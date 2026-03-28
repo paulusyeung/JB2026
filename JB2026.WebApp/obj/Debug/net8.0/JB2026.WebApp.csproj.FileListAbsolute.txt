@@ -82,3 +82,8 @@ C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\Microsoft.IdentityModel.Protoc
 C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Projects\JB2026\JB2026.WebApp\obj\Debug\net8.0\JB2026.WebApp.sourcelink.json
+C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\ClientApp\package.json
+C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\ClientApp\tsconfig.app.json
+C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\ClientApp\tsconfig.json
+C:\Projects\JB2026\JB2026.WebApp\bin\Debug\net8.0\ClientApp\tsconfig.node.json

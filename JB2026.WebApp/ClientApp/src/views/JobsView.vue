@@ -3,9 +3,27 @@
     <JobsTable />
 
     <v-card rounded="xl" elevation="0" class="panel-card detail-panel">
-      <v-card-title>
-        <h3 class="text-h6 mb-1">Job detail</h3>
-        <p class="text-body-2 text-medium-emphasis mb-0">Matches the representative master-detail workflow from the Phase 2 UI spike.</p>
+      <v-card-title class="d-flex align-start ga-2">
+        <div class="flex-grow-1">
+          <h3 class="text-h6 mb-1">Job detail</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">Matches the representative master-detail workflow from the Phase 2 UI spike.</p>
+        </div>
+        <div class="d-flex ga-2 flex-shrink-0 pt-1">
+          <v-btn
+            size="small"
+            variant="outlined"
+            prepend-icon="mdi-plus"
+            @click="openCreate"
+          >New</v-btn>
+          <v-btn
+            v-if="jobsStore.selectedJob"
+            size="small"
+            color="primary"
+            variant="tonal"
+            prepend-icon="mdi-pencil"
+            @click="openEdit"
+          >Edit</v-btn>
+        </div>
       </v-card-title>
       <v-card-text v-if="jobsStore.selectedJob">
         <div class="detail-group">
@@ -56,13 +74,56 @@
       </v-card-text>
     </v-card>
   </section>
+
+  <!-- Create / Edit job order dialog (Slice B — DevExpress form replacement) -->
+  <v-dialog v-model="formOpen" max-width="760" scrollable>
+    <JobOrderForm
+      :job="formJob"
+      @saved="handleSaved"
+      @cancel="formOpen = false"
+    />
+  </v-dialog>
+
+  <!-- Save-success snackbar -->
+  <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+    Job order saved successfully.
+    <template #actions>
+      <v-btn variant="text" @click="saveSuccess = false">Dismiss</v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import JobsTable from '@/components/grids/JobsTable.vue'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { useJobsStore } from '@/stores/jobs'
+import type { JobDetail } from '@/types/api'
 
 const jobsStore = useJobsStore()
+
+const formOpen = ref(false)
+const formJob = ref<JobDetail | null>(null)
+const saveSuccess = ref(false)
+
+function openCreate() {
+  formJob.value = null
+  formOpen.value = true
+}
+
+function openEdit() {
+  formJob.value = jobsStore.selectedJob
+  formOpen.value = true
+}
+
+async function handleSaved() {
+  formOpen.value = false
+  saveSuccess.value = true
+  // Reload the selected job to reflect any changes
+  if (jobsStore.selectedJob) {
+    await jobsStore.select(jobsStore.selectedJob.orderId)
+  }
+}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString()

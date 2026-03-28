@@ -84,3 +84,4 @@ C:\Projects\JB2026\JB2026.Rest\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGe
 C:\Projects\JB2026\JB2026.Rest\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
 C:\Projects\JB2026\JB2026.Rest\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
 C:\Projects\JB2026\JB2026.Rest\obj\Debug\net8.0\JB2026.Rest.MvcApplicationPartsAssemblyInfo.cs
+C:\Projects\JB2026\JB2026.Rest\obj\Debug\net8.0\JB2026.Rest.sourcelink.json

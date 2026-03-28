@@ -59,7 +59,7 @@ public sealed class UiSliceRoutingMiddleware
         var encodedSlice = HtmlEncoder.Default.Encode(decision.DisplayName);
         context.Response.StatusCode = StatusCodes.Status200OK;
         context.Response.ContentType = "text/html; charset=utf-8";
-        await context.Response.WriteAsync($"""
+        await context.Response.WriteAsync($$"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -67,18 +67,18 @@ public sealed class UiSliceRoutingMiddleware
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Legacy Slice Placeholder</title>
   <style>
-    body {{ font-family: Segoe UI, sans-serif; background: #f5f4ee; color: #1f2421; margin: 0; }}
-    main {{ max-width: 720px; margin: 10vh auto; padding: 2rem; background: #fffdf6; border: 1px solid #ddd3bd; border-radius: 20px; box-shadow: 0 24px 60px rgba(31,36,33,0.08); }}
-    .eyebrow {{ text-transform: uppercase; letter-spacing: 0.16em; color: #9f4f2a; font-size: 0.8rem; }}
-    h1 {{ margin-bottom: 0.75rem; }}
-    code {{ background: #efe7d7; padding: 0.2rem 0.4rem; border-radius: 6px; }}
+    body { font-family: Segoe UI, sans-serif; background: #f5f4ee; color: #1f2421; margin: 0; }
+    main { max-width: 720px; margin: 10vh auto; padding: 2rem; background: #fffdf6; border: 1px solid #ddd3bd; border-radius: 20px; box-shadow: 0 24px 60px rgba(31,36,33,0.08); }
+    .eyebrow { text-transform: uppercase; letter-spacing: 0.16em; color: #9f4f2a; font-size: 0.8rem; }
+    h1 { margin-bottom: 0.75rem; }
+    code { background: #efe7d7; padding: 0.2rem 0.4rem; border-radius: 6px; }
   </style>
 </head>
 <body>
   <main>
     <p class="eyebrow">Legacy Coexistence Route</p>
-    <h1>{encodedSlice} is currently disabled.</h1>
-    <p>The request for <code>{encodedPath}</code> stayed on the legacy side of the coexistence boundary because the slice flag is disabled.</p>
+    <h1>{{encodedSlice}} is currently disabled.</h1>
+    <p>The request for <code>{{encodedPath}}</code> stayed on the legacy side of the coexistence boundary because the slice flag is disabled.</p>
     <p>Configure <code>UiModernization:LegacyBaseUrl</code> to redirect disabled traffic to a live JB2015 endpoint in non-local environments.</p>
   </main>
 </body>

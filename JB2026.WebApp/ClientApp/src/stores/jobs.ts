@@ -33,7 +33,10 @@ export const useJobsStore = defineStore('jobs', () => {
       const startOn = date.toISOString().slice(0, 10)
       rows.value = await getJobs({ startOn, days: 14 })
       if (rows.value.length > 0 && !selectedJob.value) {
-        await select(rows.value[0].orderId)
+        const firstRow = rows.value[0]
+        if (firstRow) {
+          await select(firstRow.orderId)
+        }
       }
     } finally {
       loading.value = false

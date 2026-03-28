@@ -119,3 +119,4 @@ C:\Projects\JB2026\JB2026.Api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Ru
 C:\Projects\JB2026\JB2026.Api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 C:\Projects\JB2026\JB2026.Api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
 C:\Projects\JB2026\JB2026.Api\obj\Debug\net8.0\JB2026.Api.MvcApplicationPartsAssemblyInfo.cs
+C:\Projects\JB2026\JB2026.Api\obj\Debug\net8.0\JB2026.Api.sourcelink.json

@@ -68,3 +68,34 @@ export interface UiFeatureFlag {
   enabled: boolean
   prefixes: string[]
 }
+
+export interface JobScheduleCalendarItem {
+  scheduleId: string
+  orderId: string
+  title: string
+  startOn: string
+  endOn: string | null
+  status: number | null
+  priority: number | null
+  machineNumber: string | null
+}
+
+export interface UpdateJobScheduleTimeRequest {
+  startOn: string
+  endOn: string | null
+}
+
+/** Shape used by the create/edit job order form (Slice B DevExpress replacement). */
+export interface JobOrderFormData {
+  orderId: string | null
+  orderTitle: string
+  customerName: string
+  customerRef: string
+  orderedBy: string
+  orderedOn: string
+  requiredOn: string
+  qty: number
+  status: number
+  paymentTerms: string
+  remarks: string
+}

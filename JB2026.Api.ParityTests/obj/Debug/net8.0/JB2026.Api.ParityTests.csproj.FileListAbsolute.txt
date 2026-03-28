@@ -500,3 +500,5 @@ C:\Projects\JB2026\JB2026.Api.ParityTests\obj\Debug\net8.0\refint\JB2026.Api.Par
 C:\Projects\JB2026\JB2026.Api.ParityTests\obj\Debug\net8.0\JB2026.Api.ParityTests.pdb
 C:\Projects\JB2026\JB2026.Api.ParityTests\obj\Debug\net8.0\JB2026.Api.ParityTests.genruntimeconfig.cache
 C:\Projects\JB2026\JB2026.Api.ParityTests\obj\Debug\net8.0\ref\JB2026.Api.ParityTests.dll
+C:\Projects\JB2026\JB2026.Api.ParityTests\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.InMemory.dll
+C:\Projects\JB2026\JB2026.Api.ParityTests\obj\Debug\net8.0\JB2026.Api.ParityTests.sourcelink.json

@@ -15,3 +15,4 @@ C:\Projects\JB2026\JB2026.EfCore\obj\Debug\net8.0\JB2026.EfCore.pdb
 C:\Projects\JB2026\JB2026.EfCore\obj\Debug\net8.0\ref\JB2026.EfCore.dll
 C:\Projects\JB2026\JB2026.EfCore\bin\Debug\net8.0\JB2026.EfCore.runtimeconfig.json
 C:\Projects\JB2026\JB2026.EfCore\obj\Debug\net8.0\JB2026.EfCore.genruntimeconfig.cache
+C:\Projects\JB2026\JB2026.EfCore\obj\Debug\net8.0\JB2026.EfCore.sourcelink.json
