@@ -1,0 +1,104 @@
+﻿[
+    {
+        "name":  "api_token_header",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_token_path",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_userinfo_current",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_userinfo_by_username",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_joborders_list",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_prints_pending",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_prints_scheduled",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_prints_scheduled_machine_1",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_prints_completed",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "api_prints_completed_machine_1",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "rest_token_header",
+        "success":  false,
+        "statusCode":  401,
+        "reason":  "Unauthorized"
+    },
+    {
+        "name":  "rest_token_path",
+        "success":  false,
+        "statusCode":  401,
+        "reason":  "Unauthorized"
+    },
+    {
+        "name":  "rest_user_current",
+        "success":  false,
+        "statusCode":  400,
+        "reason":  "BadRequest"
+    },
+    {
+        "name":  "rest_job_range",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "rest_job_by_month_all",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "rest_quotation_range",
+        "success":  false,
+        "statusCode":  500,
+        "reason":  "InternalServerError"
+    },
+    {
+        "name":  "rest_quotation_keyword",
+        "success":  true,
+        "statusCode":  200,
+        "reason":  "OK"
+    }
+]

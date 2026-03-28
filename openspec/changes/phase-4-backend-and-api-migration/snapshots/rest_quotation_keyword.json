@@ -1,0 +1,48 @@
+﻿{
+    "capturedAtUtc":  "2026-03-26T21:17:21.8593684Z",
+    "name":  "rest_quotation_keyword",
+    "method":  "GET",
+    "url":  "http://localhost:5002/api/Qt/Keyword/ABC",
+    "success":  true,
+    "statusCode":  200,
+    "reason":  "OK",
+    "headers":  {
+                    "X-SourceFiles":  [
+                                          "=?UTF-8?B?QzpcUHJvamVjdHNcSkIyMDE1XEpCNS5SRVNUXGFwaVxRdFxLZXl3b3JkXEFCQw==?="
+                                      ],
+                    "Expires":  [
+                                    "-1"
+                                ],
+                    "Server":  [
+                                   "Microsoft-IIS/10.0"
+                               ],
+                    "Content-Length":  [
+                                           "2"
+                                       ],
+                    "Content-Type":  [
+                                         "application/json; charset=utf-8"
+                                     ],
+                    "Pragma":  [
+                                   "no-cache"
+                               ],
+                    "Date":  [
+                                 "Thu, 26 Mar 2026 21:17:21 GMT"
+                             ],
+                    "X-Powered-By":  [
+                                         "ASP.NET"
+                                     ],
+                    "Cache-Control":  [
+                                          "no-cache"
+                                      ],
+                    "X-AspNet-Version":  [
+                                             "4.0.30319"
+                                         ]
+                },
+    "responseBody":  {
+                         "value":  [
+
+                                   ],
+                         "Count":  0
+                     },
+    "error":  null
+}

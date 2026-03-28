@@ -1,0 +1,71 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace JB2026.EfCore.Models;
+
+public partial class vwOrderDetailList
+{
+    public Guid OrderId { get; set; }
+
+    public int OrderType { get; set; }
+
+    public string? OrderNumber { get; set; }
+
+    public string? JobOrderNumber { get; set; }
+
+    public int? JobNumber { get; set; }
+
+    public string? CustomerName { get; set; }
+
+    public string? CustomerRef { get; set; }
+
+    public string? OrderTitle { get; set; }
+
+    public string? ProductCode { get; set; }
+
+    public string? ProductStyle { get; set; }
+
+    public string? ProductDetails { get; set; }
+
+    public DateTime? OrderedOn { get; set; }
+
+    public string? OrderedBy { get; set; }
+
+    public string? OutputRef { get; set; }
+
+    public string? InvoiceRef { get; set; }
+
+    public DateTime? RequiredOn { get; set; }
+
+    public decimal InvoiceAmount { get; set; }
+
+    public decimal Qty { get; set; }
+
+    public string? PaymentTerms { get; set; }
+
+    public string? Remarks { get; set; }
+
+    public int? Attachment_ProductCode { get; set; }
+
+    public int? Attachment_CustomerRef { get; set; }
+
+    public int Status { get; set; }
+
+    public DateTime CreatedOn { get; set; }
+
+    public string? CreatedBy { get; set; }
+
+    public DateTime ModifiedOn { get; set; }
+
+    public string? ModifiedBy { get; set; }
+
+    public bool Retired { get; set; }
+
+    public DateTime? RetiredOn { get; set; }
+
+    public string? RetiredBy { get; set; }
+
+    public string SONumber { get; set; } = null!;
+
+    public DateTime CompletedOn { get; set; }
+}

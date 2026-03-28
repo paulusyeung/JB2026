@@ -1,0 +1,6 @@
+
+> jb2026-webapp-client@0.1.0 build
+> vue-tsc -b && vite build
+
+'vue-tsc' is not recognized as an internal or external command,
+operable program or batch file.

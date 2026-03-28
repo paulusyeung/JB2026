@@ -1,0 +1,12 @@
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.csproj.AssemblyReference.cache
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.AssemblyInfoInputs.cache
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.AssemblyInfo.cs
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Projects\JB2026\JB2026.Infrastructure\bin\Debug\net8.0\JB2026.Infrastructure.deps.json
+C:\Projects\JB2026\JB2026.Infrastructure\bin\Debug\net8.0\JB2026.Infrastructure.dll
+C:\Projects\JB2026\JB2026.Infrastructure\bin\Debug\net8.0\JB2026.Infrastructure.pdb
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.dll
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\refint\JB2026.Infrastructure.dll
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\JB2026.Infrastructure.pdb
+C:\Projects\JB2026\JB2026.Infrastructure\obj\Debug\net8.0\ref\JB2026.Infrastructure.dll

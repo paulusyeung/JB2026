@@ -1,0 +1,14 @@
+﻿{
+    "capturedAtUtc":  "2026-03-26T21:17:21.5562508Z",
+    "name":  "rest_token_path",
+    "method":  "GET",
+    "url":  "http://localhost:5002/api/Token/admin/password123",
+    "success":  false,
+    "statusCode":  401,
+    "reason":  "Unauthorized",
+    "headers":  {
+
+                },
+    "responseBody":  null,
+    "error":  "The remote server returned an error: (401) Unauthorized."
+}

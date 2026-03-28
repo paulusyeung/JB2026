@@ -1,0 +1,203 @@
+$shell-ink: #1f2421;
+$shell-paper: #f5f4ee;
+$shell-panel: #fffdf8;
+$shell-accent: #9f4f2a;
+$shell-secondary: #284b63;
+$shell-soft: #ece4d5;
+
+:root {
+  color: $shell-ink;
+  background: radial-gradient(circle at top right, rgba(201, 146, 61, 0.16), transparent 32%),
+    linear-gradient(180deg, #f7f2e8 0%, #f5f4ee 100%);
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: inherit;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-frame {
+  min-height: 100vh;
+  padding: 1.5rem 1.5rem 2rem;
+}
+
+.app-sidebar {
+  border-right: 1px solid rgba(31, 36, 33, 0.08);
+  background: rgba(255, 253, 248, 0.9);
+  backdrop-filter: blur(18px);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.brand-mark {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 700;
+  background: linear-gradient(135deg, $shell-accent, #c9923d);
+}
+
+.brand-name {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+  color: $shell-accent;
+}
+
+.sidebar-card {
+  margin: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: $shell-soft;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page-section {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero-card,
+.panel-card,
+.metric-card,
+.auth-card {
+  background: $shell-panel !important;
+  border: 1px solid rgba(31, 36, 33, 0.06);
+}
+
+.hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(140deg, rgba(255, 253, 248, 0.96), rgba(236, 228, 213, 0.96)) !important;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: rgba(40, 75, 99, 0.1);
+  color: $shell-secondary;
+  font-weight: 600;
+}
+
+.grid-three {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-two,
+.jobs-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-card {
+  border-radius: 1.25rem;
+}
+
+.detail-panel {
+  align-self: start;
+}
+
+.detail-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.field-label {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(31, 36, 33, 0.64);
+}
+
+.editor-preview {
+  min-height: 180px;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: $shell-soft;
+}
+
+.auth-page {
+  min-height: calc(100vh - 160px);
+  place-items: center;
+}
+
+.auth-card {
+  width: min(100%, 560px);
+}
+
+.jobs-table tbody tr {
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .grid-three,
+  .grid-two,
+  .jobs-layout,
+  .hero-card {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-frame {
+    padding: 1rem;
+  }
+}

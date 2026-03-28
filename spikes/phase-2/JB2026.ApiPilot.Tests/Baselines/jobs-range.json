@@ -1,0 +1,26 @@
+[
+  {
+    "orderId": "1e84b2e5-3f73-4d60-9d0d-08dc50c00002",
+    "orderNumber": "JB2403-3",
+    "customerName": "Northwind Foods",
+    "customerRef": "NWF-8820",
+    "orderTitle": "Shelf wobblers refresh",
+    "orderedBy": "ajohnson",
+    "orderedOn": "2026-03-21T08:30:00Z",
+    "requiredOn": "2026-03-27T15:00:00Z",
+    "qty": 3200,
+    "status": 1
+  },
+  {
+    "orderId": "1e84b2e5-3f73-4d60-9d0d-08dc50c00001",
+    "orderNumber": "JB2401-12",
+    "customerName": "Acme Retail",
+    "customerRef": "ACM-4471",
+    "orderTitle": "Spring launch flyer",
+    "orderedBy": "mchan",
+    "orderedOn": "2026-03-25T10:15:00Z",
+    "requiredOn": "2026-03-29T09:00:00Z",
+    "qty": 1500,
+    "status": 2
+  }
+]

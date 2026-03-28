@@ -1,0 +1,14 @@
+﻿{
+    "capturedAtUtc":  "2026-03-26T21:17:21.3073076Z",
+    "name":  "api_userinfo_current",
+    "method":  "GET",
+    "url":  "http://localhost:5001/api/UserInfo",
+    "success":  false,
+    "statusCode":  500,
+    "reason":  "InternalServerError",
+    "headers":  {
+
+                },
+    "responseBody":  null,
+    "error":  "The remote server returned an error: (500) Internal Server Error."
+}

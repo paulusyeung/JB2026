@@ -1,0 +1,9 @@
+﻿{
+    "capturedAtUtc":  "2026-03-26T21:17:22.6169429Z",
+    "apiBaseUrl":  "http://localhost:5001",
+    "restBaseUrl":  "http://localhost:5002",
+    "attempted":  17,
+    "succeeded":  1,
+    "failed":  16,
+    "outputDir":  "C:\\Projects\\JB2026\\openspec\\changes\\phase-4-backend-and-api-migration\\snapshots"
+}

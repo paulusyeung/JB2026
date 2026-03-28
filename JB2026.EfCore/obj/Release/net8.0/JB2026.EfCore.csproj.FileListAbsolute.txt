@@ -1,0 +1,17 @@
+C:\Projects\JB2026\JB2026.EfCore\bin\Release\net8.0\JB2026.EfCore.deps.json
+C:\Projects\JB2026\JB2026.EfCore\bin\Release\net8.0\JB2026.EfCore.dll
+C:\Projects\JB2026\JB2026.EfCore\bin\Release\net8.0\JB2026.EfCore.pdb
+C:\Projects\JB2026\JB2026.EfCore\bin\Release\net8.0\JB2026.DataAccess.dll
+C:\Projects\JB2026\JB2026.EfCore\bin\Release\net8.0\JB2026.DataAccess.pdb
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.csproj.AssemblyReference.cache
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.AssemblyInfoInputs.cache
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.AssemblyInfo.cs
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.csproj.CoreCompileInputs.cache
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.E.E798AAA3.Up2Date
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.dll
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\refint\JB2026.EfCore.dll
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.pdb
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\ref\JB2026.EfCore.dll
+C:\Projects\JB2026\JB2026.EfCore\bin\Release\net8.0\JB2026.EfCore.runtimeconfig.json
+C:\Projects\JB2026\JB2026.EfCore\obj\Release\net8.0\JB2026.EfCore.genruntimeconfig.cache

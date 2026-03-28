@@ -1,0 +1,28 @@
+{
+  "orderId": "1e84b2e5-3f73-4d60-9d0d-08dc50c00001",
+  "orderNumber": "JB2401-12",
+  "customerName": "Acme Retail",
+  "customerRef": "ACM-4471",
+  "orderTitle": "Spring launch flyer",
+  "orderedBy": "mchan",
+  "orderedOn": "2026-03-25T10:15:00Z",
+  "requiredOn": "2026-03-29T09:00:00Z",
+  "status": 2,
+  "qty": 1500,
+  "paymentTerms": "30 days",
+  "remarks": "Requires colour proof before press release.",
+  "styleTitles": [
+    "Flyer Matte A4",
+    "Retail Promo"
+  ],
+  "attachments": [
+    {
+      "attachmentType": "Product",
+      "fileName": "spring-flyer-proof.pdf"
+    },
+    {
+      "attachmentType": "Customer",
+      "fileName": "acme-brand-guidelines.pdf"
+    }
+  ]
+}

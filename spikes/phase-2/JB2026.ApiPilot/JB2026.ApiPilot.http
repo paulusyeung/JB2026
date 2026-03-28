@@ -1,0 +1,6 @@
+@JB2026.ApiPilot_HostAddress = http://localhost:5062
+
+GET {{JB2026.ApiPilot_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

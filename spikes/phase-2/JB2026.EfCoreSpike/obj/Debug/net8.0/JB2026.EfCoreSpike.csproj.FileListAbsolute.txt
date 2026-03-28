@@ -1,0 +1,14 @@
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\bin\Debug\net8.0\JB2026.EfCoreSpike.deps.json
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\bin\Debug\net8.0\JB2026.EfCoreSpike.dll
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\bin\Debug\net8.0\JB2026.EfCoreSpike.pdb
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.csproj.AssemblyReference.cache
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.AssemblyInfoInputs.cache
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.AssemblyInfo.cs
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.csproj.CoreCompileInputs.cache
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.dll
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\refint\JB2026.EfCoreSpike.dll
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.pdb
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\ref\JB2026.EfCoreSpike.dll
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\bin\Debug\net8.0\JB2026.EfCoreSpike.runtimeconfig.json
+C:\Projects\JB2026\spikes\phase-2\JB2026.EfCoreSpike\obj\Debug\net8.0\JB2026.EfCoreSpike.genruntimeconfig.cache

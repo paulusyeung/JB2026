@@ -1,0 +1,253 @@
+using JB2026.Api.Models;
+using JB2026.EfCore.Data;
+using JB2026.EfCore.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace JB2026.Api.Services;
+
+public sealed class EfJobManagementRepository : IJobManagementRepository
+{
+    private readonly JB5LegacyReadContext _readContext;
+    private readonly JB5LegacyWriteContext _writeContext;
+
+    private static readonly Func<JB5LegacyReadContext, int, IEnumerable<JobOrder>> CompiledGetJobOrders =
+        EF.CompileQuery((JB5LegacyReadContext db, int take) =>
+            db.JobOrders
+                .AsNoTracking()
+                .Include(order => order.JobSchedules)
+                .Include(order => order.JobWorkflows)
+                .Include(order => order.JobAttachments)
+                .OrderByDescending(order => order.OrderedOn)
+                .Take(take));
+
+    private static readonly Func<JB5LegacyReadContext, Guid, JobOrder?> CompiledGetJobOrderById =
+        EF.CompileQuery((JB5LegacyReadContext db, Guid orderId) =>
+            db.JobOrders
+                .AsNoTracking()
+                .Include(order => order.JobSchedules)
+                .Include(order => order.JobWorkflows)
+                .Include(order => order.JobAttachments)
+                .FirstOrDefault(order => order.OrderId == orderId));
+
+    private static readonly Func<JB5LegacyReadContext, DateTime, DateTime, IEnumerable<JobOrder>> CompiledGetRange =
+        EF.CompileQuery((JB5LegacyReadContext db, DateTime lowerBoundExclusive, DateTime upperBoundExclusive) =>
+            db.JobOrders
+                .AsNoTracking()
+                .Where(order => order.OrderedOn.HasValue
+                    && order.OrderedOn.Value < upperBoundExclusive
+                    && order.OrderedOn.Value > lowerBoundExclusive)
+                .OrderByDescending(order => order.OrderNumber));
+
+    private static readonly Func<JB5LegacyWriteContext, Guid, JobOrder?> CompiledGetWriteJobOrderById =
+        EF.CompileQuery((JB5LegacyWriteContext db, Guid orderId) =>
+            db.JobOrders.FirstOrDefault(order => order.OrderId == orderId));
+
+    public EfJobManagementRepository(JB5LegacyReadContext readContext, JB5LegacyWriteContext writeContext)
+    {
+        _readContext = readContext;
+        _writeContext = writeContext;
+    }
+
+    public IReadOnlyList<JobListItemResponse> GetRange(DateOnly startOn, int days)
+    {
+        var start = startOn.ToDateTime(TimeOnly.MinValue);
+        var items = CompiledGetRange(_readContext, start.AddDays(-days), start.AddDays(1))
+            .Select(MapListItem)
+            .ToList();
+
+        return items;
+    }
+
+    public JobDetailResponse? GetJobDetail(Guid orderId)
+    {
+        var job = CompiledGetJobOrderById(_readContext, orderId);
+        return job is null ? null : MapDetail(job);
+    }
+
+    public IReadOnlyList<string> GetStyleTitles(Guid orderId)
+    {
+        var job = CompiledGetJobOrderById(_readContext, orderId);
+        if (job is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        return job.JobWorkflows
+            .OrderBy(workflow => workflow.WorkIndex)
+            .Select(workflow => workflow.WorkTitle)
+            .Where(title => !string.IsNullOrWhiteSpace(title))
+            .Select(title => title!)
+            .ToList();
+    }
+
+    public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
+    {
+        return CompiledGetJobOrders(_readContext, take)
+            .Select(MapOrder)
+            .ToList();
+    }
+
+    public JobOrderResponse? GetJobOrder(Guid orderId)
+    {
+        var job = CompiledGetJobOrderById(_readContext, orderId);
+        return job is null ? null : MapOrder(job);
+    }
+
+    public async Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
+    {
+        var actorId = ParseActorGuidOrFallback(actor);
+        var now = DateTime.UtcNow;
+
+        var order = new JobOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderType = 0,
+            OrderNumber = request.OrderNumber,
+            JobNumber = int.TryParse(request.JobNumber, out var jobNumber) ? jobNumber : null,
+            CustomerName = request.CustomerName,
+            CustomerRef = request.CustomerRef,
+            OrderTitle = request.OrderTitle,
+            OrderedBy = actor,
+            OrderedOn = request.OrderedOn,
+            RequiredOn = request.RequiredOn,
+            Qty = request.Qty,
+            PaymentTerms = request.PaymentTerms,
+            Remarks = request.Remarks,
+            Status = request.Status,
+            CreatedBy = actorId,
+            CreatedOn = now,
+            ModifiedBy = actorId,
+            ModifiedOn = now,
+            Retired = false
+        };
+
+        _writeContext.JobOrders.Add(order);
+        await _writeContext.SaveChangesAsync();
+
+        return MapOrder(order);
+    }
+
+    public async Task<JobOrderResponse?> UpdateJobOrder(Guid orderId, UpdateJobOrderRequest request, string actor)
+    {
+        var order = CompiledGetWriteJobOrderById(_writeContext, orderId);
+        if (order is null)
+        {
+            return null;
+        }
+
+        order.CustomerName = request.CustomerName;
+        order.CustomerRef = request.CustomerRef;
+        order.OrderTitle = request.OrderTitle;
+        order.RequiredOn = request.RequiredOn;
+        order.Qty = request.Qty;
+        order.PaymentTerms = request.PaymentTerms;
+        order.Remarks = request.Remarks;
+        order.Status = request.Status;
+        order.ModifiedBy = ParseActorGuidOrFallback(actor);
+        order.ModifiedOn = DateTime.UtcNow;
+
+        await _writeContext.SaveChangesAsync();
+
+        return MapOrder(order);
+    }
+
+    public async Task<JobOrderResponse?> DeleteJobOrder(Guid orderId)
+    {
+        var order = CompiledGetWriteJobOrderById(_writeContext, orderId);
+        if (order is null)
+        {
+            return null;
+        }
+
+        _writeContext.JobOrders.Remove(order);
+        await _writeContext.SaveChangesAsync();
+
+        return MapOrder(order);
+    }
+
+    private static JobListItemResponse MapListItem(JobOrder job)
+    {
+        return new JobListItemResponse
+        {
+            OrderId = job.OrderId,
+            OrderNumber = BuildCompositeOrderNumber(job.OrderNumber, job.JobNumber),
+            CustomerName = job.CustomerName ?? string.Empty,
+            CustomerRef = job.CustomerRef ?? string.Empty,
+            OrderTitle = job.OrderTitle ?? string.Empty,
+            OrderedBy = job.OrderedBy ?? string.Empty,
+            OrderedOn = job.OrderedOn ?? DateTime.MinValue,
+            RequiredOn = job.RequiredOn ?? DateTime.MinValue,
+            Qty = job.Qty ?? 0m,
+            Status = job.Status
+        };
+    }
+
+    private static JobDetailResponse MapDetail(JobOrder job)
+    {
+        return new JobDetailResponse
+        {
+            OrderId = job.OrderId,
+            OrderNumber = BuildCompositeOrderNumber(job.OrderNumber, job.JobNumber),
+            CustomerName = job.CustomerName ?? string.Empty,
+            CustomerRef = job.CustomerRef ?? string.Empty,
+            OrderTitle = job.OrderTitle ?? string.Empty,
+            OrderedBy = job.OrderedBy ?? string.Empty,
+            OrderedOn = job.OrderedOn ?? DateTime.MinValue,
+            RequiredOn = job.RequiredOn ?? DateTime.MinValue,
+            Status = job.Status,
+            Qty = job.Qty ?? 0m,
+            PaymentTerms = job.PaymentTerms ?? string.Empty,
+            Remarks = job.Remarks ?? string.Empty,
+            StyleTitles = job.JobWorkflows
+                .OrderBy(workflow => workflow.WorkIndex)
+                .Select(workflow => workflow.WorkTitle)
+                .Where(title => !string.IsNullOrWhiteSpace(title))
+                .Select(title => title!)
+                .ToArray(),
+            Attachments = job.JobAttachments
+                .OrderBy(attachment => attachment.AttachmentIndex)
+                .Select(attachment => new JobAttachmentResponse
+                {
+                    FileName = attachment.OriginalFileName ?? string.Empty,
+                    ContentType = "application/octet-stream",
+                    Length = 0
+                })
+                .ToList()
+        };
+    }
+
+    private static JobOrderResponse MapOrder(JobOrder job)
+    {
+        return new JobOrderResponse
+        {
+            OrderId = job.OrderId,
+            OrderNumber = job.OrderNumber ?? string.Empty,
+            JobNumber = job.JobNumber?.ToString() ?? string.Empty,
+            CustomerName = job.CustomerName ?? string.Empty,
+            CustomerRef = job.CustomerRef ?? string.Empty,
+            OrderTitle = job.OrderTitle ?? string.Empty,
+            OrderedBy = job.OrderedBy ?? string.Empty,
+            OrderedOn = job.OrderedOn ?? DateTime.MinValue,
+            RequiredOn = job.RequiredOn ?? DateTime.MinValue,
+            Qty = job.Qty ?? 0m,
+            PaymentTerms = job.PaymentTerms ?? string.Empty,
+            Remarks = job.Remarks ?? string.Empty,
+            Status = job.Status,
+            CreatedBy = job.CreatedBy.ToString(),
+            CreatedOn = job.CreatedOn,
+            ModifiedBy = job.ModifiedBy.ToString(),
+            ModifiedOn = job.ModifiedOn
+        };
+    }
+
+    private static string BuildCompositeOrderNumber(string? orderNumber, int? jobNumber)
+    {
+        var lhs = orderNumber ?? string.Empty;
+        return jobNumber.HasValue ? $"{lhs}-{jobNumber.Value:00}" : lhs;
+    }
+
+    private static Guid ParseActorGuidOrFallback(string actor)
+    {
+        return Guid.TryParse(actor, out var actorId) ? actorId : Guid.NewGuid();
+    }
+}

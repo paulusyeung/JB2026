@@ -1,0 +1,14 @@
+﻿{
+    "capturedAtUtc":  "2026-03-26T21:17:21.5060958Z",
+    "name":  "api_prints_completed_machine_1",
+    "method":  "GET",
+    "url":  "http://localhost:5001/api/Prints/Completed/1",
+    "success":  false,
+    "statusCode":  500,
+    "reason":  "InternalServerError",
+    "headers":  {
+
+                },
+    "responseBody":  null,
+    "error":  "The remote server returned an error: (500) Internal Server Error."
+}

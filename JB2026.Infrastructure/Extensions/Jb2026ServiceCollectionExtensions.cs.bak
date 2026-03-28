@@ -1,0 +1,76 @@
+using System.Reflection;
+using JB2026.Infrastructure.Options;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Serilog;
+
+namespace JB2026.Infrastructure.Extensions;
+
+public static class Jb2026ServiceCollectionExtensions
+{
+    public static WebApplicationBuilder AddJb2026Foundation(this WebApplicationBuilder builder)
+    {
+        builder.Configuration
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+            .AddEnvironmentVariables();
+
+        if (builder.Environment.IsDevelopment())
+        {
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly is not null)
+            {
+                builder.Configuration.AddUserSecrets(entryAssembly, optional: true);
+            }
+        }
+
+        builder.Services
+            .AddOptions<Jb2026EnvironmentOptions>()
+            .Bind(builder.Configuration.GetSection(Jb2026EnvironmentOptions.SectionName));
+
+        builder.Services
+            .AddOptions<Jb2026ObservabilityOptions>()
+            .Bind(builder.Configuration.GetSection(Jb2026ObservabilityOptions.SectionName));
+
+        builder.Services.AddProblemDetails();
+        builder.Services
+            .AddHealthChecks()
+            .AddCheck("self", () => HealthCheckResult.Healthy());
+
+        builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .WriteTo.Console());
+
+        var serviceName = builder.Configuration[$"{Jb2026ObservabilityOptions.SectionName}:ServiceName"]
+            ?? builder.Environment.ApplicationName;
+        var otlpEndpoint = builder.Configuration[$"{Jb2026ObservabilityOptions.SectionName}:OtlpEndpoint"];
+
+        builder.Services
+            .AddOpenTelemetry()
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation();
+
+                if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var endpoint))
+                {
+                    tracing.AddOtlpExporter(options => options.Endpoint = endpoint);
+                }
+                else
+                {
+                    tracing.AddConsoleExporter();
+                }
+            });
+
+        return builder;
+    }
+}

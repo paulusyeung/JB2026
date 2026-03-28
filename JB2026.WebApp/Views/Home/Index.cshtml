@@ -1,0 +1,36 @@
+﻿@{
+    ViewData["Title"] = "Modernization Control Plane";
+}
+
+<section class="py-5">
+    <div class="row g-4 align-items-start">
+        <div class="col-lg-7">
+            <span class="badge rounded-pill text-bg-dark mb-3">Phase 6 UI Modernization</span>
+            <h1 class="display-5 fw-semibold mb-3">Vue 3 slices now run behind server-side feature flags.</h1>
+            <p class="lead text-muted mb-4">
+                Use the slice routes below to exercise the SPA host. Disabled routes continue through the legacy coexistence path,
+                and enabled routes resolve to the Vite-built shell under <code>/app</code>.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-dark" href="/dashboard">Dashboard Slice</a>
+                <a class="btn btn-outline-dark" href="/jobs">Jobs Slice</a>
+                <a class="btn btn-outline-dark" href="/quotations">Quotations Slice</a>
+                <a class="btn btn-outline-dark" href="/editor">Rich Text Slice</a>
+                <a class="btn btn-outline-secondary" href="/scheduler">Scheduler Slice</a>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 bg-light h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">What changed</h2>
+                    <ul class="mb-0 ps-3">
+                        <li>Config-backed feature flags with a 60-second cache boundary</li>
+                        <li>SPA hosting contract via <code>wwwroot/app</code></li>
+                        <li>Read-only slice routes for dashboard, jobs, and quotations</li>
+                        <li>Documented gap list for Phase 2 to Phase 6 control-library changes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

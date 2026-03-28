@@ -1,0 +1,248 @@
+:root {
+  color: #1d2731;
+  background:
+    radial-gradient(circle at top left, rgba(228, 117, 61, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(33, 113, 181, 0.18), transparent 24%),
+    linear-gradient(180deg, #f8f3eb 0%, #f3efe7 52%, #efe6da 100%);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.45;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.shell {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  color: #8b5a2b;
+}
+
+h1,
+h2,
+h3,
+dt,
+button strong {
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2.5rem, 4vw, 4.6rem);
+  line-height: 0.96;
+}
+
+.lede {
+  max-width: 62ch;
+  font-size: 1.05rem;
+}
+
+.control-panel,
+.card {
+  border: 1px solid rgba(68, 54, 37, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 252, 247, 0.88);
+  box-shadow: 0 18px 60px rgba(83, 56, 22, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.control-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.control-panel label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.95rem;
+}
+
+.control-panel input,
+.control-panel select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(68, 54, 37, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.control-panel button,
+.job-row {
+  border: 0;
+  cursor: pointer;
+}
+
+.control-panel button {
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #b24c2f, #9c7d2a);
+  color: #fffaf2;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.control-panel button:hover,
+.job-row:hover {
+  transform: translateY(-1px);
+}
+
+.error-banner {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #5a1919;
+  color: #fff3f3;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 20px;
+}
+
+.card {
+  padding: 20px;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.panel-heading h2,
+.subpanel h3 {
+  margin: 0;
+}
+
+.job-list {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.job-row {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(244, 237, 225, 0.72);
+  color: inherit;
+}
+
+.job-row.selected {
+  background: linear-gradient(135deg, rgba(178, 76, 47, 0.2), rgba(33, 113, 181, 0.14));
+  outline: 1px solid rgba(178, 76, 47, 0.28);
+}
+
+.job-row small,
+.job-row em,
+.panel-heading span {
+  color: #625547;
+}
+
+.detail {
+  display: grid;
+  gap: 18px;
+}
+
+.status-pill {
+  align-self: start;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(33, 113, 181, 0.12);
+  color: #12466f;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.detail-grid div,
+.subpanel {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(248, 244, 238, 0.9);
+}
+
+dt {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7d5a3f;
+  margin-bottom: 6px;
+}
+
+dd {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.subpanel ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.note-panel p {
+  margin: 12px 0 0;
+}
+
+.empty-state {
+  place-items: center;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .workspace,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shell {
+    width: min(100%, calc(100% - 20px));
+    padding-top: 20px;
+  }
+}
