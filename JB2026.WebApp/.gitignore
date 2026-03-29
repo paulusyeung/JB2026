@@ -1,5 +1,2 @@
-ClientApp/node_modules/
-ClientApp/dist/
-ClientApp/playwright-report/
-ClientApp/test-results/
-ClientApp/.playwright/
+# Shared ignore rules are managed in the repository root .gitignore.
+# Add file-specific exceptions here only when needed.
