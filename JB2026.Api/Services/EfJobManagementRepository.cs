@@ -36,7 +36,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                 .Where(order => order.OrderedOn.HasValue
                     && order.OrderedOn.Value < upperBoundExclusive
                     && order.OrderedOn.Value > lowerBoundExclusive)
-                .OrderByDescending(order => order.OrderNumber));
+                .OrderByDescending(order => order.OrderNumber)
+                .Select(order => order));
 
     private static readonly Func<JB5LegacyWriteContext, Guid, JobOrder?> CompiledGetWriteJobOrderById =
         EF.CompileQuery((JB5LegacyWriteContext db, Guid orderId) =>

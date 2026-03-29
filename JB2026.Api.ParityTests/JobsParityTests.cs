@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using JB2026.Api.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 
 namespace JB2026.Api.ParityTests;
 
@@ -14,7 +15,22 @@ public sealed class JobsParityTests : IClassFixture<WebApplicationFactory<Progra
 
     public JobsParityTests(WebApplicationFactory<Program> factory)
     {
-        _client = factory.CreateClient();
+        var connectionString = LegacyConnectionStringHelper.ResolveLegacyProviderConnectionString();
+
+        Environment.SetEnvironmentVariable("ConnectionStrings__Primary", connectionString);
+
+        _client = factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((_, config) =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:Primary"] = connectionString
+                    });
+                });
+            })
+            .CreateClient();
     }
 
     [Fact]
