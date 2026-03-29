@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JB2026.Api.ParityTests", "J
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JB2026.WebApp.Tests", "JB2026.WebApp.Tests\JB2026.WebApp.Tests.csproj", "{8633A876-93CA-4EFC-AFAC-582A4D5087D7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JB2026.Rest.Tests", "JB2026.Rest.Tests\JB2026.Rest.Tests.csproj", "{FB223F76-E1BC-4735-A523-0BED7992B2CC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{8633A876-93CA-4EFC-AFAC-582A4D5087D7}.Release|x64.Build.0 = Release|Any CPU
 		{8633A876-93CA-4EFC-AFAC-582A4D5087D7}.Release|x86.ActiveCfg = Release|Any CPU
 		{8633A876-93CA-4EFC-AFAC-582A4D5087D7}.Release|x86.Build.0 = Release|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Debug|x64.Build.0 = Debug|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Debug|x86.Build.0 = Debug|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x64.ActiveCfg = Release|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x64.Build.0 = Release|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x86.ActiveCfg = Release|Any CPU
+		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -21,10 +21,29 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
             "A3",
             "CMYK",
             1200m,
+            "31 x 44 in",
             "350gsm Art Card",
             420m,
+            "31 x 44",
+            4,
+            8,
+            "2-up",
+            12m,
+            18m,
+            "Retail promo launch",
             1880m,
+            1960m,
+            2040m,
+            2120m,
             1.57m,
+            1.63m,
+            1.70m,
+            1.76m,
+            [
+                new QuotationLine("Printing", "4C process setup", "1000", 0.85m, 850m, 930m, 1010m, 1090m),
+                new QuotationLine("Finishing", "Gloss lamination", "1000", 0.22m, 220m, 250m, 280m, 310m),
+                new QuotationLine("Packing", "Carton packing", "500", 0.10m, 50m, 60m, 70m, 80m)
+            ],
             2),
         new(
             Guid.Parse("2a84b2e5-3f73-4d60-9d0d-08dc50c00002"),
@@ -40,10 +59,28 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
             "A1",
             "CMYK + Spot UV",
             640m,
+            "24 x 36 in",
             "200gsm Satin",
             180m,
+            "24 x 36",
+            2,
+            2,
+            "single-up",
+            24m,
+            36m,
+            "Short-run campaign proof",
             980m,
+            1040m,
+            1120m,
+            1200m,
             1.53m,
+            1.62m,
+            1.75m,
+            1.88m,
+            [
+                new QuotationLine("Prepress", "Color proof", "1", 120m, 120m, 130m, 140m, 150m),
+                new QuotationLine("Printing", "Digital output", "640", 1.10m, 704m, 760m, 820m, 880m)
+            ],
             1),
         new(
             Guid.Parse("2a84b2e5-3f73-4d60-9d0d-08dc50c00003"),
@@ -59,10 +96,29 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
             "210x297mm",
             "CMYK",
             2500m,
+            "640 x 900 mm",
             "128gsm Gloss",
             610m,
+            "640 x 900",
+            8,
+            16,
+            "8-up",
+            8.27m,
+            11.69m,
+            "Quarterly catalog main run",
             3240m,
+            3380m,
+            3520m,
+            3660m,
             1.29m,
+            1.35m,
+            1.41m,
+            1.46m,
+            [
+                new QuotationLine("Printing", "64pp text signatures", "2500", 0.92m, 2300m, 2400m, 2500m, 2600m),
+                new QuotationLine("Binding", "Perfect bind", "2500", 0.18m, 450m, 490m, 530m, 570m),
+                new QuotationLine("Packing", "Shrink wrap", "2500", 0.06m, 150m, 170m, 190m, 210m)
+            ],
             1)
     ];
 
@@ -134,7 +190,7 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
     {
         static string Escape(string value) => value.Replace("(", "[").Replace(")", "]");
 
-        return string.Join("\n", new[]
+        var lines = new List<string>
         {
             "BT",
             "/F1 18 Tf",
@@ -146,11 +202,31 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
             "0 -18 Td",
             $"({Escape($"Title: {quotation.PrintTitle}")}) Tj",
             "0 -18 Td",
+            $"({Escape($"Print: {quotation.PrintsSize} / {quotation.PrintsColor} / Qty {quotation.PrintsQty:0.##}")}) Tj",
+            "0 -18 Td",
             $"({Escape($"Quoted On: {quotation.QuotedOn:yyyy-MM-dd}")}) Tj",
             "0 -18 Td",
-            $"({Escape($"Total Cost A: {quotation.TotalCostA:0.00}")}) Tj",
-            "ET"
-        });
+            $"({Escape($"Material: {quotation.MaterialName} / {quotation.PaperSheetSize} / Cost {quotation.MaterialCost:0.00}")}) Tj",
+            "0 -18 Td",
+            $"({Escape($"Layout: {quotation.PaperSheetSizeAlias} / Format {quotation.PrintsPerSheet} / PerPage {quotation.PrintsPerPage} {quotation.PrintPerPageEx}")}) Tj",
+            "0 -18 Td",
+            $"({Escape($"Page Size: {quotation.PageWidth:0.##} x {quotation.PageHeight:0.##}")}) Tj",
+            "0 -18 Td",
+            $"({Escape($"Remarks: {quotation.Remarks}")}) Tj",
+            "0 -18 Td",
+            $"({Escape($"Total Cost A: {quotation.TotalCostA:0.00} / B {quotation.TotalCostB:0.00} / C {quotation.TotalCostC:0.00} / D {quotation.TotalCostD:0.00}")}) Tj",
+            "0 -18 Td",
+            $"({Escape($"Unit Cost A: {quotation.UnitCostA:0.000} / B {quotation.UnitCostB:0.000} / C {quotation.UnitCostC:0.000} / D {quotation.UnitCostD:0.000}")}) Tj"
+        };
+
+        foreach (var line in quotation.Lines.Take(8))
+        {
+            lines.Add("0 -18 Td");
+            lines.Add($"({Escape($"{line.Zone}: {line.Description} / Min {line.Minimum} / Unit {line.UnitCost:0.###} / A {line.CostA:0.##} / B {line.CostB:0.##}")}) Tj");
+        }
+
+        lines.Add("ET");
+        return string.Join("\n", lines);
     }
 
     private static QuotationListItemResponse Map(QuotationRecord quotation)
@@ -193,12 +269,37 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
         string PrintsSize,
         string PrintsColor,
         decimal PrintsQty,
+        string PaperSheetSize,
         string MaterialName,
         decimal MaterialCost,
+        string PaperSheetSizeAlias,
+        int PrintsPerSheet,
+        int PrintsPerPage,
+        string PrintPerPageEx,
+        decimal PageWidth,
+        decimal PageHeight,
+        string Remarks,
         decimal TotalCostA,
+        decimal TotalCostB,
+        decimal TotalCostC,
+        decimal TotalCostD,
         decimal UnitCostA,
+        decimal UnitCostB,
+        decimal UnitCostC,
+        decimal UnitCostD,
+        IReadOnlyList<QuotationLine> Lines,
         int Status)
     {
         public string QuoteNumberIndexPair => $"{QuoteNumber}-{QuoteNumberIndex}";
     }
+
+    private sealed record QuotationLine(
+        string Zone,
+        string Description,
+        string Minimum,
+        decimal UnitCost,
+        decimal CostA,
+        decimal CostB,
+        decimal CostC,
+        decimal CostD);
 }
