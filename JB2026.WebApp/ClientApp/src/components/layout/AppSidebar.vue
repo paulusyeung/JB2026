@@ -3,7 +3,7 @@
     <div class="brand-lockup">
       <div class="brand-mark">JB</div>
       <div>
-        <p class="eyebrow mb-1">Migration Slice Host</p>
+        <p class="eyebrow mb-1">{{ t('sidebar.eyebrow') }}</p>
         <h1 class="brand-name">JB2026</h1>
       </div>
     </div>
@@ -18,7 +18,7 @@
         rounded="xl"
       />
 
-      <v-list-subheader class="mt-2">Legacy Core Modules</v-list-subheader>
+      <v-list-subheader class="mt-2">{{ t('sidebar.legacyCoreModules') }}</v-list-subheader>
       <v-list-item
         v-for="item in legacyCoreItems"
         :key="item.to"
@@ -28,7 +28,7 @@
         rounded="xl"
       />
 
-      <v-list-subheader>Legacy-Derived Areas</v-list-subheader>
+      <v-list-subheader>{{ t('sidebar.legacyDerivedAreas') }}</v-list-subheader>
       <v-list-item
         v-for="item in legacyDerivedItems"
         :key="item.to"
@@ -41,32 +41,37 @@
 
     <template #append>
       <div class="sidebar-card">
-        <p class="eyebrow mb-2">Coexistence</p>
-        <p class="mb-2">Disabled slices stay on the legacy route until the flag flips.</p>
-        <v-btn block variant="tonal" color="primary" href="/">Control Plane</v-btn>
+        <p class="eyebrow mb-2">{{ t('sidebar.coexistence') }}</p>
+        <p class="mb-2">{{ t('sidebar.coexistenceBody') }}</p>
+        <v-btn block variant="tonal" color="primary" href="/">{{ t('sidebar.controlPlane') }}</v-btn>
       </div>
     </template>
   </v-navigation-drawer>
 </template>
 
 <script setup lang="ts">
-const items = [
-  { title: 'Dashboard', to: '/dashboard', icon: 'mdi-view-dashboard-outline' },
-  { title: 'Jobs', to: '/jobs', icon: 'mdi-briefcase-outline' },
-  { title: 'Quotations', to: '/quotations', icon: 'mdi-file-document-multiple-outline' },
-  { title: 'Rich Text', to: '/editor', icon: 'mdi-text-box-edit-outline' },
-  { title: 'Scheduler', to: '/scheduler', icon: 'mdi-calendar-clock-outline' },
-]
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-const legacyCoreItems = [
-  { title: 'Job Order', to: '/job-order', icon: 'mdi-clipboard-text-outline' },
-  { title: 'Stock', to: '/stock', icon: 'mdi-package-variant-closed' },
-  { title: 'Admin', to: '/admin', icon: 'mdi-shield-account-outline' },
-  { title: 'Settings', to: '/settings', icon: 'mdi-cog-outline' },
-]
+const { t } = useI18n({ useScope: 'global' })
 
-const legacyDerivedItems = [
-  { title: 'SML', to: '/sml', icon: 'mdi-folder-multiple-outline' },
-  { title: 'Reports', to: '/reports', icon: 'mdi-chart-box-outline' },
-]
+const items = computed(() => [
+  { title: t('routes.dashboard'), to: '/dashboard', icon: 'mdi-view-dashboard-outline' },
+  { title: t('routes.jobs'), to: '/jobs', icon: 'mdi-briefcase-outline' },
+  { title: t('routes.quotations'), to: '/quotations', icon: 'mdi-file-document-multiple-outline' },
+  { title: t('routes.editor'), to: '/editor', icon: 'mdi-text-box-edit-outline' },
+  { title: t('routes.scheduler'), to: '/scheduler', icon: 'mdi-calendar-clock-outline' },
+])
+
+const legacyCoreItems = computed(() => [
+  { title: t('routes.jobOrder'), to: '/job-order', icon: 'mdi-clipboard-text-outline' },
+  { title: t('routes.stock'), to: '/stock', icon: 'mdi-package-variant-closed' },
+  { title: t('routes.admin'), to: '/admin', icon: 'mdi-shield-account-outline' },
+  { title: t('routes.settings'), to: '/settings', icon: 'mdi-cog-outline' },
+])
+
+const legacyDerivedItems = computed(() => [
+  { title: t('routes.sml'), to: '/sml', icon: 'mdi-folder-multiple-outline' },
+  { title: t('routes.reports'), to: '/reports', icon: 'mdi-chart-box-outline' },
+])
 </script>

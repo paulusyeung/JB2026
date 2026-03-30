@@ -3,19 +3,19 @@
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
-          <h3 class="text-h6 mb-1">Stock products</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">Modernized stock register powered by the new /api/v2/stock/products endpoint.</p>
+          <h3 class="text-h6 mb-1">{{ t('stock.title') }}</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('stock.subtitle') }}</p>
         </div>
         <v-spacer />
         <v-text-field
           v-model="keyword"
           density="comfortable"
-          label="Search products"
+          :label="t('stock.searchProducts')"
           prepend-inner-icon="mdi-magnify"
           variant="solo-filled"
           hide-details
         />
-        <v-btn color="primary" @click="load">Search</v-btn>
+        <v-btn color="primary" @click="load">{{ t('stock.search') }}</v-btn>
       </v-card-title>
       <v-card-text>
         <v-data-table
@@ -40,23 +40,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getStockProducts } from '@/services/stock'
 import type { StockProductListItem } from '@/types/api'
 
 const rows = ref<StockProductListItem[]>([])
 const loading = ref(false)
 const keyword = ref('')
+const { t } = useI18n({ useScope: 'global' })
+const { formatCurrency } = useLocaleFormatters()
 
-const headers = [
-  { title: 'Stock No.', key: 'stockNumber' },
-  { title: 'Code', key: 'productCode' },
-  { title: 'Product', key: 'productName' },
-  { title: 'Balance', key: 'balance' },
-  { title: 'Selling Price', key: 'sellingPrice' },
-  { title: 'COGS', key: 'cogs' },
-  { title: 'Remarks', key: 'remarks' },
-]
+const headers = computed(() => [
+  { title: t('stock.headers.stockNumber'), key: 'stockNumber' },
+  { title: t('stock.headers.code'), key: 'productCode' },
+  { title: t('stock.headers.product'), key: 'productName' },
+  { title: t('stock.headers.balance'), key: 'balance' },
+  { title: t('stock.headers.sellingPrice'), key: 'sellingPrice' },
+  { title: t('stock.headers.cogs'), key: 'cogs' },
+  { title: t('stock.headers.remarks'), key: 'remarks' },
+])
 
 onMounted(async () => {
   await load()
@@ -72,6 +76,6 @@ async function load() {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(value)
+  return formatCurrency(value)
 }
 </script>

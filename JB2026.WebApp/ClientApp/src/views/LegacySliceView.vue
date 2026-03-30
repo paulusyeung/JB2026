@@ -2,45 +2,45 @@
   <section class="page-section">
     <div class="hero-card">
       <div>
-        <p class="eyebrow mb-2">Legacy Module</p>
+        <p class="eyebrow mb-2">{{ t('legacySlice.eyebrow') }}</p>
         <h1 class="text-h4 mb-3">{{ titleText }}</h1>
         <p class="text-body-1 text-medium-emphasis mb-0">
-          Module mapped from Job.Book folder <strong>{{ folderText }}</strong> for incremental migration planning.
+          {{ t('legacySlice.mappedFrom', { folder: folderText }) }}
         </p>
       </div>
       <v-chip :color="slice?.enabled ? 'success' : 'warning'" variant="tonal" size="large">
-        {{ slice?.enabled ? 'Enabled in SPA' : 'Legacy route active' }}
+        {{ slice?.enabled ? t('legacySlice.enabledInSpa') : t('legacySlice.legacyRouteActive') }}
       </v-chip>
     </div>
 
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title class="d-flex justify-space-between align-center ga-3">
         <div>
-          <h3 class="text-h6 mb-1">Slice route status</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">Feature flag prefixes currently mapped by the coexistence middleware.</p>
+          <h3 class="text-h6 mb-1">{{ t('legacySlice.routeStatusTitle') }}</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.routeStatusSubtitle') }}</p>
         </div>
-        <v-btn variant="text" color="primary" @click="reload">Refresh</v-btn>
+        <v-btn variant="text" color="primary" @click="reload">{{ t('common.refresh') }}</v-btn>
       </v-card-title>
       <v-card-text>
         <v-chip-group v-if="prefixes.length > 0" column>
           <v-chip v-for="prefix in prefixes" :key="prefix" color="secondary" variant="outlined">{{ prefix }}</v-chip>
         </v-chip-group>
-        <p v-else class="text-body-2 text-medium-emphasis mb-0">No prefixes configured for this slice key yet.</p>
+        <p v-else class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.noPrefixes') }}</p>
       </v-card-text>
     </v-card>
 
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title>
-        <h3 class="text-h6 mb-1">Known legacy entry points</h3>
-        <p class="text-body-2 text-medium-emphasis mb-0">Representative Job.Book routes used to validate coexistence behavior.</p>
+        <h3 class="text-h6 mb-1">{{ t('legacySlice.knownEntryPointsTitle') }}</h3>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.knownEntryPointsSubtitle') }}</p>
       </v-card-title>
       <v-card-text>
         <v-table density="comfortable">
           <thead>
             <tr>
-              <th class="text-left">Legacy route</th>
-              <th class="text-left">Purpose</th>
-              <th class="text-left">Action</th>
+              <th class="text-left">{{ t('legacySlice.legacyRoute') }}</th>
+              <th class="text-left">{{ t('common.purpose') }}</th>
+              <th class="text-left">{{ t('common.action') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -48,7 +48,7 @@
               <td><code>{{ route.path }}</code></td>
               <td>{{ route.description }}</td>
               <td>
-                <v-btn size="small" variant="tonal" color="primary" :href="route.path" target="_blank">Open</v-btn>
+                <v-btn size="small" variant="tonal" color="primary" :href="route.path" target="_blank">{{ t('common.open') }}</v-btn>
               </td>
             </tr>
           </tbody>
@@ -58,16 +58,16 @@
 
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title>
-        <h3 class="text-h6 mb-1">Computed handling</h3>
-        <p class="text-body-2 text-medium-emphasis mb-0">Current server-side decision for each legacy route based on feature flags and legacy base URL.</p>
+        <h3 class="text-h6 mb-1">{{ t('legacySlice.computedHandlingTitle') }}</h3>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.computedHandlingSubtitle') }}</p>
       </v-card-title>
       <v-card-text>
         <v-table density="comfortable">
           <thead>
             <tr>
-              <th class="text-left">Legacy route</th>
-              <th class="text-left">Handling mode</th>
-              <th class="text-left">Resolved target</th>
+              <th class="text-left">{{ t('legacySlice.legacyRoute') }}</th>
+              <th class="text-left">{{ t('legacySlice.handlingMode') }}</th>
+              <th class="text-left">{{ t('legacySlice.resolvedTarget') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -75,7 +75,7 @@
               <td><code>{{ route.path }}</code></td>
               <td>
                 <v-chip size="small" variant="tonal" :color="chipColor(route.handlingMode)">
-                  {{ route.handlingMode }}
+                  {{ formatHandlingMode(route.handlingMode) }}
                 </v-chip>
               </td>
               <td>
@@ -90,54 +90,58 @@
 
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title>
-        <h3 class="text-h6 mb-1">Migration readiness summary</h3>
-        <p class="text-body-2 text-medium-emphasis mb-0">Server-calculated readiness and blockers for this slice.</p>
+        <h3 class="text-h6 mb-1">{{ t('legacySlice.readinessTitle') }}</h3>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.readinessSubtitle') }}</p>
       </v-card-title>
       <v-card-text v-if="readiness">
         <div class="d-flex flex-wrap ga-2 mb-4">
           <v-chip size="small" variant="tonal" :color="readiness.enabled ? 'success' : 'warning'">
-            Slice {{ readiness.enabled ? 'enabled' : 'disabled' }}
+            {{ t('legacySlice.sliceState', { state: readiness.enabled ? t('legacySlice.enabled') : t('legacySlice.disabled') }) }}
           </v-chip>
           <v-chip size="small" variant="tonal" :color="readiness.legacyBaseConfigured ? 'success' : 'warning'">
-            Legacy base {{ readiness.legacyBaseConfigured ? 'configured' : 'missing' }}
+            {{
+              t('legacySlice.legacyBaseState', {
+                state: readiness.legacyBaseConfigured ? t('legacySlice.configured') : t('legacySlice.missing'),
+              })
+            }}
           </v-chip>
-          <v-chip size="small" variant="outlined" color="secondary">Sample routes: {{ readiness.totalSampleRoutes }}</v-chip>
+          <v-chip size="small" variant="outlined" color="secondary">{{ t('legacySlice.sampleRoutes', { count: readiness.totalSampleRoutes }) }}</v-chip>
         </div>
 
         <v-table density="comfortable" class="mb-3">
           <thead>
             <tr>
-              <th class="text-left">Mode</th>
-              <th class="text-left">Count</th>
+              <th class="text-left">{{ t('common.mode') }}</th>
+              <th class="text-left">{{ t('common.count') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>spa</td>
+              <td>{{ t('legacySlice.modeSpa') }}</td>
               <td>{{ readiness.spaRoutes }}</td>
             </tr>
             <tr>
-              <td>legacy-redirect</td>
+              <td>{{ t('legacySlice.modeLegacyRedirect') }}</td>
               <td>{{ readiness.legacyRedirectRoutes }}</td>
             </tr>
             <tr>
-              <td>legacy-placeholder</td>
+              <td>{{ t('legacySlice.modeLegacyPlaceholder') }}</td>
               <td>{{ readiness.legacyPlaceholderRoutes }}</td>
             </tr>
             <tr>
-              <td>unmanaged</td>
+              <td>{{ t('legacySlice.modeUnmanaged') }}</td>
               <td>{{ readiness.unmanagedRoutes }}</td>
             </tr>
           </tbody>
         </v-table>
 
-        <p class="text-body-2 font-weight-medium mb-1">API dependency checklist</p>
+        <p class="text-body-2 font-weight-medium mb-1">{{ t('legacySlice.apiDependencyChecklist') }}</p>
         <v-table density="comfortable" class="mb-3">
           <thead>
             <tr>
-              <th class="text-left">Dependency</th>
-              <th class="text-left">Contract</th>
-              <th class="text-left">Status</th>
+              <th class="text-left">{{ t('common.dependency') }}</th>
+              <th class="text-left">{{ t('common.contract') }}</th>
+              <th class="text-left">{{ t('common.status') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -146,7 +150,7 @@
               <td><code>{{ dependency.method }} {{ dependency.route }}</code></td>
               <td>
                 <v-chip size="small" variant="tonal" :color="dependency.implemented ? 'success' : 'warning'">
-                  {{ dependency.implemented ? 'implemented' : 'pending' }}
+                  {{ dependency.implemented ? t('legacySlice.implementationImplemented') : t('legacySlice.implementationPending') }}
                 </v-chip>
               </td>
             </tr>
@@ -154,22 +158,22 @@
         </v-table>
 
         <div v-if="readiness.blockers.length > 0">
-          <p class="text-body-2 font-weight-medium mb-1">Blockers</p>
+          <p class="text-body-2 font-weight-medium mb-1">{{ t('legacySlice.blockers') }}</p>
           <ul class="text-body-2">
             <li v-for="blocker in readiness.blockers" :key="blocker">{{ blocker }}</li>
           </ul>
         </div>
-        <p v-else class="text-body-2 text-success mb-0">No configuration blockers detected for this slice.</p>
+        <p v-else class="text-body-2 text-success mb-0">{{ t('legacySlice.noBlockers') }}</p>
       </v-card-text>
       <v-card-text v-else>
-        <p class="text-body-2 text-medium-emphasis mb-0">Readiness summary unavailable.</p>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.readinessUnavailable') }}</p>
       </v-card-text>
     </v-card>
 
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title>
-        <h3 class="text-h6 mb-1">Migration action plan</h3>
-        <p class="text-body-2 text-medium-emphasis mb-0">Ordered next steps generated from readiness blockers and dependency status.</p>
+        <h3 class="text-h6 mb-1">{{ t('legacySlice.actionPlanTitle') }}</h3>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.actionPlanSubtitle') }}</p>
       </v-card-title>
       <v-card-text v-if="actionPlan && actionPlan.steps.length > 0">
         <ol class="text-body-2 ps-4">
@@ -180,7 +184,7 @@
         </ol>
       </v-card-text>
       <v-card-text v-else>
-        <p class="text-body-2 text-medium-emphasis mb-0">Action plan unavailable.</p>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('legacySlice.actionPlanUnavailable') }}</p>
       </v-card-text>
     </v-card>
   </section>
@@ -188,6 +192,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getLegacySliceActionPlan, getLegacySliceReadinessSummary, getLegacySliceRouteStatus } from '@/services/legacySlices'
 import { useLegacySlicesStore } from '@/stores/legacySlices'
 import type {
@@ -202,6 +207,7 @@ const props = defineProps<{
 }>()
 
 const store = useLegacySlicesStore()
+const { t } = useI18n({ useScope: 'global' })
 const routeStatuses = ref<LegacySliceSampleRouteStatus[]>([])
 const readiness = ref<LegacySliceReadinessSummary | null>(null)
 const actionPlan = ref<LegacySliceActionPlan | null>(null)
@@ -248,6 +254,19 @@ function chipColor(mode: LegacyRouteHandlingMode): string {
       return 'orange'
     default:
       return 'secondary'
+  }
+}
+
+function formatHandlingMode(mode: LegacyRouteHandlingMode): string {
+  switch (mode) {
+    case 'spa':
+      return t('legacySlice.modeSpa')
+    case 'legacy-redirect':
+      return t('legacySlice.modeLegacyRedirect')
+    case 'legacy-placeholder':
+      return t('legacySlice.modeLegacyPlaceholder')
+    default:
+      return t('legacySlice.modeUnmanaged')
   }
 }
 </script>

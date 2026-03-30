@@ -15,6 +15,15 @@ async function injectFakeSession(page: Page) {
 }
 
 // ---------------------------------------------------------------------------
+// Locale helper — switches the topbar language selector.
+// ---------------------------------------------------------------------------
+async function switchLocale(page: Page, languageLabel: 'English' | '简体中文' | '繁體中文') {
+  const localeSelector = page.getByRole('combobox', { name: /Language|语言|語言/ })
+  await localeSelector.click()
+  await page.getByRole('option', { name: languageLabel }).click()
+}
+
+// ---------------------------------------------------------------------------
 // API mock helper — intercepts backend calls so views render without a live
 // API server and tests remain deterministic.
 // ---------------------------------------------------------------------------
@@ -302,6 +311,35 @@ async function mockApiRoutes(page: Page) {
 // Slice A — Read-only lists and dashboards
 // ---------------------------------------------------------------------------
 test.describe('Slice A — read-only lists and dashboard', () => {
+  test('language selector switches UI copy and html lang tag', async ({ page }) => {
+    await injectFakeSession(page)
+    await mockApiRoutes(page)
+    await page.goto('/app/dashboard')
+
+    await expect(page.getByText('Enabled slices')).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+
+    await switchLocale(page, '简体中文')
+    await expect(page.getByText('已启用切片')).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN')
+
+    await switchLocale(page, '繁體中文')
+    await expect(page.getByText('已啟用切片')).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
+  })
+
+  test('selected locale persists after navigation', async ({ page }) => {
+    await injectFakeSession(page)
+    await mockApiRoutes(page)
+    await page.goto('/app/dashboard')
+
+    await switchLocale(page, '简体中文')
+    await page.goto('/app/settings')
+
+    await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN')
+  })
+
   test('login screen renders and supports development defaults', async ({ page }) => {
     await page.goto('/app/login')
 

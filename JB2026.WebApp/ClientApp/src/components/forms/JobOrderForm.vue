@@ -2,9 +2,9 @@
   <v-form ref="formRef" @submit.prevent="handleSubmit">
     <v-card>
       <v-card-title class="pa-6 pb-2">
-        <h2 class="text-h5">{{ isNew ? 'New Job Order' : 'Edit Job Order' }}</h2>
+        <h2 class="text-h5">{{ isNew ? t('jobForm.newTitle') : t('jobForm.editTitle') }}</h2>
         <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
-          Vuetify 3 form controls replacing the legacy DevExpress form layout.
+          {{ t('jobForm.subtitle') }}
         </p>
       </v-card-title>
 
@@ -13,7 +13,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.orderNumber"
-              label="Order Number"
+              :label="t('jobForm.fields.orderNumber')"
               variant="outlined"
               density="comfortable"
               :rules="isNew ? [required] : []"
@@ -23,7 +23,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.jobNumber"
-              label="Job Number"
+              :label="t('jobForm.fields.jobNumber')"
               variant="outlined"
               density="comfortable"
               :rules="isNew ? [required] : []"
@@ -37,7 +37,7 @@
           <v-col cols="12" md="8">
             <v-text-field
               v-model="draft.orderTitle"
-              label="Order Title"
+              :label="t('jobForm.fields.orderTitle')"
               variant="outlined"
               :rules="[required]"
               density="comfortable"
@@ -46,7 +46,7 @@
           <v-col cols="12" md="4">
             <v-select
               v-model="draft.status"
-              label="Status"
+              :label="t('jobForm.fields.status')"
               :items="statusOptions"
               item-title="label"
               item-value="value"
@@ -61,7 +61,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.customerName"
-              label="Customer Name"
+              :label="t('jobForm.fields.customerName')"
               variant="outlined"
               :rules="[required]"
               density="comfortable"
@@ -70,7 +70,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.customerRef"
-              label="Customer Reference"
+              :label="t('jobForm.fields.customerReference')"
               variant="outlined"
               density="comfortable"
             />
@@ -82,7 +82,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.orderedBy"
-              label="Ordered By"
+              :label="t('jobForm.fields.orderedBy')"
               variant="outlined"
               density="comfortable"
             />
@@ -90,7 +90,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model.number="draft.qty"
-              label="Quantity"
+              :label="t('jobForm.fields.quantity')"
               type="number"
               min="0"
               step="1"
@@ -106,7 +106,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.orderedOn"
-              label="Ordered On"
+              :label="t('jobForm.fields.orderedOn')"
               type="date"
               variant="outlined"
               density="comfortable"
@@ -116,7 +116,7 @@
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="draft.requiredOn"
-              label="Required On"
+              :label="t('jobForm.fields.requiredOn')"
               type="date"
               variant="outlined"
               density="comfortable"
@@ -130,7 +130,7 @@
           <v-col cols="12">
             <v-select
               v-model="draft.paymentTerms"
-              label="Payment Terms"
+              :label="t('jobForm.fields.paymentTerms')"
               :items="paymentTermsOptions"
               variant="outlined"
               density="comfortable"
@@ -144,7 +144,7 @@
           <v-col cols="12">
             <v-textarea
               v-model="draft.remarks"
-              label="Remarks"
+              :label="t('jobForm.fields.remarks')"
               variant="outlined"
               rows="4"
               auto-grow
@@ -162,9 +162,9 @@
 
       <v-card-actions class="pa-4 d-flex ga-2">
         <v-spacer />
-        <v-btn variant="text" :disabled="saving" @click="emit('cancel')">Cancel</v-btn>
+        <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('jobForm.actions.cancel') }}</v-btn>
         <v-btn color="primary" type="submit" :loading="saving" min-width="120">
-          {{ isNew ? 'Create' : 'Save Changes' }}
+          {{ isNew ? t('jobForm.actions.create') : t('jobForm.actions.saveChanges') }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -173,6 +173,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { VForm } from 'vuetify/components'
 import { saveJob } from '@/services/jobs'
 import type { JobDetail, JobOrderFormData } from '@/types/api'
@@ -196,6 +197,7 @@ const emit = defineEmits<{
 const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const saving = ref(false)
 const errorMessage = ref('')
+const { t } = useI18n({ useScope: 'global' })
 
 const isNew = computed(() => props.job === null)
 
@@ -212,33 +214,33 @@ watch(
 // ---------------------------------------------------------------------------
 // Static option lists (Phase 6: these will be loaded from /api/v2/lookups in a future sprint)
 // ---------------------------------------------------------------------------
-const statusOptions = [
-  { value: 0, label: 'Draft' },
-  { value: 1, label: 'In Progress' },
-  { value: 2, label: 'On Hold' },
-  { value: 3, label: 'Completed' },
-  { value: 4, label: 'Cancelled' },
-]
+const statusOptions = computed(() => [
+  { value: 0, label: t('jobForm.statuses.draft') },
+  { value: 1, label: t('jobForm.statuses.inProgress') },
+  { value: 2, label: t('jobForm.statuses.onHold') },
+  { value: 3, label: t('jobForm.statuses.completed') },
+  { value: 4, label: t('jobForm.statuses.cancelled') },
+])
 
-const paymentTermsOptions = [
-  'Net 7',
-  'Net 14',
-  'Net 30',
-  'Net 60',
-  'Cash on Delivery',
-  'Prepaid',
-]
+const paymentTermsOptions = computed(() => [
+  t('jobForm.paymentTerms.net7'),
+  t('jobForm.paymentTerms.net14'),
+  t('jobForm.paymentTerms.net30'),
+  t('jobForm.paymentTerms.net60'),
+  t('jobForm.paymentTerms.cod'),
+  t('jobForm.paymentTerms.prepaid'),
+])
 
 // ---------------------------------------------------------------------------
 // Validation rules
 // ---------------------------------------------------------------------------
-const required = (v: string | number) => (v !== '' && v !== null && v !== undefined) || 'Required'
+const required = (v: string | number) => (v !== '' && v !== null && v !== undefined) || t('jobForm.validation.required')
 
-const positiveNumber = (v: number) => v >= 0 || 'Must be 0 or greater'
+const positiveNumber = (v: number) => v >= 0 || t('jobForm.validation.nonNegative')
 
 const requiredAfterOrdered = (v: string) => {
   if (!v || !draft.value.orderedOn) return true
-  return v >= draft.value.orderedOn || 'Required On must not be before Ordered On'
+  return v >= draft.value.orderedOn || t('jobForm.validation.requiredAfterOrdered')
 }
 
 // ---------------------------------------------------------------------------
@@ -311,7 +313,7 @@ async function handleSubmit() {
     await saveJob(draft.value)
     emit('saved')
   } catch {
-    errorMessage.value = 'Save failed — verify the API is reachable and try again.'
+    errorMessage.value = t('jobForm.saveFailed')
   } finally {
     saving.value = false
   }

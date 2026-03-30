@@ -1,5 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { watch } from 'vue'
 import { useSessionStore } from '@/stores/session'
+import { i18n } from '@/i18n'
+
+function resolveTitle(titleKey?: string): string {
+  if (!titleKey) {
+    return i18n.global.t('common.appName')
+  }
+
+  return i18n.global.t(titleKey)
+}
+
+function applyDocumentTitle(titleKey?: string) {
+  const title = resolveTitle(titleKey)
+  const suffix = i18n.global.t('app.titleSuffix')
+  document.title = `${title} | ${suffix}`
+}
 
 const router = createRouter({
   history: createWebHistory('/app/'),
@@ -12,91 +28,91 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),
-      meta: { requiresAuth: true, title: 'Dashboard' },
+      meta: { requiresAuth: true, titleKey: 'routes.dashboard' },
     },
     {
       path: '/jobs',
       name: 'jobs',
       component: () => import('@/views/JobsView.vue'),
-      meta: { requiresAuth: true, title: 'Jobs' },
+      meta: { requiresAuth: true, titleKey: 'routes.jobs' },
     },
     {
       path: '/quotations',
       name: 'quotations',
       component: () => import('@/views/QuotationsView.vue'),
-      meta: { requiresAuth: true, title: 'Quotations' },
+      meta: { requiresAuth: true, titleKey: 'routes.quotations' },
     },
     {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
-      meta: { requiresAuth: false, title: 'Sign in' },
+      meta: { requiresAuth: false, titleKey: 'routes.login' },
     },
     {
       path: '/editor',
       name: 'editor',
       component: () => import('@/views/EditorView.vue'),
-      meta: { requiresAuth: true, title: 'Rich Text' },
+      meta: { requiresAuth: true, titleKey: 'routes.editor' },
     },
     {
       path: '/scheduler',
       name: 'scheduler',
       component: () => import('@/views/SchedulerView.vue'),
-      meta: { requiresAuth: true, title: 'Scheduler' },
+      meta: { requiresAuth: true, titleKey: 'routes.scheduler' },
     },
     {
       path: '/job-order',
       name: 'job-order',
       component: () => import('@/views/JobOrderView.vue'),
-      meta: { requiresAuth: true, title: 'Job Order' },
+      meta: { requiresAuth: true, titleKey: 'routes.jobOrder' },
     },
     {
       path: '/sml',
       name: 'sml',
       component: () => import('@/views/SmlView.vue'),
-      meta: { requiresAuth: true, title: 'SML' },
+      meta: { requiresAuth: true, titleKey: 'routes.sml' },
     },
     {
       path: '/stock',
       name: 'stock',
       component: () => import('@/views/StockView.vue'),
-      meta: { requiresAuth: true, title: 'Stock' },
+      meta: { requiresAuth: true, titleKey: 'routes.stock' },
     },
     {
       path: '/reports',
       name: 'reports',
       component: () => import('@/views/ReportsView.vue'),
-      meta: { requiresAuth: true, title: 'Reports' },
+      meta: { requiresAuth: true, titleKey: 'routes.reports' },
     },
     {
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/AdminView.vue'),
-      meta: { requiresAuth: true, title: 'Admin' },
+      meta: { requiresAuth: true, titleKey: 'routes.admin' },
     },
     {
       path: '/public',
       name: 'public',
       component: () => import('@/views/PublicView.vue'),
-      meta: { requiresAuth: true, title: 'Public' },
+      meta: { requiresAuth: true, titleKey: 'routes.public' },
     },
     {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),
-      meta: { requiresAuth: true, title: 'Settings' },
+      meta: { requiresAuth: true, titleKey: 'routes.settings' },
     },
     {
       path: '/help',
       name: 'help',
       component: () => import('@/views/HelpView.vue'),
-      meta: { requiresAuth: true, title: 'Help' },
+      meta: { requiresAuth: true, titleKey: 'routes.help' },
     },
   ],
 })
 
 router.beforeEach(async (to) => {
-  document.title = `${String(to.meta.title ?? 'JB2026')} | JB2026`
+  applyDocumentTitle(typeof to.meta.titleKey === 'string' ? to.meta.titleKey : undefined)
 
   const sessionStore = useSessionStore()
   if (sessionStore.isAuthenticated && !sessionStore.profile) {
@@ -113,5 +129,19 @@ router.beforeEach(async (to) => {
 
   return true
 })
+
+// Keep title in sync when locale changes after the user has already navigated.
+router.afterEach((to) => {
+  applyDocumentTitle(typeof to.meta.titleKey === 'string' ? to.meta.titleKey : undefined)
+})
+
+watch(
+  () => i18n.global.locale.value,
+  () => {
+    const currentRoute = router.currentRoute.value
+    const titleKey = typeof currentRoute.meta.titleKey === 'string' ? currentRoute.meta.titleKey : undefined
+    applyDocumentTitle(titleKey)
+  },
+)
 
 export default router

@@ -2,14 +2,14 @@
   <v-card rounded="xl" elevation="0" class="panel-card">
     <v-card-title class="d-flex flex-wrap align-center ga-3">
       <div>
-        <h3 class="text-h6 mb-1">Jobs</h3>
-        <p class="text-body-2 text-medium-emphasis mb-0">Server-style grid with filter, pagination, and sort.</p>
+        <h3 class="text-h6 mb-1">{{ t('jobs.table.title') }}</h3>
+        <p class="text-body-2 text-medium-emphasis mb-0">{{ t('jobs.table.subtitle') }}</p>
       </div>
       <v-spacer />
       <v-text-field
         v-model="jobsStore.filter"
         density="comfortable"
-        label="Filter rows"
+        :label="t('jobs.table.filterRows')"
         prepend-inner-icon="mdi-magnify"
         variant="solo-filled"
         flat
@@ -17,7 +17,6 @@
       />
     </v-card-title>
     <v-card-text>
-      <!-- Standard paginated table (≤ 500 rows) -->
       <v-data-table-server
         v-if="!virtual.prefersVirtualScroll"
         v-model:page="jobsStore.page"
@@ -28,7 +27,7 @@
         :items-length="jobsStore.filteredRows.length"
         :loading="jobsStore.loading"
         item-value="orderId"
-        loading-text="Loading jobs"
+        :loading-text="t('jobs.table.loading')"
         class="jobs-table"
         @click:row="handleSelect"
       >
@@ -39,11 +38,10 @@
           {{ formatQty(item.qty) }}
         </template>
         <template #item.status="{ item }">
-          <v-chip size="small" color="secondary" variant="tonal">Status {{ item.status }}</v-chip>
+          <v-chip size="small" color="secondary" variant="tonal">{{ t('jobs.status', { value: item.status }) }}</v-chip>
         </template>
       </v-data-table-server>
 
-      <!-- Virtual-scroll table (> 500 rows) — renders only visible rows -->
       <template v-else>
         <div class="vt-header" role="row">
           <span v-for="h in headers" :key="h.key" class="vt-cell" :class="h.align === 'end' ? 'text-end' : ''" role="columnheader">
@@ -71,13 +69,13 @@
               <span class="vt-cell">{{ formatDate(item.requiredOn) }}</span>
               <span class="vt-cell text-end">{{ formatQty(item.qty) }}</span>
               <span class="vt-cell">
-                <v-chip size="x-small" color="secondary" variant="tonal">Status {{ item.status }}</v-chip>
+                <v-chip size="x-small" color="secondary" variant="tonal">{{ t('jobs.status', { value: item.status }) }}</v-chip>
               </span>
             </div>
           </template>
         </v-virtual-scroll>
         <p class="text-caption text-medium-emphasis mt-2 text-right">
-          {{ jobsStore.filteredRows.length.toLocaleString() }} rows &mdash; virtual scroll active
+          {{ t('jobs.table.rowsVirtual', { count: formatNumber(jobsStore.filteredRows.length) }) }}
         </p>
       </template>
     </v-card-text>
@@ -85,23 +83,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
-import { useJobsStore } from '@/stores/jobs'
+import { computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useVirtualScrollThreshold } from '@/composables/useVirtualScrollThreshold'
+import { useJobsStore } from '@/stores/jobs'
 import type { JobListItem } from '@/types/api'
 
 const jobsStore = useJobsStore()
 const virtual = useVirtualScrollThreshold()
+const { t } = useI18n({ useScope: 'global' })
+const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
 
-const headers = [
-  { title: 'Order', key: 'orderNumber' },
-  { title: 'Customer', key: 'customerName' },
-  { title: 'Reference', key: 'customerRef' },
-  { title: 'Title', key: 'orderTitle' },
-  { title: 'Required', key: 'requiredOn' },
-  { title: 'Qty', key: 'qty', align: 'end' as const },
-  { title: 'Status', key: 'status' },
-]
+const headers = computed(() => [
+  { title: t('jobs.table.headers.order'), key: 'orderNumber' },
+  { title: t('jobs.table.headers.customer'), key: 'customerName' },
+  { title: t('jobs.table.headers.reference'), key: 'customerRef' },
+  { title: t('jobs.table.headers.title'), key: 'orderTitle' },
+  { title: t('jobs.table.headers.required'), key: 'requiredOn' },
+  { title: t('jobs.table.headers.qty'), key: 'qty', align: 'end' as const },
+  { title: t('jobs.table.headers.status'), key: 'status' },
+])
 
 onMounted(async () => {
   if (jobsStore.rows.length === 0) {
@@ -124,16 +126,15 @@ function handleSelectVirtual(item: JobListItem) {
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString()
+  return formatDateByLocale(value)
 }
 
 function formatQty(value: number) {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  return formatNumber(value, { maximumFractionDigits: 2 })
 }
 </script>
 
 <style scoped>
-/* Virtual-scroll table layout — 7 equal-flex columns */
 .vt-header,
 .vt-row {
   display: grid;

@@ -10,20 +10,20 @@ export const useSessionStore = defineStore('session', () => {
   const accessToken = ref(localStorage.getItem(TOKEN_STORAGE_KEY) ?? '')
   const profile = ref<UserProfile | null>(readStoredProfile())
   const loading = ref(false)
-  const errorMessage = ref('')
+  const errorKey = ref('')
 
   const isAuthenticated = computed(() => accessToken.value.length > 0)
 
   async function login(username: string, password: string) {
     loading.value = true
-    errorMessage.value = ''
+    errorKey.value = ''
 
     try {
       const response = await signIn(username, password)
       applyTokenResponse(response)
       return response
     } catch (error) {
-      errorMessage.value = 'Authentication failed. Verify the configured API credentials.'
+      errorKey.value = 'auth.errors.authenticationFailed'
       throw error
     } finally {
       loading.value = false
@@ -61,7 +61,7 @@ export const useSessionStore = defineStore('session', () => {
   function logout() {
     accessToken.value = ''
     profile.value = null
-    errorMessage.value = ''
+    errorKey.value = ''
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     localStorage.removeItem(SESSION_STORAGE_KEY)
   }
@@ -70,7 +70,7 @@ export const useSessionStore = defineStore('session', () => {
     accessToken,
     profile,
     loading,
-    errorMessage,
+    errorKey,
     isAuthenticated,
     bootstrapProfile,
     login,

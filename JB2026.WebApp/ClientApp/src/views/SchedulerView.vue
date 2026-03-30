@@ -2,10 +2,10 @@
   <section class="page-section">
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title>
-        <p class="eyebrow mb-2">Slice C</p>
-        <h3 class="text-h5 mb-1">Scheduler baseline</h3>
+        <p class="eyebrow mb-2">{{ t('scheduler.eyebrow') }}</p>
+        <h3 class="text-h5 mb-1">{{ t('scheduler.title') }}</h3>
         <p class="text-body-2 text-medium-emphasis mb-0">
-          FullCalendar now persists drag-and-drop updates through API calls while the premium timeline/resource decision remains open.
+          {{ t('scheduler.subtitle') }}
         </p>
       </v-card-title>
       <v-card-text>
@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -29,6 +30,7 @@ import { getScheduleRange, updateScheduleTime } from '@/services/scheduler'
 
 const calendarEvents = ref<EventInput[]>([])
 const errorMessage = ref('')
+const { t } = useI18n({ useScope: 'global' })
 
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -45,7 +47,7 @@ const calendarOptions = computed(() => ({
       errorMessage.value = ''
     } catch (error) {
       info.revert()
-      errorMessage.value = 'Unable to persist schedule update. The move was reverted.'
+      errorMessage.value = t('scheduler.persistFailed')
       console.error(error)
     }
   },
@@ -72,18 +74,18 @@ onMounted(async () => {
       calendarEvents.value = [
         {
           id: '00000000-0000-0000-0000-000000000001',
-          title: 'No schedules found - sample event',
+          title: t('scheduler.noSchedulesSample'),
           start: new Date().toISOString(),
           end: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         },
       ]
     }
   } catch (error) {
-    errorMessage.value = 'Unable to load schedules. Showing fallback event.'
+    errorMessage.value = t('scheduler.loadFailedFallback')
     calendarEvents.value = [
       {
         id: '00000000-0000-0000-0000-000000000001',
-        title: 'Scheduler fallback event',
+        title: t('scheduler.fallbackEvent'),
         start: new Date().toISOString(),
         end: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       },
