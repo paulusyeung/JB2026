@@ -83,12 +83,14 @@ import KpiCard from '@/components/cards/KpiCard.vue'
 import { useFeatureFlagsStore } from '@/stores/featureFlags'
 import { useJobsStore } from '@/stores/jobs'
 import { useQuotationsStore } from '@/stores/quotations'
+import { useThemeStore } from '@/stores/theme'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Legend, Tooltip)
 
 const featureFlags = useFeatureFlagsStore()
 const jobs = useJobsStore()
 const quotations = useQuotationsStore()
+const themeStore = useThemeStore()
 const { t } = useI18n({ useScope: 'global' })
 
 onMounted(async () => {
@@ -104,30 +106,65 @@ const chartData = computed(() => ({
   datasets: [
     {
       label: t('dashboard.volumeTrend.datasetLabel'),
-      backgroundColor: ['#9f4f2a', '#284b63', '#c9923d'],
+      backgroundColor: chartPalette.value.bars,
       borderRadius: 12,
       data: [featureFlags.enabledCount, jobs.rows.length, quotations.rowCount],
     },
   ],
 }))
 
-const chartOptions = {
+const chartPalette = computed(() =>
+  themeStore.current === 'dark'
+    ? {
+        bars: ['#e29a60', '#8cb9d4', '#d8ab58'],
+        axis: '#d7ddd3',
+        grid: 'rgba(215, 221, 211, 0.16)',
+        tooltipBackground: '#1e241f',
+      }
+    : {
+        bars: ['#9f4f2a', '#284b63', '#c9923d'],
+        axis: '#49514d',
+        grid: 'rgba(31, 36, 33, 0.12)',
+        tooltipBackground: '#fffdf8',
+      },
+)
+
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       display: false,
     },
+    tooltip: {
+      backgroundColor: chartPalette.value.tooltipBackground,
+      titleColor: chartPalette.value.axis,
+      bodyColor: chartPalette.value.axis,
+      borderColor: chartPalette.value.grid,
+      borderWidth: 1,
+    },
   },
   scales: {
+    x: {
+      ticks: {
+        color: chartPalette.value.axis,
+      },
+      grid: {
+        color: chartPalette.value.grid,
+      },
+    },
     y: {
       beginAtZero: true,
       ticks: {
         precision: 0,
+        color: chartPalette.value.axis,
+      },
+      grid: {
+        color: chartPalette.value.grid,
       },
     },
   },
-}
+}))
 
 async function reload() {
   await Promise.all([featureFlags.load(), jobs.load(), quotations.load()])

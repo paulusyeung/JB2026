@@ -1,25 +1,70 @@
-$shell-ink: #1f2421;
-$shell-paper: #f5f4ee;
-$shell-panel: #fffdf8;
-$shell-accent: #9f4f2a;
-$shell-secondary: #284b63;
-$shell-soft: #ece4d5;
-
 :root {
-  color: $shell-ink;
-  background: radial-gradient(circle at top right, rgba(201, 146, 61, 0.16), transparent 32%),
-    linear-gradient(180deg, #f7f2e8 0%, #f5f4ee 100%);
+  --shell-ink: #1f2421;
+  --shell-ink-rgb: 31, 36, 33;
+  --shell-paper: #f5f4ee;
+  --shell-panel: #fffdf8;
+  --shell-panel-rgb: 255, 253, 248;
+  --shell-accent: #9f4f2a;
+  --shell-accent-strong: #c9923d;
+  --shell-secondary: #284b63;
+  --shell-secondary-soft: rgba(40, 75, 99, 0.1);
+  --shell-soft: #ece4d5;
+  --shell-soft-rgb: 236, 228, 213;
+  --shell-bg-top: #f7f2e8;
+  --shell-bg-glow-rgb: 201, 146, 61;
+  --shell-sidebar-rgb: 255, 253, 248;
+  --shell-border: rgba(31, 36, 33, 0.08);
+  --shell-card-border: rgba(31, 36, 33, 0.06);
+  --shell-field-label: rgba(31, 36, 33, 0.64);
+  color: var(--shell-ink);
+  background: radial-gradient(circle at top right, rgba(var(--shell-bg-glow-rgb), 0.16), transparent 32%),
+    linear-gradient(180deg, var(--shell-bg-top) 0%, var(--shell-paper) 100%);
   font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --shell-ink: #edf1eb;
+  --shell-ink-rgb: 237, 241, 235;
+  --shell-paper: #161916;
+  --shell-panel: #1e241f;
+  --shell-panel-rgb: 30, 36, 31;
+  --shell-accent: #e29a60;
+  --shell-accent-strong: #d8ab58;
+  --shell-secondary: #8cb9d4;
+  --shell-secondary-soft: rgba(140, 185, 212, 0.18);
+  --shell-soft: #2a322b;
+  --shell-soft-rgb: 42, 50, 43;
+  --shell-bg-top: #202520;
+  --shell-bg-glow-rgb: 120, 150, 176;
+  --shell-sidebar-rgb: 26, 31, 27;
+  --shell-border: rgba(237, 241, 235, 0.1);
+  --shell-card-border: rgba(237, 241, 235, 0.08);
+  --shell-field-label: rgba(237, 241, 235, 0.72);
+  color-scheme: dark;
+}
+
+html {
+  background: var(--shell-paper);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   background: inherit;
+  color: var(--shell-ink);
 }
 
 #app {
   min-height: 100vh;
+}
+
+.v-application {
+  background: transparent !important;
+  color: var(--shell-ink) !important;
 }
 
 .app-shell {
@@ -32,8 +77,8 @@ body {
 }
 
 .app-sidebar {
-  border-right: 1px solid rgba(31, 36, 33, 0.08);
-  background: rgba(255, 253, 248, 0.9);
+  border-right: 1px solid var(--shell-border);
+  background: rgba(var(--shell-sidebar-rgb), 0.9);
   backdrop-filter: blur(18px);
 }
 
@@ -52,7 +97,7 @@ body {
   place-items: center;
   color: white;
   font-weight: 700;
-  background: linear-gradient(135deg, $shell-accent, #c9923d);
+  background: linear-gradient(135deg, var(--shell-accent), var(--shell-accent-strong));
 }
 
 .brand-name {
@@ -64,14 +109,14 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.74rem;
-  color: $shell-accent;
+  color: var(--shell-accent);
 }
 
 .sidebar-card {
   margin: 1rem;
   padding: 1rem;
   border-radius: 1rem;
-  background: $shell-soft;
+  background: var(--shell-soft);
 }
 
 .topbar {
@@ -86,6 +131,11 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.theme-toggle .v-btn {
+  text-transform: none;
 }
 
 .page-section {
@@ -97,8 +147,8 @@ body {
 .panel-card,
 .metric-card,
 .auth-card {
-  background: $shell-panel !important;
-  border: 1px solid rgba(31, 36, 33, 0.06);
+  background: var(--shell-panel) !important;
+  border: 1px solid var(--shell-card-border);
 }
 
 .hero-card {
@@ -108,7 +158,7 @@ body {
   gap: 1.5rem;
   padding: 2rem;
   border-radius: 1.5rem;
-  background: linear-gradient(140deg, rgba(255, 253, 248, 0.96), rgba(236, 228, 213, 0.96)) !important;
+  background: linear-gradient(140deg, rgba(var(--shell-panel-rgb), 0.96), rgba(var(--shell-soft-rgb), 0.96)) !important;
 }
 
 .hero-badge {
@@ -117,8 +167,8 @@ body {
   justify-content: center;
   padding: 0.75rem 1rem;
   border-radius: 999px;
-  background: rgba(40, 75, 99, 0.1);
-  color: $shell-secondary;
+  background: var(--shell-secondary-soft);
+  color: var(--shell-secondary);
   font-weight: 600;
 }
 
@@ -157,14 +207,14 @@ body {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(31, 36, 33, 0.64);
+  color: var(--shell-field-label);
 }
 
 .editor-preview {
   min-height: 180px;
   padding: 1rem;
   border-radius: 1rem;
-  background: $shell-soft;
+  background: var(--shell-soft);
 }
 
 .auth-page {

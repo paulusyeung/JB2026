@@ -10,9 +10,9 @@ import './styles/main.scss'
 
 const vuetify = createVuetify({
   theme: {
-    defaultTheme: 'jb2026',
+    defaultTheme: 'jb2026Light',
     themes: {
-      jb2026: {
+      jb2026Light: {
         dark: false,
         colors: {
           background: '#f5f4ee',
@@ -25,6 +25,21 @@ const vuetify = createVuetify({
           warning: '#c4812f',
           error: '#9c2f2f',
           info: '#406882',
+        },
+      },
+      jb2026Dark: {
+        dark: true,
+        colors: {
+          background: '#161916',
+          surface: '#1e241f',
+          surfaceVariant: '#2a322b',
+          primary: '#e29a60',
+          secondary: '#8cb9d4',
+          accent: '#d8ab58',
+          success: '#7ec08c',
+          warning: '#e0ae53',
+          error: '#ef8a8a',
+          info: '#7fb2cf',
         },
       },
     },

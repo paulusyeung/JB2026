@@ -311,6 +311,25 @@ async function mockApiRoutes(page: Page) {
 // Slice A — Read-only lists and dashboards
 // ---------------------------------------------------------------------------
 test.describe('Slice A — read-only lists and dashboard', () => {
+  test('theme toggle switches between light and dark and persists after reload', async ({ page }) => {
+    await injectFakeSession(page)
+    await mockApiRoutes(page)
+    await page.goto('/app/dashboard')
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+
+    await page.getByRole('button', { name: 'Dark' }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('jb2026.theme'))).toBe('dark')
+
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+
+    await page.getByRole('button', { name: 'Light' }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('jb2026.theme'))).toBe('light')
+  })
+
   test('language selector switches UI copy and html lang tag', async ({ page }) => {
     await injectFakeSession(page)
     await mockApiRoutes(page)

@@ -55,6 +55,9 @@ export const messages = {
       signOut: 'Sign Out',
       spaHost: 'SPA host',
       language: 'Language',
+      theme: 'Theme',
+      lightTheme: 'Light',
+      darkTheme: 'Dark',
     },
     sidebar: {
       eyebrow: 'Migration Slice Host',
@@ -402,6 +405,9 @@ export const messages = {
       signOut: '退出登录',
       spaHost: 'SPA 主机',
       language: '语言',
+      theme: '主题',
+      lightTheme: '浅色',
+      darkTheme: '深色',
     },
     sidebar: {
       eyebrow: '迁移切片承载',
@@ -749,6 +755,9 @@ export const messages = {
       signOut: '登出',
       spaHost: 'SPA 主機',
       language: '語言',
+      theme: '主題',
+      lightTheme: '淺色',
+      darkTheme: '深色',
     },
     sidebar: {
       eyebrow: '遷移切片承載',
