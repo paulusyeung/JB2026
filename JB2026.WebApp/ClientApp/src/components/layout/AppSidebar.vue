@@ -17,6 +17,16 @@
         :to="item.to"
         rounded="xl"
       />
+
+      <v-list-subheader class="mt-2">Legacy Modules</v-list-subheader>
+      <v-list-item
+        v-for="item in legacyItems"
+        :key="item.to"
+        :prepend-icon="item.icon"
+        :title="item.title"
+        :to="item.to"
+        rounded="xl"
+      />
     </v-list>
 
     <template #append>
@@ -36,5 +46,16 @@ const items = [
   { title: 'Quotations', to: '/quotations', icon: 'mdi-file-document-multiple-outline' },
   { title: 'Rich Text', to: '/editor', icon: 'mdi-text-box-edit-outline' },
   { title: 'Scheduler', to: '/scheduler', icon: 'mdi-calendar-clock-outline' },
+]
+
+const legacyItems = [
+  { title: 'Job Order', to: '/job-order', icon: 'mdi-clipboard-text-outline' },
+  { title: 'SML', to: '/sml', icon: 'mdi-folder-multiple-outline' },
+  { title: 'Stock', to: '/stock', icon: 'mdi-package-variant-closed' },
+  { title: 'Reports', to: '/reports', icon: 'mdi-chart-box-outline' },
+  { title: 'Admin', to: '/admin', icon: 'mdi-shield-account-outline' },
+  { title: 'Public', to: '/public', icon: 'mdi-web' },
+  { title: 'Settings', to: '/settings', icon: 'mdi-cog-outline' },
+  { title: 'Help', to: '/help', icon: 'mdi-lifebuoy' },
 ]
 </script>

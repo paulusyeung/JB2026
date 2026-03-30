@@ -6,6 +6,13 @@ namespace JB2026.WebApp.Middleware;
 public sealed class UiSliceRoutingMiddleware
 {
     private static readonly string[] BypassPrefixes = ["/api", "/health", "/swagger", "/lib", "/css", "/js", "/app", "/ui"];
+    private static readonly HashSet<string> StaticAssetExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".css", ".js", ".mjs", ".map",
+        ".ico", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp",
+        ".woff", ".woff2", ".ttf", ".eot", ".otf",
+        ".json", ".xml", ".txt", ".pdf", ".zip"
+    };
     private readonly RequestDelegate _next;
     private readonly ILogger<UiSliceRoutingMiddleware> _logger;
 
@@ -25,7 +32,7 @@ public sealed class UiSliceRoutingMiddleware
 
         var path = context.Request.Path;
         var rawPath = path.Value ?? "/";
-        if (Path.HasExtension(rawPath) || BypassPrefixes.Any(prefix => rawPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+        if (IsBypassRequest(rawPath))
         {
             await _next(context);
             return;
@@ -84,5 +91,21 @@ public sealed class UiSliceRoutingMiddleware
 </body>
 </html>
 """);
+    }
+
+    private static bool IsBypassRequest(string rawPath)
+    {
+        if (BypassPrefixes.Any(prefix => rawPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var extension = Path.GetExtension(rawPath);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return false;
+        }
+
+        return StaticAssetExtensions.Contains(extension);
     }
 }

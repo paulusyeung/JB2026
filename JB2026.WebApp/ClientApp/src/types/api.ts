@@ -99,3 +99,68 @@ export interface JobOrderFormData {
   paymentTerms: string
   remarks: string
 }
+
+export interface LegacySliceSampleRoute {
+  path: string
+  description: string
+}
+
+export interface LegacySliceCatalogItem {
+  key: string
+  displayName: string
+  modernPath: string
+  legacyFolder: string
+  sampleRoutes: LegacySliceSampleRoute[]
+}
+
+export interface LegacySliceViewModel extends LegacySliceCatalogItem {
+  enabled: boolean
+  prefixes: string[]
+}
+
+export type LegacyRouteHandlingMode = 'spa' | 'legacy-redirect' | 'legacy-placeholder' | 'unmanaged'
+
+export interface LegacySliceSampleRouteStatus {
+  path: string
+  description: string
+  handlingMode: LegacyRouteHandlingMode
+  resolvedTargetUrl: string | null
+}
+
+export interface LegacySliceRouteStatus {
+  key: string
+  routes: LegacySliceSampleRouteStatus[]
+}
+
+export interface LegacySliceReadinessSummary {
+  key: string
+  enabled: boolean
+  legacyBaseConfigured: boolean
+  totalSampleRoutes: number
+  spaRoutes: number
+  legacyRedirectRoutes: number
+  legacyPlaceholderRoutes: number
+  unmanagedRoutes: number
+  apiDependencies: LegacySliceApiDependency[]
+  blockers: string[]
+}
+
+export interface LegacySliceApiDependency {
+  name: string
+  method: string
+  route: string
+  implemented: boolean
+  notes: string
+}
+
+export interface LegacySliceActionPlanStep {
+  order: number
+  title: string
+  details: string
+}
+
+export interface LegacySliceActionPlan {
+  key: string
+  generatedAtUtc: string
+  steps: LegacySliceActionPlanStep[]
+}
