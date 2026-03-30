@@ -5,6 +5,13 @@ export interface UserProfile {
   role: string
 }
 
+export interface AdminUser {
+  userId: string
+  username: string
+  displayName: string
+  role: string
+}
+
 export interface TokenResponse {
   accessToken: string
   expiresAtUtc: string
@@ -62,6 +69,74 @@ export interface QuotationListItem {
   status: number
 }
 
+export interface StockProductListItem {
+  productId: string
+  stockNumber: string
+  productCode: string
+  productName: string
+  balance: number
+  sellingPrice: number
+  cogs: number
+  remarks: string
+}
+
+export interface RunReportRequest {
+  reportName: string
+  startOn: string
+  days: number
+  take: number
+}
+
+export interface ReportRunResponse {
+  reportName: string
+  generatedAtUtc: string
+  totalRows: number
+  totalCostA: number
+  rows: QuotationListItem[]
+}
+
+export interface SmlMonthlyStat {
+  year: number
+  month: number
+  count: number
+  amount: number
+}
+
+export interface SmlTopCustomerStat {
+  customerName: string
+  count: number
+  amount: number
+}
+
+export interface SmlStatsResponse {
+  generatedAtUtc: string
+  rowCount: number
+  totalAmount: number
+  monthly: SmlMonthlyStat[]
+  topCustomers: SmlTopCustomerStat[]
+}
+
+export interface AppSettings {
+  companyName: string
+  timeZone: string
+  currencyCode: string
+  enableLegacyFallback: boolean
+}
+
+export interface PublicContentItem {
+  slug: string
+  title: string
+  summary: string
+  urlPath: string
+}
+
+export interface HelpArticle {
+  articleId: string
+  title: string
+  category: string
+  content: string
+}
+
 export interface UiFeatureFlag {
   key: string
   displayName: string
@@ -88,6 +163,8 @@ export interface UpdateJobScheduleTimeRequest {
 /** Shape used by the create/edit job order form (Slice B DevExpress replacement). */
 export interface JobOrderFormData {
   orderId: string | null
+  orderNumber: string
+  jobNumber: string
   orderTitle: string
   customerName: string
   customerRef: string
@@ -98,6 +175,26 @@ export interface JobOrderFormData {
   status: number
   paymentTerms: string
   remarks: string
+}
+
+export interface JobOrderRecord {
+  orderId: string
+  orderNumber: string
+  jobNumber: string
+  customerName: string
+  customerRef: string
+  orderTitle: string
+  orderedBy: string
+  orderedOn: string
+  requiredOn: string
+  qty: number
+  paymentTerms: string
+  remarks: string
+  status: number
+  createdBy: string
+  createdOn: string
+  modifiedBy: string | null
+  modifiedOn: string | null
 }
 
 export interface LegacySliceSampleRoute {

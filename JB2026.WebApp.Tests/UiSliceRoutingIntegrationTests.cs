@@ -242,7 +242,7 @@ public sealed class UiSliceRoutingIntegrationTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
-    public async Task LegacySliceReadinessEndpoint_ReportsPendingApiContracts_ForStockSlice()
+    public async Task LegacySliceReadinessEndpoint_ReportsImplementedApiContracts_ForStockSlice()
     {
         var factory = CreateFactory(new Dictionary<string, string?>
         {
@@ -263,8 +263,8 @@ public sealed class UiSliceRoutingIntegrationTests : IClassFixture<WebApplicatio
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("\"apiDependencies\"", body, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("/api/v2/stock/products", body, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"implemented\":false", body, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("API contracts pending implementation", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"implemented\":true", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("API contracts pending implementation", body, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public sealed class UiSliceRoutingIntegrationTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
-    public async Task LegacySliceActionPlanEndpoint_IncludesPendingApiContractSteps_ForStockSlice()
+    public async Task LegacySliceActionPlanEndpoint_DoesNotIncludePendingApiContractSteps_ForStockSlice()
     {
         var factory = CreateFactory(new Dictionary<string, string?>
         {
@@ -312,8 +312,7 @@ public sealed class UiSliceRoutingIntegrationTests : IClassFixture<WebApplicatio
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Implement API contract", body, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("/api/v2/stock/products", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Implement API contract", body, StringComparison.OrdinalIgnoreCase);
     }
 
     private WebApplicationFactory<Program> CreateFactory(IReadOnlyDictionary<string, string?> overrides)

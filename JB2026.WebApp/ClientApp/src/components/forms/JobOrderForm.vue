@@ -9,6 +9,29 @@
       </v-card-title>
 
       <v-card-text class="pa-6">
+        <v-row dense>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="draft.orderNumber"
+              label="Order Number"
+              variant="outlined"
+              density="comfortable"
+              :rules="isNew ? [required] : []"
+              :readonly="!isNew"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="draft.jobNumber"
+              label="Job Number"
+              variant="outlined"
+              density="comfortable"
+              :rules="isNew ? [required] : []"
+              :readonly="!isNew"
+            />
+          </v-col>
+        </v-row>
+
         <!-- Row 1: Order title + customer name -->
         <v-row dense>
           <v-col cols="12" md="8">
@@ -226,6 +249,8 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     const today = new Date().toISOString().slice(0, 10)
     return {
       orderId: null,
+      orderNumber: '',
+      jobNumber: '',
       orderTitle: '',
       customerName: '',
       customerRef: '',
@@ -239,8 +264,12 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     }
   }
 
+  const parsedNumbers = parseCompositeOrderNumber(job.orderNumber)
+
   return {
     orderId: job.orderId,
+    orderNumber: parsedNumbers.orderNumber,
+    jobNumber: parsedNumbers.jobNumber,
     orderTitle: job.orderTitle,
     customerName: job.customerName,
     customerRef: job.customerRef,
@@ -251,6 +280,23 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     status: job.status,
     paymentTerms: job.paymentTerms ?? '',
     remarks: job.remarks ?? '',
+  }
+}
+
+function parseCompositeOrderNumber(orderNumber: string) {
+  const trimmed = orderNumber.trim()
+  const match = trimmed.match(/^(.*?)-(\d+)$/)
+
+  if (!match) {
+    return {
+      orderNumber: trimmed,
+      jobNumber: '',
+    }
+  }
+
+  return {
+    orderNumber: match[1] ?? trimmed,
+    jobNumber: match[2] ?? '',
   }
 }
 

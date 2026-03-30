@@ -29,6 +29,7 @@ public sealed class LegacySlicesController : ControllerBase
             new LegacySliceSampleRouteResponse("/SML/Stats/RtfStatsPage.aspx", "RTF statistics page")
         ],
         [
+            new LegacySliceApiDependencyDefinition("SML stats", "GET", "/api/v2/sml/stats", true, "Backed by SmlController.GetStats"),
             new LegacySliceApiDependencyDefinition("List quotations", "GET", "/api/v2/quotations", true, "Backed by QuotationsController.GetRange"),
             new LegacySliceApiDependencyDefinition("Search quotations", "GET", "/api/v2/quotations/search/{keyword}", true, "Backed by QuotationsController.Search")
         ]),
@@ -38,14 +39,14 @@ public sealed class LegacySlicesController : ControllerBase
             new LegacySliceSampleRouteResponse("/Stock/Product", "Product area entry")
         ],
         [
-            new LegacySliceApiDependencyDefinition("List stock products", "GET", "/api/v2/stock/products", false, "Stock API contract is not implemented yet in JB2026.Api")
+            new LegacySliceApiDependencyDefinition("List stock products", "GET", "/api/v2/stock/products", true, "Backed by StockController.GetProducts")
         ]),
         new("reports", "Reports", "/reports", "Reports",
         [
             new LegacySliceSampleRouteResponse("/Reports", "Legacy reporting root")
         ],
         [
-            new LegacySliceApiDependencyDefinition("Run report", "POST", "/api/v2/reports/run", false, "Reporting contract is not implemented yet in JB2026.Api")
+            new LegacySliceApiDependencyDefinition("Run report", "POST", "/api/v2/reports/run", true, "Backed by ReportsController.Run")
         ]),
         new("admin", "Admin", "/admin", "Admin",
         [
@@ -54,29 +55,29 @@ public sealed class LegacySlicesController : ControllerBase
         [
             new LegacySliceApiDependencyDefinition("Authentication token", "POST", "/api/v2/auth/token", true, "Backed by AuthController.CreateToken"),
             new LegacySliceApiDependencyDefinition("Current profile", "GET", "/api/v2/user-profiles/me", true, "Backed by UserProfilesController.GetCurrentUser"),
-            new LegacySliceApiDependencyDefinition("Manage users", "GET", "/api/v2/admin/users", false, "Admin management contract is not implemented yet in JB2026.Api")
+            new LegacySliceApiDependencyDefinition("Manage users", "GET", "/api/v2/admin/users", true, "Backed by AdminController.GetUsers")
         ]),
         new("public", "Public", "/public", "Public",
         [
             new LegacySliceSampleRouteResponse("/Public", "Public-facing module root")
         ],
         [
-            new LegacySliceApiDependencyDefinition("Public content", "GET", "/api/v2/public/content", false, "Public content contract is not implemented yet in JB2026.Api")
+            new LegacySliceApiDependencyDefinition("Public content", "GET", "/api/v2/public/content", true, "Backed by PublicController.GetContent")
         ]),
         new("settings", "Settings", "/settings", "Settings",
         [
             new LegacySliceSampleRouteResponse("/Settings", "Settings module root")
         ],
         [
-            new LegacySliceApiDependencyDefinition("Read settings", "GET", "/api/v2/settings", false, "Settings contract is not implemented yet in JB2026.Api"),
-            new LegacySliceApiDependencyDefinition("Update settings", "PUT", "/api/v2/settings", false, "Settings contract is not implemented yet in JB2026.Api")
+            new LegacySliceApiDependencyDefinition("Read settings", "GET", "/api/v2/settings", true, "Backed by SettingsController.Get"),
+            new LegacySliceApiDependencyDefinition("Update settings", "PUT", "/api/v2/settings", true, "Backed by SettingsController.Update")
         ]),
         new("help", "Help", "/help", "Help",
         [
             new LegacySliceSampleRouteResponse("/Help", "Legacy help and user guidance")
         ],
         [
-            new LegacySliceApiDependencyDefinition("Help articles", "GET", "/api/v2/help/articles", false, "Help content contract is not implemented yet in JB2026.Api")
+            new LegacySliceApiDependencyDefinition("Help articles", "GET", "/api/v2/help/articles", true, "Backed by HelpController.GetArticles")
         ])
     ];
 

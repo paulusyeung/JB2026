@@ -18,9 +18,19 @@
         rounded="xl"
       />
 
-      <v-list-subheader class="mt-2">Legacy Modules</v-list-subheader>
+      <v-list-subheader class="mt-2">Legacy Core Modules</v-list-subheader>
       <v-list-item
-        v-for="item in legacyItems"
+        v-for="item in legacyCoreItems"
+        :key="item.to"
+        :prepend-icon="item.icon"
+        :title="item.title"
+        :to="item.to"
+        rounded="xl"
+      />
+
+      <v-list-subheader>Legacy-Derived Areas</v-list-subheader>
+      <v-list-item
+        v-for="item in legacyDerivedItems"
         :key="item.to"
         :prepend-icon="item.icon"
         :title="item.title"
@@ -48,14 +58,15 @@ const items = [
   { title: 'Scheduler', to: '/scheduler', icon: 'mdi-calendar-clock-outline' },
 ]
 
-const legacyItems = [
+const legacyCoreItems = [
   { title: 'Job Order', to: '/job-order', icon: 'mdi-clipboard-text-outline' },
-  { title: 'SML', to: '/sml', icon: 'mdi-folder-multiple-outline' },
   { title: 'Stock', to: '/stock', icon: 'mdi-package-variant-closed' },
-  { title: 'Reports', to: '/reports', icon: 'mdi-chart-box-outline' },
   { title: 'Admin', to: '/admin', icon: 'mdi-shield-account-outline' },
-  { title: 'Public', to: '/public', icon: 'mdi-web' },
   { title: 'Settings', to: '/settings', icon: 'mdi-cog-outline' },
-  { title: 'Help', to: '/help', icon: 'mdi-lifebuoy' },
+]
+
+const legacyDerivedItems = [
+  { title: 'SML', to: '/sml', icon: 'mdi-folder-multiple-outline' },
+  { title: 'Reports', to: '/reports', icon: 'mdi-chart-box-outline' },
 ]
 </script>

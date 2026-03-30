@@ -1,6 +1,31 @@
 import { apiClient } from './api'
 import type { JobDetail, JobListItem, JobOrderFormData } from '@/types/api'
 
+interface CreateJobRequest {
+  orderNumber: string
+  jobNumber: string
+  customerName: string
+  customerRef: string
+  orderTitle: string
+  orderedOn: string
+  requiredOn: string
+  qty: number
+  paymentTerms: string
+  remarks: string
+  status: number
+}
+
+interface UpdateJobRequest {
+  customerName: string
+  customerRef: string
+  orderTitle: string
+  requiredOn: string
+  qty: number
+  paymentTerms: string
+  remarks: string
+  status: number
+}
+
 export interface JobQuery {
   startOn: string
   days: number
@@ -25,8 +50,33 @@ export async function getJobDetail(id: string): Promise<JobDetail> {
  */
 export async function saveJob(data: JobOrderFormData): Promise<void> {
   if (data.orderId) {
-    await apiClient.patch(`/api/v2/jobs/${data.orderId}`, data)
+    const payload: UpdateJobRequest = {
+      customerName: data.customerName,
+      customerRef: data.customerRef,
+      orderTitle: data.orderTitle,
+      requiredOn: data.requiredOn,
+      qty: data.qty,
+      paymentTerms: data.paymentTerms,
+      remarks: data.remarks,
+      status: data.status,
+    }
+
+    await apiClient.patch(`/api/v2/jobs/${data.orderId}`, payload)
   } else {
-    await apiClient.post('/api/v2/jobs', data)
+    const payload: CreateJobRequest = {
+      orderNumber: data.orderNumber,
+      jobNumber: data.jobNumber,
+      customerName: data.customerName,
+      customerRef: data.customerRef,
+      orderTitle: data.orderTitle,
+      orderedOn: data.orderedOn,
+      requiredOn: data.requiredOn,
+      qty: data.qty,
+      paymentTerms: data.paymentTerms,
+      remarks: data.remarks,
+      status: data.status,
+    }
+
+    await apiClient.post('/api/v2/jobs', payload)
   }
 }

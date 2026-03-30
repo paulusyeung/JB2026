@@ -5,6 +5,7 @@ namespace JB2026.Api.Services;
 
 public sealed class ConfiguredLegacyIdentityService : ILegacyIdentityService
 {
+    private readonly IReadOnlyList<LegacyIdentityUser> _users;
     private readonly IReadOnlyDictionary<string, LegacyIdentityUser> _usersByUsername;
     private readonly IReadOnlyDictionary<Guid, LegacyIdentityUser> _usersById;
 
@@ -21,6 +22,7 @@ public sealed class ConfiguredLegacyIdentityService : ILegacyIdentityService
             })
             .ToList();
 
+        _users = users;
         _usersByUsername = users.ToDictionary(user => user.Username, StringComparer.OrdinalIgnoreCase);
         _usersById = users.ToDictionary(user => user.UserId);
     }
@@ -40,5 +42,10 @@ public sealed class ConfiguredLegacyIdentityService : ILegacyIdentityService
     public LegacyIdentityUser? FindByUserId(Guid userId)
     {
         return _usersById.TryGetValue(userId, out var user) ? user : null;
+    }
+
+    public IReadOnlyList<LegacyIdentityUser> GetUsers()
+    {
+        return _users;
     }
 }

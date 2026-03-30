@@ -7,4 +7,6 @@ public interface ILegacyIdentityService
     LegacyIdentityUser? FindByUsername(string username);
 
     LegacyIdentityUser? FindByUserId(Guid userId);
+
+    IReadOnlyList<LegacyIdentityUser> GetUsers();
 }

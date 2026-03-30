@@ -46,7 +46,10 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSection(LegacyIdentityOptions.SectionName));
 builder.Services.AddSingleton<ILegacyIdentityService, ConfiguredLegacyIdentityService>();
+builder.Services.AddSingleton<ISettingsService, InMemorySettingsService>();
 builder.Services.AddSingleton<IQuotationRepository, InMemoryQuotationRepository>();
+builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();
+builder.Services.AddSingleton<IHelpContentService, InMemoryHelpContentService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICurrentUserProfileService, HttpContextCurrentUserProfileService>();
 

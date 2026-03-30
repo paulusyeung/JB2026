@@ -11,11 +11,16 @@ namespace JB2026.Api.Controllers;
 public sealed class JobsController : ControllerBase
 {
     private readonly IJobManagementRepository _repository;
+    private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly ILogger<JobsController> _logger;
 
-    public JobsController(IJobManagementRepository repository, ILogger<JobsController> logger)
+    public JobsController(
+        IJobManagementRepository repository,
+        ICurrentUserProfileService currentUserProfileService,
+        ILogger<JobsController> logger)
     {
         _repository = repository;
+        _currentUserProfileService = currentUserProfileService;
         _logger = logger;
     }
 
@@ -55,6 +60,58 @@ public sealed class JobsController : ControllerBase
         return Ok(job);
     }
 
+    [HttpPost]
+    [ProducesResponseType(typeof(JobOrderResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<JobOrderResponse>> Create([FromBody] CreateJobOrderRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        if (request.RequiredOn < request.OrderedOn)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.RequiredOn)] = ["RequiredOn must be on or after OrderedOn."]
+            }));
+        }
+
+        var actor = GetActor();
+        var order = await _repository.CreateJobOrder(request, actor);
+        _logger.LogInformation("Created job {OrderId} by {Actor}", order.OrderId, actor);
+
+        return Created($"/api/v2/jobs/{order.OrderId}", order);
+    }
+
+    [HttpPatch("{id:guid}")]
+    [ProducesResponseType(typeof(JobOrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<JobOrderResponse>> Update(Guid id, [FromBody] UpdateJobOrderRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actor = GetActor();
+        var order = await _repository.UpdateJobOrder(id, request, actor);
+        if (order is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Job not found",
+                Detail = $"No job exists for order id '{id}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        _logger.LogInformation("Updated job {OrderId} by {Actor}", id, actor);
+        return Ok(order);
+    }
+
     [HttpGet("{id:guid}/details")]
     [ProducesResponseType(typeof(IReadOnlyList<string>), StatusCodes.Status200OK)]
     public ActionResult<IReadOnlyList<string>> GetDetails(Guid id)
@@ -71,5 +128,10 @@ public sealed class JobsController : ControllerBase
         }
 
         return Ok(styleTitles);
+    }
+
+    private string GetActor()
+    {
+        return _currentUserProfileService.GetCurrentUser()?.Username ?? User.Identity?.Name ?? "system";
     }
 }
