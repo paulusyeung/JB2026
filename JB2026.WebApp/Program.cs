@@ -12,7 +12,11 @@ builder.Services.AddMemoryCache();
 builder.Services
     .AddOptions<UiModernizationOptions>()
     .Bind(builder.Configuration.GetSection(UiModernizationOptions.SectionName));
+builder.Services
+    .AddOptions<ViteOptions>()
+    .Bind(builder.Configuration.GetSection(ViteOptions.SectionName));
 builder.Services.AddSingleton<IUiFeatureFlagStore, ConfigurationUiFeatureFlagStore>();
+builder.Services.AddHttpClient(ApiProxyMiddleware.ClientName);
 
 var app = builder.Build();
 app.UseJb2026Foundation();
@@ -25,6 +29,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<ApiProxyMiddleware>();
 app.UseMiddleware<UiSliceRoutingMiddleware>();
 app.UseStaticFiles();
 app.UseRouting();

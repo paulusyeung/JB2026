@@ -1,8 +1,13 @@
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text;
 using JB2026.WebApp;
+using JB2026.WebApp.Middleware;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JB2026.WebApp.Tests;
 
@@ -315,6 +320,62 @@ public sealed class UiSliceRoutingIntegrationTests : IClassFixture<WebApplicatio
         Assert.DoesNotContain("Implement API contract", body, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task ApiRequests_AreForwardedToConfiguredApiBaseUrl()
+    {
+        HttpRequestMessage? forwardedRequest = null;
+        string? forwardedBody = null;
+
+        var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["Vite:ApiBaseUrl"] = "https://api.example"
+        }).WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.AddHttpClient(ApiProxyMiddleware.ClientName)
+                    .ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(async request =>
+                    {
+                        forwardedRequest = request;
+                        forwardedBody = request.Content is null
+                            ? null
+                            : await request.Content.ReadAsStringAsync();
+
+                        return new HttpResponseMessage(HttpStatusCode.OK)
+                        {
+                            Content = new StringContent(
+                                """{"accessToken":"proxy-token"}""",
+                                Encoding.UTF8,
+                                "application/json")
+                        };
+                    }));
+            });
+        });
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
+
+        using var response = await client.PostAsJsonAsync("/api/v2/auth/token", new
+        {
+            username = "admin",
+            password = "password123"
+        });
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("proxy-token", responseBody, StringComparison.Ordinal);
+        Assert.NotNull(forwardedRequest);
+        Assert.Equal(HttpMethod.Post, forwardedRequest!.Method);
+        Assert.Equal("https://api.example/api/v2/auth/token", forwardedRequest.RequestUri!.ToString());
+        Assert.Equal("application/json", forwardedRequest.Content?.Headers.ContentType?.MediaType);
+        Assert.NotNull(forwardedBody);
+        Assert.Contains("\"username\":\"admin\"", forwardedBody, StringComparison.Ordinal);
+        Assert.Contains("\"password\":\"password123\"", forwardedBody, StringComparison.Ordinal);
+    }
+
     private WebApplicationFactory<Program> CreateFactory(IReadOnlyDictionary<string, string?> overrides)
     {
         return _factory.WithWebHostBuilder(builder =>
@@ -325,5 +386,20 @@ public sealed class UiSliceRoutingIntegrationTests : IClassFixture<WebApplicatio
                 configBuilder.AddInMemoryCollection(overrides);
             });
         });
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _handler;
+
+        public StubHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler)
+        {
+            _handler = handler;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return _handler(request);
+        }
     }
 }
