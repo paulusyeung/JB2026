@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import axios from 'axios'
 import { getCurrentUser, signIn } from '@/services/auth'
 import type { TokenResponse, UserProfile } from '@/types/api'
 
@@ -23,7 +24,16 @@ export const useSessionStore = defineStore('session', () => {
       applyTokenResponse(response)
       return response
     } catch (error) {
-      errorKey.value = 'auth.errors.authenticationFailed'
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          errorKey.value = 'auth.errors.authenticationFailed'
+        } else {
+          errorKey.value = 'auth.errors.apiUnavailable'
+        }
+      } else {
+        errorKey.value = 'auth.errors.authenticationFailed'
+      }
+
       throw error
     } finally {
       loading.value = false

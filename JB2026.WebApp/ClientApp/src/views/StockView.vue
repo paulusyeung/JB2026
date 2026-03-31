@@ -24,13 +24,13 @@
           :loading="loading"
           item-value="productId"
         >
-          <template #item.sellingPrice="{ item }">
+          <template #[`item.sellingPrice`]="{ item }">
             {{ formatMoney(item.sellingPrice) }}
           </template>
-          <template #item.cogs="{ item }">
+          <template #[`item.cogs`]="{ item }">
             {{ formatMoney(item.cogs) }}
           </template>
-          <template #item.balance="{ item }">
+          <template #[`item.balance`]="{ item }">
             <v-chip size="small" color="secondary" variant="tonal">{{ item.balance }}</v-chip>
           </template>
         </v-data-table>

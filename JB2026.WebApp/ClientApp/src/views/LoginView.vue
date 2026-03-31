@@ -22,7 +22,7 @@
           </v-alert>
           <div class="d-flex flex-wrap ga-3">
             <v-btn color="primary" type="submit" :loading="session.loading">{{ t('auth.signIn') }}</v-btn>
-            <v-btn variant="outlined" @click="handleDevelopmentSignIn">{{ t('auth.useDevDefaults') }}</v-btn>
+            <v-btn type="button" variant="outlined" @click="handleDevelopmentSignIn">{{ t('auth.useDevDefaults') }}</v-btn>
           </div>
         </v-form>
       </v-card-text>

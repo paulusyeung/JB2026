@@ -29,9 +29,9 @@
           item-value="orderId"
           @click:row="onRowClick"
         >
-          <template #item.orderedOn="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #item.requiredOn="{ item }">{{ formatDate(item.requiredOn) }}</template>
-          <template #item.qty="{ item }">{{ formatQty(item.qty) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+          <template #[`item.qty`]="{ item }">{{ formatQty(item.qty) }}</template>
         </v-data-table>
 
         <v-divider class="my-4" />
@@ -92,7 +92,7 @@ async function load() {
   errorMessage.value = ''
   try {
     rows.value = await getJobOrders()
-    selected.value = rows.value.length > 0 ? rows.value[0] : null
+    selected.value = rows.value[0] ?? null
   } catch {
     errorMessage.value = t('jobOrder.loadFailed')
   } finally {

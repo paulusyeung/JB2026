@@ -77,6 +77,7 @@ export const messages = {
       useDevDefaults: 'Use Dev Defaults',
       errors: {
         authenticationFailed: 'Authentication failed. Verify the configured API credentials.',
+        apiUnavailable: 'The API is unreachable. Start JB2026.Api and try again.',
       },
     },
     dashboard: {
@@ -427,6 +428,7 @@ export const messages = {
       useDevDefaults: '使用开发默认值',
       errors: {
         authenticationFailed: '认证失败。请检查已配置的 API 凭据。',
+        apiUnavailable: '无法连接到 API。请先启动 JB2026.Api 后再重试。',
       },
     },
     dashboard: {
@@ -777,6 +779,7 @@ export const messages = {
       useDevDefaults: '使用開發預設值',
       errors: {
         authenticationFailed: '驗證失敗。請確認 API 憑證設定是否正確。',
+        apiUnavailable: '無法連線至 API。請先啟動 JB2026.Api 後再試一次。',
       },
     },
     dashboard: {

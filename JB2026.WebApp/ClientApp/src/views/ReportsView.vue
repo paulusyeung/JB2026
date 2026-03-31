@@ -34,10 +34,10 @@
           :loading="loading"
           item-value="headerId"
         >
-          <template #item.quotedOn="{ item }">
+          <template #[`item.quotedOn`]="{ item }">
             {{ formatDate(item.quotedOn) }}
           </template>
-          <template #item.totalCostA="{ item }">
+          <template #[`item.totalCostA`]="{ item }">
             {{ formatMoney(item.totalCostA) }}
           </template>
         </v-data-table>

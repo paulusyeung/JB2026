@@ -31,13 +31,13 @@
         class="jobs-table"
         @click:row="handleSelect"
       >
-        <template #item.requiredOn="{ item }">
+        <template #[`item.requiredOn`]="{ item }">
           {{ formatDate(item.requiredOn) }}
         </template>
-        <template #item.qty="{ item }">
+        <template #[`item.qty`]="{ item }">
           {{ formatQty(item.qty) }}
         </template>
-        <template #item.status="{ item }">
+        <template #[`item.status`]="{ item }">
           <v-chip size="small" color="secondary" variant="tonal">{{ t('jobs.status', { value: item.status }) }}</v-chip>
         </template>
       </v-data-table-server>

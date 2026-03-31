@@ -28,16 +28,16 @@
           :loading="store.loading"
           item-value="headerId"
         >
-          <template #item.quotedOn="{ item }">
+          <template #[`item.quotedOn`]="{ item }">
             {{ formatDate(item.quotedOn) }}
           </template>
-          <template #item.totalCostA="{ item }">
+          <template #[`item.totalCostA`]="{ item }">
             {{ formatMoney(item.totalCostA) }}
           </template>
-          <template #item.unitCostA="{ item }">
+          <template #[`item.unitCostA`]="{ item }">
             {{ formatMoney(item.unitCostA) }}
           </template>
-          <template #item.status="{ item }">
+          <template #[`item.status`]="{ item }">
             <v-chip size="small" color="accent" variant="tonal">{{ t('quotations.status', { value: item.status }) }}</v-chip>
           </template>
         </v-data-table-server>
