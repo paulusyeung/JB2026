@@ -1,0 +1,13 @@
+export const commonMessages = {
+      appName: 'JB2026',
+      refresh: '刷新',
+      search: '搜索',
+      open: '打开',
+      status: '状态',
+      action: '操作',
+      purpose: '用途',
+      mode: '模式',
+      count: '数量',
+      dependency: '依赖',
+      contract: '契约',
+    } as const

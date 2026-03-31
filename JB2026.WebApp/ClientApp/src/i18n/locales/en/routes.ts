@@ -1,0 +1,16 @@
+export const routesMessages = {
+      dashboard: 'Dashboard',
+      jobs: 'Jobs',
+      quotations: 'Quotations',
+      login: 'Sign In',
+      editor: 'Rich Text',
+      scheduler: 'Scheduler',
+      jobOrder: 'Job Order',
+      sml: 'SML',
+      stock: 'Stock',
+      reports: 'Reports',
+      admin: 'Admin',
+      public: 'Public',
+      settings: 'Settings',
+      help: 'Help',
+    } as const

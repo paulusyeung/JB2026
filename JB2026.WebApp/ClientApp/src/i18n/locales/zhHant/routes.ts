@@ -1,0 +1,16 @@
+export const routesMessages = {
+      dashboard: '儀表板',
+      jobs: '作業',
+      quotations: '報價單',
+      login: '登入',
+      editor: '富文字',
+      scheduler: '排程',
+      jobOrder: '工單',
+      sml: 'SML',
+      stock: '庫存',
+      reports: '報表',
+      admin: '管理',
+      public: '公共',
+      settings: '設定',
+      help: '說明',
+    } as const
