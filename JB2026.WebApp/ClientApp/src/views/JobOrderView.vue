@@ -29,6 +29,17 @@
           item-value="orderId"
           @click:row="onRowClick"
         >
+          <template #[`item.orderNumber`]="{ item }">
+            <v-btn
+              variant="text"
+              color="primary"
+              density="comfortable"
+              class="px-0 text-none"
+              @click.stop="openEdit(item)"
+            >
+              {{ item.orderNumber }}
+            </v-btn>
+          </template>
           <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
           <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
           <template #[`item.qty`]="{ item }">{{ formatQty(item.qty) }}</template>
@@ -44,6 +55,32 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="formOpen" max-width="1080" scrollable>
+      <OrderRecordDialog
+        v-if="formJob"
+        :order="formJob"
+        :all-orders="rows"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @open-order="handleOpenOrder"
+        @cancel="formOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ t('jobOrder.saved') }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('jobOrder.dismiss') }}</v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-snackbar v-model="deleteSuccess" color="success" timeout="3000">
+      {{ t('jobOrder.deleted') }}
+      <template #actions>
+        <v-btn variant="text" @click="deleteSuccess = false">{{ t('jobOrder.dismiss') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -52,6 +89,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getJobOrder, getJobOrders } from '@/services/jobOrders'
+import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import type { JobOrderRecord } from '@/types/api'
 
 const rows = ref<JobOrderRecord[]>([])
@@ -59,6 +97,10 @@ const loading = ref(false)
 const errorMessage = ref('')
 const selected = ref<JobOrderRecord | null>(null)
 const keyword = ref('')
+const formOpen = ref(false)
+const formJob = ref<JobOrderRecord | null>(null)
+const saveSuccess = ref(false)
+const deleteSuccess = ref(false)
 const { t } = useI18n({ useScope: 'global' })
 const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
 
@@ -105,6 +147,51 @@ async function onRowClick(_event: Event, payload: { item: JobOrderRecord }) {
     selected.value = await getJobOrder(payload.item.orderId)
   } catch {
     selected.value = payload.item
+  }
+}
+
+async function openEdit(record: JobOrderRecord) {
+  try {
+    const latest = await getJobOrder(record.orderId)
+    selected.value = latest
+    formJob.value = latest
+    formOpen.value = true
+  } catch {
+    errorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function handleSaved(orderId: string) {
+  try {
+    rows.value = await getJobOrders()
+    selected.value = await getJobOrder(orderId)
+    formJob.value = selected.value
+    saveSuccess.value = true
+    formOpen.value = false
+  } catch {
+    errorMessage.value = t('jobOrder.reloadAfterSaveFailed')
+  }
+}
+
+async function handleDeleted() {
+  try {
+    rows.value = await getJobOrders()
+    selected.value = rows.value[0] ?? null
+    formJob.value = null
+    formOpen.value = false
+    deleteSuccess.value = true
+  } catch {
+    errorMessage.value = t('jobOrder.reloadAfterDeleteFailed')
+  }
+}
+
+async function handleOpenOrder(orderId: string) {
+  try {
+    const latest = await getJobOrder(orderId)
+    selected.value = latest
+    formJob.value = latest
+  } catch {
+    errorMessage.value = t('jobOrder.openEditFailed')
   }
 }
 
