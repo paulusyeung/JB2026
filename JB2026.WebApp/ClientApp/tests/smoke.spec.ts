@@ -486,7 +486,7 @@ test.describe('Slice A — read-only lists and dashboard', () => {
     await mockApiRoutes(page)
     await page.goto('/app/dashboard')
 
-    await expect(page.getByText('Legacy Core Modules')).toBeVisible()
+    await expect(page.getByText('Core Modules')).toBeVisible()
     await expect(page.getByText('Legacy-Derived Areas')).toBeVisible()
     await expect(page.getByText('Public')).not.toBeVisible()
     await expect(page.getByText('Help')).not.toBeVisible()

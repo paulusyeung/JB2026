@@ -42,10 +42,6 @@ const { t } = useI18n({ useScope: 'global' })
 
 const items = computed(() => [
   { title: t('routes.dashboard'), to: '/dashboard', icon: 'mdi-view-dashboard-outline' },
-  { title: t('routes.jobs'), to: '/jobs', icon: 'mdi-briefcase-outline' },
-  { title: t('routes.quotations'), to: '/quotations', icon: 'mdi-file-document-multiple-outline' },
-  { title: t('routes.editor'), to: '/editor', icon: 'mdi-text-box-edit-outline' },
-  { title: t('routes.scheduler'), to: '/scheduler', icon: 'mdi-calendar-clock-outline' },
 ])
 
 const legacyMenuItems = computed(() => buildLegacyMenuItems(t))
