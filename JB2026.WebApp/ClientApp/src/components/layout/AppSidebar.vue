@@ -1,5 +1,5 @@
 <template>
-  <v-navigation-drawer permanent rail-width="82" width="290" class="app-sidebar">
+  <v-navigation-drawer permanent rail-width="82" width="240" class="app-sidebar">
     <div class="brand-lockup">
       <div class="brand-mark">JB</div>
       <div>
@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <v-list nav density="comfortable">
+    <v-list nav density="comfortable" prepend-gap="8">
       <v-list-item
         v-for="item in items"
         :key="item.to"
@@ -19,24 +19,7 @@
       />
 
       <v-list-subheader class="mt-2">{{ t('sidebar.legacyCoreModules') }}</v-list-subheader>
-      <v-list-item
-        v-for="item in legacyCoreItems"
-        :key="item.to"
-        :prepend-icon="item.icon"
-        :title="item.title"
-        :to="item.to"
-        rounded="xl"
-      />
-
-      <v-list-subheader>{{ t('sidebar.legacyDerivedAreas') }}</v-list-subheader>
-      <v-list-item
-        v-for="item in legacyDerivedItems"
-        :key="item.to"
-        :prepend-icon="item.icon"
-        :title="item.title"
-        :to="item.to"
-        rounded="xl"
-      />
+      <MenuItemRenderer :items="legacyMenuItems" />
     </v-list>
 
     <template #append>
@@ -52,6 +35,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MenuItemRenderer from './MenuItemRenderer.vue'
+import { buildLegacyMenuItems } from './menuHelper'
 
 const { t } = useI18n({ useScope: 'global' })
 
@@ -63,15 +48,5 @@ const items = computed(() => [
   { title: t('routes.scheduler'), to: '/scheduler', icon: 'mdi-calendar-clock-outline' },
 ])
 
-const legacyCoreItems = computed(() => [
-  { title: t('routes.jobOrder'), to: '/job-order', icon: 'mdi-clipboard-text-outline' },
-  { title: t('routes.stock'), to: '/stock', icon: 'mdi-package-variant-closed' },
-  { title: t('routes.admin'), to: '/admin', icon: 'mdi-shield-account-outline' },
-  { title: t('routes.settings'), to: '/settings', icon: 'mdi-cog-outline' },
-])
-
-const legacyDerivedItems = computed(() => [
-  { title: t('routes.sml'), to: '/sml', icon: 'mdi-folder-multiple-outline' },
-  { title: t('routes.reports'), to: '/reports', icon: 'mdi-chart-box-outline' },
-])
+const legacyMenuItems = computed(() => buildLegacyMenuItems(t))
 </script>

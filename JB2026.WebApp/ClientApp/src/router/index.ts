@@ -3,6 +3,33 @@ import { watch } from 'vue'
 import { useSessionStore } from '@/stores/session'
 import { i18n } from '@/i18n'
 
+const legacyLeafRoutes = [
+  { path: '/job-order/quotation-list', name: 'job-order-quotation-list', titleKey: 'routes.jobOrderQuotationList' },
+  { path: '/job-order/order-list', name: 'job-order-order-list', titleKey: 'routes.jobOrderOrderList' },
+  { path: '/job-order/job-list', name: 'job-order-job-list', titleKey: 'routes.jobOrderJobList' },
+  { path: '/job-order/job-stats', name: 'job-order-job-stats', titleKey: 'routes.jobOrderJobStats' },
+  { path: '/job-order/schedule/pending', name: 'job-order-schedule-pending', titleKey: 'routes.jobOrderSchedulePending' },
+  { path: '/job-order/schedule/scheduled', name: 'job-order-schedule-scheduled', titleKey: 'routes.jobOrderScheduleScheduled' },
+  { path: '/job-order/schedule/completed', name: 'job-order-schedule-completed', titleKey: 'routes.jobOrderScheduleCompleted' },
+  { path: '/job-order/schedule/packing', name: 'job-order-schedule-packing', titleKey: 'routes.jobOrderSchedulePackingOnAir' },
+  { path: '/job-order/sml/rtf-list', name: 'job-order-sml-rtf-list', titleKey: 'routes.smlRtfList' },
+  { path: '/job-order/sml/invoice-list', name: 'job-order-sml-invoice-list', titleKey: 'routes.smlInvoiceList' },
+  { path: '/job-order/sml/rtf-stats', name: 'job-order-sml-rtf-stats', titleKey: 'routes.smlRtfStats' },
+  { path: '/job-order/sml/invoice-stats', name: 'job-order-sml-invoice-stats', titleKey: 'routes.smlInvoiceStats' },
+  { path: '/job-order/reports/exceptional', name: 'job-order-reports-exceptional', titleKey: 'routes.reportsExceptionalReport' },
+  { path: '/stock/product', name: 'stock-product', titleKey: 'routes.stockProduct' },
+  { path: '/admin/workflow', name: 'admin-workflow', titleKey: 'routes.adminWorkflow' },
+  { path: '/admin/workflow-forms', name: 'admin-workflow-forms', titleKey: 'routes.adminWorkflowForms' },
+  { path: '/admin/order-type', name: 'admin-order-type', titleKey: 'routes.adminOrderType' },
+  { path: '/admin/user', name: 'admin-user', titleKey: 'routes.adminUser' },
+  { path: '/admin/customer', name: 'admin-customer', titleKey: 'routes.adminCustomer' },
+  { path: '/admin/supplier', name: 'admin-supplier', titleKey: 'routes.adminSupplier' },
+  { path: '/admin/quotation/item-group', name: 'admin-quotation-item-group', titleKey: 'routes.adminQuotationItemGroup' },
+  { path: '/admin/quotation/item', name: 'admin-quotation-item', titleKey: 'routes.adminQuotationItem' },
+  { path: '/admin/fcm-console', name: 'admin-fcm-console', titleKey: 'routes.adminFcmConsole' },
+  { path: '/settings/system-parameters', name: 'settings-system-parameters', titleKey: 'routes.settingsSystemParameters' },
+] as const
+
 function resolveTitle(titleKey?: string): string {
   if (!titleKey) {
     return i18n.global.t('common.appName')
@@ -108,6 +135,12 @@ const router = createRouter({
       component: () => import('@/views/HelpView.vue'),
       meta: { requiresAuth: true, titleKey: 'routes.help' },
     },
+    ...legacyLeafRoutes.map((route) => ({
+      path: route.path,
+      name: route.name,
+      component: () => import('@/views/LegacyMenuPlaceholderView.vue'),
+      meta: { requiresAuth: true, titleKey: route.titleKey },
+    })),
   ],
 })
 
