@@ -11,11 +11,16 @@ namespace JB2026.Api.Controllers;
 public sealed class QuotationsController : ControllerBase
 {
     private readonly IQuotationRepository _repository;
+    private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly ILogger<QuotationsController> _logger;
 
-    public QuotationsController(IQuotationRepository repository, ILogger<QuotationsController> logger)
+    public QuotationsController(
+        IQuotationRepository repository,
+        ICurrentUserProfileService currentUserProfileService,
+        ILogger<QuotationsController> logger)
     {
         _repository = repository;
+        _currentUserProfileService = currentUserProfileService;
         _logger = logger;
     }
 
@@ -67,5 +72,52 @@ public sealed class QuotationsController : ControllerBase
         }
 
         return File(pdf.Value.Content, "application/pdf", pdf.Value.FileName);
+    }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(QuotationListItemResponse), StatusCodes.Status201Created)]
+    public ActionResult<QuotationListItemResponse> Create([FromBody] UpsertQuotationRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actor = GetActor();
+        var quotation = _repository.Create(request, actor);
+        _logger.LogInformation("Created quotation {HeaderId} by {Actor}", quotation.HeaderId, actor);
+
+        return CreatedAtAction(nameof(GetRange), quotation);
+    }
+
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(QuotationListItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public ActionResult<QuotationListItemResponse> Update(Guid id, [FromBody] UpsertQuotationRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actor = GetActor();
+        var quotation = _repository.Update(id, request, actor);
+        if (quotation is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Quotation not found",
+                Detail = $"No quotation exists for header id '{id}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        _logger.LogInformation("Updated quotation {HeaderId} by {Actor}", id, actor);
+        return Ok(quotation);
+    }
+
+    private string GetActor()
+    {
+        return _currentUserProfileService.GetCurrentUser()?.Username ?? User.Identity?.Name ?? "system";
     }
 }

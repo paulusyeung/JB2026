@@ -4,7 +4,6 @@ import { useSessionStore } from '@/stores/session'
 import { i18n } from '@/i18n'
 
 const legacyLeafRoutes = [
-  { path: '/job-order/quotation-list', name: 'job-order-quotation-list', titleKey: 'routes.jobOrderQuotationList' },
   { path: '/job-order/order-list', name: 'job-order-order-list', titleKey: 'routes.jobOrderOrderList' },
   { path: '/job-order/job-list', name: 'job-order-job-list', titleKey: 'routes.jobOrderJobList' },
   { path: '/job-order/job-stats', name: 'job-order-job-stats', titleKey: 'routes.jobOrderJobStats' },
@@ -68,6 +67,12 @@ const router = createRouter({
       name: 'quotations',
       component: () => import('@/views/QuotationsView.vue'),
       meta: { requiresAuth: true, titleKey: 'routes.quotations' },
+    },
+    {
+      path: '/job-order/quotation-list',
+      name: 'job-order-quotation-list',
+      component: () => import('@/views/QuotationsView.vue'),
+      meta: { requiresAuth: true, titleKey: 'routes.jobOrderQuotationList' },
     },
     {
       path: '/login',

@@ -18,11 +18,28 @@ public sealed class EfQuotationRepository : IQuotationRepository
     public IReadOnlyList<QuotationListItemResponse> GetRange(DateOnly startOn, int days)
     {
         var start = startOn.ToDateTime(TimeOnly.MinValue);
+        var rows = _readContext.vwQtHeaderLists
+            .AsNoTracking()
+            .Where(x => x.QuoteNumberIndex == 1
+                        && x.QuotedOn < start.AddDays(1)
+                        && x.QuotedOn > start.AddDays(-days))
+            .OrderBy(x => x.QuoteNumber)
+            .ThenBy(x => x.QuoteNumberIndex)
+            .Select(Map)
+            .ToList();
+
+        if (rows.Count > 0)
+        {
+            return rows;
+        }
+
+        // Legacy data can be historical-only; fall back to latest rows when range is empty.
         return _readContext.vwQtHeaderLists
             .AsNoTracking()
-            .Where(x => x.QuotedOn < start.AddDays(1) && x.QuotedOn > start.AddDays(-days))
-            .OrderByDescending(x => x.QuoteNumber)
+            .Where(x => x.QuoteNumberIndex == 1)
+            .OrderBy(x => x.QuoteNumber)
             .ThenBy(x => x.QuoteNumberIndex)
+            .Take(200)
             .Select(Map)
             .ToList();
     }
@@ -37,12 +54,13 @@ public sealed class EfQuotationRepository : IQuotationRepository
         var normalized = keyword.Trim();
         return _readContext.vwQtHeaderLists
             .AsNoTracking()
-            .Where(x => x.Status >= 1 &&
+            .Where(x => x.QuoteNumberIndex == 1
+                        && x.Retired == false &&
                         (x.HeaderId.ToString().Contains(normalized)
                          || x.QuoteNumber.ToString().Contains(normalized)
                          || (x.PrintTitle ?? string.Empty).Contains(normalized)
                          || (x.CustomerName ?? string.Empty).Contains(normalized)))
-            .OrderByDescending(x => x.QuoteNumber)
+            .OrderBy(x => x.QuoteNumber)
             .ThenBy(x => x.QuoteNumberIndex)
             .Select(Map)
             .ToList();
@@ -95,6 +113,18 @@ public sealed class EfQuotationRepository : IQuotationRepository
         return (Encoding.ASCII.GetBytes(string.Join("\n", lines)), fileName);
     }
 
+    public QuotationListItemResponse Create(UpsertQuotationRequest request, string actor)
+    {
+        // Full EF write path is a future task; not yet wired to a legacy write stored procedure.
+        throw new NotSupportedException("Quotation create via EF is not yet implemented.");
+    }
+
+    public QuotationListItemResponse? Update(Guid headerId, UpsertQuotationRequest request, string actor)
+    {
+        // Full EF write path is a future task; not yet wired to a legacy write stored procedure.
+        throw new NotSupportedException("Quotation update via EF is not yet implemented.");
+    }
+
     private static QuotationListItemResponse Map(JB2026.EfCore.Models.vwQtHeaderList x)
     {
         return new QuotationListItemResponse
@@ -117,7 +147,11 @@ public sealed class EfQuotationRepository : IQuotationRepository
             MaterialCost = ParseDecimal(x.MaterialCost),
             TotalCostA = x.TotalCostA ?? 0m,
             UnitCostA = x.UnitCostA ?? 0m,
-            Status = x.Status
+            Status = x.Status,
+            CreatedOn = x.CreatedOn,
+            CreatedBy = x.CreatedBy ?? string.Empty,
+            ModifiedOn = x.ModifiedOn,
+            ModifiedBy = x.ModifiedBy ?? string.Empty
         };
     }
 

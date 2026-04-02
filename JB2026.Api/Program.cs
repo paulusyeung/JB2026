@@ -45,9 +45,8 @@ builder.Services.AddSwaggerGen(options =>
 	});
 });
 builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSection(LegacyIdentityOptions.SectionName));
-builder.Services.AddSingleton<ILegacyIdentityService, ConfiguredLegacyIdentityService>();
+builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
 builder.Services.AddSingleton<ISettingsService, InMemorySettingsService>();
-builder.Services.AddSingleton<IQuotationRepository, InMemoryQuotationRepository>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();
 builder.Services.AddSingleton<IHelpContentService, InMemoryHelpContentService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -64,6 +63,7 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddDbContext<JB5LegacyWriteContext>(options =>
 		options.UseSqlServer(primaryConnectionString));
 
+	builder.Services.AddScoped<IQuotationRepository, EfQuotationRepository>();
 	builder.Services.AddScoped<IJobManagementRepository, EfJobManagementRepository>();
 	builder.Services.AddScoped<IJobAttachmentStoredProcedureGateway, JobAttachmentStoredProcedureGateway>();
 	builder.Services.AddScoped<IJobScheduleStoredProcedureGateway, JobScheduleStoredProcedureGateway>();
@@ -93,6 +93,7 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 }
 else
 {
+	builder.Services.AddSingleton<IQuotationRepository, InMemoryQuotationRepository>();
 	builder.Services.AddSingleton<IJobManagementRepository, InMemoryJobManagementRepository>();
 }
 

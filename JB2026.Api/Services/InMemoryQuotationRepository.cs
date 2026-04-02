@@ -5,7 +5,9 @@ namespace JB2026.Api.Services;
 
 public sealed class InMemoryQuotationRepository : IQuotationRepository
 {
-    private readonly IReadOnlyList<QuotationRecord> _quotations =
+    private readonly object _lock = new();
+
+    private readonly List<QuotationRecord> _quotations =
     [
         new(
             Guid.Parse("2a84b2e5-3f73-4d60-9d0d-08dc50c00001"),
@@ -125,12 +127,31 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
     public IReadOnlyList<QuotationListItemResponse> GetRange(DateOnly startOn, int days)
     {
         var start = startOn.ToDateTime(TimeOnly.MinValue);
-        return _quotations
-            .Where(q => q.QuotedOn < start.AddDays(1) && q.QuotedOn > start.AddDays(-days))
-            .OrderByDescending(q => q.QuoteNumber)
-            .ThenBy(q => q.QuoteNumberIndex)
-            .Select(Map)
-            .ToList();
+        lock (_lock)
+        {
+            var rows = _quotations
+                .Where(q => q.QuoteNumberIndex == 1
+                            && q.QuotedOn < start.AddDays(1)
+                            && q.QuotedOn > start.AddDays(-days))
+                .OrderBy(q => q.QuoteNumber)
+                .ThenBy(q => q.QuoteNumberIndex)
+                .Select(Map)
+                .ToList();
+
+            if (rows.Count > 0)
+            {
+                return rows;
+            }
+
+            // Legacy datasets may have only older records; return latest rows as fallback.
+            return _quotations
+                .Where(q => q.QuoteNumberIndex == 1)
+                .OrderBy(q => q.QuoteNumber)
+                .ThenBy(q => q.QuoteNumberIndex)
+                .Take(200)
+                .Select(Map)
+                .ToList();
+        }
     }
 
     public IReadOnlyList<QuotationListItemResponse> Search(string keyword)
@@ -141,16 +162,100 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
         }
 
         var normalized = keyword.Trim();
-        return _quotations
-            .Where(q => q.Status >= 1 &&
-                        (q.HeaderId.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)
-                         || q.QuoteNumber.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)
-                         || q.PrintTitle.Contains(normalized, StringComparison.OrdinalIgnoreCase)
-                         || q.CustomerName.Contains(normalized, StringComparison.OrdinalIgnoreCase)))
-            .OrderByDescending(q => q.QuoteNumber)
-            .ThenBy(q => q.QuoteNumberIndex)
-            .Select(Map)
-            .ToList();
+        lock (_lock)
+        {
+            return _quotations
+                .Where(q => q.QuoteNumberIndex == 1
+                            && q.Status >= 0 &&
+                            (q.HeaderId.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)
+                             || q.QuoteNumber.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)
+                             || q.PrintTitle.Contains(normalized, StringComparison.OrdinalIgnoreCase)
+                             || q.CustomerName.Contains(normalized, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(q => q.QuoteNumber)
+                .ThenBy(q => q.QuoteNumberIndex)
+                .Select(Map)
+                .ToList();
+        }
+    }
+
+    public QuotationListItemResponse Create(UpsertQuotationRequest request, string actor)
+    {
+        var record = new QuotationRecord(
+            Guid.NewGuid(),
+            string.Empty,
+            request.QuoteNumber,
+            request.QuoteNumberIndex,
+            request.QuotedOn,
+            request.QuotedBy,
+            null,
+            null,
+            request.PrintTitle,
+            request.CustomerName,
+            string.Empty,
+            string.Empty,
+            0m,
+            string.Empty,
+            string.Empty,
+            0m,
+            string.Empty,
+            0,
+            0,
+            string.Empty,
+            0m,
+            0m,
+            string.Empty,
+            request.TotalCostA,
+            request.TotalCostA,
+            request.TotalCostA,
+            request.TotalCostA,
+            request.UnitCostA,
+            request.UnitCostA,
+            request.UnitCostA,
+            request.UnitCostA,
+            [],
+            request.Status);
+
+        lock (_lock)
+        {
+            _quotations.Add(record);
+        }
+
+        return Map(record);
+    }
+
+    public QuotationListItemResponse? Update(Guid headerId, UpsertQuotationRequest request, string actor)
+    {
+        lock (_lock)
+        {
+            var index = _quotations.FindIndex(q => q.HeaderId == headerId);
+            if (index == -1)
+            {
+                return null;
+            }
+
+            var existing = _quotations[index];
+            var updated = existing with
+            {
+                QuoteNumber = request.QuoteNumber,
+                QuoteNumberIndex = request.QuoteNumberIndex,
+                QuotedOn = request.QuotedOn,
+                QuotedBy = request.QuotedBy,
+                PrintTitle = request.PrintTitle,
+                CustomerName = request.CustomerName,
+                TotalCostA = request.TotalCostA,
+                TotalCostB = request.TotalCostA,
+                TotalCostC = request.TotalCostA,
+                TotalCostD = request.TotalCostA,
+                UnitCostA = request.UnitCostA,
+                UnitCostB = request.UnitCostA,
+                UnitCostC = request.UnitCostA,
+                UnitCostD = request.UnitCostA,
+                Status = request.Status,
+            };
+
+            _quotations[index] = updated;
+            return Map(updated);
+        }
     }
 
     public (byte[] Content, string FileName)? GetPdf(Guid headerId)
@@ -251,7 +356,11 @@ public sealed class InMemoryQuotationRepository : IQuotationRepository
             MaterialCost = quotation.MaterialCost,
             TotalCostA = quotation.TotalCostA,
             UnitCostA = quotation.UnitCostA,
-            Status = quotation.Status
+            Status = quotation.Status,
+            CreatedOn = quotation.QuotedOn,
+            CreatedBy = quotation.QuotedBy,
+            ModifiedOn = quotation.ApprovedOn ?? quotation.QuotedOn,
+            ModifiedBy = quotation.ApprovedBy ?? quotation.QuotedBy
         };
     }
 

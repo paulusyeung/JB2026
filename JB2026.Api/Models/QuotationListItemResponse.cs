@@ -39,4 +39,12 @@ public sealed class QuotationListItemResponse
     public required decimal UnitCostA { get; init; }
 
     public required int Status { get; init; }
+
+    public required DateTime CreatedOn { get; init; }
+
+    public required string CreatedBy { get; init; }
+
+    public required DateTime ModifiedOn { get; init; }
+
+    public required string ModifiedBy { get; init; }
 }

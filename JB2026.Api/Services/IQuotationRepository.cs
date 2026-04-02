@@ -9,4 +9,8 @@ public interface IQuotationRepository
     IReadOnlyList<QuotationListItemResponse> Search(string keyword);
 
     (byte[] Content, string FileName)? GetPdf(Guid headerId);
+
+    QuotationListItemResponse Create(UpsertQuotationRequest request, string actor);
+
+    QuotationListItemResponse? Update(Guid headerId, UpsertQuotationRequest request, string actor);
 }

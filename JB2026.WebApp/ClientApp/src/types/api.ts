@@ -67,6 +67,10 @@ export interface QuotationListItem {
   totalCostA: number
   unitCostA: number
   status: number
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
 }
 
 export interface StockProductListItem {
