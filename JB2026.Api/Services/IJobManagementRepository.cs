@@ -12,6 +12,8 @@ public interface IJobManagementRepository
 
     IReadOnlyList<JobOrderResponse> GetJobOrders(int take);
 
+    IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith);
+
     JobOrderResponse? GetJobOrder(Guid orderId);
 
     Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor);

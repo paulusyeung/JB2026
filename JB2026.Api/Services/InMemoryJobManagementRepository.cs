@@ -32,6 +32,42 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return _jobs.TryGetValue(orderId, out var job) ? job.StyleTitles : Array.Empty<string>();
     }
 
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith)
+    {
+        var today = DateTime.Today;
+
+        var query = _jobs.Values.AsEnumerable();
+
+        query = commonQuery switch
+        {
+            1 => query.Where(j => j.OrderedOn <= today && j.OrderedOn >= today.AddDays(-7)),
+            2 => query.Where(j => j.OrderedOn <= today && j.OrderedOn >= today.AddDays(-30)),
+            3 => query.Where(j => j.RequiredOn >= today && j.RequiredOn <= today.AddDays(7)),
+            4 => query.Where(j => j.RequiredOn >= today && j.RequiredOn <= today.AddDays(30)),
+            _ => query
+        };
+
+        if (!string.IsNullOrEmpty(startsWith) && startsWith != "All")
+        {
+            if (startsWith == "0-9")
+                query = query.Where(j => j.OrderNumber.Length == 0 ||
+                    string.Compare(j.OrderNumber[..1], "A", StringComparison.OrdinalIgnoreCase) < 0);
+            else
+                query = query.Where(j => j.OrderNumber.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(lookup))
+        {
+            var token = lookup.ToLowerInvariant();
+            query = query.Where(j =>
+                j.OrderNumber.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+                j.CustomerName.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+                j.CustomerRef.Contains(token, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return query.OrderBy(j => j.OrderNumber).Select(MapOrder).ToList();
+    }
+
     public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
     {
         return _jobs.Values
@@ -157,14 +193,22 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return new JobOrderResponse
         {
             OrderId = job.OrderId,
+            OrderType = 0,
             OrderNumber = job.OrderNumber,
             JobNumber = job.JobNumber,
             CustomerName = job.CustomerName,
             CustomerRef = job.CustomerRef,
             OrderTitle = job.OrderTitle,
+            ProductCode = string.Empty,
+            OutputRef = string.Empty,
+            InvoiceRef = string.Empty,
+            InvoiceAmount = 0m,
+            AttachmentProductCount = 0,
+            AttachmentCustomerCount = 0,
             OrderedBy = job.OrderedBy,
             OrderedOn = job.OrderedOn,
             RequiredOn = job.RequiredOn,
+            CompletedOn = null,
             Qty = job.Qty,
             PaymentTerms = job.PaymentTerms,
             Remarks = job.Remarks,

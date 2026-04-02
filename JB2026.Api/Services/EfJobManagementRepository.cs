@@ -81,6 +81,45 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith)
+    {
+        var today = DateTime.Today;
+
+        var query = _readContext.JobOrders
+            .AsNoTracking()
+            .Where(order => !order.Retired && (order.JobNumber == null || order.JobNumber == 0));
+
+        query = commonQuery switch
+        {
+            1 => query.Where(o => o.Status >= 2 && o.OrderedOn <= today && o.OrderedOn >= today.AddDays(-7)),
+            2 => query.Where(o => o.Status >= 2 && o.OrderedOn <= today && o.OrderedOn >= today.AddDays(-30)),
+            3 => query.Where(o => o.Status >= 2 && o.RequiredOn >= today && o.RequiredOn <= today.AddDays(7)),
+            4 => query.Where(o => o.Status >= 2 && o.RequiredOn >= today && o.RequiredOn <= today.AddDays(30)),
+            _ => query
+        };
+
+        if (!string.IsNullOrEmpty(startsWith) && startsWith != "All")
+        {
+            if (startsWith == "0-9")
+                query = query.Where(o => o.OrderNumber != null && !EF.Functions.Like(o.OrderNumber, "[A-Za-z]%"));
+            else
+                query = query.Where(o => o.OrderNumber != null && o.OrderNumber.StartsWith(startsWith));
+        }
+
+        if (!string.IsNullOrWhiteSpace(lookup))
+        {
+            query = query.Where(o =>
+                (o.OrderNumber != null && o.OrderNumber.Contains(lookup)) ||
+                (o.CustomerName != null && o.CustomerName.Contains(lookup)) ||
+                (o.CustomerRef != null && o.CustomerRef.Contains(lookup)));
+        }
+
+        return query
+            .OrderBy(o => o.OrderNumber)
+            .Select(o => MapOrder(o))
+            .ToList();
+    }
+
     public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
     {
         return CompiledGetJobOrders(_readContext, take)
@@ -222,14 +261,22 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         return new JobOrderResponse
         {
             OrderId = job.OrderId,
+            OrderType = job.OrderType,
             OrderNumber = job.OrderNumber ?? string.Empty,
             JobNumber = job.JobNumber?.ToString() ?? string.Empty,
             CustomerName = job.CustomerName ?? string.Empty,
             CustomerRef = job.CustomerRef ?? string.Empty,
             OrderTitle = job.OrderTitle ?? string.Empty,
+            ProductCode = job.ProductCode ?? string.Empty,
+            OutputRef = job.OutputRef ?? string.Empty,
+            InvoiceRef = job.InvoiceRef ?? string.Empty,
+            InvoiceAmount = job.InvoiceAmount ?? 0m,
+            AttachmentProductCount = job.JobAttachments.Count(attachment => attachment.AttachmentIndex == 0),
+            AttachmentCustomerCount = job.JobAttachments.Count(attachment => attachment.AttachmentIndex == 1),
             OrderedBy = job.OrderedBy ?? string.Empty,
             OrderedOn = job.OrderedOn ?? DateTime.MinValue,
             RequiredOn = job.RequiredOn ?? DateTime.MinValue,
+            CompletedOn = job.CompletedOn,
             Qty = job.Qty ?? 0m,
             PaymentTerms = job.PaymentTerms ?? string.Empty,
             Remarks = job.Remarks ?? string.Empty,

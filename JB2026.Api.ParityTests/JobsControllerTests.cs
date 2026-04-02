@@ -155,6 +155,8 @@ public sealed class JobsControllerTests
 
         public IReadOnlyList<JobOrderResponse> GetJobOrders(int take) => [];
 
+        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith) => [];
+
         public JobOrderResponse? GetJobOrder(Guid orderId) => null;
 
         public Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
@@ -163,14 +165,22 @@ public sealed class JobsControllerTests
             return Task.FromResult(new JobOrderResponse
             {
                 OrderId = Guid.NewGuid(),
+                OrderType = 0,
                 OrderNumber = request.OrderNumber,
                 JobNumber = request.JobNumber,
                 CustomerName = request.CustomerName,
                 CustomerRef = request.CustomerRef,
                 OrderTitle = request.OrderTitle,
+                ProductCode = string.Empty,
+                OutputRef = string.Empty,
+                InvoiceRef = string.Empty,
+                InvoiceAmount = 0m,
+                AttachmentProductCount = 0,
+                AttachmentCustomerCount = 0,
                 OrderedBy = actor,
                 OrderedOn = request.OrderedOn,
                 RequiredOn = request.RequiredOn,
+                CompletedOn = null,
                 Qty = request.Qty,
                 PaymentTerms = request.PaymentTerms,
                 Remarks = request.Remarks,
@@ -193,14 +203,22 @@ public sealed class JobsControllerTests
             return Task.FromResult<JobOrderResponse?>(new JobOrderResponse
             {
                 OrderId = orderId,
+                OrderType = 0,
                 OrderNumber = "JB260330",
                 JobNumber = "01",
                 CustomerName = request.CustomerName,
                 CustomerRef = request.CustomerRef,
                 OrderTitle = request.OrderTitle,
+                ProductCode = string.Empty,
+                OutputRef = string.Empty,
+                InvoiceRef = string.Empty,
+                InvoiceAmount = 0m,
+                AttachmentProductCount = 0,
+                AttachmentCustomerCount = 0,
                 OrderedBy = actor,
                 OrderedOn = new DateTime(2026, 3, 30),
                 RequiredOn = request.RequiredOn,
+                CompletedOn = null,
                 Qty = request.Qty,
                 PaymentTerms = request.PaymentTerms,
                 Remarks = request.Remarks,

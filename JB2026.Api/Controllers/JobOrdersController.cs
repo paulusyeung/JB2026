@@ -26,9 +26,17 @@ public sealed class JobOrdersController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<JobOrderResponse>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<JobOrderResponse>> GetAll()
+    public ActionResult<IReadOnlyList<JobOrderResponse>> GetAll(
+        [FromQuery] int? take,
+        [FromQuery] string? lookup,
+        [FromQuery] int? commonQuery,
+        [FromQuery] string? startsWith)
     {
-        var orders = _repository.GetJobOrders(100);
+        var hasFilters = !string.IsNullOrWhiteSpace(lookup) || commonQuery.GetValueOrDefault() > 0 || !string.IsNullOrWhiteSpace(startsWith);
+        var orders = hasFilters
+            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith)
+            : _repository.GetJobOrders(take.GetValueOrDefault(100));
+
         return Ok(orders);
     }
 

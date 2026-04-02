@@ -183,14 +183,22 @@ export interface JobOrderFormData {
 
 export interface JobOrderRecord {
   orderId: string
+  orderType: number
   orderNumber: string
   jobNumber: string
   customerName: string
   customerRef: string
   orderTitle: string
+  productCode: string
+  outputRef: string
+  invoiceRef: string
+  invoiceAmount: number
+  attachmentProductCount: number
+  attachmentCustomerCount: number
   orderedBy: string
   orderedOn: string
   requiredOn: string
+  completedOn: string | null
   qty: number
   paymentTerms: string
   remarks: string

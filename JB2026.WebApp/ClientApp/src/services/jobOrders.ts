@@ -31,6 +31,24 @@ export async function getJobOrders(): Promise<JobOrderRecord[]> {
   return response.data
 }
 
+export async function getOrderList(params: {
+  lookup?: string
+  commonQuery?: number
+  startsWith?: string
+  take?: number
+}): Promise<JobOrderRecord[]> {
+  const response = await apiClient.get<JobOrderRecord[]>('/api/v2/job-orders', {
+    params: {
+      lookup: params.lookup,
+      commonQuery: params.commonQuery,
+      startsWith: params.startsWith,
+      take: params.take,
+    },
+  })
+
+  return response.data
+}
+
 export async function getJobOrder(id: string): Promise<JobOrderRecord> {
   const response = await apiClient.get<JobOrderRecord>(`/api/v2/job-orders/${id}`)
   return response.data

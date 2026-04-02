@@ -143,7 +143,9 @@ const router = createRouter({
     ...legacyLeafRoutes.map((route) => ({
       path: route.path,
       name: route.name,
-      component: () => import('@/views/LegacyMenuPlaceholderView.vue'),
+      component: route.path === '/job-order/order-list'
+        ? () => import('@/views/OrderListView.vue')
+        : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),
   ],
