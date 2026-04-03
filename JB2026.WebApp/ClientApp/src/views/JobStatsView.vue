@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section job-stats-page">
+  <section class="page-section job-stats-page" :class="{ 'job-stats-page--dark': themeStore.isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
@@ -149,6 +149,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useThemeStore } from '@/stores/theme'
 import { getJobStats } from '@/services/jobOrders'
 import type { JobStatsRecord } from '@/types/api'
 
@@ -179,6 +180,7 @@ const page = ref(1)
 const startOn = ref('')
 const endOn = ref('')
 const rowsPerPage = 15
+const themeStore = useThemeStore()
 
 const { t, locale } = useI18n({ useScope: 'global' })
 const { formatCurrency, formatNumber } = useLocaleFormatters()
@@ -435,6 +437,30 @@ function csvEscape(value: string) {
 </script>
 
 <style scoped>
+.job-stats-page {
+  --pivot-shell-border: rgba(var(--v-theme-on-surface), 0.22);
+  --pivot-shell-bg: rgb(var(--v-theme-surface));
+  --pivot-cell-border: rgba(var(--v-theme-on-surface), 0.18);
+  --pivot-head-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 86%, rgb(var(--v-theme-surface)) 14%);
+  --pivot-body-bg: color-mix(in srgb, rgb(var(--v-theme-surface)) 94%, rgb(var(--v-theme-on-surface)) 6%);
+  --pivot-sticky-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 76%, rgb(var(--v-theme-surface)) 24%);
+  --pivot-foot-top-border: rgba(var(--v-theme-on-surface), 0.2);
+  --pivot-foot-top-width: 1px;
+  --pivot-foot-sticky-bg: color-mix(in srgb, rgb(var(--v-theme-primary)) 20%, rgb(var(--v-theme-surface-variant)) 80%);
+}
+
+.job-stats-page.job-stats-page--dark {
+  --pivot-shell-border: rgba(var(--v-theme-on-surface), 0.26);
+  --pivot-shell-bg: rgba(var(--v-theme-surface), 0.88);
+  --pivot-cell-border: rgba(var(--v-theme-on-surface), 0.16);
+  --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.94);
+  --pivot-body-bg: rgba(var(--v-theme-surface), 0.7);
+  --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
+  --pivot-foot-top-border: rgba(var(--v-theme-on-surface), 0.28);
+  --pivot-foot-top-width: 2px;
+  --pivot-foot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
+}
+
 .filter-bar {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -444,9 +470,9 @@ function csvEscape(value: string) {
 
 .pivot-shell {
   overflow-x: auto;
-  border: 1px solid rgba(120, 120, 120, 0.35);
+  border: 1px solid var(--pivot-shell-border);
   border-radius: 10px;
-  background: #f6f6f6;
+  background: var(--pivot-shell-bg);
 }
 
 .pivot-table {
@@ -457,7 +483,7 @@ function csvEscape(value: string) {
 
 .pivot-table th,
 .pivot-table td {
-  border: 1px solid rgba(120, 120, 120, 0.25);
+  border: 1px solid var(--pivot-cell-border);
   padding: 7px 10px;
   white-space: nowrap;
   font-size: 0.84rem;
@@ -465,19 +491,43 @@ function csvEscape(value: string) {
 
 .pivot-table thead th,
 .pivot-table tfoot th {
-  background: #d9d9d9;
+  background: var(--pivot-head-bg);
   font-weight: 600;
 }
 
 .pivot-table tbody td {
-  background: #f9f9f9;
+  background: var(--pivot-body-bg);
 }
 
 .pivot-table .sticky-col {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: #ececec;
+  background: var(--pivot-sticky-bg);
+}
+
+.pivot-table tfoot th {
+  border-top: var(--pivot-foot-top-width) solid var(--pivot-foot-top-border);
+}
+
+.pivot-table tfoot .sticky-col {
+  background: var(--pivot-foot-sticky-bg);
+}
+
+@supports not (background: color-mix(in srgb, black, white)) {
+  .job-stats-page {
+    --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.9);
+    --pivot-body-bg: rgba(var(--v-theme-surface), 0.92);
+    --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
+    --pivot-foot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.88);
+  }
+
+  .job-stats-page.job-stats-page--dark {
+    --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.94);
+    --pivot-body-bg: rgba(var(--v-theme-surface), 0.7);
+    --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
+    --pivot-foot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
+  }
 }
 
 .pivot-table .label-cell {
