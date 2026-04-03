@@ -155,7 +155,11 @@ public sealed class JobsControllerTests
 
         public IReadOnlyList<JobOrderResponse> GetJobOrders(int take) => [];
 
+        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take) => [];
+
         public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith) => [];
+
+        public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take) => [];
 
         public JobOrderResponse? GetJobOrder(Guid orderId) => null;
 
@@ -172,6 +176,7 @@ public sealed class JobsControllerTests
                 CustomerRef = request.CustomerRef,
                 OrderTitle = request.OrderTitle,
                 ProductCode = string.Empty,
+                ProductStyle = string.Empty,
                 OutputRef = string.Empty,
                 InvoiceRef = string.Empty,
                 InvoiceAmount = 0m,
@@ -210,6 +215,7 @@ public sealed class JobsControllerTests
                 CustomerRef = request.CustomerRef,
                 OrderTitle = request.OrderTitle,
                 ProductCode = string.Empty,
+                ProductStyle = string.Empty,
                 OutputRef = string.Empty,
                 InvoiceRef = string.Empty,
                 InvoiceAmount = 0m,

@@ -45,6 +45,7 @@ builder.Services.AddSwaggerGen(options =>
 	});
 });
 builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSection(LegacyIdentityOptions.SectionName));
+builder.Services.Configure<JobListOptions>(builder.Configuration.GetSection(JobListOptions.SectionName));
 builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
 builder.Services.AddSingleton<ISettingsService, InMemorySettingsService>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();

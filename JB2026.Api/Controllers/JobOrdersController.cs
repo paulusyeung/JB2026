@@ -1,7 +1,9 @@
 using JB2026.Api.Models;
+using JB2026.Api.Options;
 using JB2026.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Controllers;
 
@@ -12,15 +14,18 @@ public sealed class JobOrdersController : ControllerBase
 {
     private readonly IJobManagementRepository _repository;
     private readonly ICurrentUserProfileService _currentUserProfileService;
+    private readonly JobListOptions _jobListOptions;
     private readonly ILogger<JobOrdersController> _logger;
 
     public JobOrdersController(
         IJobManagementRepository repository,
         ICurrentUserProfileService currentUserProfileService,
+        IOptions<JobListOptions> jobListOptions,
         ILogger<JobOrdersController> logger)
     {
         _repository = repository;
         _currentUserProfileService = currentUserProfileService;
+        _jobListOptions = jobListOptions.Value;
         _logger = logger;
     }
 
@@ -30,14 +35,51 @@ public sealed class JobOrdersController : ControllerBase
         [FromQuery] int? take,
         [FromQuery] string? lookup,
         [FromQuery] int? commonQuery,
-        [FromQuery] string? startsWith)
+        [FromQuery] string? startsWith,
+        [FromQuery] string? listType)
     {
+        var isJobList = string.Equals(listType, "job", StringComparison.OrdinalIgnoreCase);
         var hasFilters = !string.IsNullOrWhiteSpace(lookup) || commonQuery.GetValueOrDefault() > 0 || !string.IsNullOrWhiteSpace(startsWith);
-        var orders = hasFilters
+        var defaultTake = hasFilters ? _jobListOptions.FilteredTake : _jobListOptions.InitialTake;
+        var maxTake = Math.Max(1, _jobListOptions.MaxTake);
+        var requestedTake = take.GetValueOrDefault(defaultTake);
+        var jobListTake = Math.Clamp(requestedTake, 1, maxTake);
+        var orders = isJobList
+            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake)
+            : hasFilters
             ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith)
             : _repository.GetJobOrders(take.GetValueOrDefault(100));
 
         return Ok(orders);
+    }
+
+    [HttpGet("stats")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobStatsResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public ActionResult<IReadOnlyList<JobStatsResponse>> GetStats(
+        [FromQuery] DateOnly? startOn,
+        [FromQuery] DateOnly? endOn,
+        [FromQuery] int take = 5000)
+    {
+        if (take is <= 0 or > 20000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 20000."]
+            }));
+        }
+
+        if (startOn.HasValue && endOn.HasValue && startOn.Value > endOn.Value)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(startOn)] = ["Start date must be on or before end date."],
+                [nameof(endOn)] = ["End date must be on or after start date."],
+            }));
+        }
+
+        var rows = _repository.GetJobStats(startOn, endOn, take);
+        return Ok(rows);
     }
 
     [HttpGet("{id:guid}")]

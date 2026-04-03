@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { JobOrderRecord } from '@/types/api'
+import type { JobOrderRecord, JobStatsRecord } from '@/types/api'
 
 interface CreateJobOrderRequest {
   orderNumber: string
@@ -42,6 +42,41 @@ export async function getOrderList(params: {
       lookup: params.lookup,
       commonQuery: params.commonQuery,
       startsWith: params.startsWith,
+      take: params.take,
+    },
+  })
+
+  return response.data
+}
+
+export async function getJobList(params: {
+  lookup?: string
+  commonQuery?: number
+  startsWith?: string
+  take?: number
+}): Promise<JobOrderRecord[]> {
+  const response = await apiClient.get<JobOrderRecord[]>('/api/v2/job-orders', {
+    params: {
+      lookup: params.lookup,
+      commonQuery: params.commonQuery,
+      startsWith: params.startsWith,
+      take: params.take,
+      listType: 'job',
+    },
+  })
+
+  return response.data
+}
+
+export async function getJobStats(params: {
+  startOn?: string
+  endOn?: string
+  take?: number
+}): Promise<JobStatsRecord[]> {
+  const response = await apiClient.get<JobStatsRecord[]>('/api/v2/job-orders/stats', {
+    params: {
+      startOn: params.startOn,
+      endOn: params.endOn,
       take: params.take,
     },
   })

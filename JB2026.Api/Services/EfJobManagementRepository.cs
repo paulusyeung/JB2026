@@ -120,10 +120,95 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)
+    {
+        var today = DateTime.Today;
+
+        var query = _readContext.JobOrders
+            .AsNoTracking()
+            .Include(order => order.JobSchedules)
+            .Include(order => order.JobWorkflows)
+            .Include(order => order.JobAttachments)
+            .Where(order => !order.Retired && order.JobNumber.HasValue && order.JobNumber.Value > 0);
+
+        query = commonQuery switch
+        {
+            1 => query.Where(o => o.Status >= 2 && o.OrderedOn >= today.AddDays(-30) && o.OrderedOn < today.AddDays(1)),
+            2 => query.Where(o => o.Status >= 2 && o.OrderedOn >= today.AddDays(-90) && o.OrderedOn < today.AddDays(1)),
+            _ => query
+        };
+
+        if (!string.IsNullOrWhiteSpace(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(startsWith, "0-9", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(o => o.OrderNumber != null && !EF.Functions.Like(o.OrderNumber, "[A-Za-z]%"));
+            }
+            else
+            {
+                query = query.Where(o => o.OrderNumber != null && o.OrderNumber.StartsWith(startsWith));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(lookup))
+        {
+            query = query.Where(o =>
+                (o.OrderNumber != null && o.OrderNumber.Contains(lookup)) ||
+                (o.CustomerName != null && o.CustomerName.Contains(lookup)) ||
+                (o.CustomerRef != null && o.CustomerRef.Contains(lookup)) ||
+                (o.OrderTitle != null && o.OrderTitle.Contains(lookup)));
+        }
+
+        return query
+            .OrderByDescending(o => o.OrderNumber)
+            .ThenBy(o => o.JobNumber)
+            .Take(take)
+            .Select(o => MapOrder(o))
+            .ToList();
+    }
+
     public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
     {
         return CompiledGetJobOrders(_readContext, take)
             .Select(MapOrder)
+            .ToList();
+    }
+
+    public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take)
+    {
+        var query = _readContext.vwJobStatGrossProfits.AsNoTracking().AsQueryable();
+
+        if (startOn.HasValue)
+        {
+            var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
+            query = query.Where(item => item.InvDate.HasValue && item.InvDate.Value >= lower);
+        }
+
+        if (endOn.HasValue)
+        {
+            var upperExclusive = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+            query = query.Where(item => item.InvDate.HasValue && item.InvDate.Value < upperExclusive);
+        }
+
+        return query
+            .OrderBy(item => item.InvDate)
+            .ThenBy(item => item.InvNumber)
+            .Take(take)
+            .Select(item => new JobStatsResponse
+            {
+                JobNumber = item.JobNumber ?? string.Empty,
+                CustomerName = item.CustomerName ?? string.Empty,
+                Brand = item.OrderTitle ?? string.Empty,
+                PurchaseOrder = item.PurchaseOrder ?? string.Empty,
+                SalesRep = item.SalesRep ?? string.Empty,
+                GrossProfit = item.GrossProfit ?? 0m,
+                Cost = item.Cost ?? 0m,
+                InvoiceAmount = item.InvoiceAmount ?? 0m,
+                InvNumber = item.InvNumber ?? string.Empty,
+                InvDate = item.InvDate,
+                Year = item.InvDate.HasValue ? item.InvDate.Value.Year : null,
+                Month = item.InvDate.HasValue ? item.InvDate.Value.Month : null,
+            })
             .ToList();
     }
 
@@ -268,6 +353,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             CustomerRef = job.CustomerRef ?? string.Empty,
             OrderTitle = job.OrderTitle ?? string.Empty,
             ProductCode = job.ProductCode ?? string.Empty,
+            ProductStyle = job.ProductStyle ?? string.Empty,
             OutputRef = job.OutputRef ?? string.Empty,
             InvoiceRef = job.InvoiceRef ?? string.Empty,
             InvoiceAmount = job.InvoiceAmount ?? 0m,

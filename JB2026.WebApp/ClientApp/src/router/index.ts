@@ -145,6 +145,10 @@ const router = createRouter({
       name: route.name,
       component: route.path === '/job-order/order-list'
         ? () => import('@/views/OrderListView.vue')
+        : route.path === '/job-order/job-list'
+          ? () => import('@/views/JobListView.vue')
+        : route.path === '/job-order/job-stats'
+          ? () => import('@/views/JobStatsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),

@@ -18,6 +18,8 @@ public sealed class JobOrderResponse
 
     public required string ProductCode { get; init; }
 
+    public required string ProductStyle { get; init; }
+
     public required string OutputRef { get; init; }
 
     public required string InvoiceRef { get; init; }

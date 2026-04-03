@@ -12,7 +12,11 @@ public interface IJobManagementRepository
 
     IReadOnlyList<JobOrderResponse> GetJobOrders(int take);
 
+    IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take);
+
     IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith);
+
+    IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take);
 
     JobOrderResponse? GetJobOrder(Guid orderId);
 

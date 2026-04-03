@@ -68,12 +68,100 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return query.OrderBy(j => j.OrderNumber).Select(MapOrder).ToList();
     }
 
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)
+    {
+        var today = DateTime.Today;
+
+        var query = _jobs.Values.AsEnumerable()
+            .Where(job => int.TryParse(job.JobNumber, out var jobNumber) && jobNumber > 0);
+
+        query = commonQuery switch
+        {
+            1 => query.Where(j => j.Status >= 2 && j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-30)),
+            2 => query.Where(j => j.Status >= 2 && j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-90)),
+            _ => query
+        };
+
+        if (!string.IsNullOrEmpty(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(startsWith, "0-9", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(j => j.OrderNumber.Length == 0 || !char.IsLetter(j.OrderNumber[0]));
+            }
+            else
+            {
+                query = query.Where(j => j.OrderNumber.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(lookup))
+        {
+            query = query.Where(j =>
+                j.OrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.CompositeOrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.CustomerName.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.CustomerRef.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.OrderTitle.Contains(lookup, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return query
+            .OrderByDescending(j => j.OrderNumber)
+            .ThenBy(j => j.JobNumber)
+            .Take(take)
+            .Select(MapOrder)
+            .ToList();
+    }
+
     public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
     {
         return _jobs.Values
             .OrderByDescending(job => job.OrderedOn)
             .Take(take)
             .Select(MapOrder)
+            .ToList();
+    }
+
+    public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take)
+    {
+        var query = _jobs.Values.AsEnumerable();
+
+        if (startOn.HasValue)
+        {
+            var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
+            query = query.Where(job => job.OrderedOn >= lower);
+        }
+
+        if (endOn.HasValue)
+        {
+            var upperExclusive = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+            query = query.Where(job => job.OrderedOn < upperExclusive);
+        }
+
+        return query
+            .OrderBy(job => job.OrderedOn)
+            .Take(take)
+            .Select(job =>
+            {
+                var invoiceAmount = Math.Round(job.Qty * 1.8m, 2);
+                var cost = Math.Round(job.Qty * 1.15m, 2);
+                var grossProfit = invoiceAmount <= 0m ? 0m : Math.Round((invoiceAmount - cost) / invoiceAmount, 4);
+
+                return new JobStatsResponse
+                {
+                    JobNumber = job.CompositeOrderNumber,
+                    CustomerName = job.CustomerName,
+                    Brand = job.OrderTitle,
+                    PurchaseOrder = job.CustomerRef,
+                    SalesRep = job.OrderedBy,
+                    GrossProfit = grossProfit,
+                    Cost = cost,
+                    InvoiceAmount = invoiceAmount,
+                    InvNumber = job.OrderNumber,
+                    InvDate = job.OrderedOn,
+                    Year = job.OrderedOn.Year,
+                    Month = job.OrderedOn.Month,
+                };
+            })
             .ToList();
     }
 
@@ -200,6 +288,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             CustomerRef = job.CustomerRef,
             OrderTitle = job.OrderTitle,
             ProductCode = string.Empty,
+            ProductStyle = job.StyleTitles.FirstOrDefault() ?? string.Empty,
             OutputRef = string.Empty,
             InvoiceRef = string.Empty,
             InvoiceAmount = 0m,

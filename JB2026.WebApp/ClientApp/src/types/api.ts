@@ -190,6 +190,7 @@ export interface JobOrderRecord {
   customerRef: string
   orderTitle: string
   productCode: string
+  productStyle: string
   outputRef: string
   invoiceRef: string
   invoiceAmount: number
@@ -207,6 +208,21 @@ export interface JobOrderRecord {
   createdOn: string
   modifiedBy: string | null
   modifiedOn: string | null
+}
+
+export interface JobStatsRecord {
+  jobNumber: string
+  customerName: string
+  brand: string
+  purchaseOrder: string
+  salesRep: string
+  grossProfit: number
+  cost: number
+  invoiceAmount: number
+  invNumber: string
+  invDate: string | null
+  year: number | null
+  month: number | null
 }
 
 export interface LegacySliceSampleRoute {
