@@ -1,0 +1,479 @@
+<template>
+  <section class="page-section pending-list-page">
+    <v-card rounded="xl" elevation="0" class="panel-card pending-list-card">
+      <v-card-title class="d-flex flex-wrap align-center ga-3">
+        <div>
+          <h3 class="text-h6 mb-1">{{ t('jobOrder.pending.title') }}</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('jobOrder.pending.subtitle') }}</p>
+        </div>
+      </v-card-title>
+
+      <v-card-text>
+        <div class="filter-bar">
+          <v-text-field
+            v-model="lookup"
+            density="comfortable"
+            :label="t('jobOrder.pending.lookup')"
+            prepend-inner-icon="mdi-magnify"
+            variant="solo-filled"
+            hide-details
+            clearable
+            @keydown.enter="applyLookup"
+          />
+
+          <v-select
+            v-model="commonQuery"
+            :items="commonQueryItems"
+            item-title="label"
+            item-value="value"
+            :label="t('jobOrder.pending.commonQuery')"
+            variant="solo-filled"
+            density="comfortable"
+            hide-details
+          />
+
+          <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="applyLookup">
+            {{ t('jobOrder.pending.search') }}
+          </v-btn>
+
+          <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
+            {{ t('common.refresh') }}
+          </v-btn>
+        </div>
+
+        <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
+
+        <div class="toolbar-bar mb-2 mt-2">
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                {{ t('jobOrder.pending.actions.columns') }}
+              </v-btn>
+            </template>
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item v-for="column in columnOptions" :key="column.key" @click="toggleColumn(column.key)">
+                <template #prepend>
+                  <v-checkbox-btn :model-value="visibleColumnKeys.includes(column.key)" />
+                </template>
+                <v-list-item-title>{{ column.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                {{ t('jobOrder.pending.actions.sorting') }}
+              </v-btn>
+            </template>
+            <v-card min-width="280" class="pa-3">
+              <v-select
+                v-model="sortKey"
+                :items="sortableColumns"
+                item-title="title"
+                item-value="key"
+                density="compact"
+                variant="outlined"
+                :label="t('jobOrder.pending.actions.sortBy')"
+                hide-details
+              />
+              <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
+                <v-btn value="asc">{{ t('jobOrder.pending.actions.asc') }}</v-btn>
+                <v-btn value="desc">{{ t('jobOrder.pending.actions.desc') }}</v-btn>
+              </v-btn-toggle>
+            </v-card>
+          </v-menu>
+
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+            {{ t('jobOrder.pending.actions.checkbox') }}
+          </v-btn>
+
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
+            {{ t('jobOrder.pending.actions.popup') }}
+          </v-btn>
+
+          <v-divider vertical class="mx-1" />
+
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
+            {{ t('jobOrder.pending.actions.print') }}
+          </v-btn>
+
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
+            {{ t('jobOrder.pending.actions.export') }}
+          </v-btn>
+        </div>
+
+        <v-data-table
+          :headers="headers"
+          :items="displayedRows"
+          :loading="loading"
+          v-model="selectedOrderIds"
+          :show-select="checkboxMode"
+          item-value="orderId"
+          density="compact"
+          fixed-header
+          height="62vh"
+          class="pending-list-table"
+          @click:row="onRowClick"
+        >
+          <template #[`item.orderNumber`]="{ item }">
+            <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEditor(item)">
+              {{ item.orderNumber }}
+            </v-btn>
+          </template>
+
+          <template #[`item.orderType`]="{ item }">
+            <div class="d-flex justify-center">
+              <v-icon size="16" :color="orderTypeMeta(item.orderType).color">{{ orderTypeMeta(item.orderType).icon }}</v-icon>
+            </div>
+          </template>
+
+          <template #[`item.status`]="{ item }">
+            <div class="d-flex justify-center">
+              <v-icon size="16" :color="statusColor(item.status)">mdi-flag</v-icon>
+            </div>
+          </template>
+
+          <template #[`item.step1Status`]="{ item }">
+            <div class="d-flex justify-center">
+              <v-icon size="14" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
+            </div>
+          </template>
+
+          <template #[`item.step2Status`]="{ item }">
+            <div class="d-flex justify-center">
+              <v-icon size="14" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
+            </div>
+          </template>
+
+          <template #[`item.step3Status`]="{ item }">
+            <div class="d-flex justify-center">
+              <v-icon size="14" :color="workflowColor(item.step3Status)">mdi-circle</v-icon>
+            </div>
+          </template>
+
+          <template #[`item.urgencyLevel`]="{ item }">
+            <div class="d-flex justify-center">
+              <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
+              <span v-else>-</span>
+            </div>
+          </template>
+
+          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+        </v-data-table>
+
+        <div class="text-caption text-medium-emphasis mt-2">
+          {{ t('jobOrder.pending.rows', { count: formatNumber(displayedRows.length) }) }}
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <v-dialog v-model="formOpen" max-width="760" scrollable>
+      <JobOrderForm
+        v-if="formJob"
+        :job="formJob"
+        @saved="handleSaved"
+        @cancel="formOpen = false"
+      />
+    </v-dialog>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import { getJobDetail } from '@/services/jobs'
+import { getPendingSchedule } from '@/services/scheduler'
+import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
+import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+
+const rows = ref<JobSchedulePendingItem[]>([])
+const loading = ref(false)
+const errorMessage = ref('')
+const lookup = ref('')
+// commonQuery mapping: 0=None, 1=Ordered in last 30 days, 2=Ordered in last 90 days.
+const commonQuery = ref(0)
+const checkboxMode = ref(false)
+const selectedOrderIds = ref<string[]>([])
+const activeOrderId = ref<string | null>(null)
+const sortDirection = ref<'asc' | 'desc'>('desc')
+const sortKey = ref('orderNumber')
+const formOpen = ref(false)
+const formJob = ref<JobDetail | null>(null)
+const visibleColumnKeys = ref<string[]>([
+  'orderNumber',
+  'orderType',
+  'status',
+  'step1Status',
+  'step2Status',
+  'step3Status',
+  'urgencyLevel',
+  'customerName',
+  'orderTitle',
+  'orderedOn',
+  'requiredOn',
+])
+
+const { t } = useI18n({ useScope: 'global' })
+const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+
+const commonQueryItems = computed(() => [
+  { value: 0, label: t('jobOrder.pending.commonQueryItems.none') },
+  { value: 1, label: t('jobOrder.pending.commonQueryItems.ordered30') },
+  { value: 2, label: t('jobOrder.pending.commonQueryItems.ordered90') },
+])
+
+const allHeaders = computed(() => [
+  { title: t('jobOrder.pending.headers.order'), key: 'orderNumber', width: '132px' },
+  { title: t('jobOrder.pending.headers.orderType'), key: 'orderType', width: '58px', sortable: false },
+  { title: t('jobOrder.pending.headers.status'), key: 'status', width: '58px', sortable: false },
+  { title: '@1', key: 'step1Status', width: '52px', sortable: false },
+  { title: '@2', key: 'step2Status', width: '52px', sortable: false },
+  { title: '@3', key: 'step3Status', width: '52px', sortable: false },
+  { title: t('jobOrder.pending.headers.urgency'), key: 'urgencyLevel', width: '70px', sortable: false },
+  { title: t('jobOrder.pending.headers.customer'), key: 'customerName', minWidth: '220px' },
+  { title: t('jobOrder.pending.headers.orderTitle'), key: 'orderTitle', minWidth: '240px' },
+  { title: t('jobOrder.pending.headers.orderedOn'), key: 'orderedOn', width: '122px' },
+  { title: t('jobOrder.pending.headers.requiredOn'), key: 'requiredOn', width: '122px' },
+])
+
+const headers = computed(() => allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
+const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
+const sortableColumns = computed(() =>
+  allHeaders.value
+    .filter((header) => header.sortable !== false)
+    .map((header) => ({ key: String(header.key), title: String(header.title) })),
+)
+
+const displayedRows = computed(() => {
+  const result = [...rows.value]
+  const key = sortKey.value as keyof JobSchedulePendingItem
+
+  result.sort((lhs, rhs) => {
+    const leftValue = lhs[key]
+    const rightValue = rhs[key]
+
+    if (leftValue == null && rightValue == null) return 0
+    if (leftValue == null) return sortDirection.value === 'asc' ? -1 : 1
+    if (rightValue == null) return sortDirection.value === 'asc' ? 1 : -1
+
+    if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+      return sortDirection.value === 'asc' ? leftValue - rightValue : rightValue - leftValue
+    }
+
+    const left = String(leftValue)
+    const right = String(rightValue)
+    return sortDirection.value === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+  })
+
+  return result
+})
+
+const activeRow = computed(() => rows.value.find((row) => row.orderId === activeOrderId.value) ?? null)
+
+onMounted(async () => {
+  await load()
+})
+
+async function load() {
+  loading.value = true
+  errorMessage.value = ''
+  selectedOrderIds.value = []
+
+  try {
+    rows.value = await getPendingSchedule({
+      lookup: lookup.value.trim() || undefined,
+      commonQuery: commonQuery.value,
+      take: 1000,
+    })
+
+    if (activeOrderId.value && !rows.value.some((row) => row.orderId === activeOrderId.value)) {
+      activeOrderId.value = rows.value[0]?.orderId ?? null
+    }
+
+    if (!activeOrderId.value && rows.value.length > 0) {
+      activeOrderId.value = rows.value[0]?.orderId ?? null
+    }
+  } catch {
+    errorMessage.value = t('jobOrder.pending.loadFailed')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function applyLookup() {
+  await load()
+}
+
+async function refreshList() {
+  lookup.value = ''
+  commonQuery.value = 0
+  await load()
+}
+
+function toggleColumn(columnKey: string) {
+  if (visibleColumnKeys.value.includes(columnKey)) {
+    if (visibleColumnKeys.value.length > 1) {
+      visibleColumnKeys.value = visibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+
+  visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
+}
+
+function onRowClick(_event: Event, payload: { item: JobSchedulePendingItem }) {
+  activeOrderId.value = payload.item.orderId
+}
+
+async function openPopup() {
+  if (!activeRow.value) {
+    return
+  }
+
+  await openEditor(activeRow.value)
+}
+
+async function openEditor(record: JobSchedulePendingItem) {
+  activeOrderId.value = record.orderId
+  try {
+    formJob.value = await getJobDetail(record.orderId)
+    formOpen.value = true
+  } catch {
+    errorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function handleSaved() {
+  formOpen.value = false
+  await load()
+}
+
+function printList() {
+  window.print()
+}
+
+function exportToCsv() {
+  const exportCols = headers.value.filter((header) => !['orderType', 'status', 'step1Status', 'step2Status', 'step3Status', 'urgencyLevel'].includes(String(header.key)))
+  const headerRow = exportCols.map((header) => `"${String(header.title).replace(/"/g, '""')}"`).join(',')
+
+  const dataRows = displayedRows.value.map((row) =>
+    exportCols
+      .map((header) => {
+        const key = String(header.key) as keyof JobSchedulePendingItem
+        const value = row[key]
+        if (value == null || value === '') return '""'
+
+        if (key === 'orderedOn' || key === 'requiredOn') {
+          return `"${formatDate(value as string)}"`
+        }
+
+        return `"${String(value).replace(/"/g, '""')}"`
+      })
+      .join(','),
+  )
+
+  const csv = '\uFEFF' + [headerRow, ...dataRows].join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `job-schedule-pending-${new Date().toISOString().slice(0, 10)}.csv`
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '-'
+  return formatDateByLocale(value)
+}
+
+function statusColor(status: number) {
+  if (status <= 0) return 'grey'
+  if (status === 1) return 'success'
+  if (status === 2) return 'warning'
+  return 'error'
+}
+
+function workflowColor(status: number | null) {
+  if (status == null) return 'grey-lighten-1'
+  if (status <= 0) return 'error'
+  if (status === 1) return 'error'
+  if (status === 2) return 'warning'
+  if (status === 3) return 'success'
+  if (status === 4) return 'info'
+  return 'grey'
+}
+
+function urgencyIcon(level: number) {
+  if (level === 4) return 'mdi-bell-alert'
+  if (level === 2) return 'mdi-bell'
+  return ''
+}
+
+function urgencyColor(level: number) {
+  if (level === 4) return 'error'
+  if (level === 2) return 'warning'
+  return 'grey'
+}
+
+function orderTypeMeta(orderType: number) {
+  switch (orderType) {
+    case 1:
+      return { icon: 'mdi-tag-text-outline', color: 'error' }
+    case 2:
+      return { icon: 'mdi-label-outline', color: 'warning' }
+    case 3:
+      return { icon: 'mdi-shape-outline', color: 'secondary' }
+    default:
+      return { icon: 'mdi-tag-outline', color: 'success' }
+  }
+}
+</script>
+
+<style scoped>
+.pending-list-page {
+  min-height: 0;
+}
+
+.pending-list-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.15);
+  background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));
+}
+
+.filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto auto;
+  align-items: center;
+}
+
+.toolbar-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.pending-list-table :deep(thead th) {
+  white-space: nowrap;
+  background: rgba(195, 216, 248, 0.72);
+}
+
+.pending-list-table :deep(tbody td) {
+  font-size: 12px;
+}
+
+@media (max-width: 960px) {
+  .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -159,6 +159,21 @@ export interface JobScheduleCalendarItem {
   machineNumber: string | null
 }
 
+export interface JobSchedulePendingItem {
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+  status: number
+  orderedOn: string | null
+  requiredOn: string | null
+  urgencyLevel: number
+  step1Status: number | null
+  step2Status: number | null
+  step3Status: number | null
+}
+
 export interface UpdateJobScheduleTimeRequest {
   startOn: string
   endOn: string | null

@@ -149,6 +149,8 @@ const router = createRouter({
           ? () => import('@/views/JobListView.vue')
         : route.path === '/job-order/job-stats'
           ? () => import('@/views/JobStatsView.vue')
+        : route.path === '/job-order/schedule/pending'
+          ? () => import('@/views/SchedulePendingView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),

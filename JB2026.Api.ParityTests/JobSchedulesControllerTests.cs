@@ -145,6 +145,128 @@ public sealed class JobSchedulesControllerTests
         Assert.Empty(items);
     }
 
+    [Fact]
+    public async Task GetPending_NoData_ReturnsOkEmptyList()
+    {
+        using var context = CreateContext(nameof(GetPending_NoData_ReturnsOkEmptyList));
+        var controller = CreateController(context, new NoOpGateway());
+
+        var result = await controller.GetPending(null, null, null, 100, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(ok.Value);
+        Assert.Empty(items);
+    }
+
+    [Fact]
+    public async Task GetPending_ReturnsLegacyLikeProjection()
+    {
+        using var context = CreateContext(nameof(GetPending_ReturnsLegacyLikeProjection));
+
+        var orderId = Guid.NewGuid();
+        context.JobOrders.Add(new JobOrder
+        {
+            OrderId = orderId,
+            OrderType = 1,
+            OrderNumber = "168312",
+            JobNumber = 1,
+            CustomerName = "Orbusneich",
+            OrderTitle = "Name Card",
+            Status = 1,
+            OrderedOn = DateTime.Today,
+            RequiredOn = DateTime.Today.AddDays(7),
+            CreatedOn = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+            ModifiedOn = DateTime.UtcNow,
+            ModifiedBy = Guid.NewGuid(),
+            Retired = false
+        });
+
+        context.JobWorkflows.AddRange(
+            new JobWorkflow { JobWorkflowId = Guid.NewGuid(), OrderId = orderId, WorkIndex = 0, WorkStatus = 1 },
+            new JobWorkflow { JobWorkflowId = Guid.NewGuid(), OrderId = orderId, WorkIndex = 1, WorkStatus = 3 },
+            new JobWorkflow { JobWorkflowId = Guid.NewGuid(), OrderId = orderId, WorkIndex = 2, WorkStatus = 2 });
+
+        context.JobSchedules.Add(new JobSchedule
+        {
+            ScheduleId = Guid.NewGuid(),
+            OrderId = orderId,
+            ScheduledOn = DateTime.Today,
+            UrgencyLevel = 4,
+            Cancelled = false
+        });
+
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, new NoOpGateway());
+        var result = await controller.GetPending("168312", null, null, 100, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(ok.Value);
+        var item = Assert.Single(items);
+
+        Assert.Equal(orderId, item.OrderId);
+        Assert.Equal("168312-1", item.OrderNumber);
+        Assert.Equal(4, item.UrgencyLevel);
+        Assert.Equal(1, item.Step1Status);
+        Assert.Equal(3, item.Step2Status);
+        Assert.Equal(2, item.Step3Status);
+    }
+
+    [Fact]
+    public async Task GetPending_StartsWithFilter_WorksForAlphaAndNumericShortcut()
+    {
+        using var context = CreateContext(nameof(GetPending_StartsWithFilter_WorksForAlphaAndNumericShortcut));
+
+        context.JobOrders.AddRange(
+            new JobOrder
+            {
+                OrderId = Guid.NewGuid(),
+                OrderType = 0,
+                OrderNumber = "A100",
+                JobNumber = 1,
+                CustomerName = "Alpha",
+                OrderTitle = "First",
+                Status = 1,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false
+            },
+            new JobOrder
+            {
+                OrderId = Guid.NewGuid(),
+                OrderType = 0,
+                OrderNumber = "1680",
+                JobNumber = 1,
+                CustomerName = "Numeric",
+                OrderTitle = "Second",
+                Status = 1,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false
+            });
+
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, new NoOpGateway());
+
+        var alpha = await controller.GetPending(null, null, "A", 100, CancellationToken.None);
+        var alphaOk = Assert.IsType<OkObjectResult>(alpha.Result);
+        var alphaItems = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(alphaOk.Value);
+        Assert.Single(alphaItems);
+        Assert.Equal("A100-1", alphaItems[0].OrderNumber);
+
+        var numeric = await controller.GetPending(null, null, "9", 100, CancellationToken.None);
+        var numericOk = Assert.IsType<OkObjectResult>(numeric.Result);
+        var numericItems = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(numericOk.Value);
+        Assert.Single(numericItems);
+        Assert.Equal("1680-1", numericItems[0].OrderNumber);
+    }
+
     // -----------------------------------------------------------------------
     // PATCH /{id}/time — validation
     // -----------------------------------------------------------------------
