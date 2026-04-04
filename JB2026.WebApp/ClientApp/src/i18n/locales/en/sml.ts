@@ -55,4 +55,33 @@ export const smlMessages = {
         },
         loadFailed: 'Unable to load SML RTF list. Please verify API availability.',
       },
+      invoiceList: {
+        title: 'Invoice list',
+        subtitle: 'Legacy-style SML invoice list backed by modern API contracts.',
+        lookup: 'Lookup',
+        commonQuery: 'Common query',
+        rows: 'Rows: {count}',
+        commonQueryItems: {
+          thirty: 'Last 30 days',
+          sixty: 'Last 60 days',
+          ninety: 'Last 90 days',
+          all: 'All',
+        },
+        actions: {
+          attachment: 'Attachment',
+          export: 'Export',
+          delete: 'Delete',
+        },
+        headers: {
+          invoiceNumber: 'Invoice No.',
+          rowNumber: '#',
+          customerName: 'Customer Name',
+          invoiceDate: 'Invoice Date',
+          invoiceAmount: 'Invoice Amount',
+          icNumber: 'IC No.',
+          createdOn: 'Created On',
+          createdBy: 'Created By',
+        },
+        loadFailed: 'Unable to load SML Invoice list. Please verify API availability.',
+      },
     } as const

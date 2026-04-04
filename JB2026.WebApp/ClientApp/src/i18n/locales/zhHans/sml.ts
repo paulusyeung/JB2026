@@ -55,4 +55,33 @@ export const smlMessages = {
         },
         loadFailed: '无法加载 SML RTF 列表，请检查 API 可用性。',
       },
+      invoiceList: {
+        title: '发票列表',
+        subtitle: '通过现代 API 契约还原遗留 SML 发票列表。',
+        lookup: '查找',
+        commonQuery: '常用查询',
+        rows: '行数: {count}',
+        commonQueryItems: {
+          thirty: '最近 30 天',
+          sixty: '最近 60 天',
+          ninety: '最近 90 天',
+          all: '全部',
+        },
+        actions: {
+          attachment: '附件',
+          export: '导出',
+          delete: '删除',
+        },
+        headers: {
+          invoiceNumber: '发票号',
+          rowNumber: '#',
+          customerName: '客户名称',
+          invoiceDate: '发票日期',
+          invoiceAmount: '发票金额',
+          icNumber: '身份证号',
+          createdOn: '创建时间',
+          createdBy: '创建人',
+        },
+        loadFailed: '无法加载 SML 发票列表，请检查 API 可用性。',
+      },
     } as const

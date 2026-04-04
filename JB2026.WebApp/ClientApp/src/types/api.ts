@@ -155,6 +155,24 @@ export interface SmlRtfListResponse {
   headers: SmlRtfListHeader[]
 }
 
+export interface SmlInvoiceListRow {
+  headerId: string
+  invoiceNumber: string
+  rowNumber: number
+  customerName: string
+  invoiceDate: string
+  invoiceAmount: number
+  icNumber: string
+  createdOn: string
+  createdBy: string
+}
+
+export interface SmlInvoiceListResponse {
+  generatedAtUtc: string
+  rowCount: number
+  rows: SmlInvoiceListRow[]
+}
+
 export interface AppSettings {
   companyName: string
   timeZone: string

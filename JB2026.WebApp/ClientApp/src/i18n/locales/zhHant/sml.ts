@@ -55,4 +55,33 @@ export const smlMessages = {
         },
         loadFailed: '無法載入 SML RTF 清單，請確認 API 可用性。',
       },
+      invoiceList: {
+        title: '發票列表',
+        subtitle: '透過現代 API 契約還原舊版 SML 發票清單。',
+        lookup: '查詢',
+        commonQuery: '常用查詢',
+        rows: '筆數: {count}',
+        commonQueryItems: {
+          thirty: '最近 30 天',
+          sixty: '最近 60 天',
+          ninety: '最近 90 天',
+          all: '全部',
+        },
+        actions: {
+          attachment: '附件',
+          export: '匯出',
+          delete: '刪除',
+        },
+        headers: {
+          invoiceNumber: '發票號碼',
+          rowNumber: '#',
+          customerName: '客戶名稱',
+          invoiceDate: '發票日期',
+          invoiceAmount: '發票金額',
+          icNumber: 'IC 號碼',
+          createdOn: '建立時間',
+          createdBy: '建立人',
+        },
+        loadFailed: '無法載入 SML 發票清單，請確認 API 可用性。',
+      },
     } as const

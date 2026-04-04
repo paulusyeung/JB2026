@@ -576,4 +576,160 @@ FROM [dbo].[vwRtfItemList]")
             TopCustomers = topCustomers,
         });
     }
+
+    [HttpGet("invoice-list")]
+    [ProducesResponseType(typeof(SmlInvoiceListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SmlInvoiceListResponse>> GetInvoiceList(
+        [FromQuery] string? lookup,
+        [FromQuery] int commonQuery = 1,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (_readContext is null)
+        {
+            return Problem("SML invoice list data source is unavailable.");
+        }
+
+        if (commonQuery is < 0 or > 3)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(commonQuery)] = ["Common query must be between 0 and 3."]
+            }));
+        }
+
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+
+        try
+        {
+            var sourceRows = await _readContext.Database.SqlQueryRaw<SmlInvoiceListViewRow>(@"
+SELECT
+    [HeaderId],
+    [InvoiceNumber],
+    [CustomerName],
+    [InvoiceDate],
+    [InvoiceAmount],
+    [ICNumber],
+    [CreatedOn],
+    [CreatedBy],
+    [ModifiedOn],
+    [ModifiedBy]
+FROM [dbo].[vwInvoiceList]")
+                .ToListAsync(cancellationToken);
+
+            var filtered = ApplyInvoiceListFilter(sourceRows, normalizedLookup, commonQuery)
+                .OrderByDescending(row => row.InvoiceNumber ?? string.Empty)
+                .Take(take)
+                .ToArray();
+
+            var payloadRows = filtered
+                .Select((row, index) => new SmlInvoiceListRowResponse
+                {
+                    HeaderId = row.HeaderId,
+                    InvoiceNumber = row.InvoiceNumber ?? string.Empty,
+                    RowNumber = index + 1,
+                    CustomerName = row.CustomerName ?? string.Empty,
+                    InvoiceDate = row.InvoiceDate,
+                    InvoiceAmount = row.InvoiceAmount ?? 0m,
+                    ICNumber = row.ICNumber ?? string.Empty,
+                    CreatedOn = row.ModifiedOn,
+                    CreatedBy = row.ModifiedBy ?? row.CreatedBy ?? string.Empty,
+                })
+                .ToArray();
+
+            _logger.LogInformation(
+                "Returned SML Invoice list with {Count} rows for lookup '{Lookup}' and commonQuery {CommonQuery}",
+                payloadRows.Length,
+                normalizedLookup ?? string.Empty,
+                commonQuery);
+
+            return Ok(new SmlInvoiceListResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = payloadRows.Length,
+                Rows = payloadRows,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to load SML Invoice list for lookup '{Lookup}' and commonQuery {CommonQuery}",
+                normalizedLookup ?? string.Empty,
+                commonQuery);
+
+            return Ok(new SmlInvoiceListResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = 0,
+                Rows = Array.Empty<SmlInvoiceListRowResponse>(),
+            });
+        }
+    }
+
+    private static IEnumerable<SmlInvoiceListViewRow> ApplyInvoiceListFilter(
+        IEnumerable<SmlInvoiceListViewRow> rows,
+        string? normalizedLookup,
+        int commonQuery)
+    {
+        var query = rows;
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            return query.Where(row =>
+                (row.InvoiceNumber ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                (row.CustomerName ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                (row.ICNumber ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                row.InvoiceDate.ToString("yyyy-MM-dd").Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                row.CreatedOn.ToString("yyyy-MM-dd").Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (commonQuery is >= 1 and <= 3)
+        {
+            var now = DateTime.Now;
+            var upperBound = now.Date.AddDays(1);
+            var lowerBound = commonQuery switch
+            {
+                1 => now.Date.AddDays(-30),
+                2 => now.Date.AddDays(-60),
+                3 => now.Date.AddDays(-90),
+                _ => now.Date.AddDays(-30),
+            };
+
+            query = query.Where(row => row.CreatedOn <= upperBound && row.CreatedOn >= lowerBound);
+        }
+
+        return query;
+    }
+
+    private sealed class SmlInvoiceListViewRow
+    {
+        public Guid HeaderId { get; init; }
+
+        public string? InvoiceNumber { get; init; }
+
+        public string? CustomerName { get; init; }
+
+        public DateTime InvoiceDate { get; init; }
+
+        public decimal? InvoiceAmount { get; init; }
+
+        public string? ICNumber { get; init; }
+
+        public DateTime CreatedOn { get; init; }
+
+        public string? CreatedBy { get; init; }
+
+        public DateTime ModifiedOn { get; init; }
+
+        public string? ModifiedBy { get; init; }
+    }
 }
