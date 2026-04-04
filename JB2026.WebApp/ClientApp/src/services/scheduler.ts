@@ -1,5 +1,8 @@
 import { apiClient } from './api'
 import type {
+  CompletePackingOnAirRequest,
+  JobPackingOnAirAvailableItem,
+  JobPackingOnAirItem,
   JobScheduleAvailableItem,
   JobScheduleCalendarItem,
   JobScheduleCompletedItem,
@@ -7,6 +10,7 @@ import type {
   JobSchedulePackingItem,
   JobSchedulePendingItem,
   RescheduleCompletedSchedulesRequest,
+  SavePackingOnAirBatchRequest,
   SaveScheduleBatchRequest,
   UpdateJobScheduleTimeRequest,
 } from '@/types/api'
@@ -68,6 +72,30 @@ export async function getPackingSchedule(query: PackingScheduleQuery): Promise<J
   })
 
   return response.data
+}
+
+export async function getPackingOnAirAvailable(orderType = 0): Promise<JobPackingOnAirAvailableItem[]> {
+  const response = await apiClient.get<JobPackingOnAirAvailableItem[]>('/api/v2/job-schedules/packing-on-air/available', {
+    params: { orderType },
+  })
+
+  return response.data
+}
+
+export async function getPackingOnAir(orderType = 0): Promise<JobPackingOnAirItem[]> {
+  const response = await apiClient.get<JobPackingOnAirItem[]>('/api/v2/job-schedules/packing-on-air', {
+    params: { orderType },
+  })
+
+  return response.data
+}
+
+export async function savePackingOnAirBatch(request: SavePackingOnAirBatchRequest): Promise<void> {
+  await apiClient.post('/api/v2/job-schedules/packing-on-air/batch', request)
+}
+
+export async function completePackingOnAir(request: CompletePackingOnAirRequest): Promise<void> {
+  await apiClient.post('/api/v2/job-schedules/packing-on-air/complete', request)
 }
 
 export async function updateScheduleTime(

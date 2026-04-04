@@ -44,4 +44,34 @@ export const schedulerMessages = {
           yellow: '紧急（黄）',
         },
       },
+      packingOnAir: {
+        title: '作业排程 - 包装 (OnAir)',
+        loadFailed: '无法加载包装队列，请确认 API 可用性。',
+        saveFailed: '无法保存包装队列，请重试。',
+        saveConfirm: '保存包装队列？',
+        completeFailed: '无法将所选项目标记为已完成。',
+        available: {
+          title: '可用工单',
+        },
+        selected: {
+          title: '已选工单',
+        },
+        columns: {
+          order: '工单号',
+          customer: '客户',
+          title: '标题',
+          remarks: '备注',
+        },
+        actions: {
+          selectOne: '选取',
+          selectAll: '全选',
+          unselectOne: '取消选取',
+          unselectAll: '全部取消',
+          moveTop: '移至顶端',
+          moveUp: '上移',
+          moveDown: '下移',
+          moveBottom: '移至底部',
+          completed: '标记完成',
+        },
+      },
     } as const

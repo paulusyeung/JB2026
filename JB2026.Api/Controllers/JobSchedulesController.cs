@@ -16,18 +16,29 @@ namespace JB2026.Api.Controllers;
 [Route("api/v2/job-schedules")]
 public sealed class JobSchedulesController : ControllerBase
 {
+    private static readonly DateTime LegacyEmptyDate = new(1900, 1, 1);
+    private const int PackingStatusDraft = 0;
+    private const int PackingStatusCompleted = 1;
+    private const int PackingWorkflowIndex = 2;
+    private const int WorkflowStatusRed = 0;
+    private const int WorkflowStatusYellow = 1;
+    private const int WorkflowStatusGreen = 2;
+
     private readonly JB5LegacyReadContext _readContext;
     private readonly JB5LegacyWriteContext _writeContext;
     private readonly IJobScheduleStoredProcedureGateway _gateway;
+    private readonly IJobPackingOnAirStoredProcedureGateway _packingOnAirGateway;
 
     public JobSchedulesController(
         JB5LegacyReadContext readContext,
         JB5LegacyWriteContext writeContext,
-        IJobScheduleStoredProcedureGateway gateway)
+        IJobScheduleStoredProcedureGateway gateway,
+        IJobPackingOnAirStoredProcedureGateway packingOnAirGateway)
     {
         _readContext = readContext;
         _writeContext = writeContext;
         _gateway = gateway;
+        _packingOnAirGateway = packingOnAirGateway;
     }
 
     [HttpGet("range")]
@@ -486,6 +497,280 @@ public sealed class JobSchedulesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("packing-on-air/available")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobPackingOnAirAvailableItemResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<JobPackingOnAirAvailableItemResponse>>> GetPackingOnAirAvailable(
+        [FromQuery] int orderType = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _readContext.vwAvailableJobPackingLists
+            .AsNoTracking()
+            .Where(item => item.OrderType == orderType)
+            .OrderByDescending(item => item.OrderNumber)
+            .Take(1000)
+            .ToListAsync(cancellationToken);
+
+        if (rows.Count == 0)
+        {
+            return Ok(Array.Empty<JobPackingOnAirAvailableItemResponse>());
+        }
+
+        var orderIds = rows.Select(item => item.OrderId).Distinct().ToList();
+
+        var workflowRows = await WhereOrderIdIn(
+                _readContext.JobWorkflows
+                    .AsNoTracking(),
+                workflow => workflow.OrderId,
+                orderIds)
+            .Where(workflow => workflow.WorkIndex == 0 || workflow.WorkIndex == 1)
+            .ToListAsync(cancellationToken);
+
+        var workflowMap = workflowRows
+            .GroupBy(workflow => workflow.OrderId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToDictionary(workflow => workflow.WorkIndex, workflow => workflow.WorkStatus));
+
+        var remarksRows = await WhereOrderIdIn(
+                _readContext.JobOrders
+                    .AsNoTracking(),
+                order => order.OrderId,
+                orderIds)
+            .Select(order => new { order.OrderId, order.Remarks })
+            .ToListAsync(cancellationToken);
+
+        var remarksMap = remarksRows.ToDictionary(item => item.OrderId, item => item.Remarks ?? string.Empty);
+
+        var result = rows
+            .Where(row =>
+            {
+                if (!workflowMap.TryGetValue(row.OrderId, out var steps))
+                {
+                    return false;
+                }
+
+                var step1Ready = steps.TryGetValue(0, out var step1) && step1 == WorkflowStatusGreen;
+                var step2Ready = steps.TryGetValue(1, out var step2) && step2 == WorkflowStatusGreen;
+                return step1Ready && step2Ready;
+            })
+            .Select(row =>
+            {
+                remarksMap.TryGetValue(row.OrderId, out var remarks);
+
+                return new JobPackingOnAirAvailableItemResponse
+                {
+                    OrderId = row.OrderId,
+                    OrderType = row.OrderType,
+                    OrderNumber = row.OrderNumber ?? string.Empty,
+                    CustomerName = row.CustomerName ?? string.Empty,
+                    OrderTitle = row.OrderTitle ?? string.Empty,
+                    Remarks = remarks ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        return Ok(result);
+    }
+
+    [HttpGet("packing-on-air")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobPackingOnAirItemResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<JobPackingOnAirItemResponse>>> GetPackingOnAir(
+        [FromQuery] int orderType = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _readContext.vwAvailableJobPackingOnAirLists
+            .AsNoTracking()
+            .Where(item => item.OrderType == orderType)
+            .OrderBy(item => item.Priority)
+            .ThenByDescending(item => item.OrderNumber)
+            .Take(1000)
+            .ToListAsync(cancellationToken);
+
+        var orderIds = rows
+            .Select(item => item.OrderId)
+            .Where(item => item.HasValue)
+            .Select(item => item!.Value)
+            .Distinct()
+            .ToList();
+
+        var remarksRows = orderIds.Count == 0
+            ? []
+            : await WhereOrderIdIn(
+                    _readContext.JobOrders
+                        .AsNoTracking(),
+                    order => order.OrderId,
+                    orderIds)
+                .Select(order => new { order.OrderId, order.Remarks })
+                .ToListAsync(cancellationToken);
+
+        var remarksMap = remarksRows.ToDictionary(item => item.OrderId, item => item.Remarks ?? string.Empty);
+
+        var result = rows
+            .Where(row => row.OrderId.HasValue)
+            .Select(row =>
+            {
+                var orderId = row.OrderId!.Value;
+                remarksMap.TryGetValue(orderId, out var remarks);
+
+                return new JobPackingOnAirItemResponse
+                {
+                    OnAirId = row.OnAirId,
+                    OrderId = orderId,
+                    OrderType = row.OrderType ?? 0,
+                    OrderNumber = row.OrderNumber ?? string.Empty,
+                    CustomerName = row.CustomerName ?? string.Empty,
+                    OrderTitle = row.OrderTitle ?? string.Empty,
+                    Priority = row.Priority ?? 0,
+                    Remarks = remarks ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        return Ok(result);
+    }
+
+    [HttpPost("packing-on-air/batch")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SavePackingOnAirBatch(
+        [FromBody] SavePackingOnAirBatchRequest request,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.Now;
+        var currentUserId = ResolveCurrentUserId() ?? Guid.Empty;
+
+        for (var index = 0; index < request.SelectedItems.Count; index++)
+        {
+            var item = request.SelectedItems[index];
+
+            var existing = await _readContext.JobPackingOnAirs
+                .AsNoTracking()
+                .Where(record => record.OrderId == item.OrderId)
+                .OrderByDescending(record => record.OnAiredOn)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existing is null)
+            {
+                await _packingOnAirGateway.InsertAsync(new CreateJobPackingOnAirStoredProcedureRequest(
+                    OrderId: item.OrderId,
+                    OnAiredOn: now,
+                    OnAiredBy: currentUserId,
+                    Priority: index,
+                    Status: PackingStatusDraft,
+                    CompletedOn: LegacyEmptyDate,
+                    CompletedBy: null,
+                    Cancelled: false,
+                    CancelledOn: LegacyEmptyDate,
+                    CancelledBy: null,
+                    RescheduledCount: 0,
+                    RescheduledOn: LegacyEmptyDate,
+                    RescheduledBy: null), cancellationToken);
+            }
+            else
+            {
+                await _packingOnAirGateway.UpdateAsync(new UpdateJobPackingOnAirStoredProcedureRequest(
+                    OnAirId: existing.OnAirId,
+                    OrderId: existing.OrderId,
+                    OnAiredOn: now,
+                    OnAiredBy: currentUserId,
+                    Priority: index,
+                    Status: PackingStatusDraft,
+                    CompletedOn: LegacyEmptyDate,
+                    CompletedBy: null,
+                    Cancelled: false,
+                    CancelledOn: LegacyEmptyDate,
+                    CancelledBy: null,
+                    RescheduledCount: existing.RescheduledCount,
+                    RescheduledOn: existing.RescheduledOn,
+                    RescheduledBy: existing.RescheduledBy), cancellationToken);
+            }
+
+            await UpdatePackingWorkflowStatusAsync(item.OrderId, WorkflowStatusYellow, now, cancellationToken);
+        }
+
+        foreach (var orderId in request.CancelledOrderIds.Distinct())
+        {
+            var existing = await _readContext.JobPackingOnAirs
+                .AsNoTracking()
+                .Where(record => record.OrderId == orderId)
+                .OrderByDescending(record => record.OnAiredOn)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existing is null)
+            {
+                continue;
+            }
+
+            await _packingOnAirGateway.UpdateAsync(new UpdateJobPackingOnAirStoredProcedureRequest(
+                OnAirId: existing.OnAirId,
+                OrderId: existing.OrderId,
+                OnAiredOn: existing.OnAiredOn,
+                OnAiredBy: existing.OnAiredBy,
+                Priority: existing.Priority,
+                Status: existing.Status,
+                CompletedOn: existing.CompletedOn,
+                CompletedBy: existing.CompletedBy,
+                Cancelled: true,
+                CancelledOn: now,
+                CancelledBy: currentUserId,
+                RescheduledCount: existing.RescheduledCount,
+                RescheduledOn: existing.RescheduledOn,
+                RescheduledBy: existing.RescheduledBy), cancellationToken);
+
+            await UpdatePackingWorkflowStatusAsync(orderId, WorkflowStatusRed, now, cancellationToken);
+        }
+
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { saved = request.SelectedItems.Count, cancelled = request.CancelledOrderIds.Count });
+    }
+
+    [HttpPost("packing-on-air/complete")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CompletePackingOnAir(
+        [FromBody] CompletePackingOnAirRequest request,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.Now;
+        var currentUserId = ResolveCurrentUserId();
+        var completed = 0;
+
+        foreach (var orderId in request.OrderIds.Distinct())
+        {
+            var existing = await _readContext.JobPackingOnAirs
+                .AsNoTracking()
+                .Where(record => record.OrderId == orderId && record.Cancelled != true)
+                .OrderByDescending(record => record.OnAiredOn)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existing is null)
+            {
+                continue;
+            }
+
+            await _packingOnAirGateway.UpdateAsync(new UpdateJobPackingOnAirStoredProcedureRequest(
+                OnAirId: existing.OnAirId,
+                OrderId: existing.OrderId,
+                OnAiredOn: existing.OnAiredOn,
+                OnAiredBy: existing.OnAiredBy,
+                Priority: existing.Priority,
+                Status: PackingStatusCompleted,
+                CompletedOn: now,
+                CompletedBy: currentUserId,
+                Cancelled: existing.Cancelled,
+                CancelledOn: existing.CancelledOn,
+                CancelledBy: existing.CancelledBy,
+                RescheduledCount: existing.RescheduledCount,
+                RescheduledOn: existing.RescheduledOn,
+                RescheduledBy: existing.RescheduledBy), cancellationToken);
+
+            await UpdatePackingWorkflowStatusAsync(orderId, WorkflowStatusGreen, now, cancellationToken);
+            completed++;
+        }
+
+        await _writeContext.SaveChangesAsync(cancellationToken);
+        return Ok(new { completed });
+    }
+
     [HttpPatch("{id:guid}/time")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -795,6 +1080,26 @@ public sealed class JobSchedulesController : ControllerBase
     {
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(value, out var id) ? id : null;
+    }
+
+    private async Task UpdatePackingWorkflowStatusAsync(
+        Guid orderId,
+        int status,
+        DateTime modifiedOn,
+        CancellationToken cancellationToken)
+    {
+        var workflow = await _writeContext.JobWorkflows
+            .FirstOrDefaultAsync(
+                item => item.OrderId == orderId && item.WorkIndex == PackingWorkflowIndex,
+                cancellationToken);
+
+        if (workflow is null)
+        {
+            return;
+        }
+
+        workflow.WorkStatus = status;
+        workflow.ModifiedOn = modifiedOn;
     }
 
     private static string[] ExtractPrintInfo(string? productDetails, string? orderTitle)

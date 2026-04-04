@@ -44,4 +44,34 @@ export const schedulerMessages = {
           yellow: 'Urgent (Yellow)',
         },
       },
+      packingOnAir: {
+        title: 'Job Schedule - Packing (OnAir)',
+        loadFailed: 'Unable to load packing queue. Please verify API availability.',
+        saveFailed: 'Unable to save packing queue. Please try again.',
+        saveConfirm: 'Save packing queue?',
+        completeFailed: 'Unable to mark the selected items as completed.',
+        available: {
+          title: 'Available Job Orders',
+        },
+        selected: {
+          title: 'Selected Job Orders',
+        },
+        columns: {
+          order: 'Job Order',
+          customer: 'Customer',
+          title: 'Title',
+          remarks: 'Remarks',
+        },
+        actions: {
+          selectOne: 'Select',
+          selectAll: 'Select All',
+          unselectOne: 'Unselect',
+          unselectAll: 'Unselect All',
+          moveTop: 'Move to Top',
+          moveUp: 'Move Up',
+          moveDown: 'Move Down',
+          moveBottom: 'Move to Bottom',
+          completed: 'Mark Completed',
+        },
+      },
     } as const

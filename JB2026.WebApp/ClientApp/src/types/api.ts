@@ -217,6 +217,26 @@ export interface JobScheduleAvailableItem {
   orderTitle: string
 }
 
+export interface JobPackingOnAirAvailableItem {
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+  remarks: string
+}
+
+export interface JobPackingOnAirItem {
+  onAirId: string
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+  priority: number
+  remarks: string
+}
+
 export interface JobScheduleOnAirItem {
   scheduleId: string
   orderId: string
@@ -246,6 +266,20 @@ export interface SaveScheduleBatchRequest {
   orderType: number
   scheduledItems: SaveScheduleBatchItem[]
   cancelledOrderIds: string[]
+}
+
+export interface SavePackingOnAirBatchItem {
+  orderId: string
+}
+
+export interface SavePackingOnAirBatchRequest {
+  orderType: number
+  selectedItems: SavePackingOnAirBatchItem[]
+  cancelledOrderIds: string[]
+}
+
+export interface CompletePackingOnAirRequest {
+  orderIds: string[]
 }
 
 export interface RescheduleCompletedSchedulesRequest {

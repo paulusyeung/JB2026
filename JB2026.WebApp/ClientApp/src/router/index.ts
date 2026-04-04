@@ -158,6 +158,8 @@ const router = createRouter({
           ? () => import('@/views/ScheduleCompletedView.vue')
         : route.path === '/job-order/schedule/packing'
           ? () => import('@/views/SchedulePackingView.vue')
+        : route.path === '/job-order/schedule/packing-on-air'
+          ? () => import('@/views/SchedulePackingOnAirView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),

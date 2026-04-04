@@ -44,4 +44,34 @@ export const schedulerMessages = {
           yellow: '緊急（黃）',
         },
       },
+      packingOnAir: {
+        title: '作業排程 - 包裝 (OnAir)',
+        loadFailed: '無法載入包裝佇列，請確認 API 可用性。',
+        saveFailed: '無法儲存包裝佇列，請再試一次。',
+        saveConfirm: '儲存包裝佇列？',
+        completeFailed: '無法將所選項目標記為已完成。',
+        available: {
+          title: '可用工單',
+        },
+        selected: {
+          title: '已選工單',
+        },
+        columns: {
+          order: '工單號',
+          customer: '客戶',
+          title: '標題',
+          remarks: '備註',
+        },
+        actions: {
+          selectOne: '選取',
+          selectAll: '全選',
+          unselectOne: '取消選取',
+          unselectAll: '全部取消',
+          moveTop: '移至頂端',
+          moveUp: '上移',
+          moveDown: '下移',
+          moveBottom: '移至底部',
+          completed: '標記完成',
+        },
+      },
     } as const
