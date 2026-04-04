@@ -153,6 +153,8 @@ const router = createRouter({
           ? () => import('@/views/SchedulePendingView.vue')
         : route.path === '/job-order/schedule/scheduled'
           ? () => import('@/views/ScheduleView.vue')
+        : route.path === '/job-order/schedule/completed'
+          ? () => import('@/views/ScheduleCompletedView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),

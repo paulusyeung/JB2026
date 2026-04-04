@@ -266,6 +266,95 @@ public sealed class JobSchedulesController : ControllerBase
         }
     }
 
+    [HttpGet("completed")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobScheduleCompletedItemResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<JobScheduleCompletedItemResponse>>> GetCompleted(
+        [FromQuery] string? lookup,
+        [FromQuery] int? commonQuery,
+        [FromQuery] string? machine,
+        [FromQuery] string? startsWith,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        var safeTake = Math.Clamp(take, 1, 2000);
+        var today = DateTime.Today;
+
+        var query = _readContext.vwJobScheduleLists
+            .AsNoTracking()
+            .Where(item =>
+                item.Status == 1 &&
+                item.CompletedOn.HasValue);
+
+        query = commonQuery.GetValueOrDefault() switch
+        {
+            1 => query.Where(item =>
+                item.CompletedOn.HasValue &&
+                item.CompletedOn.Value >= today.AddDays(-7) &&
+                item.CompletedOn.Value < today.AddDays(1)),
+            2 => query.Where(item =>
+                item.CompletedOn.HasValue &&
+                item.CompletedOn.Value >= today.AddDays(-30) &&
+                item.CompletedOn.Value < today.AddDays(1)),
+            _ => query
+        };
+
+        if (!string.IsNullOrWhiteSpace(lookup))
+        {
+            var keyword = lookup.Trim();
+            query = query.Where(item =>
+                (item.OrderNumber != null && item.OrderNumber.Contains(keyword)) ||
+                (item.CustomerName != null && item.CustomerName.Contains(keyword)) ||
+                (item.OrderTitle != null && item.OrderTitle.Contains(keyword)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(machine) && machine != "0")
+        {
+            query = query.Where(item => item.MachineNumber == machine);
+        }
+
+        if (!string.IsNullOrWhiteSpace(startsWith))
+        {
+            var prefix = startsWith.Trim();
+            if (prefix == "9")
+            {
+                query = query.Where(item =>
+                    item.OrderNumber != null &&
+                    item.OrderNumber.Length > 0 &&
+                    item.OrderNumber[0] >= '0' &&
+                    item.OrderNumber[0] <= '9');
+            }
+            else
+            {
+                query = query.Where(item => item.OrderNumber != null && item.OrderNumber.StartsWith(prefix));
+            }
+        }
+
+        var rows = await query
+            .OrderByDescending(item => item.OrderNumber)
+            .Take(safeTake)
+            .ToListAsync(cancellationToken);
+
+        var result = rows
+            .Where(item => item.OrderId.HasValue)
+            .Select(item => new JobScheduleCompletedItemResponse
+            {
+                OrderId = item.OrderId!.Value,
+                OrderType = item.OrderType ?? 0,
+                OrderNumber = item.OrderNumber ?? string.Empty,
+                CustomerName = item.CustomerName ?? string.Empty,
+                OrderTitle = item.OrderTitle ?? string.Empty,
+                Status = item.Status ?? 0,
+                MachineNumber = item.MachineNumber ?? string.Empty,
+                OrderedOn = item.OrderedOn,
+                RequiredOn = item.RequiredOn,
+                ScheduledOn = item.ScheduledOn,
+                CompletedOn = item.CompletedOn,
+            })
+            .ToList();
+
+        return Ok(result);
+    }
+
     [HttpPatch("{id:guid}/time")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -519,6 +608,56 @@ public sealed class JobSchedulesController : ControllerBase
         }
 
         return Ok(new { saved = request.ScheduledItems.Count, cancelled = request.CancelledOrderIds.Count });
+    }
+
+    [HttpPost("completed/reschedule")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RescheduleCompleted(
+        [FromBody] RescheduleCompletedSchedulesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = ResolveCurrentUserId();
+        var now = DateTime.UtcNow;
+        var updated = 0;
+
+        foreach (var orderId in request.OrderIds.Distinct())
+        {
+            var schedule = await _readContext.JobSchedules
+                .AsNoTracking()
+                .Where(item =>
+                    item.OrderId == orderId &&
+                    item.Cancelled != true &&
+                    item.CompletedOn.HasValue)
+                .OrderByDescending(item => item.CompletedOn)
+                .ThenByDescending(item => item.ScheduledOn)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (schedule is null)
+            {
+                continue;
+            }
+
+            await _gateway.UpdateAsync(new UpdateJobScheduleStoredProcedureRequest(
+                ScheduleId: schedule.ScheduleId,
+                OrderId: schedule.OrderId,
+                ScheduledOn: schedule.ScheduledOn,
+                Status: schedule.Status,
+                Priority: schedule.Priority,
+                MachineNumber: schedule.MachineNumber,
+                CompletedOn: null,
+                ShouldReview: schedule.ShouldReview,
+                UrgencyLevel: schedule.UrgencyLevel,
+                Cancelled: true,
+                CancelledOn: now,
+                CancelledBy: currentUserId,
+                RescheduledCount: (schedule.RescheduledCount ?? 0) + 1,
+                RescheduledBy: currentUserId,
+                RescheduledOn: now), cancellationToken);
+
+            updated++;
+        }
+
+        return Ok(new { updated });
     }
 
     private Guid? ResolveCurrentUserId()

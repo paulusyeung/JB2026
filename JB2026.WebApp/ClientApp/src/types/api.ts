@@ -174,6 +174,20 @@ export interface JobSchedulePendingItem {
   step3Status: number | null
 }
 
+export interface JobScheduleCompletedItem {
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+  status: number
+  machineNumber: string
+  orderedOn: string | null
+  requiredOn: string | null
+  scheduledOn: string | null
+  completedOn: string | null
+}
+
 export interface UpdateJobScheduleTimeRequest {
   startOn: string
   endOn: string | null
@@ -217,6 +231,10 @@ export interface SaveScheduleBatchRequest {
   orderType: number
   scheduledItems: SaveScheduleBatchItem[]
   cancelledOrderIds: string[]
+}
+
+export interface RescheduleCompletedSchedulesRequest {
+  orderIds: string[]
 }
 
 export interface JobOrderFormData {

@@ -2,8 +2,10 @@ import { apiClient } from './api'
 import type {
   JobScheduleAvailableItem,
   JobScheduleCalendarItem,
+  JobScheduleCompletedItem,
   JobScheduleOnAirItem,
   JobSchedulePendingItem,
+  RescheduleCompletedSchedulesRequest,
   SaveScheduleBatchRequest,
   UpdateJobScheduleTimeRequest,
 } from '@/types/api'
@@ -20,6 +22,14 @@ export interface PendingScheduleQuery {
   take?: number
 }
 
+export interface CompletedScheduleQuery {
+  lookup?: string
+  commonQuery?: number
+  machine?: string
+  startsWith?: string
+  take?: number
+}
+
 export async function getScheduleRange(query: ScheduleRangeQuery): Promise<JobScheduleCalendarItem[]> {
   const response = await apiClient.get<JobScheduleCalendarItem[]>('/api/v2/job-schedules/range', {
     params: query,
@@ -30,6 +40,14 @@ export async function getScheduleRange(query: ScheduleRangeQuery): Promise<JobSc
 
 export async function getPendingSchedule(query: PendingScheduleQuery): Promise<JobSchedulePendingItem[]> {
   const response = await apiClient.get<JobSchedulePendingItem[]>('/api/v2/job-schedules/pending', {
+    params: query,
+  })
+
+  return response.data
+}
+
+export async function getCompletedSchedule(query: CompletedScheduleQuery): Promise<JobScheduleCompletedItem[]> {
+  const response = await apiClient.get<JobScheduleCompletedItem[]>('/api/v2/job-schedules/completed', {
     params: query,
   })
 
@@ -59,4 +77,8 @@ export async function getOnAirSchedule(orderType = 0, machine?: string): Promise
 
 export async function saveScheduleBatch(request: SaveScheduleBatchRequest): Promise<void> {
   await apiClient.post('/api/v2/job-schedules/batch', request)
+}
+
+export async function rescheduleCompletedOrders(request: RescheduleCompletedSchedulesRequest): Promise<void> {
+  await apiClient.post('/api/v2/job-schedules/completed/reschedule', request)
 }
