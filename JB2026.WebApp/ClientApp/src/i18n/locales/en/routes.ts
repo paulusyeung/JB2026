@@ -14,6 +14,7 @@ export const routesMessages = {
   jobOrderSchedulePending: 'Pending',
   jobOrderScheduleScheduled: 'Schedule',
   jobOrderScheduleCompleted: 'Completed',
+    jobOrderSchedulePacking: 'Packing',
   jobOrderSchedulePackingOnAir: 'Packing (OnAir)',
       sml: 'SML',
   smlRtfList: 'RTF List',

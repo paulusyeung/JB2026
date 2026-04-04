@@ -10,7 +10,8 @@ const legacyLeafRoutes = [
   { path: '/job-order/schedule/pending', name: 'job-order-schedule-pending', titleKey: 'routes.jobOrderSchedulePending' },
   { path: '/job-order/schedule/scheduled', name: 'job-order-schedule-scheduled', titleKey: 'routes.jobOrderScheduleScheduled' },
   { path: '/job-order/schedule/completed', name: 'job-order-schedule-completed', titleKey: 'routes.jobOrderScheduleCompleted' },
-  { path: '/job-order/schedule/packing', name: 'job-order-schedule-packing', titleKey: 'routes.jobOrderSchedulePackingOnAir' },
+  { path: '/job-order/schedule/packing', name: 'job-order-schedule-packing', titleKey: 'routes.jobOrderSchedulePacking' },
+  { path: '/job-order/schedule/packing-on-air', name: 'job-order-schedule-packing-on-air', titleKey: 'routes.jobOrderSchedulePackingOnAir' },
   { path: '/job-order/sml/rtf-list', name: 'job-order-sml-rtf-list', titleKey: 'routes.smlRtfList' },
   { path: '/job-order/sml/invoice-list', name: 'job-order-sml-invoice-list', titleKey: 'routes.smlInvoiceList' },
   { path: '/job-order/sml/rtf-stats', name: 'job-order-sml-rtf-stats', titleKey: 'routes.smlRtfStats' },
@@ -155,6 +156,8 @@ const router = createRouter({
           ? () => import('@/views/ScheduleView.vue')
         : route.path === '/job-order/schedule/completed'
           ? () => import('@/views/ScheduleCompletedView.vue')
+        : route.path === '/job-order/schedule/packing'
+          ? () => import('@/views/SchedulePackingView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),

@@ -355,6 +355,137 @@ public sealed class JobSchedulesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("packing")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobSchedulePackingItemResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<JobSchedulePackingItemResponse>>> GetPacking(
+        [FromQuery] string? lookup,
+        [FromQuery] int? commonQuery,
+        [FromQuery] string? startsWith,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        var safeTake = Math.Clamp(take, 1, 2000);
+        var today = DateTime.Today;
+
+        var query = _readContext.vwJobOrder_PackingLists
+            .AsNoTracking()
+            .Where(item => item.Status == 1);
+
+        query = commonQuery.GetValueOrDefault() switch
+        {
+            1 => query.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-30) && item.OrderedOn.Value < today.AddDays(1)),
+            2 => query.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-90) && item.OrderedOn.Value < today.AddDays(1)),
+            _ => query
+        };
+
+        if (!string.IsNullOrWhiteSpace(lookup))
+        {
+            var keyword = lookup.Trim();
+            query = query.Where(item =>
+                (item.OrderNumber != null && item.OrderNumber.Contains(keyword)) ||
+                (item.JobOrderNumber != null && item.JobOrderNumber.Contains(keyword)) ||
+                (item.CustomerName != null && item.CustomerName.Contains(keyword)) ||
+                (item.OrderTitle != null && item.OrderTitle.Contains(keyword)));
+        }
+
+        var rows = await query
+            .OrderByDescending(item => item.JobOrderNumber)
+            .ThenByDescending(item => item.OrderNumber)
+            .Take(safeTake * 2)
+            .ToListAsync(cancellationToken);
+
+        if (rows.Count == 0)
+        {
+            return Ok(Array.Empty<JobSchedulePackingItemResponse>());
+        }
+
+        var orderIds = rows.Select(item => item.OrderId).Distinct().ToList();
+
+        var workflowRows = await WhereOrderIdIn(
+                _readContext.JobWorkflows
+                    .AsNoTracking(),
+                workflow => workflow.OrderId,
+                orderIds)
+            .Where(workflow => workflow.WorkIndex >= 0 && workflow.WorkIndex <= 2)
+            .ToListAsync(cancellationToken);
+
+        var workflowMap = workflowRows
+            .GroupBy(row => row.OrderId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToDictionary(row => row.WorkIndex, row => row.WorkStatus));
+
+        var orderRemarks = await WhereOrderIdIn(
+                _readContext.JobOrders
+                    .AsNoTracking(),
+                order => order.OrderId,
+                orderIds)
+            .Select(order => new { order.OrderId, order.Remarks })
+            .ToListAsync(cancellationToken);
+
+        var remarksMap = orderRemarks.ToDictionary(item => item.OrderId, item => item.Remarks ?? string.Empty);
+
+        var result = rows
+            .Where(row =>
+            {
+                if (!workflowMap.TryGetValue(row.OrderId, out var steps))
+                {
+                    return false;
+                }
+
+                var hasStep1 = steps.ContainsKey(0);
+                var hasStep2 = steps.ContainsKey(1);
+                var hasStep3 = steps.ContainsKey(2);
+
+                var step1 = hasStep1 ? steps[0] : null;
+                var step2 = hasStep2 ? steps[1] : null;
+
+                var singleStepPacking = hasStep1 && !hasStep2 && !hasStep3 && step1 != 3;
+                var threeStepPacking = hasStep1 && hasStep2 && hasStep3 && step2 != 3;
+                return singleStepPacking || threeStepPacking;
+            })
+            .Select(row =>
+            {
+                workflowMap.TryGetValue(row.OrderId, out var steps);
+                remarksMap.TryGetValue(row.OrderId, out var remarks);
+
+                return new JobSchedulePackingItemResponse
+                {
+                    OrderId = row.OrderId,
+                    OrderType = row.OrderType,
+                    OrderNumber = string.IsNullOrWhiteSpace(row.JobOrderNumber)
+                        ? BuildCompositeOrderNumber(row.OrderNumber, row.JobNumber)
+                        : row.JobOrderNumber!,
+                    CustomerName = row.CustomerName ?? string.Empty,
+                    OrderTitle = row.OrderTitle ?? string.Empty,
+                    Status = row.Status,
+                    OrderedOn = row.OrderedOn,
+                    RequiredOn = row.RequiredOn,
+                    Step1Status = steps != null && steps.TryGetValue(0, out var step1) ? step1 : null,
+                    Step2Status = steps != null && steps.TryGetValue(1, out var step2) ? step2 : null,
+                    Step3Status = steps != null && steps.TryGetValue(2, out var step3) ? step3 : null,
+                    Remarks = remarks ?? string.Empty,
+                };
+            })
+            .Where(item => MatchesStartsWith(new PendingRow
+            {
+                OrderId = item.OrderId,
+                OrderType = item.OrderType,
+                OrderNumber = item.OrderNumber,
+                JobNumber = null,
+                JobOrderNumber = item.OrderNumber,
+                CustomerName = item.CustomerName,
+                OrderTitle = item.OrderTitle,
+                Status = item.Status,
+                OrderedOn = item.OrderedOn,
+                RequiredOn = item.RequiredOn,
+            }, startsWith ?? string.Empty))
+            .Take(safeTake)
+            .ToList();
+
+        return Ok(result);
+    }
+
     [HttpPatch("{id:guid}/time")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

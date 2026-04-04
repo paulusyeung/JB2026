@@ -14,6 +14,7 @@ export const routesMessages = {
   jobOrderSchedulePending: '待處理',
   jobOrderScheduleScheduled: '已排程',
   jobOrderScheduleCompleted: '已完成',
+    jobOrderSchedulePacking: '包裝',
   jobOrderSchedulePackingOnAir: '包裝 (OnAir)',
       sml: 'SML',
   smlRtfList: 'RTF 列表',

@@ -4,6 +4,7 @@ import type {
   JobScheduleCalendarItem,
   JobScheduleCompletedItem,
   JobScheduleOnAirItem,
+  JobSchedulePackingItem,
   JobSchedulePendingItem,
   RescheduleCompletedSchedulesRequest,
   SaveScheduleBatchRequest,
@@ -30,6 +31,13 @@ export interface CompletedScheduleQuery {
   take?: number
 }
 
+export interface PackingScheduleQuery {
+  lookup?: string
+  commonQuery?: number
+  startsWith?: string
+  take?: number
+}
+
 export async function getScheduleRange(query: ScheduleRangeQuery): Promise<JobScheduleCalendarItem[]> {
   const response = await apiClient.get<JobScheduleCalendarItem[]>('/api/v2/job-schedules/range', {
     params: query,
@@ -48,6 +56,14 @@ export async function getPendingSchedule(query: PendingScheduleQuery): Promise<J
 
 export async function getCompletedSchedule(query: CompletedScheduleQuery): Promise<JobScheduleCompletedItem[]> {
   const response = await apiClient.get<JobScheduleCompletedItem[]>('/api/v2/job-schedules/completed', {
+    params: query,
+  })
+
+  return response.data
+}
+
+export async function getPackingSchedule(query: PackingScheduleQuery): Promise<JobSchedulePackingItem[]> {
+  const response = await apiClient.get<JobSchedulePackingItem[]>('/api/v2/job-schedules/packing', {
     params: query,
   })
 

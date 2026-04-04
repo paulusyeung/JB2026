@@ -174,6 +174,21 @@ export interface JobSchedulePendingItem {
   step3Status: number | null
 }
 
+export interface JobSchedulePackingItem {
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+  status: number
+  orderedOn: string | null
+  requiredOn: string | null
+  step1Status: number | null
+  step2Status: number | null
+  step3Status: number | null
+  remarks: string
+}
+
 export interface JobScheduleCompletedItem {
   orderId: string
   orderType: number

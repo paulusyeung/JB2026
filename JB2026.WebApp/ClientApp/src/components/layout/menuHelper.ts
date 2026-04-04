@@ -24,7 +24,8 @@ export function buildLegacyMenuItems(t: ComposerTranslation): MenuItem[] {
             { title: t('routes.jobOrderSchedulePending'), to: '/job-order/schedule/pending', icon: 'mdi-timer-sand' },
             { title: t('routes.jobOrderScheduleScheduled'), to: '/job-order/schedule/scheduled', icon: 'mdi-calendar-check-outline' },
             { title: t('routes.jobOrderScheduleCompleted'), to: '/job-order/schedule/completed', icon: 'mdi-check-circle-outline' },
-            { title: t('routes.jobOrderSchedulePackingOnAir'), to: '/job-order/schedule/packing', icon: 'mdi-package-variant-closed' },
+            { title: t('routes.jobOrderSchedulePacking'), to: '/job-order/schedule/packing', icon: 'mdi-package-variant' },
+            { title: t('routes.jobOrderSchedulePackingOnAir'), to: '/job-order/schedule/packing-on-air', icon: 'mdi-package-variant-closed' },
           ],
         },
         {
