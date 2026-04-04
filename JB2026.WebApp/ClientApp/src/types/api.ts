@@ -120,6 +120,41 @@ export interface SmlStatsResponse {
   topCustomers: SmlTopCustomerStat[]
 }
 
+export interface SmlRtfListItem {
+  lineNumber: number
+  productCode: string
+  productDescription: string
+  price: string
+  qty: string
+  amount: string
+}
+
+export interface SmlRtfListHeader {
+  headerId: string
+  rtfFileName: string
+  purchaseOrder: string
+  rowNumber: number
+  customerPO: string
+  orderedBy: string
+  orderedOn: string
+  originalPO: string
+  salesOrder: string
+  originalSO: string
+  dnCount: number
+  invoiceCount: number
+  invoiceNumber: string
+  isLabelPrinted: boolean
+  createdOn: string
+  createdBy: string
+  items: SmlRtfListItem[]
+}
+
+export interface SmlRtfListResponse {
+  generatedAtUtc: string
+  rowCount: number
+  headers: SmlRtfListHeader[]
+}
+
 export interface AppSettings {
   companyName: string
   timeZone: string

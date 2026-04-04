@@ -160,6 +160,8 @@ const router = createRouter({
           ? () => import('@/views/SchedulePackingView.vue')
         : route.path === '/job-order/schedule/packing-on-air'
           ? () => import('@/views/SchedulePackingOnAirView.vue')
+        : route.path === '/job-order/sml/rtf-list'
+          ? () => import('@/views/SmlRtfListView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),

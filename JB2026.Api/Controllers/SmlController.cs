@@ -1,7 +1,9 @@
 using JB2026.Api.Models;
 using JB2026.Api.Services;
+using JB2026.EfCore.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace JB2026.Api.Controllers;
 
@@ -12,11 +14,503 @@ public sealed class SmlController : ControllerBase
 {
     private readonly IQuotationRepository _quotationRepository;
     private readonly ILogger<SmlController> _logger;
+    private readonly JB5LegacyReadContext? _readContext;
 
-    public SmlController(IQuotationRepository quotationRepository, ILogger<SmlController> logger)
+    public SmlController(IQuotationRepository quotationRepository, ILogger<SmlController> logger, JB5LegacyReadContext? readContext = null)
     {
         _quotationRepository = quotationRepository;
         _logger = logger;
+        _readContext = readContext;
+    }
+
+    [HttpGet("rtf-list")]
+    [ProducesResponseType(typeof(SmlRtfListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SmlRtfListResponse>> GetRtfList(
+        [FromQuery] string? lookup,
+        [FromQuery] int commonQuery = 1,
+        [FromQuery] string? shortcut = "All",
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (_readContext is null)
+        {
+            return Problem("SML RTF list data source is unavailable.");
+        }
+
+        if (commonQuery is < 0 or > 3)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(commonQuery)] = ["Common query must be between 0 and 3."]
+            }));
+        }
+
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+        var normalizedShortcut = string.IsNullOrWhiteSpace(shortcut) ? "All" : shortcut.Trim();
+
+        try
+        {
+            var headers = await LoadLegacyHeadersAsync(normalizedLookup, normalizedShortcut, commonQuery, take, cancellationToken);
+
+            if (headers.Count == 0)
+            {
+                headers = await LoadTableHeadersAsync(normalizedLookup, normalizedShortcut, commonQuery, take, cancellationToken);
+            }
+
+            var headerIds = headers.Select(header => header.HeaderId).ToArray();
+            var headerIdSet = headerIds.ToHashSet();
+            var purchaseOrders = new HashSet<string>(
+                headers
+                    .Select(header => header.PurchaseOrder ?? string.Empty)
+                    .Where(purchaseOrder => !string.IsNullOrWhiteSpace(purchaseOrder)),
+                StringComparer.OrdinalIgnoreCase);
+
+        var dnCounts = new Dictionary<Guid, int>();
+        try
+        {
+            dnCounts = await _readContext.SmlRtfExtractToDNs
+                .AsNoTracking()
+                .GroupBy(row => row.HeaderId)
+                .Select(group => new { HeaderId = group.Key, Count = group.Count() })
+                .ToDictionaryAsync(item => item.HeaderId, item => item.Count, cancellationToken);
+
+            dnCounts = dnCounts
+                .Where(entry => headerIdSet.Contains(entry.Key))
+                .ToDictionary(entry => entry.Key, entry => entry.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load SML RTF DN counts; continuing with defaults.");
+        }
+
+        var invoiceInfo = new Dictionary<Guid, (int InvoiceCount, string InvoiceNumber)>();
+        try
+        {
+            var invoiceItems = await _readContext.InvoiceItems
+                .AsNoTracking()
+                .Where(row => row.SmlRtfHeaderId.HasValue)
+                .Select(row => new
+                {
+                    HeaderId = row.HeaderId,
+                    SmlRtfHeaderId = row.SmlRtfHeaderId!.Value,
+                })
+                .ToListAsync(cancellationToken);
+
+            var invoices = await _readContext.vwInvoiceLists
+                .AsNoTracking()
+                .Select(invoice => new
+                {
+                    invoice.HeaderId,
+                    invoice.InvoiceNumber,
+                    invoice.InvoiceDate,
+                })
+                .ToListAsync(cancellationToken);
+
+            invoiceInfo = invoiceItems
+                .Where(item => headerIdSet.Contains(item.SmlRtfHeaderId))
+                .Join(
+                    invoices,
+                    item => item.HeaderId,
+                    invoice => invoice.HeaderId,
+                    (item, invoice) => new
+                    {
+                        item.SmlRtfHeaderId,
+                        invoice.InvoiceNumber,
+                        invoice.InvoiceDate,
+                    })
+                .GroupBy(item => item.SmlRtfHeaderId)
+                .ToDictionary(
+                    group => group.Key,
+                    group =>
+                    {
+                        var invoiceNumber = group
+                            .OrderBy(item => item.InvoiceDate)
+                            .Select(item => item.InvoiceNumber ?? string.Empty)
+                            .FirstOrDefault() ?? string.Empty;
+
+                        return (group.Count(), invoiceNumber);
+                    });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load SML RTF invoice details; continuing with defaults.");
+        }
+
+            var detailRows = await LoadLegacyItemsAsync(cancellationToken);
+
+            detailRows = detailRows
+                .Where(item => purchaseOrders.Contains(item.PurchaseOrder ?? string.Empty))
+                .OrderBy(item => item.PurchaseOrder)
+                .ThenBy(item => item.LineNumber)
+                .ToList();
+
+            var itemsByPurchaseOrder = detailRows
+            .GroupBy(item => item.PurchaseOrder ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<SmlRtfListItemResponse>)group
+                    .Select(item => new SmlRtfListItemResponse
+                    {
+                        LineNumber = item.LineNumber,
+                        ProductCode = item.ProductCode ?? string.Empty,
+                        ProductDescription = item.ProductDescription ?? string.Empty,
+                        Price = item.Price ?? string.Empty,
+                        Qty = item.Qty ?? string.Empty,
+                        Amount = item.Amount ?? string.Empty,
+                    })
+                    .ToArray());
+
+            var payloadHeaders = headers
+            .Select((header, index) =>
+            {
+                var dnCount = dnCounts.GetValueOrDefault(header.HeaderId);
+                var invoice = invoiceInfo.GetValueOrDefault(header.HeaderId);
+
+                return new SmlRtfListHeaderResponse
+                {
+                    HeaderId = header.HeaderId,
+                    RtfFileName = header.RtfFileName ?? string.Empty,
+                    PurchaseOrder = header.PurchaseOrder ?? string.Empty,
+                    RowNumber = index + 1,
+                    CustomerPO = header.CustomerPO ?? string.Empty,
+                    OrderedBy = header.OrderedBy ?? string.Empty,
+                    OrderedOn = header.OrderedOn,
+                    OriginalPO = header.OriginalPO ?? string.Empty,
+                    SalesOrder = header.SalesOrder ?? string.Empty,
+                    OriginalSO = header.OriginalSO ?? string.Empty,
+                    DNCount = dnCount,
+                    InvoiceCount = invoice.InvoiceCount,
+                    InvoiceNumber = invoice.InvoiceNumber,
+                    IsLabelPrinted = dnCount > 0,
+                    CreatedOn = header.CreatedOn,
+                    CreatedBy = header.CreatedByText,
+                    Items = itemsByPurchaseOrder.GetValueOrDefault(header.PurchaseOrder ?? string.Empty) ?? Array.Empty<SmlRtfListItemResponse>(),
+                };
+            })
+            .ToArray();
+
+        _logger.LogInformation(
+            "Returned SML RTF list with {Count} headers for lookup '{Lookup}', commonQuery {CommonQuery}, shortcut '{Shortcut}'",
+            payloadHeaders.Length,
+            normalizedLookup ?? string.Empty,
+            commonQuery,
+            normalizedShortcut);
+
+        return Ok(new SmlRtfListResponse
+        {
+            GeneratedAtUtc = DateTimeOffset.UtcNow,
+            RowCount = payloadHeaders.Length,
+            Headers = payloadHeaders,
+        });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to load SML RTF list for lookup '{Lookup}', commonQuery {CommonQuery}, shortcut '{Shortcut}'",
+                normalizedLookup ?? string.Empty,
+                commonQuery,
+                normalizedShortcut);
+
+            return Ok(new SmlRtfListResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = 0,
+                Headers = Array.Empty<SmlRtfListHeaderResponse>(),
+            });
+        }
+    }
+
+    private static IEnumerable<SmlRtfHeaderViewRow> ApplyInMemoryFilter(
+        IEnumerable<SmlRtfHeaderViewRow> rows,
+        string? normalizedLookup,
+        string normalizedShortcut,
+        int commonQuery)
+    {
+        var query = rows;
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            return query.Where(header =>
+                (header.PurchaseOrder ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                (header.CustomerPO ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                (header.OriginalPO ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                (header.SalesOrder ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                (header.OriginalSO ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!normalizedShortcut.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            if (normalizedShortcut == "9")
+            {
+                query = query.Where(header =>
+                {
+                    var po = header.PurchaseOrder ?? string.Empty;
+                    return po.Length == 0 || !char.IsLetter(po[0]);
+                });
+            }
+            else
+            {
+                var firstChar = normalizedShortcut[..1];
+                query = query.Where(header => (header.PurchaseOrder ?? string.Empty).StartsWith(firstChar, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        if (commonQuery is >= 1 and <= 3)
+        {
+            var now = DateTime.Now;
+            var upperBound = now.Date.AddDays(1);
+            var lowerBound = commonQuery switch
+            {
+                1 => now.Date.AddDays(-30),
+                2 => now.Date.AddDays(-60),
+                3 => now.Date.AddDays(-90),
+                _ => now.Date.AddDays(-30),
+            };
+
+            query = query.Where(header => header.CreatedOn <= upperBound && header.CreatedOn >= lowerBound);
+        }
+
+        return query;
+    }
+
+    private async Task<List<SmlRtfHeaderMaterialized>> LoadLegacyHeadersAsync(
+        string? normalizedLookup,
+        string normalizedShortcut,
+        int commonQuery,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        var activeViewRows = await _readContext!.Database.SqlQueryRaw<SmlRtfHeaderViewRow>(@"
+SELECT
+    [HeaderId],
+    [RtfFileName],
+    [PurchaseOrder],
+    [CustomerPO],
+    [OrderedBy],
+    [OrderedOn],
+    [OriginalPO],
+    [SalesOrder],
+    [OriginalSO],
+    [CreatedOn],
+    [CreatedBy]
+FROM [dbo].[vwRtfHeaderList_Active]")
+            .ToListAsync(cancellationToken);
+
+        var activeHeaders = ApplyInMemoryFilter(activeViewRows, normalizedLookup, normalizedShortcut, commonQuery)
+            .OrderByDescending(row => row.PurchaseOrder)
+            .Take(take)
+            .Select(MapLegacyHeader)
+            .ToList();
+
+        if (activeHeaders.Count > 0)
+        {
+            return activeHeaders;
+        }
+
+        var fullViewRows = await _readContext.Database.SqlQueryRaw<SmlRtfHeaderViewRow>(@"
+SELECT
+    [HeaderId],
+    [RtfFileName],
+    [PurchaseOrder],
+    [CustomerPO],
+    [OrderedBy],
+    [OrderedOn],
+    [OriginalPO],
+    [SalesOrder],
+    [OriginalSO],
+    [CreatedOn],
+    [CreatedBy]
+FROM [dbo].[vwRtfHeaderList]")
+            .ToListAsync(cancellationToken);
+
+        return ApplyInMemoryFilter(fullViewRows, normalizedLookup, normalizedShortcut, commonQuery)
+            .OrderByDescending(row => row.PurchaseOrder)
+            .Take(take)
+            .Select(MapLegacyHeader)
+            .ToList();
+    }
+
+    private async Task<List<SmlRtfHeaderMaterialized>> LoadTableHeadersAsync(
+        string? normalizedLookup,
+        string normalizedShortcut,
+        int commonQuery,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        var query = _readContext!.SmlRtfHeaders
+            .AsNoTracking()
+            .Where(header => !header.Retired);
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            query = query.Where(header =>
+                (header.PurchaseOrder ?? string.Empty).Contains(normalizedLookup) ||
+                (header.CustomerPO ?? string.Empty).Contains(normalizedLookup) ||
+                (header.OriginalPO ?? string.Empty).Contains(normalizedLookup) ||
+                (header.SalesOrder ?? string.Empty).Contains(normalizedLookup) ||
+                (header.OriginalSO ?? string.Empty).Contains(normalizedLookup));
+        }
+        else
+        {
+            if (!normalizedShortcut.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                if (normalizedShortcut == "9")
+                {
+                    query = query.Where(header => !EF.Functions.Like(header.PurchaseOrder ?? string.Empty, "[A-Za-z]%"));
+                }
+                else
+                {
+                    var firstChar = normalizedShortcut[..1];
+                    query = query.Where(header => EF.Functions.Like(header.PurchaseOrder ?? string.Empty, $"{firstChar}%"));
+                }
+            }
+
+            if (commonQuery is >= 1 and <= 3)
+            {
+                var now = DateTime.Now;
+                var upperBound = now.Date.AddDays(1);
+                var lowerBound = commonQuery switch
+                {
+                    1 => now.Date.AddDays(-30),
+                    2 => now.Date.AddDays(-60),
+                    3 => now.Date.AddDays(-90),
+                    _ => now.Date.AddDays(-30),
+                };
+
+                query = query.Where(header => header.CreatedOn <= upperBound && header.CreatedOn >= lowerBound);
+            }
+        }
+
+        return await query
+            .OrderByDescending(header => header.PurchaseOrder)
+            .Take(take)
+            .Select(header => new SmlRtfHeaderMaterialized
+            {
+                HeaderId = header.HeaderId,
+                RtfFileName = header.RtfFileName,
+                PurchaseOrder = header.PurchaseOrder,
+                CustomerPO = header.CustomerPO,
+                OrderedBy = header.OrderedBy,
+                OrderedOn = header.OrderedOn,
+                OriginalPO = header.OriginalPO,
+                SalesOrder = header.SalesOrder,
+                OriginalSO = header.OriginalSO,
+                CreatedOn = header.CreatedOn,
+                CreatedByText = header.CreatedBy.HasValue ? header.CreatedBy.Value.ToString() : string.Empty,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<List<SmlRtfItemViewRow>> LoadLegacyItemsAsync(CancellationToken cancellationToken)
+    {
+        return await _readContext!.Database.SqlQueryRaw<SmlRtfItemViewRow>(@"
+SELECT
+    [PurchaseOrder],
+    [LineNumber],
+    [ProductCode],
+    [ProductDescription],
+    [Price],
+    [Discount],
+    [Qty],
+    [Amount]
+FROM [dbo].[vwRtfItemList]")
+            .ToListAsync(cancellationToken);
+    }
+
+    private static SmlRtfHeaderMaterialized MapLegacyHeader(SmlRtfHeaderViewRow row)
+    {
+        return new SmlRtfHeaderMaterialized
+        {
+            HeaderId = row.HeaderId,
+            RtfFileName = row.RtfFileName,
+            PurchaseOrder = row.PurchaseOrder,
+            CustomerPO = row.CustomerPO,
+            OrderedBy = row.OrderedBy,
+            OrderedOn = row.OrderedOn,
+            OriginalPO = row.OriginalPO,
+            SalesOrder = row.SalesOrder,
+            OriginalSO = row.OriginalSO,
+            CreatedOn = row.CreatedOn,
+            CreatedByText = row.CreatedBy ?? string.Empty,
+        };
+    }
+
+    private sealed class SmlRtfHeaderMaterialized
+    {
+        public Guid HeaderId { get; init; }
+
+        public string? RtfFileName { get; init; }
+
+        public string? PurchaseOrder { get; init; }
+
+        public string? CustomerPO { get; init; }
+
+        public string? OrderedBy { get; init; }
+
+        public DateTime OrderedOn { get; init; }
+
+        public string? OriginalPO { get; init; }
+
+        public string? SalesOrder { get; init; }
+
+        public string? OriginalSO { get; init; }
+
+        public DateTime CreatedOn { get; init; }
+
+        public string CreatedByText { get; init; } = string.Empty;
+    }
+
+    private sealed class SmlRtfHeaderViewRow
+    {
+        public Guid HeaderId { get; init; }
+
+        public string? RtfFileName { get; init; }
+
+        public string? PurchaseOrder { get; init; }
+
+        public string? CustomerPO { get; init; }
+
+        public string? OrderedBy { get; init; }
+
+        public DateTime OrderedOn { get; init; }
+
+        public string? OriginalPO { get; init; }
+
+        public string? SalesOrder { get; init; }
+
+        public string? OriginalSO { get; init; }
+
+        public DateTime CreatedOn { get; init; }
+
+        public string? CreatedBy { get; init; }
+    }
+
+    private sealed class SmlRtfItemViewRow
+    {
+        public string? PurchaseOrder { get; init; }
+
+        public int LineNumber { get; init; }
+
+        public string? ProductCode { get; init; }
+
+        public string? ProductDescription { get; init; }
+
+        public string? Price { get; init; }
+
+        public string? Discount { get; init; }
+
+        public string? Qty { get; init; }
+
+        public string? Amount { get; init; }
     }
 
     [HttpGet("stats")]
