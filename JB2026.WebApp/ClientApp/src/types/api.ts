@@ -180,6 +180,45 @@ export interface UpdateJobScheduleTimeRequest {
 }
 
 /** Shape used by the create/edit job order form (Slice B DevExpress replacement). */
+export interface JobScheduleAvailableItem {
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+}
+
+export interface JobScheduleOnAirItem {
+  scheduleId: string
+  orderId: string
+  orderType: number
+  orderNumber: string
+  customerName: string
+  orderTitle: string
+  priority: number
+  machineNumber: string
+  urgencyLevel: number
+  step1Status: number | null
+  step2Status: number | null
+  printQty: string
+  printColor: string
+  printSize: string
+}
+
+export interface SaveScheduleBatchItem {
+  orderId: string
+  machineNumber: string
+  step1Status: number
+  step2Status: number
+  urgencyLevel: number
+}
+
+export interface SaveScheduleBatchRequest {
+  orderType: number
+  scheduledItems: SaveScheduleBatchItem[]
+  cancelledOrderIds: string[]
+}
+
 export interface JobOrderFormData {
   orderId: string | null
   orderNumber: string

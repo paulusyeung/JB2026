@@ -22,6 +22,11 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('jb2026.accessToken')
       localStorage.removeItem('jb2026.sessionProfile')
+
+      const redirect = `${window.location.pathname}${window.location.search}`
+      if (!window.location.pathname.endsWith('/login')) {
+        window.location.assign(`/app/login?redirect=${encodeURIComponent(redirect)}`)
+      }
     }
 
     return Promise.reject(error)

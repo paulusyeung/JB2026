@@ -10,4 +10,7 @@ export const commonMessages = {
       count: 'Count',
       dependency: 'Dependency',
       contract: 'Contract',
+      save: 'Save',
+      cancel: 'Cancel',
+      confirmation: 'Confirmation',
     } as const

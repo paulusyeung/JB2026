@@ -1,5 +1,12 @@
 import { apiClient } from './api'
-import type { JobScheduleCalendarItem, JobSchedulePendingItem, UpdateJobScheduleTimeRequest } from '@/types/api'
+import type {
+  JobScheduleAvailableItem,
+  JobScheduleCalendarItem,
+  JobScheduleOnAirItem,
+  JobSchedulePendingItem,
+  SaveScheduleBatchRequest,
+  UpdateJobScheduleTimeRequest,
+} from '@/types/api'
 
 export interface ScheduleRangeQuery {
   startOn: string
@@ -34,4 +41,22 @@ export async function updateScheduleTime(
   request: UpdateJobScheduleTimeRequest,
 ): Promise<void> {
   await apiClient.patch(`/api/v2/job-schedules/${scheduleId}/time`, request)
+}
+
+export async function getAvailableSchedule(orderType = 0): Promise<JobScheduleAvailableItem[]> {
+  const response = await apiClient.get<JobScheduleAvailableItem[]>('/api/v2/job-schedules/available', {
+    params: { orderType },
+  })
+  return response.data
+}
+
+export async function getOnAirSchedule(orderType = 0, machine?: string): Promise<JobScheduleOnAirItem[]> {
+  const response = await apiClient.get<JobScheduleOnAirItem[]>('/api/v2/job-schedules/on-air', {
+    params: { orderType, machine },
+  })
+  return response.data
+}
+
+export async function saveScheduleBatch(request: SaveScheduleBatchRequest): Promise<void> {
+  await apiClient.post('/api/v2/job-schedules/batch', request)
 }

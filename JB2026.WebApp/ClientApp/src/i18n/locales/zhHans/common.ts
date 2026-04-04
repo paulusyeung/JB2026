@@ -10,4 +10,7 @@ export const commonMessages = {
       count: '数量',
       dependency: '依赖',
       contract: '契约',
+      save: '保存',
+      cancel: '取消',
+      confirmation: '确认',
     } as const
