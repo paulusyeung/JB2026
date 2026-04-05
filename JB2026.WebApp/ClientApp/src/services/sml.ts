@@ -1,5 +1,11 @@
 import { apiClient } from './api'
-import type { SmlInvoiceListResponse, SmlRtfListResponse, SmlStatsResponse } from '@/types/api'
+import type {
+  SmlInvoiceListResponse,
+  SmlInvoiceStatsResponse,
+  SmlRtfListResponse,
+  SmlRtfStatsResponse,
+  SmlStatsResponse,
+} from '@/types/api'
 
 export interface SmlStatsQuery {
   startOn: string
@@ -17,6 +23,20 @@ export interface SmlRtfListQuery {
 export interface SmlInvoiceListQuery {
   lookup?: string
   commonQuery?: number
+  take?: number
+}
+
+export interface SmlRtfStatsQuery {
+  startOn?: string
+  endOn?: string
+  lookup?: string
+  take?: number
+}
+
+export interface SmlInvoiceStatsQuery {
+  startOn?: string
+  endOn?: string
+  lookup?: string
   take?: number
 }
 
@@ -51,6 +71,32 @@ export async function getSmlInvoiceList(query: SmlInvoiceListQuery): Promise<Sml
       lookup: query.lookup,
       commonQuery: query.commonQuery ?? 1,
       take: query.take ?? 500,
+    },
+  })
+
+  return response.data
+}
+
+export async function getSmlRtfStats(query: SmlRtfStatsQuery): Promise<SmlRtfStatsResponse> {
+  const response = await apiClient.get<SmlRtfStatsResponse>('/api/v2/sml/rtf-stats', {
+    params: {
+      startOn: query.startOn,
+      endOn: query.endOn,
+      lookup: query.lookup,
+      take: query.take ?? 5000,
+    },
+  })
+
+  return response.data
+}
+
+export async function getSmlInvoiceStats(query: SmlInvoiceStatsQuery): Promise<SmlInvoiceStatsResponse> {
+  const response = await apiClient.get<SmlInvoiceStatsResponse>('/api/v2/sml/invoice-stats', {
+    params: {
+      startOn: query.startOn,
+      endOn: query.endOn,
+      lookup: query.lookup,
+      take: query.take ?? 5000,
     },
   })
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace JB2026.Api.Controllers;
 
 [ApiController]
@@ -513,6 +514,120 @@ FROM [dbo].[vwRtfItemList]")
         public string? Amount { get; init; }
     }
 
+    [HttpGet("rtf-stats")]
+    [ProducesResponseType(typeof(SmlRtfStatsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SmlRtfStatsResponse>> GetRtfStats(
+        [FromQuery] DateOnly? startOn,
+        [FromQuery] DateOnly? endOn,
+        [FromQuery] string? lookup,
+        [FromQuery] int take = 5000,
+        CancellationToken cancellationToken = default)
+    {
+        if (_readContext is null)
+        {
+            return Problem("SML RTF stats data source is unavailable.");
+        }
+
+        if (take is <= 0 or > 20000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 20000."]
+            }));
+        }
+
+        if (startOn.HasValue && endOn.HasValue && startOn.Value > endOn.Value)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(startOn)] = ["Start date cannot be later than end date."],
+                [nameof(endOn)] = ["End date cannot be earlier than start date."],
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+
+        try
+        {
+            IQueryable<JB2026.EfCore.Models.vwOlapSmlRtf> dbQuery = _readContext.vwOlapSmlRtfs.AsNoTracking();
+
+            if (startOn.HasValue)
+            {
+                var startDate = startOn.Value.ToDateTime(TimeOnly.MinValue);
+                dbQuery = dbQuery.Where(row => row.OrderedOn >= startDate);
+            }
+
+            if (endOn.HasValue)
+            {
+                var endDateExclusive = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+                dbQuery = dbQuery.Where(row => row.OrderedOn < endDateExclusive);
+            }
+
+            var sourceRows = await dbQuery.ToListAsync(cancellationToken);
+
+            var memQuery = sourceRows.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(normalizedLookup))
+            {
+                memQuery = memQuery.Where(row =>
+                    (row.PurchaseOrder ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    row.CustomerPO.Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.OrderedBy ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.OriginalPO ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.SalesOrder ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    row.OriginalSO.Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.ProductCode ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var rows = memQuery
+                .OrderByDescending(row => row.OrderedOn)
+                .ThenBy(row => row.PurchaseOrder)
+                .ThenBy(row => row.ProductCode)
+                .Take(take)
+                .Select(row => new SmlRtfStatsRowResponse
+                {
+                    PurchaseOrder = row.PurchaseOrder ?? string.Empty,
+                    CustomerPO = row.CustomerPO,
+                    OrderedOn = row.OrderedOn,
+                    OrderedBy = row.OrderedBy ?? string.Empty,
+                    OriginalPO = row.OriginalPO ?? string.Empty,
+                    SalesOrder = row.SalesOrder ?? string.Empty,
+                    OriginalSO = row.OriginalSO,
+                    ProductCode = row.ProductCode ?? string.Empty,
+                    Price = row.Price ?? string.Empty,
+                    Qty = row.Qty ?? string.Empty,
+                    Year = row.OrderedOn.Year,
+                    Month = row.OrderedOn.Month,
+                    Amount = row.Amount ?? 0m,
+                })
+                .ToArray();
+
+            return Ok(new SmlRtfStatsResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = rows.Length,
+                Rows = rows,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to load SML RTF stats for lookup '{Lookup}', start {StartOn}, end {EndOn}",
+                normalizedLookup ?? string.Empty,
+                startOn,
+                endOn);
+
+            return Ok(new SmlRtfStatsResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = 0,
+                Rows = Array.Empty<SmlRtfStatsRowResponse>(),
+            });
+        }
+    }
+
     [HttpGet("stats")]
     [ProducesResponseType(typeof(SmlStatsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -575,6 +690,119 @@ FROM [dbo].[vwRtfItemList]")
             Monthly = monthly,
             TopCustomers = topCustomers,
         });
+    }
+
+    [HttpGet("invoice-stats")]
+    [ProducesResponseType(typeof(SmlInvoiceStatsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SmlInvoiceStatsResponse>> GetInvoiceStats(
+        [FromQuery] DateOnly? startOn,
+        [FromQuery] DateOnly? endOn,
+        [FromQuery] string? lookup,
+        [FromQuery] int take = 5000,
+        CancellationToken cancellationToken = default)
+    {
+        if (_readContext is null)
+        {
+            return Problem("SML invoice stats data source is unavailable.");
+        }
+
+        if (take is <= 0 or > 20000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 20000."]
+            }));
+        }
+
+        if (startOn.HasValue && endOn.HasValue && startOn.Value > endOn.Value)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(startOn)] = ["Start date cannot be later than end date."],
+                [nameof(endOn)] = ["End date cannot be earlier than start date."],
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+
+        try
+        {
+            IQueryable<JB2026.EfCore.Models.vwOlapInvoiceStat> dbQuery = _readContext.vwOlapInvoiceStats.AsNoTracking();
+
+            if (startOn.HasValue)
+            {
+                dbQuery = dbQuery.Where(row => row.InvoiceDate.HasValue && row.InvoiceDate.Value >= startOn.Value);
+            }
+
+            if (endOn.HasValue)
+            {
+                dbQuery = dbQuery.Where(row => row.InvoiceDate.HasValue && row.InvoiceDate.Value <= endOn.Value);
+            }
+
+            var sourceRows = await dbQuery.ToListAsync(cancellationToken);
+            var memQuery = sourceRows.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(normalizedLookup))
+            {
+                memQuery = memQuery.Where(row =>
+                    (row.CustomerName ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.InvoiceNumber ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.CreatedBy ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.PurchaseOrder ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.ProductCode ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase) ||
+                    (row.Unit ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var rows = memQuery
+                .OrderByDescending(row => row.InvoiceDate)
+                .ThenBy(row => row.CustomerName)
+                .ThenBy(row => row.InvoiceNumber)
+                .ThenBy(row => row.PurchaseOrder)
+                .ThenBy(row => row.ProductCode)
+                .Take(take)
+                .Select(row => new SmlInvoiceStatsRowResponse
+                {
+                    CustomerName = row.CustomerName ?? string.Empty,
+                    InvoiceNumber = row.InvoiceNumber ?? string.Empty,
+                    InvoiceDate = row.InvoiceDate,
+                    InvoiceAmount = row.InvoiceAmount ?? 0m,
+                    CreatedOn = row.CreatedOn,
+                    CreatedBy = row.CreatedBy ?? string.Empty,
+                    PurchaseOrder = row.PurchaseOrder ?? string.Empty,
+                    ProductCode = row.ProductCode ?? string.Empty,
+                    Qty = row.Qty ?? 0m,
+                    Unit = row.Unit ?? string.Empty,
+                    Price = row.Price ?? 0m,
+                    Amount = row.Amount ?? 0m,
+                    Year = row.InvoiceDate?.Year ?? 0,
+                    Month = row.InvoiceDate?.Month ?? 0,
+                })
+                .ToArray();
+
+            return Ok(new SmlInvoiceStatsResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = rows.Length,
+                Rows = rows,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to load SML invoice stats for lookup '{Lookup}', start {StartOn}, end {EndOn}",
+                normalizedLookup ?? string.Empty,
+                startOn,
+                endOn);
+
+            return Ok(new SmlInvoiceStatsResponse
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                RowCount = 0,
+                Rows = Array.Empty<SmlInvoiceStatsRowResponse>(),
+            });
+        }
     }
 
     [HttpGet("invoice-list")]

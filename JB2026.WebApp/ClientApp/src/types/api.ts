@@ -155,6 +155,28 @@ export interface SmlRtfListResponse {
   headers: SmlRtfListHeader[]
 }
 
+export interface SmlRtfStatsRow {
+  purchaseOrder: string
+  customerPO: string
+  orderedOn: string
+  orderedBy: string
+  originalPO: string
+  salesOrder: string
+  originalSO: string
+  productCode: string
+  price: string
+  qty: string
+  year: number
+  month: number
+  amount: number
+}
+
+export interface SmlRtfStatsResponse {
+  generatedAtUtc: string
+  rowCount: number
+  rows: SmlRtfStatsRow[]
+}
+
 export interface SmlInvoiceListRow {
   headerId: string
   invoiceNumber: string
@@ -171,6 +193,29 @@ export interface SmlInvoiceListResponse {
   generatedAtUtc: string
   rowCount: number
   rows: SmlInvoiceListRow[]
+}
+
+export interface SmlInvoiceStatsRow {
+  customerName: string
+  invoiceNumber: string
+  invoiceDate: string | null
+  invoiceAmount: number
+  createdOn: string | null
+  createdBy: string
+  purchaseOrder: string
+  productCode: string
+  qty: number
+  unit: string
+  price: number
+  amount: number
+  year: number
+  month: number
+}
+
+export interface SmlInvoiceStatsResponse {
+  generatedAtUtc: string
+  rowCount: number
+  rows: SmlInvoiceStatsRow[]
 }
 
 export interface AppSettings {

@@ -164,6 +164,10 @@ const router = createRouter({
           ? () => import('@/views/SmlRtfListView.vue')
         : route.path === '/job-order/sml/invoice-list'
           ? () => import('@/views/SmlInvoiceListView.vue')
+        : route.path === '/job-order/sml/rtf-stats'
+          ? () => import('@/views/SmlRtfStatsView.vue')
+        : route.path === '/job-order/sml/invoice-stats'
+          ? () => import('@/views/SmlInvoiceStatsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { requiresAuth: true, titleKey: route.titleKey },
     })),
