@@ -96,7 +96,7 @@ export async function getSmlInvoiceStats(query: SmlInvoiceStatsQuery): Promise<S
       startOn: query.startOn,
       endOn: query.endOn,
       lookup: query.lookup,
-      take: query.take ?? 5000,
+      take: query.take,
     },
   })
 

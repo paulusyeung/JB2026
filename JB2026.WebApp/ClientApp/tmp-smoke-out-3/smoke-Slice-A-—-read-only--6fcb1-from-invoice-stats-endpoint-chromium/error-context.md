@@ -1,0 +1,157 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e5]:
+  - navigation [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: JB
+        - generic [ref=e10]:
+          - paragraph [ref=e11]: Migration Slice Host
+          - heading "JB2026" [level=1] [ref=e12]
+      - list [ref=e13]:
+        - link "Dashboard" [ref=e14] [cursor=pointer]:
+          - /url: /app/dashboard
+          - generic [ref=e16]: 󰨝
+          - generic [ref=e18]: Dashboard
+        - generic [ref=e20]: Core Modules
+        - generic "Job Order" [ref=e21]:
+          - listitem "Job Order" [ref=e22] [cursor=pointer]:
+            - generic [ref=e24]: 󰨸
+            - generic [ref=e26]: Job Order
+            - generic [ref=e28]: 󰅃
+          - group:
+            - generic [ref=e29]:
+              - link "Quotation List" [ref=e30] [cursor=pointer]:
+                - /url: /app/job-order/quotation-list
+                - generic [ref=e32]: 󱔘
+                - generic [ref=e34]: Quotation List
+              - link "Order List" [ref=e35] [cursor=pointer]:
+                - /url: /app/job-order/order-list
+                - generic [ref=e37]: 󰉹
+                - generic [ref=e39]: Order List
+              - link "Job List" [ref=e40] [cursor=pointer]:
+                - /url: /app/job-order/job-list
+                - generic [ref=e42]: 󰠔
+                - generic [ref=e44]: Job List
+              - link "Job Stats" [ref=e45] [cursor=pointer]:
+                - /url: /app/job-order/job-stats
+                - generic [ref=e47]: 󰄪
+                - generic [ref=e49]: Job Stats
+              - generic "Job Schedule" [ref=e50]:
+                - listitem "Job Schedule" [ref=e51] [cursor=pointer]:
+                  - generic [ref=e53]: 󱛡
+                  - generic [ref=e55]: Job Schedule
+                  - generic [ref=e57]: 󰅀
+                - text: 󰔟 󰱄 󰗡 󰏖 󰏗
+              - generic "SML" [ref=e58]:
+                - listitem "SML" [ref=e59] [cursor=pointer]:
+                  - generic [ref=e61]: 󰉕
+                  - generic [ref=e63]: SML
+                  - generic [ref=e65]: 󰅃
+                - group:
+                  - generic [ref=e66]:
+                    - link "RTF List" [ref=e67] [cursor=pointer]:
+                      - /url: /app/job-order/sml/rtf-list
+                      - generic [ref=e69]: 󰧮
+                      - generic [ref=e71]: RTF List
+                    - link "Invoice List" [ref=e72] [cursor=pointer]:
+                      - /url: /app/job-order/sml/invoice-list
+                      - generic [ref=e74]: 󱧜
+                      - generic [ref=e76]: Invoice List
+                    - link "RTF Stats" [ref=e77] [cursor=pointer]:
+                      - /url: /app/job-order/sml/rtf-stats
+                      - generic [ref=e79]: 󰄨
+                      - generic [ref=e81]: RTF Stats
+                    - link "Invoice Stats" [ref=e82] [cursor=pointer]:
+                      - /url: /app/job-order/sml/invoice-stats
+                      - generic [ref=e84]: 󰄧
+                      - generic [ref=e86]: Invoice Stats
+              - generic "Reports" [ref=e87]:
+                - listitem "Reports" [ref=e88] [cursor=pointer]:
+                  - generic [ref=e90]: 󱕎
+                  - generic [ref=e92]: Reports
+                  - generic [ref=e94]: 󰅀
+                - text: 󰗖
+        - generic "Stock" [ref=e95]:
+          - listitem "Stock" [ref=e96] [cursor=pointer]:
+            - generic [ref=e98]: 󰏗
+            - generic [ref=e100]: Stock
+            - generic [ref=e102]: 󰅀
+          - text: 󰆧
+        - generic "Admin" [ref=e103]:
+          - listitem "Admin" [ref=e104] [cursor=pointer]:
+            - generic [ref=e106]: 󰨒
+            - generic [ref=e108]: Admin
+            - generic [ref=e110]: 󰅀
+          - text: 󰘬 󱏒 󰠲 󰀓 󰭘 󱊝 󱔘 󰅀 󱱏 󰓼 󰅸
+        - generic "Settings" [ref=e111]:
+          - listitem "Settings" [ref=e112] [cursor=pointer]:
+            - generic [ref=e114]: 󰢻
+            - generic [ref=e116]: Settings
+            - generic [ref=e118]: 󰅀
+          - text: 󱕃
+    - generic [ref=e120]:
+      - paragraph [ref=e121]: Coexistence
+      - paragraph [ref=e122]: Disabled slices stay on the legacy route until the flag flips.
+      - link "Control Plane" [ref=e123] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e124]: Control Plane
+  - main [ref=e125]:
+    - generic [ref=e126]:
+      - generic [ref=e127]:
+        - generic [ref=e128]:
+          - paragraph [ref=e129]: Phase 6
+          - heading "UI Modernization Workspace" [level=2] [ref=e130]
+        - generic [ref=e131]:
+          - generic "Theme" [ref=e132]:
+            - button "Light" [ref=e133] [cursor=pointer]:
+              - generic [ref=e134]:
+                - generic [ref=e135]: 󰖨
+                - text: Light
+            - button "Dark" [ref=e136] [cursor=pointer]:
+              - generic [ref=e137]:
+                - generic [ref=e138]: 󰖔
+                - text: Dark
+          - combobox [ref=e141] [cursor=pointer]:
+            - generic [ref=e143]:
+              - generic [ref=e145]: English
+              - combobox "Language": English
+            - generic [ref=e147]: 󰍝
+            - generic:
+              - generic:
+                - generic: Language
+          - generic [ref=e149]: Smoke Test
+          - button "Sign Out" [ref=e150] [cursor=pointer]:
+            - generic [ref=e151]: Sign Out
+          - generic [ref=e153]: SPA host
+      - generic [ref=e155]:
+        - generic [ref=e157]:
+          - heading "Invoice stats" [level=3] [ref=e158]
+          - paragraph [ref=e159]: Legacy OLAP-style Invoice pivot from vwOlapInvoiceStats, with Year/Month columns and Amount totals.
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - generic [ref=e164]:
+              - generic [ref=e166]: 󰍉
+              - generic [ref=e167]:
+                - generic: Lookup
+                - textbox "Lookup" [ref=e168]
+              - text: 󰅙
+            - generic [ref=e172]:
+              - generic: Start date
+              - textbox "Start date" [ref=e173]
+            - generic [ref=e177]:
+              - generic: End date
+              - textbox "End date" [ref=e178]
+            - button "Search" [ref=e179] [cursor=pointer]:
+              - generic [ref=e181]: 󰍉
+              - generic [ref=e182]: Search
+            - button "Refresh" [ref=e183] [cursor=pointer]:
+              - generic [ref=e185]: 󰑐
+              - generic [ref=e186]: Refresh
+            - button "Export To Excel" [ref=e187] [cursor=pointer]:
+              - generic [ref=e189]: 󱎏
+              - generic [ref=e190]: Export To Excel
+          - generic [ref=e191]: "Rows: 3"
+          - generic [ref=e194]: No store for wpt-1
+```

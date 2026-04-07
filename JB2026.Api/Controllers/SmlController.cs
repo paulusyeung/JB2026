@@ -699,7 +699,7 @@ FROM [dbo].[vwRtfItemList]")
         [FromQuery] DateOnly? startOn,
         [FromQuery] DateOnly? endOn,
         [FromQuery] string? lookup,
-        [FromQuery] int take = 5000,
+        [FromQuery] int? take,
         CancellationToken cancellationToken = default)
     {
         if (_readContext is null)
@@ -707,11 +707,11 @@ FROM [dbo].[vwRtfItemList]")
             return Problem("SML invoice stats data source is unavailable.");
         }
 
-        if (take is <= 0 or > 20000)
+        if (take.HasValue && take.Value <= 0)
         {
             return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
             {
-                [nameof(take)] = ["Take must be between 1 and 20000."]
+                [nameof(take)] = ["Take must be greater than 0."]
             }));
         }
 
@@ -754,13 +754,19 @@ FROM [dbo].[vwRtfItemList]")
                     (row.Unit ?? string.Empty).Contains(normalizedLookup, StringComparison.OrdinalIgnoreCase));
             }
 
-            var rows = memQuery
+            IEnumerable<JB2026.EfCore.Models.vwOlapInvoiceStat> orderedRows = memQuery
                 .OrderByDescending(row => row.InvoiceDate)
                 .ThenBy(row => row.CustomerName)
                 .ThenBy(row => row.InvoiceNumber)
                 .ThenBy(row => row.PurchaseOrder)
-                .ThenBy(row => row.ProductCode)
-                .Take(take)
+                .ThenBy(row => row.ProductCode);
+
+            if (take.HasValue)
+            {
+                orderedRows = orderedRows.Take(take.Value);
+            }
+
+            var rows = orderedRows
                 .Select(row => new SmlInvoiceStatsRowResponse
                 {
                     CustomerName = row.CustomerName ?? string.Empty,

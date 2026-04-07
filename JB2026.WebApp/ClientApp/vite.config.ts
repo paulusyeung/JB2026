@@ -8,10 +8,20 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: '/app/',
-    plugins: [vue(), vuetify({ autoImport: true })],
+    plugins: [
+      vue({
+        template: {
+          compilerOptions: {
+            isCustomElement: (tag) => tag === 'web-pivot-table',
+          },
+        },
+      }),
+      vuetify({ autoImport: true }),
+    ],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
+        'webpivottable-dist': fileURLToPath(new URL('./node_modules/webpivottable/dist/wpt.js', import.meta.url)),
       },
     },
     server: {

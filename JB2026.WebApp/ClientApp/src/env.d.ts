@@ -12,3 +12,7 @@ interface ImportMeta {
 }
 
 declare module 'vuetify/styles'
+declare module 'webpivottable-wpt'
+declare module 'webpivottable'
+declare module 'webpivottable/dist/wpt.js'
+declare module 'webpivottable-dist'

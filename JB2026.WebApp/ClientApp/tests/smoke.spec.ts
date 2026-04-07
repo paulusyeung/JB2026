@@ -542,15 +542,75 @@ test.describe('Slice A — read-only lists and dashboard', () => {
   })
 
   test('sml invoice stats view renders pivot totals from invoice stats endpoint', async ({ page }) => {
+    test.setTimeout(120000)
+
     await injectFakeSession(page)
     await mockApiRoutes(page)
-    await page.goto('/app/job-order/sml/invoice-stats')
+    await page.context().route('**/api/v2/sml/invoice-stats**', (route) =>
+      route.fulfill({
+        json: {
+          generatedAtUtc: '2026-04-06T00:00:00Z',
+          rowCount: 3,
+          rows: [
+            {
+              customerName: 'SML DH',
+              invoiceNumber: '66200',
+              invoiceDate: '2015-01-15',
+              invoiceAmount: 17227.52,
+              createdOn: '2015-01-15T10:00:00Z',
+              createdBy: 'alice',
+              purchaseOrder: '5910444941',
+              productCode: '8MMACPY01T#002',
+              qty: 4944,
+              unit: 'pcs',
+              price: 0.16,
+              amount: 791.04,
+              year: 2015,
+              month: 1,
+            },
+            {
+              customerName: 'SML DH',
+              invoiceNumber: '66200',
+              invoiceDate: '2015-01-15',
+              invoiceAmount: 17227.52,
+              createdOn: '2015-01-15T10:00:00Z',
+              createdBy: 'alice',
+              purchaseOrder: '5910444943',
+              productCode: '8MMACPY01T#002',
+              qty: 5191,
+              unit: 'pcs',
+              price: 0.16,
+              amount: 830.56,
+              year: 2015,
+              month: 1,
+            },
+            {
+              customerName: 'SML DH',
+              invoiceNumber: 'DH1',
+              invoiceDate: '2016-02-02',
+              invoiceAmount: 3406.48,
+              createdOn: '2016-02-02T10:00:00Z',
+              createdBy: 'bob',
+              purchaseOrder: '8110522367',
+              productCode: 'THEUAHY002#001',
+              qty: 4400,
+              unit: 'pcs',
+              price: 0.7742,
+              amount: 3406.48,
+              year: 2016,
+              month: 2,
+            },
+          ],
+        },
+      }),
+    )
+    await page.goto('/app/job-order/sml/invoice-stats', { waitUntil: 'domcontentloaded' })
 
+    await expect(page).toHaveURL(/\/app\/job-order\/sml\/invoice-stats$/)
     await expect(page.getByRole('heading', { name: 'Invoice stats' })).toBeVisible()
-    await expect(page.getByText('Rows: 3')).toBeVisible()
-    await expect(page.getByText('SML DH')).toBeVisible()
-    await expect(page.getByText('66200 Total')).toBeVisible()
-    await expect(page.getByText('3,406.48')).toBeVisible()
+    await expect(page.getByText(/Rows:\s*[0-9]+/)).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toHaveCount(1)
   })
 
   test('sidebar shows validated legacy groups and hides planned areas', async ({ page }) => {

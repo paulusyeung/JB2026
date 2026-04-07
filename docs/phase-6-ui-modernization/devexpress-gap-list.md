@@ -26,6 +26,15 @@ Confirm the validated Phase 2 findings and capture the concrete gaps between the
 5. CKEditor 5 Classic covers the minimum toolbar set, but legacy CKEditor 4 plugin parity still needs slice-by-slice validation for embedded HTML, tables, and unsupported plugins.
 6. The Vue spike did not include route guards, Playwright automation, or flag-aware routing. Those are now baseline deliverables for every migrated slice.
 
+## SML Invoice Stats OLAP Notes
+
+1. Invoice Stats now uses WebPivotTable via a custom element host (`web-pivot-table`) instead of the legacy handcrafted pivot table rendering.
+2. Vite must resolve `webpivottable/dist/wpt.js` through the explicit alias `webpivottable-wpt` to avoid package `exports` resolution issues in local dev and production build.
+3. Client import path is intentionally `import 'webpivottable-wpt'` with a corresponding `declare module 'webpivottable-wpt'` in `src/env.d.ts`.
+4. The vendor bundle emits an `eval` warning from the upstream package and may increase chunk size for Invoice Stats; this is currently accepted for parity delivery.
+5. Default OLAP layout is set at runtime for parity (rows: customer/invoice/PO/product/qty/unit/price; columns: year/month; value: amount sum).
+6. If the primary grid init API path fails, the view falls back to `setWptFromDataArray` to reduce hard-failure risk.
+
 ## Conclusion
 
 The Phase 2 findings remain directionally correct: Vue 3 is viable and DevExpress must be removed. The main Phase 6 execution risk is not the SPA scaffold; it is the remaining parity work for dense data grids, premium-style scheduler behavior, and rich-text edge cases.
