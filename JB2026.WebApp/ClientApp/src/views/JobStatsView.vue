@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section job-stats-page" :class="{ 'job-stats-page--dark': themeStore.isDark }">
+  <section class="page-section job-stats-page">
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
@@ -83,7 +83,7 @@
           <v-btn
             variant="outlined"
             prepend-icon="mdi-microsoft-excel"
-            :disabled="yearColumns.length === 0"
+            :disabled="filteredRows.length === 0"
             @click="exportToCsv"
           >
             {{ t('jobOrder.jobStats.exportToExcel') }}
@@ -98,47 +98,16 @@
 
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
-        <div class="pivot-shell">
-          <table class="pivot-table" v-if="yearColumns.length > 0">
-            <thead>
-              <tr>
-                <th class="sticky-col">{{ rowFieldLabel }}</th>
-                <th v-for="yearValue in yearColumns" :key="yearValue">{{ yearValue }}</th>
-                <th>{{ t('jobOrder.jobStats.grandTotal') }}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr v-for="group in pagedGroups" :key="group.key">
-                <td class="sticky-col label-cell">{{ group.label }}</td>
-                <td v-for="yearValue in yearColumns" :key="`${group.key}-${yearValue}`" class="numeric-cell">
-                  {{ formatMeasure(valueFromAggregate(group.byYear[yearValue])) }}
-                </td>
-                <td class="numeric-cell total-cell">{{ formatMeasure(valueFromAggregate(group.total)) }}</td>
-              </tr>
-            </tbody>
-
-            <tfoot>
-              <tr>
-                <th class="sticky-col">{{ t('jobOrder.jobStats.grandTotal') }}</th>
-                <th v-for="yearValue in yearColumns" :key="`total-${yearValue}`" class="numeric-cell">
-                  {{ formatMeasure(valueFromAggregate(grandByYear[yearValue])) }}
-                </th>
-                <th class="numeric-cell">{{ formatMeasure(valueFromAggregate(grandTotal)) }}</th>
-              </tr>
-            </tfoot>
-          </table>
-
-          <div v-else class="text-body-2 text-medium-emphasis py-6 text-center">
-            {{ t('jobOrder.jobStats.empty') }}
-          </div>
+        <div v-if="pivotMounted" class="pivot-shell">
+          <web-pivot-table ref="pivotRef" class="pivot-element" />
         </div>
 
-        <div class="pager-row" v-if="totalPages > 1">
-          <div class="text-caption text-medium-emphasis">
-            {{ t('jobOrder.jobStats.page', { page, pages: totalPages, count: allGroups.length }) }}
-          </div>
-          <v-pagination v-model="page" :length="totalPages" density="comfortable" rounded="circle" total-visible="7" />
+        <div v-else-if="!pivotAvailable" class="text-body-2 text-medium-emphasis py-6 text-center">
+          {{ t('jobOrder.jobStats.loadFailed') }}
+        </div>
+
+        <div v-if="!loading && filteredRows.length === 0" class="text-body-2 text-medium-emphasis py-6 text-center">
+          {{ t('jobOrder.jobStats.empty') }}
         </div>
       </v-card-text>
     </v-card>
@@ -146,27 +115,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
-import { useThemeStore } from '@/stores/theme'
 import { getJobStats } from '@/services/jobOrders'
 import type { JobStatsRecord } from '@/types/api'
 
+type WptElement = HTMLElement & {
+  setLocale?: (locale: string) => void
+  setOptions?: (options: Record<string, unknown>) => void
+  setWptFromDataArray?: (
+    attrArray: string[],
+    dataArray: Array<Array<string | number>>,
+    url?: string,
+    type?: string,
+  ) => Promise<void> | void
+  configurePivot?: (config: Record<string, unknown>) => void
+}
+
 type RowField = 'salesRep' | 'customerName' | 'brand'
 type Measure = 'invoiceAmount' | 'cost' | 'grossProfit'
-
-type Aggregate = {
-  invoiceAmount: number
-  cost: number
-}
-
-type GroupRow = {
-  key: string
-  label: string
-  byYear: Record<number, Aggregate>
-  total: Aggregate
-}
 
 const rows = ref<JobStatsRecord[]>([])
 const loading = ref(false)
@@ -175,15 +143,18 @@ const lookup = ref('')
 const rowField = ref<RowField>('salesRep')
 const measure = ref<Measure>('invoiceAmount')
 const month = ref<number | null>(null)
-const page = ref(1)
+const pivotRef = ref<WptElement | null>(null)
+const pivotMounted = ref(false)
+const pivotAvailable = ref(false)
 
 const startOn = ref('')
 const endOn = ref('')
-const rowsPerPage = 15
-const themeStore = useThemeStore()
+let hydrateRetryTimer: number | null = null
+let hydrateAttempts = 0
+const MAX_HYDRATE_ATTEMPTS = 8
 
 const { t, locale } = useI18n({ useScope: 'global' })
-const { formatCurrency, formatNumber } = useLocaleFormatters()
+const { formatNumber } = useLocaleFormatters()
 
 const rowFieldItems = computed(() => [
   { value: 'salesRep', label: t('jobOrder.jobStats.rowFields.salesRep') },
@@ -198,9 +169,8 @@ const measureItems = computed(() => [
 ])
 
 const monthItems = computed(() => {
-  const formatter = new Intl.DateTimeFormat(locale.value === 'zh-Hans' ? 'zh-CN' : locale.value === 'zh-Hant' ? 'zh-TW' : 'en', {
-    month: 'short',
-  })
+  const localeCode = locale.value === 'zh-Hans' ? 'zh-CN' : locale.value === 'zh-Hant' ? 'zh-TW' : 'en'
+  const formatter = new Intl.DateTimeFormat(localeCode, { month: 'short' })
 
   return [
     { value: null, label: t('jobOrder.jobStats.month.all') },
@@ -211,8 +181,6 @@ const monthItems = computed(() => {
     }),
   ]
 })
-
-const rowFieldLabel = computed(() => rowFieldItems.value.find((item) => item.value === rowField.value)?.label ?? '')
 
 const filteredRows = computed(() => {
   const token = lookup.value.trim().toLowerCase()
@@ -234,98 +202,61 @@ const filteredRows = computed(() => {
       row.salesRep,
       row.invNumber,
       row.invDate ?? '',
-    ].some((field) => field.toLowerCase().includes(token))
+    ].some((field) => String(field).toLowerCase().includes(token))
   })
 })
 
-const yearColumns = computed(() => {
-  return Array.from(new Set(filteredRows.value.map((row) => row.year).filter((year): year is number => typeof year === 'number')))
-    .sort((left, right) => left - right)
-})
-
-const allGroups = computed<GroupRow[]>(() => {
-  const byGroup = new Map<string, GroupRow>()
-
-  for (const row of filteredRows.value) {
-    const rawLabel = readRowField(row, rowField.value)
-    const label = rawLabel.trim().length > 0 ? rawLabel : t('jobOrder.jobStats.blank')
-    const key = label.toLowerCase()
-    const yearValue = row.year
-
-    let group = byGroup.get(key)
-    if (!group) {
-      group = {
-        key,
-        label,
-        byYear: {},
-        total: createEmptyAggregate(),
-      }
-      byGroup.set(key, group)
-    }
-
-    addToAggregate(group.total, row)
-
-    if (typeof yearValue === 'number') {
-      if (!group.byYear[yearValue]) {
-        group.byYear[yearValue] = createEmptyAggregate()
-      }
-      addToAggregate(group.byYear[yearValue], row)
-    }
+watch([lookup, month, rowField, measure], async () => {
+  if (!pivotMounted.value || !pivotAvailable.value) {
+    return
   }
 
-  return Array.from(byGroup.values()).sort((left, right) => left.label.localeCompare(right.label))
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(allGroups.value.length / rowsPerPage)))
-
-const pagedGroups = computed(() => {
-  const offset = (page.value - 1) * rowsPerPage
-  return allGroups.value.slice(offset, offset + rowsPerPage)
-})
-
-const grandByYear = computed<Record<number, Aggregate>>(() => {
-  const result: Record<number, Aggregate> = {}
-
-  for (const group of allGroups.value) {
-    for (const yearValue of yearColumns.value) {
-      if (!result[yearValue]) {
-        result[yearValue] = createEmptyAggregate()
-      }
-      const cell = group.byYear[yearValue]
-      if (cell) {
-        result[yearValue].invoiceAmount += cell.invoiceAmount
-        result[yearValue].cost += cell.cost
-      }
-    }
-  }
-
-  return result
-})
-
-const grandTotal = computed<Aggregate>(() => {
-  const total = createEmptyAggregate()
-  for (const group of allGroups.value) {
-    total.invoiceAmount += group.total.invoiceAmount
-    total.cost += group.total.cost
-  }
-  return total
-})
-
-watch([lookup, month, rowField, measure], () => {
-  page.value = 1
-})
-
-watch(totalPages, (value) => {
-  if (page.value > value) {
-    page.value = value
-  }
+  await nextTick()
+  hydrateAttempts = 0
+  scheduleHydratePivot()
 })
 
 onMounted(async () => {
+  pivotAvailable.value = await ensurePivotComponentLoaded()
+  if (!pivotAvailable.value) {
+    errorMessage.value = t('jobOrder.jobStats.loadFailed')
+    return
+  }
+
+  await customElements.whenDefined('web-pivot-table')
   await load()
+
+  if (!pivotMounted.value) {
+    pivotMounted.value = true
+    await nextTick()
+
+    const pivot = pivotRef.value
+    if (pivot) {
+      pivot.addEventListener('wpt:ready', onPivotReady as EventListener)
+    }
+
+    hydrateAttempts = 0
+    scheduleHydratePivot()
+  }
+})
+
+onUnmounted(() => {
+  const pivot = pivotRef.value
+  if (pivot) {
+    pivot.removeEventListener('wpt:ready', onPivotReady as EventListener)
+  }
+
+  if (hydrateRetryTimer != null) {
+    window.clearTimeout(hydrateRetryTimer)
+    hydrateRetryTimer = null
+  }
 })
 
 async function load() {
+  if (!pivotAvailable.value) {
+    return
+  }
+
   loading.value = true
   errorMessage.value = ''
 
@@ -335,6 +266,12 @@ async function load() {
       endOn: endOn.value || undefined,
       take: 20000,
     })
+
+    if (pivotMounted.value) {
+      await nextTick()
+      hydrateAttempts = 0
+      scheduleHydratePivot()
+    }
   } catch {
     errorMessage.value = t('jobOrder.jobStats.loadFailed')
   } finally {
@@ -343,57 +280,231 @@ async function load() {
 }
 
 async function refresh() {
-  page.value = 1
   await load()
 }
 
-function valueFromAggregate(aggregate: Aggregate | undefined): number {
-  if (!aggregate) {
-    return 0
+async function hydratePivot() {
+  const pivot = pivotRef.value
+  if (!pivot || filteredRows.value.length === 0) {
+    return false
   }
 
-  if (measure.value === 'invoiceAmount') {
-    return aggregate.invoiceAmount
-  }
+  const attrArray = [
+    'Job Number',
+    'Customer Name',
+    'Brand',
+    'Purchase Order',
+    'Sales Rep',
+    'Gross Profit',
+    'Cost',
+    'Invoice Amount',
+    'Inv Number',
+    'Inv Date',
+    'Year',
+    'Month',
+  ]
 
-  if (measure.value === 'cost') {
-    return aggregate.cost
-  }
+  const dataArray = filteredRows.value.map((row) => [
+    normalizeText(row.jobNumber),
+    normalizeText(row.customerName),
+    normalizeText(row.brand),
+    normalizeText(row.purchaseOrder),
+    normalizeText(row.salesRep),
+    grossProfitRatio(row),
+    Number(row.cost ?? 0),
+    Number(row.invoiceAmount ?? 0),
+    normalizeText(row.invNumber),
+    normalizeText(row.invDate),
+    Number(row.year ?? 0),
+    Number(row.month ?? 0),
+  ])
 
-  if (aggregate.invoiceAmount <= 0) {
-    return 0
-  }
+  const rowFieldName = rowField.value === 'customerName'
+    ? 'Customer Name'
+    : rowField.value === 'brand'
+      ? 'Brand'
+      : 'Sales Rep'
 
-  return (aggregate.invoiceAmount - aggregate.cost) / aggregate.invoiceAmount
+  const valueFieldName = measure.value === 'cost'
+    ? 'Cost'
+    : measure.value === 'grossProfit'
+      ? 'Gross Profit'
+      : 'Invoice Amount'
+
+  try {
+    pivot.setLocale?.(locale.value)
+    pivot.setOptions?.({
+      locale: locale.value,
+      layout: { fitMode: 'fill' },
+    })
+
+    await pivot.setWptFromDataArray?.(attrArray, dataArray)
+    pivot.configurePivot?.({
+      displayMode: 'grid',
+      filters: ['Job Number', 'Customer Name', 'Brand', 'Purchase Order', 'Gross Profit', 'Cost', 'Inv Number', 'Inv Date'],
+      rows: [rowFieldName],
+      columns: ['Year', 'Month'],
+      values: [{
+        field: valueFieldName,
+        aggregation: 'SUM',
+        formatter: (value: unknown) => {
+          if (typeof value !== 'number') return String(value)
+          if (measure.value === 'grossProfit') {
+            return formatNumber(value, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          }
+          return formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        },
+      }],
+      sort: {
+        field: rowFieldName,
+        direction: 'asc',
+      },
+      grid: {
+        compactForm: false,
+      },
+      showRowTotals: true,
+      showColTotals: true,
+    })
+    return !hasNoStoreError(pivot)
+  } catch {
+    errorMessage.value = t('jobOrder.jobStats.loadFailed')
+    return false
+  }
 }
 
-function formatMeasure(value: number): string {
-  if (measure.value === 'grossProfit') {
-    return formatNumber(value, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function onPivotReady() {
+  hydrateAttempts = 0
+  scheduleHydratePivot()
+}
+
+async function scheduleHydratePivot() {
+  if (hydrateRetryTimer != null) {
+    window.clearTimeout(hydrateRetryTimer)
+    hydrateRetryTimer = null
   }
 
-  return formatCurrency(value)
+  if (!pivotAvailable.value || filteredRows.value.length === 0) {
+    return
+  }
+
+  const pivot = pivotRef.value
+  if (!pivot) {
+    if (hydrateAttempts >= MAX_HYDRATE_ATTEMPTS) {
+      errorMessage.value = t('jobOrder.jobStats.loadFailed')
+      return
+    }
+
+    hydrateAttempts += 1
+    hydrateRetryTimer = window.setTimeout(scheduleHydratePivot, 250)
+    return
+  }
+
+  const hasMethods = typeof pivot.setWptFromDataArray === 'function'
+  if (!hasMethods) {
+    if (hydrateAttempts >= MAX_HYDRATE_ATTEMPTS) {
+      errorMessage.value = t('jobOrder.jobStats.loadFailed')
+      return
+    }
+
+    hydrateAttempts += 1
+    hydrateRetryTimer = window.setTimeout(scheduleHydratePivot, 250)
+    return
+  }
+
+  const healthy = hasMethods && (await hydratePivot())
+
+  if (healthy) {
+    return
+  }
+
+  if (hydrateAttempts >= MAX_HYDRATE_ATTEMPTS) {
+    errorMessage.value = t('jobOrder.jobStats.loadFailed')
+    return
+  }
+
+  hydrateAttempts += 1
+  hydrateRetryTimer = window.setTimeout(scheduleHydratePivot, 250)
+}
+
+function hasNoStoreError(pivot: WptElement | null): boolean {
+  if (!pivot) {
+    return false
+  }
+
+  const text = `${pivot.textContent || ''} ${pivot.shadowRoot?.textContent || ''}`
+  return text.includes('No store for')
+}
+
+async function ensurePivotComponentLoaded(): Promise<boolean> {
+  if (customElements.get('web-pivot-table')) {
+    return true
+  }
+
+  try {
+    await import('webpivottable-dist')
+  } catch {
+    return false
+  }
+
+  return Boolean(customElements.get('web-pivot-table'))
+}
+
+function grossProfitRatio(row: JobStatsRecord): number {
+  const invoiceAmount = Number(row.invoiceAmount ?? 0)
+  const cost = Number(row.cost ?? 0)
+  if (invoiceAmount <= 0) {
+    return 0
+  }
+  return (invoiceAmount - cost) / invoiceAmount
+}
+
+function normalizeText(value: unknown): string {
+  if (typeof value !== 'string') {
+    return t('jobOrder.jobStats.blank')
+  }
+
+  const trimmed = value.trim()
+  return trimmed || t('jobOrder.jobStats.blank')
 }
 
 function exportToCsv() {
-  const header = [rowFieldLabel.value, ...yearColumns.value.map(String), t('jobOrder.jobStats.grandTotal')]
-  const lines = [header.join(',')]
-
-  for (const group of allGroups.value) {
-    const row = [
-      csvEscape(group.label),
-      ...yearColumns.value.map((yearValue) => csvEscape(formatMeasure(valueFromAggregate(group.byYear[yearValue])))),
-      csvEscape(formatMeasure(valueFromAggregate(group.total))),
-    ]
-    lines.push(row.join(','))
-  }
-
-  const totalRow = [
-    t('jobOrder.jobStats.grandTotal'),
-    ...yearColumns.value.map((yearValue) => csvEscape(formatMeasure(valueFromAggregate(grandByYear.value[yearValue])))),
-    csvEscape(formatMeasure(valueFromAggregate(grandTotal.value))),
+  const header = [
+    'Job Number',
+    'Customer Name',
+    'Brand',
+    'Purchase Order',
+    'Sales Rep',
+    'Gross Profit %',
+    'Cost',
+    'Invoice Amount',
+    'Inv Number',
+    'Inv Date',
+    'Year',
+    'Month',
   ]
-  lines.push(totalRow.join(','))
+
+  const lines = [header.map(csvEscape).join(',')]
+
+  for (const row of filteredRows.value) {
+    lines.push(
+      [
+        normalizeText(row.jobNumber),
+        normalizeText(row.customerName),
+        normalizeText(row.brand),
+        normalizeText(row.purchaseOrder),
+        normalizeText(row.salesRep),
+        formatNumber(grossProfitRatio(row), { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        formatNumber(row.cost ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        formatNumber(row.invoiceAmount ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        normalizeText(row.invNumber),
+        normalizeText(row.invDate),
+        String(row.year ?? 0),
+        String(row.month ?? 0),
+      ]
+        .map((value) => csvEscape(value ?? ''))
+        .join(','),
+    )
+  }
 
   const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
@@ -406,59 +517,16 @@ function exportToCsv() {
   URL.revokeObjectURL(link.href)
 }
 
-function readRowField(row: JobStatsRecord, field: RowField): string {
-  if (field === 'customerName') {
-    return row.customerName
-  }
-
-  if (field === 'brand') {
-    return row.brand
-  }
-
-  return row.salesRep
-}
-
-function createEmptyAggregate(): Aggregate {
-  return {
-    invoiceAmount: 0,
-    cost: 0,
-  }
-}
-
-function addToAggregate(aggregate: Aggregate, row: JobStatsRecord) {
-  aggregate.invoiceAmount += row.invoiceAmount
-  aggregate.cost += row.cost
-}
-
-function csvEscape(value: string) {
-  const escaped = value.replace(/"/g, '""')
+function csvEscape(value: unknown): string {
+  const escaped = String(value).replace(/"/g, '""')
   return `"${escaped}"`
 }
 </script>
 
 <style scoped>
 .job-stats-page {
-  --pivot-shell-border: rgba(var(--v-theme-on-surface), 0.22);
+  --pivot-shell-border: rgba(var(--v-theme-on-surface), 0.2);
   --pivot-shell-bg: rgb(var(--v-theme-surface));
-  --pivot-cell-border: rgba(var(--v-theme-on-surface), 0.18);
-  --pivot-head-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 86%, rgb(var(--v-theme-surface)) 14%);
-  --pivot-body-bg: color-mix(in srgb, rgb(var(--v-theme-surface)) 94%, rgb(var(--v-theme-on-surface)) 6%);
-  --pivot-sticky-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 76%, rgb(var(--v-theme-surface)) 24%);
-  --pivot-foot-top-border: rgba(var(--v-theme-on-surface), 0.2);
-  --pivot-foot-top-width: 1px;
-  --pivot-foot-sticky-bg: color-mix(in srgb, rgb(var(--v-theme-primary)) 20%, rgb(var(--v-theme-surface-variant)) 80%);
-}
-
-.job-stats-page.job-stats-page--dark {
-  --pivot-shell-border: rgba(var(--v-theme-on-surface), 0.26);
-  --pivot-shell-bg: rgba(var(--v-theme-surface), 0.88);
-  --pivot-cell-border: rgba(var(--v-theme-on-surface), 0.16);
-  --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.94);
-  --pivot-body-bg: rgba(var(--v-theme-surface), 0.7);
-  --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
-  --pivot-foot-top-border: rgba(var(--v-theme-on-surface), 0.28);
-  --pivot-foot-top-width: 2px;
-  --pivot-foot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
 }
 
 .filter-bar {
@@ -469,92 +537,17 @@ function csvEscape(value: string) {
 }
 
 .pivot-shell {
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid var(--pivot-shell-border);
   border-radius: 10px;
   background: var(--pivot-shell-bg);
+  height: clamp(560px, calc(100vh - 340px), 720px);
 }
 
-.pivot-table {
+.pivot-element {
+  display: block;
   width: 100%;
-  border-collapse: collapse;
-  min-width: 860px;
-}
-
-.pivot-table th,
-.pivot-table td {
-  border: 1px solid var(--pivot-cell-border);
-  padding: 7px 10px;
-  white-space: nowrap;
-  font-size: 0.84rem;
-}
-
-.pivot-table thead th,
-.pivot-table tfoot th {
-  background: var(--pivot-head-bg);
-  font-weight: 600;
-}
-
-.pivot-table tbody td {
-  background: var(--pivot-body-bg);
-}
-
-.pivot-table .sticky-col {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--pivot-sticky-bg);
-}
-
-.pivot-table tfoot th {
-  border-top: var(--pivot-foot-top-width) solid var(--pivot-foot-top-border);
-}
-
-.pivot-table tfoot .sticky-col {
-  background: var(--pivot-foot-sticky-bg);
-}
-
-@supports not (background: color-mix(in srgb, black, white)) {
-  .job-stats-page {
-    --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.9);
-    --pivot-body-bg: rgba(var(--v-theme-surface), 0.92);
-    --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
-    --pivot-foot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.88);
-  }
-
-  .job-stats-page.job-stats-page--dark {
-    --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.94);
-    --pivot-body-bg: rgba(var(--v-theme-surface), 0.7);
-    --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
-    --pivot-foot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.82);
-  }
-}
-
-.pivot-table .label-cell {
-  font-weight: 500;
-}
-
-.pivot-table .numeric-cell {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.pivot-table .total-cell {
-  font-weight: 600;
-}
-
-.pager-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-@media (max-width: 900px) {
-  .pager-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
+  height: 100%;
+  min-height: 560px;
 }
 </style>
