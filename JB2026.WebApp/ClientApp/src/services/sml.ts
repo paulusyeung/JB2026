@@ -83,7 +83,7 @@ export async function getSmlRtfStats(query: SmlRtfStatsQuery): Promise<SmlRtfSta
       startOn: query.startOn,
       endOn: query.endOn,
       lookup: query.lookup,
-      take: query.take ?? 5000,
+      take: query.take,
     },
   })
 

@@ -65,53 +65,16 @@
 
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
-        <div class="pivot-shell">
-          <table class="pivot-table" v-if="columnKeys.length > 0">
-            <thead>
-              <tr>
-                <th class="sticky-col-1">{{ t('sml.rtfStats.headers.purchaseOrder') }}</th>
-                <th class="sticky-col-2">{{ t('sml.rtfStats.headers.productCode') }}</th>
-                <th class="sticky-col-3">{{ t('sml.rtfStats.headers.price') }}</th>
-                <th class="sticky-col-4">{{ t('sml.rtfStats.headers.qty') }}</th>
-                <th v-for="column in columnKeys" :key="column">{{ formatColumnLabel(column) }}</th>
-                <th>{{ t('sml.rtfStats.headers.grandTotal') }}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr v-for="group in pagedGroups" :key="group.key">
-                <td class="sticky-col-1 label-cell">{{ group.purchaseOrder }}</td>
-                <td class="sticky-col-2 label-cell">{{ group.productCode }}</td>
-                <td class="sticky-col-3 numeric-cell">{{ group.price }}</td>
-                <td class="sticky-col-4 numeric-cell">{{ group.qty }}</td>
-                <td v-for="column in columnKeys" :key="`${group.key}-${column}`" class="numeric-cell">
-                  {{ formatAmount(group.byColumn[column] ?? 0) }}
-                </td>
-                <td class="numeric-cell total-cell">{{ formatAmount(group.total) }}</td>
-              </tr>
-            </tbody>
-
-            <tfoot>
-              <tr>
-                <th class="sticky-col-1" colspan="4">{{ t('sml.rtfStats.headers.grandTotal') }}</th>
-                <th v-for="column in columnKeys" :key="`total-${column}`" class="numeric-cell">
-                  {{ formatAmount(grandByColumn[column] ?? 0) }}
-                </th>
-                <th class="numeric-cell">{{ formatAmount(grandTotal) }}</th>
-              </tr>
-            </tfoot>
-          </table>
-
-          <div v-else class="text-body-2 text-medium-emphasis py-6 text-center">
-            {{ t('sml.rtfStats.empty') }}
-          </div>
+        <div v-if="pivotMounted" class="pivot-shell">
+          <web-pivot-table ref="pivotRef" class="pivot-element" />
         </div>
 
-        <div class="pager-row" v-if="totalPages > 1">
-          <div class="text-caption text-medium-emphasis">
-            {{ t('sml.rtfStats.page', { page, pages: totalPages, count: groups.length }) }}
-          </div>
-          <v-pagination v-model="page" :length="totalPages" density="comfortable" rounded="circle" total-visible="7" />
+        <div v-else-if="!pivotAvailable" class="text-body-2 text-medium-emphasis py-6 text-center">
+          {{ t('sml.rtfStats.loadFailed') }}
+        </div>
+
+        <div v-if="!loading && rows.length === 0" class="text-body-2 text-medium-emphasis py-6 text-center">
+          {{ t('sml.rtfStats.empty') }}
         </div>
       </v-card-text>
     </v-card>
@@ -119,11 +82,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getSmlRtfStats } from '@/services/sml'
 import type { SmlRtfStatsRow } from '@/types/api'
+
+type WptElement = HTMLElement & {
+  setLocale?: (locale: string) => void
+  setOptions?: (options: Record<string, unknown>) => void
+  setWptFromDataArray?: (
+    attrArray: string[],
+    dataArray: Array<Array<string | number>>,
+    url?: string,
+    type?: string,
+  ) => Promise<void> | void
+  configurePivot?: (config: Record<string, unknown>) => void
+}
 
 type PivotGroup = {
   key: string
@@ -136,17 +111,22 @@ type PivotGroup = {
 }
 
 const { t } = useI18n({ useScope: 'global' })
+const { locale } = useI18n({ useScope: 'global' })
 const { formatNumber } = useLocaleFormatters()
 
 const rows = ref<SmlRtfStatsRow[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const lookup = ref('')
-const page = ref(1)
-const rowsPerPage = 15
+const pivotRef = ref<WptElement | null>(null)
+const pivotMounted = ref(false)
+const pivotAvailable = ref(false)
 
 const startOn = ref('')
 const endOn = ref('')
+let hydrateRetryTimer: number | null = null
+let hydrateAttempts = 0
+const MAX_HYDRATE_ATTEMPTS = 8
 
 const columnKeys = computed(() => {
   return Array.from(new Set(rows.value.map((row) => toColumnKey(row.year, row.month)))).sort()
@@ -196,13 +176,6 @@ const groups = computed<PivotGroup[]>(() => {
   })
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(groups.value.length / rowsPerPage)))
-
-const pagedGroups = computed(() => {
-  const offset = (page.value - 1) * rowsPerPage
-  return groups.value.slice(offset, offset + rowsPerPage)
-})
-
 const grandByColumn = computed<Record<string, number>>(() => {
   const totals: Record<string, number> = {}
 
@@ -229,21 +202,47 @@ const grandTotal = computed(() => {
   return total
 })
 
-watch([lookup, startOn, endOn], () => {
-  page.value = 1
-})
+onMounted(async () => {
+  pivotAvailable.value = await ensurePivotComponentLoaded()
+  if (!pivotAvailable.value) {
+    errorMessage.value = t('sml.rtfStats.loadFailed')
+    return
+  }
 
-watch(totalPages, (value) => {
-  if (page.value > value) {
-    page.value = value
+  await customElements.whenDefined('web-pivot-table')
+  await load()
+
+  if (!pivotMounted.value) {
+    pivotMounted.value = true
+    await nextTick()
+
+    const pivot = pivotRef.value
+    if (pivot) {
+      pivot.addEventListener('wpt:ready', onPivotReady as EventListener)
+    }
+
+    hydrateAttempts = 0
+    scheduleHydratePivot()
   }
 })
 
-onMounted(async () => {
-  await load()
+onUnmounted(() => {
+  const pivot = pivotRef.value
+  if (pivot) {
+    pivot.removeEventListener('wpt:ready', onPivotReady as EventListener)
+  }
+
+  if (hydrateRetryTimer != null) {
+    window.clearTimeout(hydrateRetryTimer)
+    hydrateRetryTimer = null
+  }
 })
 
 async function load() {
+  if (!pivotAvailable.value) {
+    return
+  }
+
   loading.value = true
   errorMessage.value = ''
 
@@ -252,10 +251,14 @@ async function load() {
       startOn: startOn.value || undefined,
       endOn: endOn.value || undefined,
       lookup: lookup.value.trim() || undefined,
-      take: 20000,
     })
 
     rows.value = response.rows
+    if (pivotMounted.value) {
+      await nextTick()
+      hydrateAttempts = 0
+      scheduleHydratePivot()
+    }
   } catch {
     errorMessage.value = t('sml.rtfStats.loadFailed')
   } finally {
@@ -264,8 +267,168 @@ async function load() {
 }
 
 async function refresh() {
-  page.value = 1
   await load()
+}
+
+async function hydratePivot() {
+  const pivot = pivotRef.value
+  if (!pivot || rows.value.length === 0) {
+    return false
+  }
+
+  const attrArray = [
+    'Customer PO',
+    'Ordered On',
+    'Ordered By',
+    'Original PO',
+    'Sales Order',
+    'Original SO',
+    'Purchase Order',
+    'Product Code',
+    'Price',
+    'Qty',
+    'Year',
+    'Month',
+    'Amount',
+  ]
+  const dataArray = rows.value.map((row) => [
+    normalizeText(row.customerPO),
+    normalizeText(row.orderedOn),
+    normalizeText(row.orderedBy),
+    normalizeText(row.originalPO),
+    normalizeText(row.salesOrder),
+    normalizeText(row.originalSO),
+    normalizeText(row.purchaseOrder),
+    normalizeText(row.productCode),
+    normalizeText(row.price, '-'),
+    normalizeText(row.qty, '-'),
+    Number(row.year ?? 0),
+    Number(row.month ?? 0),
+    Number(row.amount ?? 0),
+  ])
+
+  try {
+    pivot.setLocale?.(locale.value)
+    pivot.setOptions?.({
+      locale: locale.value,
+      layout: { fitMode: 'fill' },
+    })
+
+    await pivot.setWptFromDataArray?.(attrArray, dataArray)
+    pivot.configurePivot?.({
+      displayMode: 'grid',
+      filters: ['Customer PO', 'Ordered On', 'Ordered By', 'Original PO', 'Sales Order', 'Original SO'],
+      rows: ['Purchase Order', 'Product Code', 'Price', 'Qty'],
+      columns: ['Year', 'Month'],
+      values: [{
+        field: 'Amount',
+        aggregation: 'SUM',
+        formatter: (value: unknown) => {
+          if (typeof value !== 'number') return String(value)
+          return formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        },
+      }],
+      sort: {
+        field: 'Purchase Order',
+        direction: 'asc',
+      },
+      grid: {
+        compactForm: false,
+      },
+      showRowTotals: true,
+      showColTotals: true,
+    })
+    return !hasNoStoreError(pivot)
+  } catch {
+    errorMessage.value = t('sml.rtfStats.loadFailed')
+    return false
+  }
+}
+
+function onPivotReady() {
+  hydrateAttempts = 0
+  scheduleHydratePivot()
+}
+
+async function scheduleHydratePivot() {
+  if (hydrateRetryTimer != null) {
+    window.clearTimeout(hydrateRetryTimer)
+    hydrateRetryTimer = null
+  }
+
+  if (!pivotAvailable.value || rows.value.length === 0) {
+    return
+  }
+
+  const pivot = pivotRef.value
+  if (!pivot) {
+    if (hydrateAttempts >= MAX_HYDRATE_ATTEMPTS) {
+      errorMessage.value = t('sml.rtfStats.loadFailed')
+      return
+    }
+
+    hydrateAttempts += 1
+    hydrateRetryTimer = window.setTimeout(scheduleHydratePivot, 250)
+    return
+  }
+
+  const hasMethods = typeof pivot.setWptFromDataArray === 'function'
+  if (!hasMethods) {
+    if (hydrateAttempts >= MAX_HYDRATE_ATTEMPTS) {
+      errorMessage.value = t('sml.rtfStats.loadFailed')
+      return
+    }
+
+    hydrateAttempts += 1
+    hydrateRetryTimer = window.setTimeout(scheduleHydratePivot, 250)
+    return
+  }
+
+  const healthy = hasMethods && (await hydratePivot())
+
+  if (healthy) {
+    return
+  }
+
+  if (hydrateAttempts >= MAX_HYDRATE_ATTEMPTS) {
+    errorMessage.value = t('sml.rtfStats.loadFailed')
+    return
+  }
+
+  hydrateAttempts += 1
+  hydrateRetryTimer = window.setTimeout(scheduleHydratePivot, 250)
+}
+
+function hasNoStoreError(pivot: WptElement | null): boolean {
+  if (!pivot) {
+    return false
+  }
+
+  const text = `${pivot.textContent || ''} ${pivot.shadowRoot?.textContent || ''}`
+  return text.includes('No store for')
+}
+
+function normalizeText(value: unknown, fallback = t('sml.rtfStats.blank')): string {
+  if (typeof value !== 'string') {
+    return fallback
+  }
+
+  const trimmed = value.trim()
+  return trimmed || fallback
+}
+
+async function ensurePivotComponentLoaded(): Promise<boolean> {
+  if (customElements.get('web-pivot-table')) {
+    return true
+  }
+
+  try {
+    await import('webpivottable-dist')
+  } catch {
+    return false
+  }
+
+  return Boolean(customElements.get('web-pivot-table'))
 }
 
 function toColumnKey(year: number, month: number): string {
@@ -349,10 +512,6 @@ function csvEscape(value: string): string {
 .sml-rtf-stats-page {
   --pivot-shell-border: rgba(var(--v-theme-on-surface), 0.2);
   --pivot-shell-bg: rgb(var(--v-theme-surface));
-  --pivot-cell-border: rgba(var(--v-theme-on-surface), 0.15);
-  --pivot-head-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 86%, rgb(var(--v-theme-surface)) 14%);
-  --pivot-body-bg: color-mix(in srgb, rgb(var(--v-theme-surface)) 95%, rgb(var(--v-theme-on-surface)) 5%);
-  --pivot-sticky-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 76%, rgb(var(--v-theme-surface)) 24%);
 }
 
 .filter-bar {
@@ -363,99 +522,18 @@ function csvEscape(value: string): string {
 }
 
 .pivot-shell {
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--pivot-shell-border);
   border-radius: 10px;
   background: var(--pivot-shell-bg);
+  height: clamp(560px, calc(100vh - 340px), 720px);
 }
 
-.pivot-table {
+.pivot-element {
+  display: block;
   width: 100%;
-  border-collapse: collapse;
-  min-width: 1200px;
+  height: 100%;
+  min-height: 560px;
 }
 
-.pivot-table th,
-.pivot-table td {
-  border: 1px solid var(--pivot-cell-border);
-  padding: 7px 10px;
-  white-space: nowrap;
-  font-size: 0.84rem;
-}
-
-.pivot-table thead th,
-.pivot-table tfoot th {
-  background: var(--pivot-head-bg);
-  font-weight: 600;
-}
-
-.pivot-table tbody td {
-  background: var(--pivot-body-bg);
-}
-
-.pivot-table .label-cell {
-  font-weight: 500;
-}
-
-.pivot-table .numeric-cell {
-  text-align: right;
-}
-
-.pivot-table .total-cell {
-  font-weight: 700;
-}
-
-.pivot-table .sticky-col-1,
-.pivot-table .sticky-col-2,
-.pivot-table .sticky-col-3,
-.pivot-table .sticky-col-4 {
-  position: sticky;
-  z-index: 1;
-  background: var(--pivot-sticky-bg);
-}
-
-.pivot-table .sticky-col-1 {
-  left: 0;
-}
-
-.pivot-table .sticky-col-2 {
-  left: 185px;
-}
-
-.pivot-table .sticky-col-3 {
-  left: 360px;
-}
-
-.pivot-table .sticky-col-4 {
-  left: 480px;
-}
-
-.pager-row {
-  margin-top: 12px;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 900px) {
-  .pivot-table .sticky-col-2,
-  .pivot-table .sticky-col-3,
-  .pivot-table .sticky-col-4 {
-    position: static;
-  }
-
-  .pivot-table {
-    min-width: 900px;
-  }
-}
-
-@supports not (background: color-mix(in srgb, black, white)) {
-  .sml-rtf-stats-page {
-    --pivot-head-bg: rgba(var(--v-theme-surface-variant), 0.9);
-    --pivot-body-bg: rgba(var(--v-theme-surface), 0.95);
-    --pivot-sticky-bg: rgba(var(--v-theme-surface-variant), 0.85);
-  }
-}
 </style>
