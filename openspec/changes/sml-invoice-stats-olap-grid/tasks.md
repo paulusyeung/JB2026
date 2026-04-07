@@ -10,12 +10,18 @@
 - [x] 2.2 Implement invoice-stats row transformation into WebPivotTable-compatible tabular payload.
 - [x] 2.3 Initialize WebPivotTable with legacy default layout (row/column/data fields and totals).
 - [x] 2.4 Preserve existing filter controls and refresh behavior using the current invoice-stats API source.
+- [x] 2.5 Use explicit WebPivotTable two-argument hydration signature (`attrArray`, `dataArray`) and await hydration before layout configuration.
+- [x] 2.6 Add mount-time readiness synchronization (`customElements.whenDefined` + guarded retry) to prevent intermittent blank OLAP host.
+- [x] 2.7 Remove implicit/default API row cap behavior and keep row limiting optional for large-dataset parity checks.
 
 ## 3. UX and Reliability
 
 - [x] 3.1 Implement loading/empty/error states around data load and OLAP initialization.
 - [x] 3.2 Keep or rewire export behavior so Invoice Stats export remains available after OLAP migration.
 - [x] 3.3 Add runtime guards/logging for invalid dataset shape to prevent silent failures.
+- [x] 3.4 Enforce explicit WebPivotTable host sizing (`display: block` + bounded height) so rendered grid is visible across viewport sizes.
+- [x] 3.5 Set default OLAP display mode to grid for Invoice Stats parity.
+- [x] 3.6 Format Amount aggregate output with thousand separators and 2 decimal places.
 
 ## 4. Validation and Parity Checks
 
