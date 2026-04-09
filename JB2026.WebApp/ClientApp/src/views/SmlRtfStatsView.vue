@@ -338,9 +338,16 @@ async function hydratePivot() {
       values: [{
         field: 'Amount',
         aggregation: 'SUM',
+        format: {
+          category: 'CURRENCY',
+          decimal: 2,
+          separatorFlag: true,
+          symbol: '$',
+          symbolSuffix: false,
+        },
         formatter: (value: unknown) => {
           if (typeof value !== 'number') return String(value)
-          return formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          return formatAmountCurrency(value)
         },
       }],
       sort: {
@@ -462,8 +469,10 @@ function formatColumnLabel(columnKey: string): string {
   return `${year}/${month.toString().padStart(2, '0')}`
 }
 
-function formatAmount(value: number): string {
-  return formatNumber(value, {
+function formatAmountCurrency(value: number): string {
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
@@ -487,8 +496,8 @@ function exportToCsv() {
       csvEscape(group.productCode),
       csvEscape(group.price),
       csvEscape(group.qty),
-      ...columnKeys.value.map((column) => csvEscape(formatAmount(group.byColumn[column] ?? 0))),
-      csvEscape(formatAmount(group.total)),
+      ...columnKeys.value.map((column) => csvEscape(formatAmountCurrency(group.byColumn[column] ?? 0))),
+      csvEscape(formatAmountCurrency(group.total)),
     ]
 
     lines.push(row.join(','))
@@ -499,8 +508,8 @@ function exportToCsv() {
     csvEscape(''),
     csvEscape(''),
     csvEscape(''),
-    ...columnKeys.value.map((column) => csvEscape(formatAmount(grandByColumn.value[column] ?? 0))),
-    csvEscape(formatAmount(grandTotal.value)),
+    ...columnKeys.value.map((column) => csvEscape(formatAmountCurrency(grandByColumn.value[column] ?? 0))),
+    csvEscape(formatAmountCurrency(grandTotal.value)),
   ]
 
   lines.push(totalRow.join(','))

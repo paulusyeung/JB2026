@@ -362,11 +362,33 @@ async function hydratePivot() {
       values: [{
         field: valueFieldName,
         aggregation: 'SUM',
+        format: measure.value === 'invoiceAmount'
+          ? {
+            category: 'CURRENCY',
+            decimal: 2,
+            separatorFlag: true,
+            symbol: '$',
+            symbolSuffix: false,
+          }
+          : measure.value === 'grossProfit'
+            ? {
+              category: 'PERCENTAGE',
+              decimal: 2,
+            }
+            : {
+              category: 'NUMBER',
+              decimal: 2,
+              separatorFlag: true,
+            },
         formatter: (value: unknown) => {
-          if (typeof value !== 'number') return String(value)
           if (measure.value === 'grossProfit') {
+            if (typeof value !== 'number') return String(value)
             return formatNumber(value, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 })
           }
+          if (measure.value === 'invoiceAmount') {
+            return formatInvoiceAmountCurrency(value)
+          }
+          if (typeof value !== 'number') return String(value)
           return formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         },
       }],
@@ -482,6 +504,20 @@ function normalizeText(value: unknown): string {
   return trimmed || t('jobOrder.jobStats.blank')
 }
 
+function formatInvoiceAmountCurrency(value: unknown): string {
+  const numericValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numericValue)) {
+    return String(value ?? '')
+  }
+
+  return numericValue.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 function exportToCsv() {
   const header = [
     'Job Number',
@@ -510,7 +546,7 @@ function exportToCsv() {
         normalizeText(row.salesRep),
         formatNumber(grossProfitRatio(row), { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         formatNumber(row.cost ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        formatNumber(row.invoiceAmount ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        formatInvoiceAmountCurrency(row.invoiceAmount ?? 0),
         normalizeText(row.invNumber),
         normalizeText(row.invDate),
         String(row.year ?? 0),

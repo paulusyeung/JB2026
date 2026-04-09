@@ -236,9 +236,16 @@ async function hydratePivot() {
       values: [{
         field: 'Amount',
         aggregation: 'SUM',
+        format: {
+          category: 'CURRENCY',
+          decimal: 2,
+          separatorFlag: true,
+          symbol: '$',
+          symbolSuffix: false,
+        },
         formatter: (value: unknown) => {
           if (typeof value !== 'number') return String(value)
-          return formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          return formatAmountCurrency(value)
         },
       }],
       showRowTotals: true,
@@ -356,7 +363,7 @@ function exportToCsv() {
         formatNumber(row.price, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         String(row.year),
         String(row.month),
-        formatNumber(row.amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        formatAmountCurrency(row.amount),
       ]
         .map((value) => csvEscape(value ?? ''))
         .join(','),
@@ -373,6 +380,15 @@ function exportToCsv() {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(link.href)
+}
+
+function formatAmountCurrency(value: number): string {
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 function csvEscape(value: string): string {
