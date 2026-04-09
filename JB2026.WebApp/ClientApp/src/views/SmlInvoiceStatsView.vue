@@ -91,6 +91,8 @@ import type { SmlInvoiceStatsRow } from '@/types/api'
 type WptElement = HTMLElement & {
   setLocale?: (locale: string) => void
   setOptions?: (options: Record<string, unknown>) => void
+  getSourceObject?: () => Record<string, unknown> | null
+  setSourceObject?: (source: Record<string, unknown>) => void
   setWptFromDataArray?: (
     attrArray: string[],
     dataArray: Array<Array<string | number>>,
@@ -211,9 +213,22 @@ async function hydratePivot() {
     pivot.setOptions?.({
       locale: locale.value,
       layout: { fitMode: 'fill' },
+      uiFlags: {
+        save: true,
+        saveToLocal: true,
+      },
     })
 
-    await pivot.setWptFromDataArray?.(attrArray, dataArray)
+    await pivot.setWptFromDataArray?.(attrArray, dataArray, 'memory://sml-invoice-stats')
+
+    const source = pivot.getSourceObject?.()
+    if (source && source.mode === 'MEMORY' && (!source.url || typeof source.url !== 'string')) {
+      pivot.setSourceObject?.({
+        ...source,
+        url: 'memory://sml-invoice-stats',
+      })
+    }
+
     pivot.configurePivot?.({
       displayMode: 'grid',
       rows: ['CustomerName', 'InvoiceNumber', 'PurchaseOrder', 'ProductCode'],
