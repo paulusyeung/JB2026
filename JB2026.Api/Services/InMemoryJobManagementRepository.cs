@@ -121,7 +121,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take)
+    public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn)
     {
         var query = _jobs.Values.AsEnumerable();
 
@@ -139,7 +139,6 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
 
         return query
             .OrderBy(job => job.OrderedOn)
-            .Take(take)
             .Select(job =>
             {
                 var invoiceAmount = Math.Round(job.Qty * 1.8m, 2);

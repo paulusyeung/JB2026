@@ -174,7 +174,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take)
+    public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn)
     {
         var query = _readContext.vwJobStatGrossProfits.AsNoTracking().AsQueryable();
 
@@ -193,7 +193,6 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         return query
             .OrderBy(item => item.InvDate)
             .ThenBy(item => item.InvNumber)
-            .Take(take)
             .Select(item => new JobStatsResponse
             {
                 JobNumber = item.JobNumber ?? string.Empty,

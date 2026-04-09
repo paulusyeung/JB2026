@@ -71,13 +71,11 @@ export async function getJobList(params: {
 export async function getJobStats(params: {
   startOn?: string
   endOn?: string
-  take?: number
 }): Promise<JobStatsRecord[]> {
   const response = await apiClient.get<JobStatsRecord[]>('/api/v2/job-orders/stats', {
     params: {
       startOn: params.startOn,
       endOn: params.endOn,
-      take: params.take,
     },
   })
 

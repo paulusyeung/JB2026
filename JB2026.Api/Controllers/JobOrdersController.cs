@@ -58,17 +58,8 @@ public sealed class JobOrdersController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public ActionResult<IReadOnlyList<JobStatsResponse>> GetStats(
         [FromQuery] DateOnly? startOn,
-        [FromQuery] DateOnly? endOn,
-        [FromQuery] int take = 5000)
+        [FromQuery] DateOnly? endOn)
     {
-        if (take is <= 0 or > 20000)
-        {
-            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
-            {
-                [nameof(take)] = ["Take must be between 1 and 20000."]
-            }));
-        }
-
         if (startOn.HasValue && endOn.HasValue && startOn.Value > endOn.Value)
         {
             return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
@@ -78,7 +69,7 @@ public sealed class JobOrdersController : ControllerBase
             }));
         }
 
-        var rows = _repository.GetJobStats(startOn, endOn, take);
+        var rows = _repository.GetJobStats(startOn, endOn);
         return Ok(rows);
     }
 

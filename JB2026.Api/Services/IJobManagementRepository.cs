@@ -16,7 +16,7 @@ public interface IJobManagementRepository
 
     IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith);
 
-    IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take);
+    IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn);
 
     JobOrderResponse? GetJobOrder(Guid orderId);
 

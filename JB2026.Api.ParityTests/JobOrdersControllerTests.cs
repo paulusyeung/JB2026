@@ -61,7 +61,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetStats(new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31), 1000);
+        var result = controller.GetStats(new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobStatsResponse>>(ok.Value);
@@ -131,7 +131,7 @@ public sealed class JobOrdersControllerTests
             return [CreateResponse("order-list")];
         }
 
-        public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn, int take)
+        public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn)
         {
             JobStatsCalled = true;
             return

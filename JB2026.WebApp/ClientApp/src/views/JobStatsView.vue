@@ -188,6 +188,10 @@ const filteredRows = computed(() => {
   const token = lookup.value.trim().toLowerCase()
 
   return rows.value.filter((row) => {
+    if (!isWithinLastTenYears(row)) {
+      return false
+    }
+
     if (month.value !== null && row.month !== month.value) {
       return false
     }
@@ -205,6 +209,17 @@ const filteredRows = computed(() => {
       row.invNumber,
       row.invDate ?? '',
     ].some((field) => String(field).toLowerCase().includes(token))
+  }).sort((left, right) => {
+    const leftSalesRep = normalizeText(left.salesRep).toLowerCase()
+    const rightSalesRep = normalizeText(right.salesRep).toLowerCase()
+    const salesRepCompare = leftSalesRep.localeCompare(rightSalesRep)
+    if (salesRepCompare !== 0) {
+      return salesRepCompare
+    }
+
+    const leftJob = normalizeText(left.jobNumber).toLowerCase()
+    const rightJob = normalizeText(right.jobNumber).toLowerCase()
+    return leftJob.localeCompare(rightJob)
   })
 })
 
@@ -263,10 +278,15 @@ async function load() {
   errorMessage.value = ''
 
   try {
+    const defaultStartOn = startOn.value || (() => {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - 9, 0, 1)
+      return d.toISOString().slice(0, 10)
+    })()
+
     rows.value = await getJobStats({
-      startOn: startOn.value || undefined,
+      startOn: defaultStartOn,
       endOn: endOn.value || undefined,
-      take: 20000,
     })
 
     if (pivotMounted.value) {
@@ -393,7 +413,7 @@ async function hydratePivot() {
         },
       }],
       sort: {
-        field: rowFieldName,
+        field: 'Sales Rep',
         direction: 'asc',
       },
       grid: {
@@ -493,6 +513,40 @@ function grossProfitRatio(row: JobStatsRecord): number {
     return 0
   }
   return (invoiceAmount - cost) / invoiceAmount
+}
+
+function isWithinLastTenYears(row: JobStatsRecord): boolean {
+  const currentYear = new Date().getFullYear()
+  const minYear = currentYear - 9
+  const year = normalizeToGregorianYear(row.year)
+
+  if (Number.isFinite(year)) {
+    return year >= minYear && year <= currentYear
+  }
+
+  if (typeof row.invDate === 'string') {
+    const parsed = new Date(row.invDate)
+    const parsedYear = parsed.getFullYear()
+    return Number.isFinite(parsedYear) && parsedYear >= minYear && parsedYear <= currentYear
+  }
+
+  return false
+}
+
+function normalizeToGregorianYear(value: unknown): number {
+  const rawYear = Number(value)
+  if (!Number.isFinite(rawYear)) {
+    return Number.NaN
+  }
+
+  const integerYear = Math.trunc(rawYear)
+
+  // Accept both Gregorian years (2025) and ROC years (114 -> 2025).
+  if (integerYear > 0 && integerYear < 300) {
+    return integerYear + 1911
+  }
+
+  return integerYear
 }
 
 function normalizeText(value: unknown): string {
