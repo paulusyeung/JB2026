@@ -119,6 +119,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getJobStats } from '@/services/jobOrders'
+import { useThemeStore } from '@/stores/theme'
 import type { JobStatsRecord } from '@/types/api'
 
 type WptElement = HTMLElement & {
@@ -157,6 +158,78 @@ const MAX_HYDRATE_ATTEMPTS = 8
 
 const { t, locale } = useI18n({ useScope: 'global' })
 const { formatNumber } = useLocaleFormatters()
+const themeStore = useThemeStore()
+const webPivotTheme = computed(() => {
+  if (themeStore.current !== 'dark') {
+    return {
+      preset: 'default',
+      colors: {
+        primary: '#6366f1',
+        primaryText: '#ffffff',
+        background: '#ffffff',
+        backgroundPanel: '#ffffff',
+        backgroundSecondary: '#fafafa',
+        backgroundTertiary: '#f5f5f5',
+        border: '#d0d4da',
+        borderLight: '#e8ecf0',
+        text: '#1a1a1a',
+        textSecondary: '#555555',
+        textMuted: '#888888',
+        toolbarBackground: '#eef2f7',
+        gridHeaderBackground: '#dde6f0',
+        gridHeaderText: '#1a2a3a',
+        gridBackground: '#ffffff',
+        gridText: '#1a1a1a',
+        buttonBackground: '#e7e7e7',
+        buttonBorder: '#dcdfe6',
+        buttonText: '#1a1a1a',
+        gridTotalBackground: '#72d2df',
+        gridSubtotalBackground: '#d2e9e9',
+      },
+      typography: {
+        fontSize: '13px',
+        lineHeight: 28,
+      },
+      shape: {
+        borderRadius: '6px',
+      },
+    }
+  }
+
+  return {
+    preset: 'dark',
+    colors: {
+      primary: '#e29a60',
+      primaryText: '#1e241f',
+      background: '#161916',
+      backgroundPanel: '#1e241f',
+      backgroundSecondary: '#252d26',
+      backgroundTertiary: '#2a322b',
+      border: '#384338',
+      borderLight: '#485348',
+      text: '#e7e5dc',
+      textSecondary: '#b9c2b3',
+      textMuted: '#8f9a8f',
+      toolbarBackground: '#2a322b',
+      gridHeaderBackground: '#2a322b',
+      gridHeaderText: '#e7e5dc',
+      gridBackground: '#1e241f',
+      gridText: '#e7e5dc',
+      buttonBackground: '#2a322b',
+      buttonBorder: '#485348',
+      buttonText: '#e7e5dc',
+      gridTotalBackground: '#2f4f40',
+      gridSubtotalBackground: '#2c3f35',
+    },
+    typography: {
+      fontSize: '13px',
+      lineHeight: 28,
+    },
+    shape: {
+      borderRadius: '6px',
+    },
+  }
+})
 
 const rowFieldItems = computed(() => [
   { value: 'salesRep', label: t('jobOrder.jobStats.rowFields.salesRep') },
@@ -224,6 +297,16 @@ const filteredRows = computed(() => {
 })
 
 watch([lookup, month, rowField, measure], async () => {
+  if (!pivotMounted.value || !pivotAvailable.value) {
+    return
+  }
+
+  await nextTick()
+  hydrateAttempts = 0
+  scheduleHydratePivot()
+})
+
+watch(() => themeStore.current, async () => {
   if (!pivotMounted.value || !pivotAvailable.value) {
     return
   }
@@ -357,6 +440,7 @@ async function hydratePivot() {
     pivot.setLocale?.(locale.value)
     pivot.setOptions?.({
       locale: locale.value,
+      theme: webPivotTheme.value,
       layout: { fitMode: 'fill' },
       uiFlags: {
         save: true,
