@@ -38,7 +38,7 @@ public sealed class StockController : ControllerBase
 
         var normalizedKeyword = keyword?.Trim();
 
-        var query = _readContext.Products
+        var query = _readContext.vwProductLists
             .AsNoTracking()
             .Where(product => !product.Retired);
 
@@ -51,7 +51,7 @@ public sealed class StockController : ControllerBase
         }
 
         var products = await query
-            .OrderBy(product => product.ProductName)
+            .OrderBy(product => product.StockNumber)
             .Take(take)
             .Select(product => new StockProductListItemResponse
             {
@@ -62,7 +62,12 @@ public sealed class StockController : ControllerBase
                 Balance = product.Balance,
                 SellingPrice = product.SellingPrice,
                 COGS = product.COGS,
-                Remarks = product.Remarks ?? string.Empty
+                Remarks = product.Description ?? string.Empty,
+                AttachmentCount = _readContext.ProductAttachments.Count(attachment => attachment.ProductId == product.ProductId),
+                CreatedOn = product.CreatedOn,
+                CreatedBy = product.CreatedBy ?? string.Empty,
+                ModifiedOn = product.ModifiedOn,
+                ModifiedBy = product.ModifiedBy ?? string.Empty
             })
             .ToListAsync(cancellationToken);
 

@@ -17,4 +17,14 @@ public sealed class StockProductListItemResponse
     public required decimal COGS { get; init; }
 
     public required string Remarks { get; init; }
+
+    public required int AttachmentCount { get; init; }
+
+    public required DateTime CreatedOn { get; init; }
+
+    public required string CreatedBy { get; init; }
+
+    public required DateTime ModifiedOn { get; init; }
+
+    public required string ModifiedBy { get; init; }
 }

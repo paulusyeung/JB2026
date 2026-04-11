@@ -82,6 +82,11 @@ export interface StockProductListItem {
   sellingPrice: number
   cogs: number
   remarks: string
+  attachmentCount: number
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
 }
 
 export interface RunReportRequest {
