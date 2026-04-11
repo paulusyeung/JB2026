@@ -11,6 +11,15 @@ public sealed class InMemorySettingsService : ISettingsService
         TimeZone = "Asia/Kuala_Lumpur",
         CurrencyCode = "MYR",
         EnableLegacyFallback = true,
+        OwnerName = "Marche Label & Printing Limited",
+        NextOrderNumber = "168360",
+        NextProductNumber = "005356",
+        NextQuotationNumber = "170024",
+        CommonQueryIndex = 2,
+        CompletedQueryIndex = 1,
+        ScheduleQueryRange = 1,
+        GmailAccount = "job.book@marchehk.com",
+        GmailPassword = "24110810",
     };
 
     public SettingsResponse Get()
@@ -31,6 +40,15 @@ public sealed class InMemorySettingsService : ISettingsService
                 TimeZone = request.TimeZone.Trim(),
                 CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
                 EnableLegacyFallback = request.EnableLegacyFallback,
+                OwnerName = request.OwnerName.Trim(),
+                NextOrderNumber = request.NextOrderNumber.Trim(),
+                NextProductNumber = request.NextProductNumber.Trim(),
+                NextQuotationNumber = request.NextQuotationNumber.Trim(),
+                CommonQueryIndex = request.CommonQueryIndex,
+                CompletedQueryIndex = request.CompletedQueryIndex,
+                ScheduleQueryRange = request.ScheduleQueryRange,
+                GmailAccount = request.GmailAccount.Trim(),
+                GmailPassword = request.GmailPassword.Trim(),
             };
 
             return _settings;

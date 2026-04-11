@@ -1,18 +1,37 @@
 export const settingsMessages = {
       title: 'Settings',
-      subtitle: 'System configuration for the modern slice host.',
+      subtitle: 'Legacy-style system parameter setup for numbering, query defaults, and Gmail integration.',
       fields: {
-        companyName: 'Company Name',
-        timeZone: 'Time Zone',
-        currency: 'Currency',
-        enableLegacyFallback: 'Enable legacy fallback',
+        ownerName: "Owner's Name",
+        nextOrderNumber: 'Next Order No.',
+        nextProductNumber: 'Next Product No.',
+        nextQuotationNumber: 'Next Quotation No.',
+        commonQuery: 'Common Query',
+        completedQuery: 'Completed Query',
+        scheduleQueryRange: 'Show completed jobs in',
+        daysUnit: 'day(s)',
+        gmailAccount: 'Gmail Account',
+        gmailPassword: 'Gmail Password',
       },
       actions: {
-        save: 'Save settings',
+        save: 'Save',
+      },
+      commonQueryOptions: {
+        none: 'None',
+        ordered7: 'Ordered on last 7 days',
+        ordered30: 'Ordered on last 30 days',
+        ordered90: 'Ordered on last 90 days',
+      },
+      completedQueryOptions: {
+        none: 'None',
+        completed7: 'Completed on last 7 days',
+        completed30: 'Completed on last 30 days',
+        completed90: 'Completed on last 90 days',
       },
       messages: {
         loadFailed: 'Unable to load settings. Please verify API availability.',
         saveSuccess: 'Settings saved successfully.',
         saveFailed: 'Unable to save settings. Please verify API availability.',
+        scheduleRangeInvalid: 'Range must be at least 1 day.',
       },
     } as const

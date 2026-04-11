@@ -223,6 +223,15 @@ export interface AppSettings {
   timeZone: string
   currencyCode: string
   enableLegacyFallback: boolean
+  ownerName: string
+  nextOrderNumber: string
+  nextProductNumber: string
+  nextQuotationNumber: string
+  commonQueryIndex: number
+  completedQueryIndex: number
+  scheduleQueryRange: number
+  gmailAccount: string
+  gmailPassword: string
 }
 
 export interface PublicContentItem {
