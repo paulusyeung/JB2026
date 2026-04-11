@@ -12,6 +12,20 @@ export interface AdminUser {
   role: string
 }
 
+export interface AdminWorkflowListItem {
+  workflowId: string
+  workflowName: string
+  workTitle: string
+  workInstruction: string
+}
+
+export interface AdminWorkflowFormListItem {
+  formId: string
+  formName: string
+  formNameChs: string
+  formNameCht: string
+}
+
 export interface TokenResponse {
   accessToken: string
   expiresAtUtc: string

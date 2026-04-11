@@ -170,6 +170,10 @@ const router = createRouter({
           ? () => import('@/views/SmlInvoiceStatsView.vue')
         : route.path === '/stock/product'
           ? () => import('@/views/StockView.vue')
+        : route.path === '/admin/workflow'
+          ? () => import('@/views/AdminWorkflowView.vue')
+        : route.path === '/admin/workflow-forms'
+          ? () => import('@/views/AdminWorkflowFormsView.vue')
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
