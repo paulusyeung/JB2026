@@ -10,6 +10,13 @@ export interface AdminUser {
   username: string
   displayName: string
   role: string
+  primaryRec: boolean
+  userAlias: string
+  userPassword: string
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
 }
 
 export interface AdminWorkflowListItem {

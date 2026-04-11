@@ -2,7 +2,6 @@ using JB2026.Api.Models;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
-using JB2026.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,30 +12,70 @@ namespace JB2026.Api.Controllers;
 [Route("api/v2/admin")]
 public sealed class AdminController : ControllerBase
 {
-    private readonly ILegacyIdentityService _legacyIdentityService;
-
-    public AdminController(ILegacyIdentityService legacyIdentityService)
+    public AdminController()
     {
-        _legacyIdentityService = legacyIdentityService;
     }
 
     [HttpGet("users")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminUserResponse>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<AdminUserResponse>> GetUsers()
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<AdminUserResponse>>> GetUsers(
+        [FromServices] JB5LegacyReadContext readContext,
+        [FromQuery] string? lookup,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
     {
-        var users = _legacyIdentityService
-            .GetUsers()
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+        var query = readContext.vwUserList_Actives.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            query = query.Where(user =>
+                (user.UserName ?? string.Empty).Contains(normalizedLookup) ||
+                (user.UserAlias ?? string.Empty).Contains(normalizedLookup));
+        }
+
+        var users = await query
+            .OrderBy(user => user.UserAlias)
+            .Take(take)
             .Select(user => new AdminUserResponse
             {
                 UserId = user.UserId,
-                Username = user.Username,
-                DisplayName = user.DisplayName,
-                Role = user.Role,
+                Username = (user.UserName ?? string.Empty).Trim(),
+                DisplayName = string.IsNullOrWhiteSpace(user.UserAlias) ? (user.UserName ?? string.Empty).Trim() : user.UserAlias,
+                Role = MapUserRole(user.UserRole),
+                PrimaryRec = user.PrimaryRec,
+                UserAlias = user.UserAlias ?? string.Empty,
+                UserPassword = user.UserPassword ?? string.Empty,
+                CreatedOn = user.CreatedOn,
+                CreatedBy = user.CreatedBy ?? string.Empty,
+                ModifiedOn = user.ModifiedOn,
+                ModifiedBy = user.ModifiedBy ?? string.Empty,
             })
-            .OrderBy(user => user.Username, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .ToListAsync(cancellationToken);
 
         return Ok(users);
+    }
+
+    private static string MapUserRole(int role)
+    {
+        return role switch
+        {
+            0 => "Guest",
+            1 => "Operator",
+            2 => "Supervisor",
+            3 => "Manager",
+            4 => "Admin",
+            _ => role.ToString(),
+        };
     }
 
     [HttpGet("workflows")]

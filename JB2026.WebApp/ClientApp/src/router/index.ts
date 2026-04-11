@@ -176,6 +176,8 @@ const router = createRouter({
           ? () => import('@/views/AdminWorkflowFormsView.vue')
         : route.path === '/admin/order-type'
           ? () => import('@/views/AdminOrderTypeView.vue')
+        : route.path === '/admin/user'
+          ? () => import('@/views/AdminUserView.vue')
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),

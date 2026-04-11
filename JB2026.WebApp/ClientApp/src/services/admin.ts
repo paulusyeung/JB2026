@@ -13,8 +13,18 @@ export interface AdminWorkflowsQuery {
   take?: number
 }
 
-export async function getAdminUsers(): Promise<AdminUser[]> {
-  const response = await apiClient.get<AdminUser[]>('/api/v2/admin/users')
+export interface AdminUsersQuery {
+  lookup?: string
+  take?: number
+}
+
+export async function getAdminUsers(query: AdminUsersQuery = {}): Promise<AdminUser[]> {
+  const response = await apiClient.get<AdminUser[]>('/api/v2/admin/users', {
+    params: {
+      lookup: query.lookup ?? '',
+      take: query.take ?? 500,
+    },
+  })
   return response.data
 }
 
