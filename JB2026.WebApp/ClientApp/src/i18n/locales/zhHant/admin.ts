@@ -69,4 +69,27 @@ export const adminMessages = {
           selectRecordFirst: '請先選取一筆工作流程表單。',
         },
       },
+      orderType: {
+        title: '訂單類型工作流程指派',
+        subtitle: '沿用舊版雙清單樣式，依訂單類型指派並排序工作流程。',
+        orderType: '訂單類型',
+        availableWorkflow: '可用工作流程',
+        selectedWorkflow: '已選工作流程',
+        actions: {
+          save: '儲存',
+        },
+        options: {
+          printing: '印刷',
+          printedLabel: '印刷標籤',
+          wovenLabel: '織標',
+          other: '其他',
+        },
+        messages: {
+          loadFailed: '無法載入訂單類型工作流程，請確認 API 可用性。',
+          saveSuccess: '儲存成功。',
+          saveFailed: '無法儲存訂單類型工作流程。',
+          mustSelectOrderType: '請先選取訂單類型。',
+          mustSelectWorkflow: '請至少選取一個工作流程。',
+        },
+      },
     } as const

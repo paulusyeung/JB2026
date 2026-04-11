@@ -1,5 +1,11 @@
 import { apiClient } from './api'
-import type { AdminUser, AdminWorkflowListItem, AdminWorkflowFormListItem } from '@/types/api'
+import type {
+  AdminUser,
+  AdminWorkflowListItem,
+  AdminWorkflowFormListItem,
+  AdminOrderTypeWorkflowPayload,
+  UpdateAdminOrderTypeWorkflowsRequest,
+} from '@/types/api'
 
 export interface AdminWorkflowsQuery {
   lookup?: string
@@ -38,4 +44,15 @@ export async function getAdminWorkflowForms(query: AdminWorkflowFormsQuery = {})
   })
 
   return response.data
+}
+
+export async function getAdminOrderTypeWorkflows(orderType: number): Promise<AdminOrderTypeWorkflowPayload> {
+  const response = await apiClient.get<AdminOrderTypeWorkflowPayload>('/api/v2/admin/order-type/workflows', {
+    params: { orderType },
+  })
+  return response.data
+}
+
+export async function updateAdminOrderTypeWorkflows(request: UpdateAdminOrderTypeWorkflowsRequest): Promise<void> {
+  await apiClient.put('/api/v2/admin/order-type/workflows', request)
 }

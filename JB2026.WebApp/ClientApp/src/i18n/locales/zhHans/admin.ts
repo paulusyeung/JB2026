@@ -69,4 +69,27 @@ export const adminMessages = {
           selectRecordFirst: '请先选择一条工作流程表单。',
         },
       },
+      orderType: {
+        title: '订单类型工作流程分配',
+        subtitle: '沿用旧版双列表样式，按订单类型分配并排序工作流程。',
+        orderType: '订单类型',
+        availableWorkflow: '可用工作流程',
+        selectedWorkflow: '已选工作流程',
+        actions: {
+          save: '保存',
+        },
+        options: {
+          printing: '印刷',
+          printedLabel: '印刷标签',
+          wovenLabel: '织标',
+          other: '其他',
+        },
+        messages: {
+          loadFailed: '无法加载订单类型工作流程，请确认 API 可用性。',
+          saveSuccess: '保存成功。',
+          saveFailed: '无法保存订单类型工作流程。',
+          mustSelectOrderType: '请先选择订单类型。',
+          mustSelectWorkflow: '请至少选择一个工作流程。',
+        },
+      },
     } as const

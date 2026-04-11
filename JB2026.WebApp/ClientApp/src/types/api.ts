@@ -26,6 +26,21 @@ export interface AdminWorkflowFormListItem {
   formNameCht: string
 }
 
+export interface AdminOrderTypeWorkflowItem {
+  workflowId: string
+  workflowName: string
+}
+
+export interface AdminOrderTypeWorkflowPayload {
+  availableWorkflows: AdminOrderTypeWorkflowItem[]
+  selectedWorkflows: AdminOrderTypeWorkflowItem[]
+}
+
+export interface UpdateAdminOrderTypeWorkflowsRequest {
+  orderType: number
+  workflowIds: string[]
+}
+
 export interface TokenResponse {
   accessToken: string
   expiresAtUtc: string

@@ -69,4 +69,27 @@ export const adminMessages = {
           selectRecordFirst: 'Select a workflow form record first.',
         },
       },
+      orderType: {
+        title: 'Order Type Workflow Assignment',
+        subtitle: 'Assign and reorder workflows by order type in a legacy dual-list layout.',
+        orderType: 'Order Type',
+        availableWorkflow: 'Available Workflow',
+        selectedWorkflow: 'Selected Workflow',
+        actions: {
+          save: 'Save',
+        },
+        options: {
+          printing: 'Printing',
+          printedLabel: 'Printed Label',
+          wovenLabel: 'Woven Label',
+          other: 'Other',
+        },
+        messages: {
+          loadFailed: 'Unable to load order type workflows. Please verify API availability.',
+          saveSuccess: 'Saved successfully.',
+          saveFailed: 'Unable to save order type workflows.',
+          mustSelectOrderType: 'Please select an order type.',
+          mustSelectWorkflow: 'Please select at least one workflow.',
+        },
+      },
     } as const
