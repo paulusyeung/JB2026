@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section job-list-page">
+  <section class="page-section job-list-page" :class="{ 'job-list-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card job-list-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
@@ -108,6 +108,17 @@
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
             {{ t('jobOrder.jobList.actions.export') }}
+          </v-btn>
+
+          <v-btn
+            variant="outlined"
+            size="small"
+            color="primary"
+            prepend-icon="mdi-file-plus"
+            class="toolbar-new-order-btn"
+            @click="openNew"
+          >
+            {{ t('jobOrder.jobList.actions.newOrder') }}
           </v-btn>
 
           <v-btn
@@ -222,8 +233,8 @@
 
     <v-dialog v-model="formOpen" max-width="760" scrollable>
       <JobOrderForm
-        v-if="formJob"
-        :job="formJob"
+        v-if="formOpen"
+        :job="formJob ?? undefined"
         @saved="handleSaved"
         @cancel="formOpen = false"
       />
@@ -241,6 +252,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTheme } from 'vuetify'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getJobDetail } from '@/services/jobs'
@@ -284,6 +296,8 @@ const saveSuccess = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
 const { formatCurrency: formatCurrencyByLocale, formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const theme = useTheme()
+const isDark = computed(() => theme.global.current.value.dark)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.jobList.commonQueryItems.none') },
@@ -536,11 +550,23 @@ function orderTypeMeta(orderType: number) {
       return { icon: 'mdi-tag-outline', color: 'success' }
   }
 }
+
+function openNew() {
+  formJob.value = null
+  formOpen.value = true
+}
 </script>
 
 <style scoped>
 .job-list-page {
   min-height: 0;
+  --job-list-header-bg: rgba(195, 216, 248, 0.92);
+  --job-list-header-fg: inherit;
+}
+
+.job-list-page--dark {
+  --job-list-header-bg: rgba(52, 74, 104, 0.95);
+  --job-list-header-fg: rgba(239, 246, 255, 0.98);
 }
 
 .job-list-card {
@@ -553,6 +579,11 @@ function orderTypeMeta(orderType: number) {
   gap: 12px;
   grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto auto;
   align-items: center;
+  margin-bottom: 16px;
+}
+
+.toolbar-new-order-btn {
+  min-width: 168px;
 }
 
 .toolbar-bar {
@@ -567,9 +598,27 @@ function orderTypeMeta(orderType: number) {
   overflow: auto;
 }
 
-.job-list-table :deep(thead th) {
+.job-list-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.job-list-table :deep(.v-table__wrapper > table > thead > tr > th),
+.job-list-table :deep(.v-data-table__th) {
   white-space: nowrap;
-  background: rgba(195, 216, 248, 0.72);
+  background-color: var(--job-list-header-bg) !important;
+  color: var(--job-list-header-fg) !important;
+}
+
+.job-list-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.job-list-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.job-list-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.job-list-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
 }
 
 .job-list-table :deep(tbody td) {

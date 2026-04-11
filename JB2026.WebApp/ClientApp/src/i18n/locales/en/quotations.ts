@@ -6,6 +6,17 @@ export const quotationsMessages = {
       saved: 'Quotation saved locally.',
       dismiss: 'Dismiss',
       status: 'Status {value}',
+      actions: {
+        columns: 'Columns',
+        sorting: 'Sorting',
+        sortBy: 'Sort by',
+        asc: 'Ascending',
+        desc: 'Descending',
+        checkbox: 'Checkbox',
+        print: 'Print',
+        export: 'Export CSV',
+        selected: '{count} selected',
+      },
       headers: {
         quoteNumber: 'Quotation Number',
         quoteIndex: '#',

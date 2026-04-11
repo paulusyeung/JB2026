@@ -6,6 +6,17 @@ export const quotationsMessages = {
       saved: '報價已在本地更新。',
       dismiss: '關閉',
       status: '狀態 {value}',
+      actions: {
+        columns: '欄位',
+        sorting: '排序',
+        sortBy: '排序依據',
+        asc: '遞增',
+        desc: '遞減',
+        checkbox: '勾選',
+        print: '列印',
+        export: '匯出 CSV',
+        selected: '已選取 {count} 筆',
+      },
       headers: {
         quoteNumber: '報價編號',
         quoteIndex: '#',

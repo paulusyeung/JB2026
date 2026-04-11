@@ -6,6 +6,17 @@ export const quotationsMessages = {
       saved: '报价已在本地更新。',
       dismiss: '关闭',
       status: '状态 {value}',
+      actions: {
+        columns: '列',
+        sorting: '排序',
+        sortBy: '排序依据',
+        asc: '升序',
+        desc: '降序',
+        checkbox: '勾选',
+        print: '打印',
+        export: '导出 CSV',
+        selected: '已选择 {count} 项',
+      },
       headers: {
         quoteNumber: '报价编号',
         quoteIndex: '#',

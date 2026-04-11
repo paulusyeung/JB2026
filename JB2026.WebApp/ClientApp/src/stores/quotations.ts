@@ -9,7 +9,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
   const keyword = ref('')
   const page = ref(1)
   const itemsPerPage = ref(10)
-  const sortBy = ref([{ key: 'quotedOn', order: 'desc' as const }])
+  const sortBy = ref<Array<{ key: string, order: 'asc' | 'desc' }>>([{ key: 'quotedOn', order: 'desc' }])
 
   const rowCount = computed(() => rows.value.length)
 

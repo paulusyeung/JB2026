@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section order-list-page">
+  <section class="page-section order-list-page" :class="{ 'order-list-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card order-list-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
@@ -96,6 +96,17 @@
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
             {{ t('jobOrder.orderList.actions.export') }}
+          </v-btn>
+
+          <v-btn
+            variant="outlined"
+            color="primary"
+            size="small"
+            prepend-icon="mdi-file-plus"
+            class="toolbar-new-order-btn"
+            @click="openCreate"
+          >
+            {{ t('jobOrder.orderList.actions.newOrder') }}
           </v-btn>
 
           <v-btn
@@ -250,8 +261,8 @@
 
     <v-dialog v-model="formOpen" max-width="1080" scrollable>
       <OrderRecordDialog
-        v-if="formJob"
-        :order="formJob"
+        v-if="formOpen"
+        :order="formJob ?? undefined"
         :all-orders="rows"
         @saved="handleSaved"
         @deleted="handleDeleted"
@@ -265,6 +276,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
@@ -304,6 +316,8 @@ const deleting = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
 const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const theme = useTheme()
+const isDark = computed(() => theme.global.current.value.dark)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.orderList.commonQueryItems.none') },
@@ -508,6 +522,11 @@ async function openEdit(record: JobOrderRecord) {
   }
 }
 
+function openCreate() {
+  formJob.value = null
+  formOpen.value = true
+}
+
 async function handleSaved(orderId: string) {
   await load()
   await handleOpenOrder(orderId)
@@ -596,6 +615,17 @@ function statusColor(status: number) {
 <style scoped>
 .order-list-page {
   min-height: 0;
+  --order-list-header-bg: rgba(195, 216, 248, 0.92);
+  --order-list-header-fg: inherit;
+}
+
+.order-list-page--dark {
+  --order-list-header-bg: rgba(52, 74, 104, 0.95);
+  --order-list-header-fg: rgba(239, 246, 255, 0.98);
+}
+
+.toolbar-new-order-btn {
+  min-width: 168px;
 }
 
 .order-list-card {
@@ -608,6 +638,7 @@ function statusColor(status: number) {
   gap: 12px;
   grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto auto;
   align-items: center;
+  margin-bottom: 16px;
 }
 
 .toolbar-bar {
@@ -622,9 +653,27 @@ function statusColor(status: number) {
   overflow: auto;
 }
 
-.order-list-table :deep(thead th) {
+.order-list-table :deep(.v-table__wrapper > table > thead > tr > th),
+.order-list-table :deep(.v-data-table__th) {
   white-space: nowrap;
-  background: rgba(195, 216, 248, 0.7);
+  background-color: var(--order-list-header-bg) !important;
+  color: var(--order-list-header-fg) !important;
+}
+
+.order-list-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.order-list-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.order-list-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.order-list-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.order-list-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
 }
 
 .order-list-table :deep(tbody td) {
