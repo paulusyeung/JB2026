@@ -33,6 +33,18 @@ export interface AdminWorkflowFormListItem {
   formNameCht: string
 }
 
+export interface AdminCustomerListItem {
+  customerId: string
+  customerName: string
+  loginAccount: string
+  loginPassword: string
+  customerCode: string
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
 export interface AdminOrderTypeWorkflowItem {
   workflowId: string
   workflowName: string

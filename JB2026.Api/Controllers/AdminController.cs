@@ -4,6 +4,8 @@ using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace JB2026.Api.Controllers;
 
@@ -76,6 +78,168 @@ public sealed class AdminController : ControllerBase
             4 => "Admin",
             _ => role.ToString(),
         };
+    }
+
+    [HttpGet("customers")]
+    [ProducesResponseType(typeof(IReadOnlyList<AdminCustomerListItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<AdminCustomerListItemResponse>>> GetCustomers(
+        [FromServices] JB5LegacyReadContext readContext,
+        [FromQuery] string? lookup,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+
+        var rawQuery = readContext.vwCustomerList_Actives
+            .AsNoTracking()
+            .GroupJoin(
+                readContext.Customers.AsNoTracking(),
+                customerView => customerView.CustomerId,
+                customer => customer.CustomerId,
+                (customerView, customerGroup) => new { customerView, customerGroup })
+            .SelectMany(
+                x => x.customerGroup.DefaultIfEmpty(),
+                (x, customer) => new
+                {
+                    x.customerView.CustomerId,
+                    x.customerView.CustomerName,
+                    x.customerView.LoginAccount,
+                    x.customerView.LoginPassword,
+                    x.customerView.CreatedOn,
+                    x.customerView.CreatedBy,
+                    x.customerView.ModifiedOn,
+                    x.customerView.ModifiedBy,
+                    MetadataXml = customer != null ? customer.MetadataXml : null,
+                });
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            rawQuery = rawQuery.Where(row =>
+                row.CustomerName.Contains(normalizedLookup) ||
+                row.LoginAccount.Contains(normalizedLookup));
+        }
+
+        var rows = await rawQuery
+            .OrderBy(row => row.CustomerName)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        var result = rows.Select(row => new AdminCustomerListItemResponse
+        {
+            CustomerId = row.CustomerId,
+            CustomerName = row.CustomerName,
+            LoginAccount = row.LoginAccount,
+            LoginPassword = row.LoginPassword,
+            CustomerCode = TryExtractCustomerCode(row.MetadataXml),
+            CreatedOn = row.CreatedOn,
+            CreatedBy = row.CreatedBy ?? string.Empty,
+            ModifiedOn = row.ModifiedOn,
+            ModifiedBy = row.ModifiedBy ?? string.Empty,
+        }).ToArray();
+
+        return Ok(result);
+    }
+
+    private static string TryExtractCustomerCode(string? metadataXml)
+    {
+        if (string.IsNullOrWhiteSpace(metadataXml))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = metadataXml.Trim();
+
+        if (TryExtractCustomerCodeFromJson(trimmed, out var jsonCode))
+        {
+            return jsonCode;
+        }
+
+        try
+        {
+            var document = XDocument.Parse(trimmed);
+            var customerCodeElement = document
+                .Descendants()
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "CustomerCode", StringComparison.OrdinalIgnoreCase));
+
+            if (customerCodeElement is not null)
+            {
+                return customerCodeElement.Value.Trim();
+            }
+
+            var metadataJsonElement = document
+                .Descendants()
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "MetadataJson", StringComparison.OrdinalIgnoreCase));
+
+            if (metadataJsonElement is not null && TryExtractCustomerCodeFromJson(metadataJsonElement.Value, out var nestedJsonCode))
+            {
+                return nestedJsonCode;
+            }
+        }
+        catch
+        {
+            // Ignore metadata parse failures and return empty fallback.
+        }
+
+        return string.Empty;
+    }
+
+    private static bool TryExtractCustomerCodeFromJson(string json, out string customerCode)
+    {
+        customerCode = string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (TryGetCustomerCodeProperty(document.RootElement, out customerCode))
+            {
+                return true;
+            }
+
+            if (document.RootElement.TryGetProperty("MetadataJson", out var nestedMetadataJson)
+                && nestedMetadataJson.ValueKind == JsonValueKind.String
+                && TryExtractCustomerCodeFromJson(nestedMetadataJson.GetString() ?? string.Empty, out customerCode))
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetCustomerCodeProperty(JsonElement element, out string customerCode)
+    {
+        customerCode = string.Empty;
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (!string.Equals(property.Name, "CustomerCode", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            customerCode = property.Value.GetString()?.Trim() ?? string.Empty;
+            return true;
+        }
+
+        return false;
     }
 
     [HttpGet("workflows")]
