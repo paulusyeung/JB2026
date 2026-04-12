@@ -81,7 +81,7 @@
             {{ t('admin.supplier.actions.views') }}
           </v-btn>
 
-          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="showUnavailable('admin.supplier.actions.newSupplier')">
+          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
             {{ t('admin.supplier.actions.newSupplier') }}
           </v-btn>
 
@@ -131,6 +131,22 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="920" scrollable>
+      <AdminSupplierRecordDialog
+        :supplier-id="editingSupplierId"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -138,8 +154,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import AdminSupplierRecordDialog from '@/components/forms/AdminSupplierRecordDialog.vue'
 import { getAdminSuppliers } from '@/services/admin'
-import type { AdminSupplierListItem } from '@/types/api'
+import type { AdminSupplierListItem, AdminSupplierRecord } from '@/types/api'
 
 type AdminSupplierDisplayItem = AdminSupplierListItem & {
   icon: string
@@ -152,6 +169,10 @@ const lookup = ref('')
 const errorMessage = ref('')
 const checkboxMode = ref(false)
 const selectedSupplierIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const editingSupplierId = ref<string | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 const sortDirection = ref<'asc' | 'desc'>('asc')
 const sortKey = ref('supplierName')
 const visibleColumnKeys = ref<string[]>([
@@ -252,15 +273,39 @@ function toggleColumn(columnKey: string) {
 function onRowClick(_event: Event, payload: { item: AdminSupplierListItem }) {
   if (checkboxMode.value) return
   selectedSupplierIds.value = [payload.item.supplierId]
+  openPopup(payload.item.supplierId)
 }
 
-function openPopup() {
-  if (!selectedSupplierId.value) {
+function openPopup(supplierId = selectedSupplierId.value ?? editingSupplierId.value) {
+  if (!supplierId) {
     errorMessage.value = t('admin.supplier.messages.selectRecordFirst')
     return
   }
 
-  errorMessage.value = t('admin.supplier.messages.popupUnavailable')
+  editingSupplierId.value = supplierId
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+function openNewSupplier() {
+  editingSupplierId.value = null
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(supplier: AdminSupplierRecord) {
+  await load()
+  selectedSupplierIds.value = [supplier.supplierId]
+  editingSupplierId.value = supplier.supplierId
+  successMessage.value = t('admin.supplier.messages.saveSuccess')
+  saveSuccess.value = true
+}
+
+async function handleDeleted(id: string) {
+  await load()
+  selectedSupplierIds.value = selectedSupplierIds.value.filter((supplierId) => supplierId !== id)
+  successMessage.value = t('admin.supplier.messages.deleteSuccess')
+  saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {

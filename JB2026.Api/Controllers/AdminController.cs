@@ -1,4 +1,5 @@
 using JB2026.Api.Models;
+using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Xml.Linq;
 
 namespace JB2026.Api.Controllers;
@@ -150,6 +152,307 @@ public sealed class AdminController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("suppliers/{id:guid}")]
+    [ProducesResponseType(typeof(AdminSupplierRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminSupplierRecordResponse>> GetSupplier(
+        Guid id,
+        [FromServices] ISupplierStoredProcedureGateway supplierGateway,
+        CancellationToken cancellationToken = default)
+    {
+        var supplier = await supplierGateway.SelectAsync(id, cancellationToken);
+        if (supplier is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Supplier not found",
+                Detail = $"No supplier exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        return Ok(MapToSupplierRecordResponse(supplier));
+    }
+
+    [HttpPost("suppliers")]
+    [ProducesResponseType(typeof(AdminSupplierRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminSupplierRecordResponse>> CreateSupplier(
+        [FromServices] ISupplierStoredProcedureGateway supplierGateway,
+        [FromBody] CreateAdminSupplierRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actorId = ResolveActorId();
+        var now = DateTime.Now;
+
+        var createdId = await supplierGateway.InsertAsync(
+            new CreateSupplierStoredProcedureRequest(
+                SupplierName: request.SupplierName.Trim(),
+                LoginAccount: request.LoginAccount.Trim(),
+                LoginPassword: request.LoginPassword.Trim(),
+                MetadataXml: BuildSupplierMetadataJson(null, request.SupplierCode, request.BillTo, request.ShipToAddresses),
+                CreatedOn: now,
+                CreatedBy: actorId,
+                ModifiedOn: now,
+                ModifiedBy: actorId,
+                Retired: false,
+                RetiredOn: null,
+                RetiredBy: null),
+            cancellationToken);
+
+        var createdSupplier = await supplierGateway.SelectAsync(createdId, cancellationToken);
+        if (createdSupplier is null)
+        {
+            return StatusCode(StatusCodes.Status201Created, new AdminSupplierRecordResponse
+            {
+                SupplierId = createdId,
+                SupplierName = request.SupplierName.Trim(),
+                LoginAccount = request.LoginAccount.Trim(),
+                LoginPassword = request.LoginPassword.Trim(),
+                SupplierCode = request.SupplierCode.Trim(),
+                BillTo = request.BillTo.Trim(),
+                ShipToAddresses = request.ShipToAddresses
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Name) || !string.IsNullOrWhiteSpace(entry.Address))
+                    .Select(entry => new AdminSupplierShipToAddressResponse
+                    {
+                        Name = entry.Name.Trim(),
+                        Address = entry.Address.Trim(),
+                    })
+                    .ToArray(),
+                CreatedOn = now,
+                CreatedBy = actorId.ToString(),
+                ModifiedOn = now,
+                ModifiedBy = actorId.ToString(),
+            });
+        }
+
+        return StatusCode(StatusCodes.Status201Created, MapToSupplierRecordResponse(createdSupplier));
+    }
+
+    [HttpPut("suppliers/{id:guid}")]
+    [ProducesResponseType(typeof(AdminSupplierRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminSupplierRecordResponse>> UpdateSupplier(
+        Guid id,
+        [FromServices] ISupplierStoredProcedureGateway supplierGateway,
+        [FromBody] UpdateAdminSupplierRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var current = await supplierGateway.SelectAsync(id, cancellationToken);
+        if (current is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Supplier not found",
+                Detail = $"No supplier exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        await supplierGateway.UpdateAsync(
+            new UpdateSupplierStoredProcedureRequest(
+                SupplierId: id,
+                SupplierName: request.SupplierName.Trim(),
+                LoginAccount: request.LoginAccount.Trim(),
+                LoginPassword: request.LoginPassword.Trim(),
+                MetadataXml: BuildSupplierMetadataJson(current.MetadataXml, request.SupplierCode, request.BillTo, request.ShipToAddresses),
+                CreatedOn: current.CreatedOn,
+                CreatedBy: current.CreatedBy,
+                ModifiedOn: DateTime.Now,
+                ModifiedBy: actorId,
+                Retired: current.Retired,
+                RetiredOn: current.RetiredOn,
+                RetiredBy: current.RetiredBy),
+            cancellationToken);
+
+        var updated = await supplierGateway.SelectAsync(id, cancellationToken);
+        return Ok(updated is null ? MapToSupplierRecordResponse(current) : MapToSupplierRecordResponse(updated));
+    }
+
+    [HttpDelete("suppliers/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSupplier(
+        Guid id,
+        [FromServices] ISupplierStoredProcedureGateway supplierGateway,
+        CancellationToken cancellationToken = default)
+    {
+        var supplier = await supplierGateway.SelectAsync(id, cancellationToken);
+        if (supplier is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Supplier not found",
+                Detail = $"No supplier exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        await supplierGateway.DeleteAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    private static AdminSupplierRecordResponse MapToSupplierRecordResponse(SupplierStoredProcedureRecord supplier)
+    {
+        var metadata = ParseSupplierMetadata(supplier.MetadataXml);
+
+        return new AdminSupplierRecordResponse
+        {
+            SupplierId = supplier.SupplierId,
+            SupplierName = supplier.SupplierName?.Trim() ?? string.Empty,
+            LoginAccount = supplier.LoginAccount?.Trim() ?? string.Empty,
+            LoginPassword = supplier.LoginPassword?.Trim() ?? string.Empty,
+            SupplierCode = metadata.SupplierCode,
+            BillTo = metadata.BillTo,
+            ShipToAddresses = metadata.ShipToAddresses,
+            CreatedOn = supplier.CreatedOn,
+            CreatedBy = supplier.CreatedBy.ToString(),
+            ModifiedOn = supplier.ModifiedOn,
+            ModifiedBy = supplier.ModifiedBy.ToString(),
+        };
+    }
+
+    private static (string SupplierCode, string BillTo, IReadOnlyList<AdminSupplierShipToAddressResponse> ShipToAddresses) ParseSupplierMetadata(string? metadataRaw)
+    {
+        if (string.IsNullOrWhiteSpace(metadataRaw))
+        {
+            return (string.Empty, string.Empty, []);
+        }
+
+        var trimmed = metadataRaw.Trim();
+
+        try
+        {
+            using var document = JsonDocument.Parse(trimmed);
+            if (document.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                var root = document.RootElement;
+                var supplierCode = TryGetJsonString(root, "SupplierCode");
+                var billTo = TryGetJsonString(root, "BillTo");
+                var shipToAddresses = ParseShipToAddresses(root);
+                return (supplierCode, billTo, shipToAddresses);
+            }
+        }
+        catch
+        {
+            // Fallback to XML parsing.
+        }
+
+        try
+        {
+            var xml = XDocument.Parse(trimmed);
+            var supplierCode = xml
+                .Descendants()
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "SupplierCode", StringComparison.OrdinalIgnoreCase))
+                ?.Value.Trim() ?? string.Empty;
+            var billTo = xml
+                .Descendants()
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "BillTo", StringComparison.OrdinalIgnoreCase))
+                ?.Value.Trim() ?? string.Empty;
+            return (supplierCode, billTo, []);
+        }
+        catch
+        {
+            return (string.Empty, string.Empty, []);
+        }
+    }
+
+    private static IReadOnlyList<AdminSupplierShipToAddressResponse> ParseShipToAddresses(JsonElement root)
+    {
+        JsonElement shipToArray;
+        if (root.TryGetProperty("ShipToAddresses", out shipToArray) && shipToArray.ValueKind == JsonValueKind.Array)
+        {
+            return shipToArray
+                .EnumerateArray()
+                .Where(entry => entry.ValueKind == JsonValueKind.Object)
+                .Select(entry => new AdminSupplierShipToAddressResponse
+                {
+                    Name = TryGetJsonString(entry, "Name"),
+                    Address = TryGetJsonString(entry, "Address"),
+                })
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Name) || !string.IsNullOrWhiteSpace(entry.Address))
+                .ToArray();
+        }
+
+        return [];
+    }
+
+    private static string TryGetJsonString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var value))
+        {
+            return string.Empty;
+        }
+
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            return value.GetString()?.Trim() ?? string.Empty;
+        }
+
+        return value.ToString().Trim();
+    }
+
+    private static string BuildSupplierMetadataJson(
+        string? existingMetadataRaw,
+        string supplierCode,
+        string billTo,
+        IReadOnlyList<AdminSupplierShipToAddressRequest>? shipToAddresses)
+    {
+        JsonObject root = new();
+
+        if (!string.IsNullOrWhiteSpace(existingMetadataRaw))
+        {
+            try
+            {
+                var parsed = JsonNode.Parse(existingMetadataRaw.Trim()) as JsonObject;
+                if (parsed is not null)
+                {
+                    root = parsed;
+                }
+            }
+            catch
+            {
+                // Ignore parse failures and rebuild metadata from known fields.
+            }
+        }
+
+        root["SupplierCode"] = supplierCode.Trim();
+        root["BillTo"] = billTo.Trim();
+
+        var shipToArray = new JsonArray();
+        foreach (var entry in shipToAddresses ?? [])
+        {
+            var name = entry.Name.Trim();
+            var address = entry.Address.Trim();
+            if (name.Length == 0 && address.Length == 0)
+            {
+                continue;
+            }
+
+            shipToArray.Add(new JsonObject
+            {
+                ["Name"] = name,
+                ["Address"] = address,
+            });
+        }
+
+        root["ShipToAddresses"] = shipToArray;
+        return root.ToJsonString();
+    }
+
     [HttpGet("customers")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminCustomerListItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -217,6 +520,292 @@ public sealed class AdminController : ControllerBase
         }).ToArray();
 
         return Ok(result);
+    }
+
+    [HttpGet("customers/{id:guid}")]
+    [ProducesResponseType(typeof(AdminCustomerRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminCustomerRecordResponse>> GetCustomer(
+        Guid id,
+        [FromServices] ICustomerStoredProcedureGateway customerGateway,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await customerGateway.SelectAsync(id, cancellationToken);
+        if (customer is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Customer not found",
+                Detail = $"No customer exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        return Ok(MapToCustomerRecordResponse(customer));
+    }
+
+    [HttpPost("customers")]
+    [ProducesResponseType(typeof(AdminCustomerRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminCustomerRecordResponse>> CreateCustomer(
+        [FromServices] ICustomerStoredProcedureGateway customerGateway,
+        [FromBody] CreateAdminCustomerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actorId = ResolveActorId();
+        var now = DateTime.Now;
+
+        var createdId = await customerGateway.InsertAsync(
+            new CreateCustomerStoredProcedureRequest(
+                CustomerName: request.CustomerName.Trim(),
+                LoginAccount: request.LoginAccount.Trim(),
+                LoginPassword: request.LoginPassword.Trim(),
+                MetadataXml: BuildCustomerMetadataJson(null, request.CustomerCode, request.BillTo, request.ShipToAddresses),
+                CreatedOn: now,
+                CreatedBy: actorId,
+                ModifiedOn: now,
+                ModifiedBy: actorId,
+                Retired: false,
+                RetiredOn: null,
+                RetiredBy: null),
+            cancellationToken);
+
+        var createdCustomer = await customerGateway.SelectAsync(createdId, cancellationToken);
+        if (createdCustomer is null)
+        {
+            return StatusCode(StatusCodes.Status201Created, new AdminCustomerRecordResponse
+            {
+                CustomerId = createdId,
+                CustomerName = request.CustomerName.Trim(),
+                LoginAccount = request.LoginAccount.Trim(),
+                LoginPassword = request.LoginPassword.Trim(),
+                CustomerCode = request.CustomerCode.Trim(),
+                BillTo = request.BillTo.Trim(),
+                ShipToAddresses = request.ShipToAddresses
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Name) || !string.IsNullOrWhiteSpace(entry.Address))
+                    .Select(entry => new AdminCustomerShipToAddressResponse
+                    {
+                        Name = entry.Name.Trim(),
+                        Address = entry.Address.Trim(),
+                    })
+                    .ToArray(),
+                CreatedOn = now,
+                CreatedBy = actorId.ToString(),
+                ModifiedOn = now,
+                ModifiedBy = actorId.ToString(),
+            });
+        }
+
+        return StatusCode(StatusCodes.Status201Created, MapToCustomerRecordResponse(createdCustomer));
+    }
+
+    [HttpPut("customers/{id:guid}")]
+    [ProducesResponseType(typeof(AdminCustomerRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminCustomerRecordResponse>> UpdateCustomer(
+        Guid id,
+        [FromServices] ICustomerStoredProcedureGateway customerGateway,
+        [FromBody] UpdateAdminCustomerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var current = await customerGateway.SelectAsync(id, cancellationToken);
+        if (current is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Customer not found",
+                Detail = $"No customer exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        await customerGateway.UpdateAsync(
+            new UpdateCustomerStoredProcedureRequest(
+                CustomerId: id,
+                CustomerName: request.CustomerName.Trim(),
+                LoginAccount: request.LoginAccount.Trim(),
+                LoginPassword: request.LoginPassword.Trim(),
+                MetadataXml: BuildCustomerMetadataJson(current.MetadataXml, request.CustomerCode, request.BillTo, request.ShipToAddresses),
+                CreatedOn: current.CreatedOn,
+                CreatedBy: current.CreatedBy,
+                ModifiedOn: DateTime.Now,
+                ModifiedBy: actorId,
+                Retired: current.Retired,
+                RetiredOn: current.RetiredOn,
+                RetiredBy: current.RetiredBy),
+            cancellationToken);
+
+        var updated = await customerGateway.SelectAsync(id, cancellationToken);
+        return Ok(updated is null ? MapToCustomerRecordResponse(current) : MapToCustomerRecordResponse(updated));
+    }
+
+    [HttpDelete("customers/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCustomer(
+        Guid id,
+        [FromServices] ICustomerStoredProcedureGateway customerGateway,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await customerGateway.SelectAsync(id, cancellationToken);
+        if (customer is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Customer not found",
+                Detail = $"No customer exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        await customerGateway.DeleteAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    private static AdminCustomerRecordResponse MapToCustomerRecordResponse(CustomerStoredProcedureRecord customer)
+    {
+        var metadata = ParseCustomerMetadata(customer.MetadataXml);
+
+        return new AdminCustomerRecordResponse
+        {
+            CustomerId = customer.CustomerId,
+            CustomerName = customer.CustomerName?.Trim() ?? string.Empty,
+            LoginAccount = customer.LoginAccount?.Trim() ?? string.Empty,
+            LoginPassword = customer.LoginPassword?.Trim() ?? string.Empty,
+            CustomerCode = metadata.CustomerCode,
+            BillTo = metadata.BillTo,
+            ShipToAddresses = metadata.ShipToAddresses,
+            CreatedOn = customer.CreatedOn,
+            CreatedBy = customer.CreatedBy.ToString(),
+            ModifiedOn = customer.ModifiedOn,
+            ModifiedBy = customer.ModifiedBy.ToString(),
+        };
+    }
+
+    private static (string CustomerCode, string BillTo, IReadOnlyList<AdminCustomerShipToAddressResponse> ShipToAddresses) ParseCustomerMetadata(string? metadataRaw)
+    {
+        if (string.IsNullOrWhiteSpace(metadataRaw))
+        {
+            return (string.Empty, string.Empty, []);
+        }
+
+        var trimmed = metadataRaw.Trim();
+
+        try
+        {
+            using var document = JsonDocument.Parse(trimmed);
+            if (document.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                var root = document.RootElement;
+                var customerCode = TryGetJsonString(root, "CustomerCode");
+                var billTo = TryGetJsonString(root, "BillTo");
+                var shipToAddresses = ParseCustomerShipToAddresses(root);
+                return (customerCode, billTo, shipToAddresses);
+            }
+        }
+        catch
+        {
+            // Fallback to XML parsing.
+        }
+
+        try
+        {
+            var xml = XDocument.Parse(trimmed);
+            var customerCode = xml
+                .Descendants()
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "CustomerCode", StringComparison.OrdinalIgnoreCase))
+                ?.Value.Trim() ?? string.Empty;
+            var billTo = xml
+                .Descendants()
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "BillTo", StringComparison.OrdinalIgnoreCase))
+                ?.Value.Trim() ?? string.Empty;
+            return (customerCode, billTo, []);
+        }
+        catch
+        {
+            return (string.Empty, string.Empty, []);
+        }
+    }
+
+    private static IReadOnlyList<AdminCustomerShipToAddressResponse> ParseCustomerShipToAddresses(JsonElement root)
+    {
+        JsonElement shipToArray;
+        if (root.TryGetProperty("ShipToAddresses", out shipToArray) && shipToArray.ValueKind == JsonValueKind.Array)
+        {
+            return shipToArray
+                .EnumerateArray()
+                .Where(entry => entry.ValueKind == JsonValueKind.Object)
+                .Select(entry => new AdminCustomerShipToAddressResponse
+                {
+                    Name = TryGetJsonString(entry, "Name"),
+                    Address = TryGetJsonString(entry, "Address"),
+                })
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Name) || !string.IsNullOrWhiteSpace(entry.Address))
+                .ToArray();
+        }
+
+        return [];
+    }
+
+    private static string BuildCustomerMetadataJson(
+        string? existingMetadataRaw,
+        string customerCode,
+        string billTo,
+        IReadOnlyList<AdminCustomerShipToAddressRequest>? shipToAddresses)
+    {
+        JsonObject root = new();
+
+        if (!string.IsNullOrWhiteSpace(existingMetadataRaw))
+        {
+            try
+            {
+                var parsed = JsonNode.Parse(existingMetadataRaw.Trim()) as JsonObject;
+                if (parsed is not null)
+                {
+                    root = parsed;
+                }
+            }
+            catch
+            {
+                // Ignore parse failures and rebuild metadata from known fields.
+            }
+        }
+
+        root["CustomerCode"] = customerCode.Trim();
+        root["BillTo"] = billTo.Trim();
+
+        var shipToArray = new JsonArray();
+        foreach (var entry in shipToAddresses ?? [])
+        {
+            var name = entry.Name.Trim();
+            var address = entry.Address.Trim();
+            if (name.Length == 0 && address.Length == 0)
+            {
+                continue;
+            }
+
+            shipToArray.Add(new JsonObject
+            {
+                ["Name"] = name,
+                ["Address"] = address,
+            });
+        }
+
+        root["ShipToAddresses"] = shipToArray;
+        return root.ToJsonString();
     }
 
     private static string TryExtractMetadataCode(string? metadataXml, string propertyName)

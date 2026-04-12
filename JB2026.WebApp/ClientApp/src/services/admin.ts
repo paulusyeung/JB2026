@@ -4,11 +4,17 @@ import type {
   AdminWorkflowListItem,
   AdminWorkflowFormListItem,
   AdminCustomerListItem,
+  AdminCustomerRecord,
   AdminQuotationItemGroupListItem,
   AdminQuotationItemListItem,
   AdminSupplierListItem,
+  AdminSupplierRecord,
   AdminOrderTypeWorkflowPayload,
   UpdateAdminOrderTypeWorkflowsRequest,
+  CreateAdminCustomerRequest,
+  UpdateAdminCustomerRequest,
+  CreateAdminSupplierRequest,
+  UpdateAdminSupplierRequest,
   CreateAdminQuotationItemRequest,
   UpdateAdminQuotationItemRequest,
   CreateAdminQuotationItemGroupRequest,
@@ -96,6 +102,25 @@ export async function getAdminCustomers(query: AdminCustomersQuery = {}): Promis
   return response.data
 }
 
+export async function getAdminCustomer(id: string): Promise<AdminCustomerRecord> {
+  const response = await apiClient.get<AdminCustomerRecord>(`/api/v2/admin/customers/${id}`)
+  return response.data
+}
+
+export async function createAdminCustomer(request: CreateAdminCustomerRequest): Promise<AdminCustomerRecord> {
+  const response = await apiClient.post<AdminCustomerRecord>('/api/v2/admin/customers', request)
+  return response.data
+}
+
+export async function updateAdminCustomer(id: string, request: UpdateAdminCustomerRequest): Promise<AdminCustomerRecord> {
+  const response = await apiClient.put<AdminCustomerRecord>(`/api/v2/admin/customers/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminCustomer(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/customers/${id}`)
+}
+
 export async function getAdminSuppliers(query: AdminSuppliersQuery = {}): Promise<AdminSupplierListItem[]> {
   const response = await apiClient.get<AdminSupplierListItem[]>('/api/v2/admin/suppliers', {
     params: {
@@ -105,6 +130,25 @@ export async function getAdminSuppliers(query: AdminSuppliersQuery = {}): Promis
   })
 
   return response.data
+}
+
+export async function getAdminSupplier(id: string): Promise<AdminSupplierRecord> {
+  const response = await apiClient.get<AdminSupplierRecord>(`/api/v2/admin/suppliers/${id}`)
+  return response.data
+}
+
+export async function createAdminSupplier(request: CreateAdminSupplierRequest): Promise<AdminSupplierRecord> {
+  const response = await apiClient.post<AdminSupplierRecord>('/api/v2/admin/suppliers', request)
+  return response.data
+}
+
+export async function updateAdminSupplier(id: string, request: UpdateAdminSupplierRequest): Promise<AdminSupplierRecord> {
+  const response = await apiClient.put<AdminSupplierRecord>(`/api/v2/admin/suppliers/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminSupplier(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/suppliers/${id}`)
 }
 
 export async function getAdminQuotationItems(query: AdminQuotationItemsQuery = {}): Promise<AdminQuotationItemListItem[]> {

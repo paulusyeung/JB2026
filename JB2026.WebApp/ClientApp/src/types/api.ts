@@ -45,6 +45,43 @@ export interface AdminCustomerListItem {
   modifiedBy: string
 }
 
+export interface CustomerShipToAddress {
+  name: string
+  address: string
+}
+
+export interface AdminCustomerRecord {
+  customerId: string
+  customerName: string
+  loginAccount: string
+  loginPassword: string
+  customerCode: string
+  billTo: string
+  shipToAddresses: CustomerShipToAddress[]
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
+export interface CreateAdminCustomerRequest {
+  customerName: string
+  loginAccount: string
+  loginPassword: string
+  customerCode: string
+  billTo: string
+  shipToAddresses: CustomerShipToAddress[]
+}
+
+export interface UpdateAdminCustomerRequest {
+  customerName: string
+  loginAccount: string
+  loginPassword: string
+  customerCode: string
+  billTo: string
+  shipToAddresses: CustomerShipToAddress[]
+}
+
 export interface AdminSupplierListItem {
   supplierId: string
   supplierName: string
@@ -55,6 +92,43 @@ export interface AdminSupplierListItem {
   createdBy: string
   modifiedOn: string
   modifiedBy: string
+}
+
+export interface SupplierShipToAddress {
+  name: string
+  address: string
+}
+
+export interface AdminSupplierRecord {
+  supplierId: string
+  supplierName: string
+  loginAccount: string
+  loginPassword: string
+  supplierCode: string
+  billTo: string
+  shipToAddresses: SupplierShipToAddress[]
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
+export interface CreateAdminSupplierRequest {
+  supplierName: string
+  loginAccount: string
+  loginPassword: string
+  supplierCode: string
+  billTo: string
+  shipToAddresses: SupplierShipToAddress[]
+}
+
+export interface UpdateAdminSupplierRequest {
+  supplierName: string
+  loginAccount: string
+  loginPassword: string
+  supplierCode: string
+  billTo: string
+  shipToAddresses: SupplierShipToAddress[]
 }
 
 export interface AdminQuotationItemListItem {

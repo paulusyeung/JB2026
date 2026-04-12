@@ -81,6 +81,10 @@
             {{ t('admin.customer.actions.views') }}
           </v-btn>
 
+          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewCustomer">
+            {{ t('admin.customer.actions.newCustomer') }}
+          </v-btn>
+
           <v-divider vertical class="mx-1" />
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
@@ -89,10 +93,6 @@
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.customer.actions.preference')">
             {{ t('admin.customer.actions.preference') }}
-          </v-btn>
-
-          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="showUnavailable('admin.customer.actions.newCustomer')">
-            {{ t('admin.customer.actions.newCustomer') }}
           </v-btn>
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedCustomerId" @click="openPopup">
@@ -131,6 +131,22 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="920" scrollable>
+      <AdminCustomerRecordDialog
+        :customer-id="editingCustomerId"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -138,8 +154,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import AdminCustomerRecordDialog from '@/components/forms/AdminCustomerRecordDialog.vue'
 import { getAdminCustomers } from '@/services/admin'
-import type { AdminCustomerListItem } from '@/types/api'
+import type { AdminCustomerListItem, AdminCustomerRecord } from '@/types/api'
 
 type AdminCustomerDisplayItem = AdminCustomerListItem & {
   icon: string
@@ -152,6 +169,10 @@ const lookup = ref('')
 const errorMessage = ref('')
 const checkboxMode = ref(false)
 const selectedCustomerIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const editingCustomerId = ref<string | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 const sortDirection = ref<'asc' | 'desc'>('asc')
 const sortKey = ref('customerName')
 const visibleColumnKeys = ref<string[]>([
@@ -256,15 +277,39 @@ function toggleColumn(columnKey: string) {
 function onRowClick(_event: Event, payload: { item: AdminCustomerListItem }) {
   if (checkboxMode.value) return
   selectedCustomerIds.value = [payload.item.customerId]
+  openPopup(payload.item.customerId)
 }
 
-function openPopup() {
-  if (!selectedCustomerId.value) {
+function openPopup(customerId = selectedCustomerId.value ?? editingCustomerId.value) {
+  if (!customerId) {
     errorMessage.value = t('admin.customer.messages.selectRecordFirst')
     return
   }
 
-  errorMessage.value = t('admin.customer.messages.popupUnavailable')
+  editingCustomerId.value = customerId
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+function openNewCustomer() {
+  editingCustomerId.value = null
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(customer: AdminCustomerRecord) {
+  await load()
+  selectedCustomerIds.value = [customer.customerId]
+  editingCustomerId.value = customer.customerId
+  successMessage.value = t('admin.customer.messages.saveSuccess')
+  saveSuccess.value = true
+}
+
+async function handleDeleted(id: string) {
+  await load()
+  selectedCustomerIds.value = selectedCustomerIds.value.filter((customerId) => customerId !== id)
+  successMessage.value = t('admin.customer.messages.deleteSuccess')
+  saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {
