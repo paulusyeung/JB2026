@@ -57,6 +57,39 @@ export interface AdminSupplierListItem {
   modifiedBy: string
 }
 
+export interface AdminQuotationItemListItem {
+  itemId: string
+  itemGroupId: string
+  itemGroupZone: string
+  zone: string
+  groupNameEn: string
+  groupNameCht: string
+  groupNameChs: string
+  itemIndex: number
+  itemNameEn: string
+  itemNameCht: string
+  itemNameChs: string
+  unitCost: number
+  minimum: string
+  unitCostType: number
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
+export interface AdminQuotationItemGroupListItem {
+  itemGroupId: string
+  zone: string
+  groupNameEn: string
+  groupNameCht: string
+  groupNameChs: string
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
 export interface AdminOrderTypeWorkflowItem {
   workflowId: string
   workflowName: string

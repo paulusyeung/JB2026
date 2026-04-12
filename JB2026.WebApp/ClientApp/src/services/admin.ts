@@ -4,6 +4,8 @@ import type {
   AdminWorkflowListItem,
   AdminWorkflowFormListItem,
   AdminCustomerListItem,
+  AdminQuotationItemGroupListItem,
+  AdminQuotationItemListItem,
   AdminSupplierListItem,
   AdminOrderTypeWorkflowPayload,
   UpdateAdminOrderTypeWorkflowsRequest,
@@ -68,6 +70,17 @@ export interface AdminSuppliersQuery {
   take?: number
 }
 
+export interface AdminQuotationItemsQuery {
+  lookup?: string
+  shortcut?: string
+  take?: number
+}
+
+export interface AdminQuotationItemGroupsQuery {
+  lookup?: string
+  take?: number
+}
+
 export async function getAdminCustomers(query: AdminCustomersQuery = {}): Promise<AdminCustomerListItem[]> {
   const response = await apiClient.get<AdminCustomerListItem[]>('/api/v2/admin/customers', {
     params: {
@@ -81,6 +94,29 @@ export async function getAdminCustomers(query: AdminCustomersQuery = {}): Promis
 
 export async function getAdminSuppliers(query: AdminSuppliersQuery = {}): Promise<AdminSupplierListItem[]> {
   const response = await apiClient.get<AdminSupplierListItem[]>('/api/v2/admin/suppliers', {
+    params: {
+      lookup: query.lookup ?? '',
+      take: query.take ?? 500,
+    },
+  })
+
+  return response.data
+}
+
+export async function getAdminQuotationItems(query: AdminQuotationItemsQuery = {}): Promise<AdminQuotationItemListItem[]> {
+  const response = await apiClient.get<AdminQuotationItemListItem[]>('/api/v2/admin/quotation-items', {
+    params: {
+      lookup: query.lookup ?? '',
+      shortcut: query.shortcut ?? 'All',
+      take: query.take ?? 500,
+    },
+  })
+
+  return response.data
+}
+
+export async function getAdminQuotationItemGroups(query: AdminQuotationItemGroupsQuery = {}): Promise<AdminQuotationItemGroupListItem[]> {
+  const response = await apiClient.get<AdminQuotationItemGroupListItem[]>('/api/v2/admin/quotation-item-groups', {
     params: {
       lookup: query.lookup ?? '',
       take: query.take ?? 500,

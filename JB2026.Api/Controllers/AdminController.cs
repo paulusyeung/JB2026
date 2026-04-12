@@ -418,6 +418,158 @@ public sealed class AdminController : ControllerBase
         return Ok(forms);
     }
 
+    [HttpGet("quotation-items")]
+    [ProducesResponseType(typeof(IReadOnlyList<AdminQuotationItemListItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<AdminQuotationItemListItemResponse>>> GetQuotationItems(
+        [FromServices] JB5LegacyReadContext readContext,
+        [FromQuery] string? lookup,
+        [FromQuery] string? shortcut,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+        var normalizedShortcut = shortcut?.Trim();
+
+        var query = readContext.vwQtItemLists.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            query = query.Where(item =>
+                (item.ItemNameEn ?? string.Empty).Contains(normalizedLookup) ||
+                (item.ItemNameCht ?? string.Empty).Contains(normalizedLookup) ||
+                (item.ItemNameChs ?? string.Empty).Contains(normalizedLookup));
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedShortcut) && !string.Equals(normalizedShortcut, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(normalizedShortcut, "9", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(item =>
+                    !string.IsNullOrEmpty(item.ItemNameEn) &&
+                    EF.Functions.Like(item.ItemNameEn, "[0-9]%"));
+            }
+            else
+            {
+                var startsWith = $"{char.ToUpperInvariant(normalizedShortcut[0])}%";
+                query = query.Where(item =>
+                    !string.IsNullOrEmpty(item.ItemNameEn) &&
+                    EF.Functions.Like(item.ItemNameEn, startsWith));
+            }
+        }
+
+        var items = await query
+            .OrderBy(item => item.Zone)
+            .ThenBy(item => item.Index)
+            .Take(take)
+            .Select(item => new AdminQuotationItemListItemResponse
+            {
+                ItemId = item.ItemId,
+                ItemGroupId = item.ItemGroupId,
+                ItemGroupZone = item.ItemGroupZone,
+                Zone = item.Zone ?? string.Empty,
+                GroupNameEn = item.GroupNameEn ?? string.Empty,
+                GroupNameCht = item.GroupNameCht ?? string.Empty,
+                GroupNameChs = item.GroupNameChs ?? string.Empty,
+                ItemIndex = item.Index,
+                ItemNameEn = item.ItemNameEn ?? string.Empty,
+                ItemNameCht = item.ItemNameCht ?? string.Empty,
+                ItemNameChs = item.ItemNameChs ?? string.Empty,
+                UnitCost = item.UnitCost,
+                Minimum = item.Minimum ?? string.Empty,
+                UnitCostType = item.UnitCostType,
+                CreatedOn = item.CreatedOn,
+                CreatedBy = item.CreatedBy ?? string.Empty,
+                ModifiedOn = item.ModifiedOn,
+                ModifiedBy = item.ModifiedBy ?? string.Empty,
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(items);
+    }
+
+    [HttpGet("quotation-item-groups")]
+    [ProducesResponseType(typeof(IReadOnlyList<AdminQuotationItemGroupListItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<AdminQuotationItemGroupListItemResponse>>> GetQuotationItemGroups(
+        [FromServices] JB5LegacyContext legacyContext,
+        [FromQuery] string? lookup,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+
+        var query = legacyContext.QtItemGroups
+            .AsNoTracking()
+            .GroupJoin(
+                legacyContext.vwUserList_Actives.AsNoTracking(),
+                group => group.CreatedBy,
+                user => user.UserId,
+                (group, createdUsers) => new { group, createdUsers })
+            .SelectMany(
+                x => x.createdUsers.DefaultIfEmpty(),
+                (x, createdUser) => new { x.group, createdUser })
+            .GroupJoin(
+                legacyContext.vwUserList_Actives.AsNoTracking(),
+                x => x.group.ModifiedBy,
+                user => user.UserId,
+                (x, modifiedUsers) => new { x.group, x.createdUser, modifiedUsers })
+            .SelectMany(
+                x => x.modifiedUsers.DefaultIfEmpty(),
+                (x, modifiedUser) => new AdminQuotationItemGroupListItemResponse
+                {
+                    ItemGroupId = x.group.ItemGroupId,
+                    Zone = x.group.Zone,
+                    GroupNameEn = x.group.GroupNameEn ?? string.Empty,
+                    GroupNameCht = x.group.GroupNameCht ?? string.Empty,
+                    GroupNameChs = x.group.GroupNameChs ?? string.Empty,
+                    CreatedOn = x.group.CreatedOn,
+                    CreatedBy = x.createdUser == null
+                        ? string.Empty
+                        : string.IsNullOrWhiteSpace(x.createdUser.UserAlias)
+                            ? x.createdUser.UserName ?? string.Empty
+                            : x.createdUser.UserAlias,
+                    ModifiedOn = x.group.ModifiedOn,
+                    ModifiedBy = modifiedUser == null
+                        ? string.Empty
+                        : string.IsNullOrWhiteSpace(modifiedUser.UserAlias)
+                            ? modifiedUser.UserName ?? string.Empty
+                            : modifiedUser.UserAlias,
+                });
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            query = query.Where(group =>
+                group.Zone.Contains(normalizedLookup) ||
+                group.GroupNameEn.Contains(normalizedLookup) ||
+                group.GroupNameCht.Contains(normalizedLookup) ||
+                group.GroupNameChs.Contains(normalizedLookup));
+        }
+
+        var groups = await query
+            .OrderBy(group => group.Zone)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        return Ok(groups);
+    }
+
     [HttpGet("order-type/workflows")]
     [ProducesResponseType(typeof(AdminOrderTypeWorkflowResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]

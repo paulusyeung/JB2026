@@ -182,6 +182,10 @@ const router = createRouter({
           ? () => import('@/views/AdminCustomerView.vue')
         : route.path === '/admin/supplier'
           ? () => import('@/views/AdminSupplierView.vue')
+        : route.path === '/admin/quotation/item-group'
+          ? () => import('@/views/AdminQuotationItemGroupView.vue')
+        : route.path === '/admin/quotation/item'
+          ? () => import('@/views/AdminQuotationItemView.vue')
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
