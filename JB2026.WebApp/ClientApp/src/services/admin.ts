@@ -9,6 +9,10 @@ import type {
   AdminSupplierListItem,
   AdminOrderTypeWorkflowPayload,
   UpdateAdminOrderTypeWorkflowsRequest,
+  CreateAdminQuotationItemRequest,
+  UpdateAdminQuotationItemRequest,
+  CreateAdminQuotationItemGroupRequest,
+  UpdateAdminQuotationItemGroupRequest,
 } from '@/types/api'
 
 export interface AdminWorkflowsQuery {
@@ -115,6 +119,20 @@ export async function getAdminQuotationItems(query: AdminQuotationItemsQuery = {
   return response.data
 }
 
+export async function createAdminQuotationItem(request: CreateAdminQuotationItemRequest): Promise<AdminQuotationItemListItem> {
+  const response = await apiClient.post<AdminQuotationItemListItem>('/api/v2/admin/quotation-items', request)
+  return response.data
+}
+
+export async function updateAdminQuotationItem(id: string, request: UpdateAdminQuotationItemRequest): Promise<AdminQuotationItemListItem> {
+  const response = await apiClient.put<AdminQuotationItemListItem>(`/api/v2/admin/quotation-items/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminQuotationItem(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/quotation-items/${id}`)
+}
+
 export async function getAdminQuotationItemGroups(query: AdminQuotationItemGroupsQuery = {}): Promise<AdminQuotationItemGroupListItem[]> {
   const response = await apiClient.get<AdminQuotationItemGroupListItem[]>('/api/v2/admin/quotation-item-groups', {
     params: {
@@ -135,4 +153,18 @@ export async function getAdminOrderTypeWorkflows(orderType: number): Promise<Adm
 
 export async function updateAdminOrderTypeWorkflows(request: UpdateAdminOrderTypeWorkflowsRequest): Promise<void> {
   await apiClient.put('/api/v2/admin/order-type/workflows', request)
+}
+
+export async function createAdminQuotationItemGroup(request: CreateAdminQuotationItemGroupRequest): Promise<AdminQuotationItemGroupListItem> {
+  const response = await apiClient.post<AdminQuotationItemGroupListItem>('/api/v2/admin/quotation-item-groups', request)
+  return response.data
+}
+
+export async function updateAdminQuotationItemGroup(id: string, request: UpdateAdminQuotationItemGroupRequest): Promise<AdminQuotationItemGroupListItem> {
+  const response = await apiClient.put<AdminQuotationItemGroupListItem>(`/api/v2/admin/quotation-item-groups/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminQuotationItemGroup(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/quotation-item-groups/${id}`)
 }

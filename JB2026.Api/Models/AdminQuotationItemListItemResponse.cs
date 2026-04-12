@@ -13,9 +13,12 @@ public sealed class AdminQuotationItemListItemResponse
     public string ItemNameEn { get; init; } = string.Empty;
     public string ItemNameCht { get; init; } = string.Empty;
     public string ItemNameChs { get; init; } = string.Empty;
+    public bool Mandatory { get; init; }
+    public bool Fixed { get; init; }
     public decimal UnitCost { get; init; }
     public string Minimum { get; init; } = string.Empty;
     public int UnitCostType { get; init; }
+    public decimal CostRounding { get; init; }
     public DateTime CreatedOn { get; init; }
     public string CreatedBy { get; init; } = string.Empty;
     public DateTime ModifiedOn { get; init; }

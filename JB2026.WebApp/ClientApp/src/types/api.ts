@@ -69,9 +69,12 @@ export interface AdminQuotationItemListItem {
   itemNameEn: string
   itemNameCht: string
   itemNameChs: string
+  mandatory: boolean
+  fixed: boolean
   unitCost: number
   minimum: string
   unitCostType: number
+  costRounding: number
   createdOn: string
   createdBy: string
   modifiedOn: string
@@ -88,6 +91,49 @@ export interface AdminQuotationItemGroupListItem {
   createdBy: string
   modifiedOn: string
   modifiedBy: string
+}
+
+
+export interface CreateAdminQuotationItemGroupRequest {
+  zone: string
+  groupNameEn: string
+  groupNameCht: string
+  groupNameChs: string
+}
+
+export interface UpdateAdminQuotationItemGroupRequest {
+  zone: string
+  groupNameEn: string
+  groupNameCht: string
+  groupNameChs: string
+}
+
+export interface CreateAdminQuotationItemRequest {
+  itemGroupId: string
+  itemIndex: number
+  itemNameEn: string
+  itemNameCht: string
+  itemNameChs: string
+  mandatory: boolean
+  fixed: boolean
+  unitCost: number
+  unitCostType: number
+  minimum: string
+  costRounding: number
+}
+
+export interface UpdateAdminQuotationItemRequest {
+  itemGroupId: string
+  itemIndex: number
+  itemNameEn: string
+  itemNameCht: string
+  itemNameChs: string
+  mandatory: boolean
+  fixed: boolean
+  unitCost: number
+  unitCostType: number
+  minimum: string
+  costRounding: number
 }
 
 export interface AdminOrderTypeWorkflowItem {

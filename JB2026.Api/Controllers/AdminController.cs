@@ -4,6 +4,7 @@ using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Xml.Linq;
 
@@ -483,9 +484,12 @@ public sealed class AdminController : ControllerBase
                 ItemNameEn = item.ItemNameEn ?? string.Empty,
                 ItemNameCht = item.ItemNameCht ?? string.Empty,
                 ItemNameChs = item.ItemNameChs ?? string.Empty,
+                Mandatory = item.Mandatory,
+                Fixed = item.Fixed,
                 UnitCost = item.UnitCost,
                 Minimum = item.Minimum ?? string.Empty,
                 UnitCostType = item.UnitCostType,
+                CostRounding = item.CostRounding,
                 CreatedOn = item.CreatedOn,
                 CreatedBy = item.CreatedBy ?? string.Empty,
                 ModifiedOn = item.ModifiedOn,
@@ -496,11 +500,171 @@ public sealed class AdminController : ControllerBase
         return Ok(items);
     }
 
+    [HttpPost("quotation-items")]
+    [ProducesResponseType(typeof(AdminQuotationItemListItemResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminQuotationItemListItemResponse>> CreateQuotationItem(
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        [FromBody] CreateAdminQuotationItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var group = await legacyContext.QtItemGroups
+            .FirstOrDefaultAsync(x => x.ItemGroupId == request.ItemGroupId, cancellationToken);
+
+        if (group is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Item group not found",
+                Detail = $"No item group exists for id '{request.ItemGroupId}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+        var now = DateTime.Now;
+
+        var item = new QtItem
+        {
+            ItemId = Guid.NewGuid(),
+            ItemGroupId = group.ItemGroupId,
+            Zone = group.Zone,
+            Index = request.ItemIndex,
+            ItemNameEn = request.ItemNameEn.Trim(),
+            ItemNameCht = request.ItemNameCht.Trim(),
+            ItemNameChs = request.ItemNameChs.Trim(),
+            Mandatory = request.Mandatory,
+            Fixed = request.Fixed,
+            UnitCost = request.UnitCost,
+            UnitCostType = request.UnitCostType,
+            Minimum = request.Minimum.Trim(),
+            CostRounding = request.CostRounding,
+            CreatedOn = now,
+            CreatedBy = actorId,
+            ModifiedOn = now,
+            ModifiedBy = actorId,
+            Retired = false,
+        };
+
+        legacyContext.QtItems.Add(item);
+        await legacyContext.SaveChangesAsync(cancellationToken);
+
+        return StatusCode(StatusCodes.Status201Created, MapToListItemResponse(item, group));
+    }
+
+    [HttpPut("quotation-items/{id:guid}")]
+    [ProducesResponseType(typeof(AdminQuotationItemListItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminQuotationItemListItemResponse>> UpdateQuotationItem(
+        Guid id,
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        [FromBody] UpdateAdminQuotationItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var item = await legacyContext.QtItems
+            .FirstOrDefaultAsync(x => x.ItemId == id, cancellationToken);
+
+        if (item is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Item not found",
+                Detail = $"No quotation item exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var group = await legacyContext.QtItemGroups
+            .FirstOrDefaultAsync(x => x.ItemGroupId == request.ItemGroupId, cancellationToken);
+
+        if (group is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Item group not found",
+                Detail = $"No item group exists for id '{request.ItemGroupId}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        item.ItemGroupId = group.ItemGroupId;
+        item.Zone = group.Zone;
+        item.Index = request.ItemIndex;
+        item.ItemNameEn = request.ItemNameEn.Trim();
+        item.ItemNameCht = request.ItemNameCht.Trim();
+        item.ItemNameChs = request.ItemNameChs.Trim();
+        item.Mandatory = request.Mandatory;
+        item.Fixed = request.Fixed;
+        item.UnitCost = request.UnitCost;
+        item.UnitCostType = request.UnitCostType;
+        item.Minimum = request.Minimum.Trim();
+        item.CostRounding = request.CostRounding;
+        item.ModifiedOn = DateTime.Now;
+        item.ModifiedBy = actorId;
+        item.Retired = false;
+
+        await legacyContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(MapToListItemResponse(item, group));
+    }
+
+    [HttpDelete("quotation-items/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteQuotationItem(
+        Guid id,
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await legacyContext.QtItems
+            .FirstOrDefaultAsync(x => x.ItemId == id, cancellationToken);
+
+        if (item is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Item not found",
+                Detail = $"No quotation item exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        if (item.Retired)
+        {
+            legacyContext.QtItems.Remove(item);
+        }
+        else
+        {
+            item.Retired = true;
+            item.RetiredOn = DateTime.Now;
+            item.RetiredBy = actorId;
+        }
+
+        await legacyContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("quotation-item-groups")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminQuotationItemGroupListItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<AdminQuotationItemGroupListItemResponse>>> GetQuotationItemGroups(
-        [FromServices] JB5LegacyContext legacyContext,
+        [FromServices] JB5LegacyReadContext legacyContext,
         [FromQuery] string? lookup,
         [FromQuery] int take = 500,
         CancellationToken cancellationToken = default)
@@ -515,60 +679,231 @@ public sealed class AdminController : ControllerBase
 
         var normalizedLookup = lookup?.Trim();
 
-        var query = legacyContext.QtItemGroups
-            .AsNoTracking()
-            .GroupJoin(
-                legacyContext.vwUserList_Actives.AsNoTracking(),
-                group => group.CreatedBy,
-                user => user.UserId,
-                (group, createdUsers) => new { group, createdUsers })
-            .SelectMany(
-                x => x.createdUsers.DefaultIfEmpty(),
-                (x, createdUser) => new { x.group, createdUser })
-            .GroupJoin(
-                legacyContext.vwUserList_Actives.AsNoTracking(),
-                x => x.group.ModifiedBy,
-                user => user.UserId,
-                (x, modifiedUsers) => new { x.group, x.createdUser, modifiedUsers })
-            .SelectMany(
-                x => x.modifiedUsers.DefaultIfEmpty(),
-                (x, modifiedUser) => new AdminQuotationItemGroupListItemResponse
-                {
-                    ItemGroupId = x.group.ItemGroupId,
-                    Zone = x.group.Zone,
-                    GroupNameEn = x.group.GroupNameEn ?? string.Empty,
-                    GroupNameCht = x.group.GroupNameCht ?? string.Empty,
-                    GroupNameChs = x.group.GroupNameChs ?? string.Empty,
-                    CreatedOn = x.group.CreatedOn,
-                    CreatedBy = x.createdUser == null
-                        ? string.Empty
-                        : string.IsNullOrWhiteSpace(x.createdUser.UserAlias)
-                            ? x.createdUser.UserName ?? string.Empty
-                            : x.createdUser.UserAlias,
-                    ModifiedOn = x.group.ModifiedOn,
-                    ModifiedBy = modifiedUser == null
-                        ? string.Empty
-                        : string.IsNullOrWhiteSpace(modifiedUser.UserAlias)
-                            ? modifiedUser.UserName ?? string.Empty
-                            : modifiedUser.UserAlias,
-                });
+        var groupsQuery = legacyContext.QtItemGroups.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(normalizedLookup))
         {
-            query = query.Where(group =>
+            groupsQuery = groupsQuery.Where(group =>
                 group.Zone.Contains(normalizedLookup) ||
-                group.GroupNameEn.Contains(normalizedLookup) ||
-                group.GroupNameCht.Contains(normalizedLookup) ||
-                group.GroupNameChs.Contains(normalizedLookup));
+                (group.GroupNameEn ?? string.Empty).Contains(normalizedLookup) ||
+                (group.GroupNameCht ?? string.Empty).Contains(normalizedLookup) ||
+                (group.GroupNameChs ?? string.Empty).Contains(normalizedLookup));
         }
 
-        var groups = await query
+        var groups = await groupsQuery
             .OrderBy(group => group.Zone)
+            .ThenBy(group => group.GroupNameEn)
             .Take(take)
             .ToListAsync(cancellationToken);
 
-        return Ok(groups);
+        var users = await legacyContext.vwUserList_Actives
+            .AsNoTracking()
+            .Select(user => new
+            {
+                user.UserId,
+                user.UserAlias,
+                user.UserName,
+            })
+            .ToListAsync(cancellationToken);
+
+        var userDisplayNameLookup = users
+            .GroupBy(user => user.UserId)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var user = group.First();
+                    return string.IsNullOrWhiteSpace(user.UserAlias)
+                        ? user.UserName ?? string.Empty
+                        : user.UserAlias;
+                });
+
+        var result = groups
+            .Select(group => new AdminQuotationItemGroupListItemResponse
+            {
+                ItemGroupId = group.ItemGroupId,
+                Zone = group.Zone,
+                GroupNameEn = group.GroupNameEn ?? string.Empty,
+                GroupNameCht = group.GroupNameCht ?? string.Empty,
+                GroupNameChs = group.GroupNameChs ?? string.Empty,
+                CreatedOn = group.CreatedOn,
+                CreatedBy = userDisplayNameLookup.TryGetValue(group.CreatedBy, out var createdByName)
+                    ? createdByName
+                    : string.Empty,
+                ModifiedOn = group.ModifiedOn,
+                ModifiedBy = userDisplayNameLookup.TryGetValue(group.ModifiedBy, out var modifiedByName)
+                    ? modifiedByName
+                    : string.Empty,
+            })
+            .ToList();
+
+        return Ok(result);
     }
+
+    [HttpPost("quotation-item-groups")]
+    [ProducesResponseType(typeof(AdminQuotationItemGroupListItemResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminQuotationItemGroupListItemResponse>> CreateQuotationItemGroup(
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        [FromBody] CreateAdminQuotationItemGroupRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actorId = ResolveActorId();
+        var now = DateTime.Now;
+
+        var item = new QtItemGroup
+        {
+            ItemGroupId = Guid.NewGuid(),
+            Zone = request.Zone.Trim().ToUpperInvariant(),
+            GroupNameEn = request.GroupNameEn.Trim(),
+            GroupNameCht = request.GroupNameCht.Trim(),
+            GroupNameChs = request.GroupNameChs.Trim(),
+            CreatedOn = now,
+            CreatedBy = actorId,
+            ModifiedOn = now,
+            ModifiedBy = actorId,
+            Retired = false,
+        };
+
+        legacyContext.QtItemGroups.Add(item);
+        await legacyContext.SaveChangesAsync(cancellationToken);
+
+        var result = MapToListItemResponse(item);
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpPut("quotation-item-groups/{id:guid}")]
+    [ProducesResponseType(typeof(AdminQuotationItemGroupListItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminQuotationItemGroupListItemResponse>> UpdateQuotationItemGroup(
+        Guid id,
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        [FromBody] UpdateAdminQuotationItemGroupRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var item = await legacyContext.QtItemGroups
+            .FirstOrDefaultAsync(x => x.ItemGroupId == id, cancellationToken);
+
+        if (item is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Item group not found",
+                Detail = $"No item group exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        item.Zone = request.Zone.Trim().ToUpperInvariant();
+        item.GroupNameEn = request.GroupNameEn.Trim();
+        item.GroupNameCht = request.GroupNameCht.Trim();
+        item.GroupNameChs = request.GroupNameChs.Trim();
+        item.ModifiedOn = DateTime.Now;
+        item.ModifiedBy = actorId;
+
+        await legacyContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(MapToListItemResponse(item));
+    }
+
+    [HttpDelete("quotation-item-groups/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteQuotationItemGroup(
+        Guid id,
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await legacyContext.QtItemGroups
+            .FirstOrDefaultAsync(x => x.ItemGroupId == id, cancellationToken);
+
+        if (item is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Item group not found",
+                Detail = $"No item group exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        if (item.Retired)
+        {
+            // Already soft-deleted: hard delete
+            legacyContext.QtItemGroups.Remove(item);
+        }
+        else
+        {
+            // Soft delete: mark as retired
+            item.Retired = true;
+            item.RetiredOn = DateTime.Now;
+            item.RetiredBy = actorId;
+        }
+
+        await legacyContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    private Guid ResolveActorId()
+    {
+        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(value, out var id) ? id : Guid.Empty;
+    }
+
+    private static AdminQuotationItemGroupListItemResponse MapToListItemResponse(QtItemGroup item) =>
+        new()
+        {
+            ItemGroupId = item.ItemGroupId,
+            Zone = item.Zone,
+            GroupNameEn = item.GroupNameEn ?? string.Empty,
+            GroupNameCht = item.GroupNameCht ?? string.Empty,
+            GroupNameChs = item.GroupNameChs ?? string.Empty,
+            CreatedOn = item.CreatedOn,
+            CreatedBy = string.Empty,
+            ModifiedOn = item.ModifiedOn,
+            ModifiedBy = string.Empty,
+        };
+
+    private static AdminQuotationItemListItemResponse MapToListItemResponse(QtItem item, QtItemGroup group) =>
+        new()
+        {
+            ItemId = item.ItemId,
+            ItemGroupId = item.ItemGroupId,
+            ItemGroupZone = group.Zone,
+            Zone = item.Zone ?? string.Empty,
+            GroupNameEn = group.GroupNameEn ?? string.Empty,
+            GroupNameCht = group.GroupNameCht ?? string.Empty,
+            GroupNameChs = group.GroupNameChs ?? string.Empty,
+            ItemIndex = item.Index,
+            ItemNameEn = item.ItemNameEn ?? string.Empty,
+            ItemNameCht = item.ItemNameCht ?? string.Empty,
+            ItemNameChs = item.ItemNameChs ?? string.Empty,
+            Mandatory = item.Mandatory,
+            Fixed = item.Fixed,
+            UnitCost = item.UnitCost,
+            Minimum = item.Minimum ?? string.Empty,
+            UnitCostType = item.UnitCostType,
+            CostRounding = item.CostRounding,
+            CreatedOn = item.CreatedOn,
+            CreatedBy = string.Empty,
+            ModifiedOn = item.ModifiedOn,
+            ModifiedBy = string.Empty,
+        };
 
     [HttpGet("order-type/workflows")]
     [ProducesResponseType(typeof(AdminOrderTypeWorkflowResponse), StatusCodes.Status200OK)]

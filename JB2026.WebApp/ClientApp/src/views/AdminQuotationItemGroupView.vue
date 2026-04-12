@@ -116,7 +116,6 @@
           height="62vh"
           class="quotation-item-group-table"
           @click:row="onRowClick"
-          @dblclick="openPopup"
         >
           <template #[`item.icon`]>
             <v-icon size="14" color="secondary">mdi-shape-plus-outline</v-icon>
@@ -131,6 +130,22 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="720" scrollable>
+      <AdminQuotationItemGroupRecordDialog
+        :item-group="editingItemGroup"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -139,6 +154,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import AdminQuotationItemGroupRecordDialog from '@/components/forms/AdminQuotationItemGroupRecordDialog.vue'
 import { getAdminQuotationItemGroups } from '@/services/admin'
 import type { AdminQuotationItemGroupListItem } from '@/types/api'
 
@@ -156,6 +172,10 @@ const lookup = ref('')
 const errorMessage = ref('')
 const checkboxMode = ref(false)
 const selectedItemGroupIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const editingItemGroup = ref<AdminQuotationItemGroupListItem | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 const sortDirection = ref<SortDirection>('asc')
 const sortKey = ref('originalOrder')
 const visibleColumnKeys = ref<string[]>([
@@ -262,21 +282,43 @@ function onRowClick(_event: Event, payload: { item: AdminQuotationItemGroupDispl
   }
 
   selectedItemGroupIds.value = [payload.item.itemGroupId]
+  openPopup(payload.item.itemGroupId)
 }
 
-function openPopup() {
-  if (!selectedItemGroupId.value) {
+function openPopup(itemGroupId = selectedItemGroupId.value) {
+  if (!itemGroupId) {
     errorMessage.value = t('admin.quotationItemGroup.messages.selectRecordFirst')
     return
   }
 
-  errorMessage.value = t('admin.quotationItemGroup.messages.popupUnavailable')
+  const row = rows.value.find((item) => item.itemGroupId === itemGroupId)
+  if (!row) {
+    errorMessage.value = t('admin.quotationItemGroup.messages.selectRecordFirst')
+    return
+  }
+
+  editingItemGroup.value = { ...row }
+  dialogOpen.value = true
 }
 
 function openNewItemGroup() {
-  errorMessage.value = t('admin.quotationItemGroup.messages.actionUnavailable', {
-    action: t('admin.quotationItemGroup.actions.newItemGroup'),
-  })
+  editingItemGroup.value = null
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(item: AdminQuotationItemGroupListItem) {
+  await load()
+  selectedItemGroupIds.value = [item.itemGroupId]
+  successMessage.value = t('admin.quotationItemGroup.messages.saveSuccess')
+  saveSuccess.value = true
+}
+
+async function handleDeleted(id: string) {
+  await load()
+  selectedItemGroupIds.value = selectedItemGroupIds.value.filter((itemId) => itemId !== id)
+  successMessage.value = t('admin.quotationItemGroup.messages.deleteSuccess')
+  saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {

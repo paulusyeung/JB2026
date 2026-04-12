@@ -132,6 +132,22 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="860" scrollable>
+      <AdminQuotationItemRecordDialog
+        :item="editingItem"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -140,6 +156,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import AdminQuotationItemRecordDialog from '@/components/forms/AdminQuotationItemRecordDialog.vue'
 import { getAdminQuotationItems } from '@/services/admin'
 import type { AdminQuotationItemListItem } from '@/types/api'
 
@@ -160,6 +177,10 @@ const lookup = ref('')
 const errorMessage = ref('')
 const checkboxMode = ref(false)
 const selectedItemIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const editingItem = ref<AdminQuotationItemListItem | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 const sortDirection = ref<SortDirection>('asc')
 const sortKey = ref('originalOrder')
 const visibleColumnKeys = ref<string[]>([
@@ -280,21 +301,46 @@ function onRowClick(_event: Event, payload: { item: AdminQuotationItemDisplayIte
   }
 
   selectedItemIds.value = [payload.item.itemId]
+  openPopup(payload.item.itemId)
 }
 
-function openPopup() {
-  if (!selectedItemId.value) {
+function openPopup(itemId = selectedItemId.value) {
+  if (!itemId) {
     errorMessage.value = t('admin.quotationItem.messages.selectRecordFirst')
     return
   }
 
-  errorMessage.value = t('admin.quotationItem.messages.popupUnavailable')
+  const row = rows.value.find((item) => item.itemId === itemId)
+  if (!row) {
+    errorMessage.value = t('admin.quotationItem.messages.selectRecordFirst')
+    return
+  }
+
+  editingItem.value = { ...row }
+  dialogOpen.value = true
+  errorMessage.value = ''
 }
 
 function openNewItem() {
-  errorMessage.value = t('admin.quotationItem.messages.actionUnavailable', {
-    action: t('admin.quotationItem.actions.newItem'),
-  })
+  editingItem.value = null
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(item: AdminQuotationItemListItem) {
+  await load()
+  const refreshed = rows.value.find((row) => row.itemId === item.itemId) ?? item
+  editingItem.value = { ...refreshed }
+  selectedItemIds.value = [item.itemId]
+  successMessage.value = t('admin.quotationItem.messages.saveSuccess')
+  saveSuccess.value = true
+}
+
+async function handleDeleted(id: string) {
+  await load()
+  selectedItemIds.value = selectedItemIds.value.filter((itemId) => itemId !== id)
+  successMessage.value = t('admin.quotationItem.messages.deleteSuccess')
+  saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {
