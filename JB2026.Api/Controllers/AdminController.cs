@@ -70,6 +70,171 @@ public sealed class AdminController : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("users/{id:guid}")]
+    [ProducesResponseType(typeof(AdminUserRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminUserRecordResponse>> GetUser(
+        Guid id,
+        [FromServices] JB5LegacyReadContext readContext,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await readContext.UserInfos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.UserId == id && !x.Retired, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "User not found",
+                Detail = $"No user exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        return Ok(MapToUserRecordResponse(user));
+    }
+
+    [HttpPost("users")]
+    [ProducesResponseType(typeof(AdminUserRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminUserRecordResponse>> CreateUser(
+        [FromServices] JB5LegacyWriteContext writeContext,
+        [FromBody] CreateAdminUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var actorId = ResolveActorId();
+        var now = DateTime.Now;
+
+        var user = new UserInfo
+        {
+            UserId = Guid.NewGuid(),
+            PrimaryRec = false,
+            UserName = request.Username.Trim(),
+            UserAlias = request.UserAlias.Trim(),
+            UserPassword = request.UserPassword.Trim(),
+            UserRole = request.UserRole,
+            CreatedOn = now,
+            CreatedBy = actorId,
+            ModifiedOn = now,
+            ModifiedBy = actorId,
+            Retired = false,
+            RetiredOn = null,
+            RetiredBy = null,
+        };
+
+        writeContext.UserInfos.Add(user);
+        await writeContext.SaveChangesAsync(cancellationToken);
+
+        return StatusCode(StatusCodes.Status201Created, MapToUserRecordResponse(user));
+    }
+
+    [HttpPut("users/{id:guid}")]
+    [ProducesResponseType(typeof(AdminUserRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminUserRecordResponse>> UpdateUser(
+        Guid id,
+        [FromServices] JB5LegacyWriteContext writeContext,
+        [FromBody] UpdateAdminUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var user = await writeContext.UserInfos
+            .FirstOrDefaultAsync(x => x.UserId == id && !x.Retired, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "User not found",
+                Detail = $"No user exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        user.UserName = request.Username.Trim();
+        user.UserAlias = request.UserAlias.Trim();
+        user.UserPassword = request.UserPassword.Trim();
+        user.UserRole = request.UserRole;
+        user.ModifiedOn = DateTime.Now;
+        user.ModifiedBy = actorId;
+        user.Retired = false;
+
+        await writeContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(MapToUserRecordResponse(user));
+    }
+
+    [HttpDelete("users/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUser(
+        Guid id,
+        [FromServices] JB5LegacyWriteContext writeContext,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await writeContext.UserInfos
+            .FirstOrDefaultAsync(x => x.UserId == id, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "User not found",
+                Detail = $"No user exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var actorId = ResolveActorId();
+
+        if (user.Retired)
+        {
+            writeContext.UserInfos.Remove(user);
+        }
+        else
+        {
+            user.Retired = true;
+            user.RetiredOn = DateTime.Now;
+            user.RetiredBy = actorId;
+            user.ModifiedOn = DateTime.Now;
+            user.ModifiedBy = actorId;
+        }
+
+        await writeContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    private static AdminUserRecordResponse MapToUserRecordResponse(UserInfo user)
+    {
+        return new AdminUserRecordResponse
+        {
+            UserId = user.UserId,
+            Username = user.UserName?.Trim() ?? string.Empty,
+            UserAlias = user.UserAlias?.Trim() ?? string.Empty,
+            UserPassword = user.UserPassword?.Trim() ?? string.Empty,
+            UserRole = user.UserRole,
+            Role = MapUserRole(user.UserRole),
+            PrimaryRec = user.PrimaryRec,
+            CreatedOn = user.CreatedOn,
+            CreatedBy = user.CreatedBy.ToString(),
+            ModifiedOn = user.ModifiedOn,
+            ModifiedBy = user.ModifiedBy.ToString(),
+        };
+    }
+
     private static string MapUserRole(int role)
     {
         return role switch

@@ -81,6 +81,10 @@
             {{ t('admin.user.actions.views') }}
           </v-btn>
 
+          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
+            {{ t('admin.user.actions.newUser') }}
+          </v-btn>
+
           <v-divider vertical class="mx-1" />
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
@@ -89,10 +93,6 @@
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.user.actions.preference')">
             {{ t('admin.user.actions.preference') }}
-          </v-btn>
-
-          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="showUnavailable('admin.user.actions.newUser')">
-            {{ t('admin.user.actions.newUser') }}
           </v-btn>
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedUserId" @click="openPopup">
@@ -133,6 +133,22 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="760" scrollable>
+      <AdminUserRecordDialog
+        :user-id="editingUserId"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -140,8 +156,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
 import { getAdminUsers } from '@/services/admin'
-import type { AdminUser } from '@/types/api'
+import type { AdminUser, AdminUserRecord } from '@/types/api'
 
 type AdminUserDisplayItem = AdminUser & {
   icon: string
@@ -154,6 +171,10 @@ const lookup = ref('')
 const errorMessage = ref('')
 const checkboxMode = ref(false)
 const selectedUserIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const editingUserId = ref<string | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 const sortDirection = ref<'asc' | 'desc'>('asc')
 const sortKey = ref('userAlias')
 const visibleColumnKeys = ref<string[]>([
@@ -258,15 +279,39 @@ function toggleColumn(columnKey: string) {
 function onRowClick(_event: Event, payload: { item: AdminUser }) {
   if (checkboxMode.value) return
   selectedUserIds.value = [payload.item.userId]
+  openPopup(payload.item.userId)
 }
 
-function openPopup() {
-  if (!selectedUserId.value) {
+function openPopup(userId = selectedUserId.value ?? editingUserId.value) {
+  if (!userId) {
     errorMessage.value = t('admin.user.messages.selectRecordFirst')
     return
   }
 
-  errorMessage.value = t('admin.user.messages.popupUnavailable')
+  editingUserId.value = userId
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+function openNewUser() {
+  editingUserId.value = null
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(user: AdminUserRecord) {
+  await load()
+  selectedUserIds.value = [user.userId]
+  editingUserId.value = user.userId
+  successMessage.value = t('admin.user.messages.saveSuccess')
+  saveSuccess.value = true
+}
+
+async function handleDeleted(id: string) {
+  await load()
+  selectedUserIds.value = selectedUserIds.value.filter((userId) => userId !== id)
+  successMessage.value = t('admin.user.messages.deleteSuccess')
+  saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {

@@ -19,6 +19,34 @@ export interface AdminUser {
   modifiedBy: string
 }
 
+export interface AdminUserRecord {
+  userId: string
+  username: string
+  userAlias: string
+  userPassword: string
+  userRole: number
+  role: string
+  primaryRec: boolean
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
+export interface CreateAdminUserRequest {
+  username: string
+  userAlias: string
+  userPassword: string
+  userRole: number
+}
+
+export interface UpdateAdminUserRequest {
+  username: string
+  userAlias: string
+  userPassword: string
+  userRole: number
+}
+
 export interface AdminWorkflowListItem {
   workflowId: string
   workflowName: string

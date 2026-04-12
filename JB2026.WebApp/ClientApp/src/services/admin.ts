@@ -1,6 +1,7 @@
 import { apiClient } from './api'
 import type {
   AdminUser,
+  AdminUserRecord,
   AdminWorkflowListItem,
   AdminWorkflowFormListItem,
   AdminCustomerListItem,
@@ -11,6 +12,8 @@ import type {
   AdminSupplierRecord,
   AdminOrderTypeWorkflowPayload,
   UpdateAdminOrderTypeWorkflowsRequest,
+  CreateAdminUserRequest,
+  UpdateAdminUserRequest,
   CreateAdminCustomerRequest,
   UpdateAdminCustomerRequest,
   CreateAdminSupplierRequest,
@@ -40,6 +43,25 @@ export async function getAdminUsers(query: AdminUsersQuery = {}): Promise<AdminU
     },
   })
   return response.data
+}
+
+export async function getAdminUser(id: string): Promise<AdminUserRecord> {
+  const response = await apiClient.get<AdminUserRecord>(`/api/v2/admin/users/${id}`)
+  return response.data
+}
+
+export async function createAdminUser(request: CreateAdminUserRequest): Promise<AdminUserRecord> {
+  const response = await apiClient.post<AdminUserRecord>('/api/v2/admin/users', request)
+  return response.data
+}
+
+export async function updateAdminUser(id: string, request: UpdateAdminUserRequest): Promise<AdminUserRecord> {
+  const response = await apiClient.put<AdminUserRecord>(`/api/v2/admin/users/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/users/${id}`)
 }
 
 export async function getAdminWorkflows(query: AdminWorkflowsQuery = {}): Promise<AdminWorkflowListItem[]> {
