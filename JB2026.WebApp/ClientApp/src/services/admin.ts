@@ -3,6 +3,11 @@ import type {
   AdminUser,
   AdminUserRecord,
   AdminWorkflowListItem,
+  AdminWorkflowRecord,
+  CreateAdminWorkflowRequest,
+  UpdateAdminWorkflowRequest,
+  AdminWorkflowAssignedFormItem,
+  UpdateAdminWorkflowFormsRequest,
   AdminWorkflowFormListItem,
   AdminWorkflowFormRecord,
   CreateAdminWorkflowFormRequest,
@@ -77,6 +82,34 @@ export async function getAdminWorkflows(query: AdminWorkflowsQuery = {}): Promis
   })
 
   return response.data
+}
+
+export async function getAdminWorkflow(id: string): Promise<AdminWorkflowRecord> {
+  const response = await apiClient.get<AdminWorkflowRecord>(`/api/v2/admin/workflows/${id}`)
+  return response.data
+}
+
+export async function createAdminWorkflow(request: CreateAdminWorkflowRequest): Promise<AdminWorkflowRecord> {
+  const response = await apiClient.post<AdminWorkflowRecord>('/api/v2/admin/workflows', request)
+  return response.data
+}
+
+export async function updateAdminWorkflow(id: string, request: UpdateAdminWorkflowRequest): Promise<AdminWorkflowRecord> {
+  const response = await apiClient.put<AdminWorkflowRecord>(`/api/v2/admin/workflows/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminWorkflow(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/workflows/${id}`)
+}
+
+export async function getAdminWorkflowAssignedForms(workflowId: string): Promise<AdminWorkflowAssignedFormItem[]> {
+  const response = await apiClient.get<AdminWorkflowAssignedFormItem[]>(`/api/v2/admin/workflows/${workflowId}/workflow-forms`)
+  return response.data
+}
+
+export async function saveAdminWorkflowAssignedForms(workflowId: string, request: UpdateAdminWorkflowFormsRequest): Promise<void> {
+  await apiClient.put(`/api/v2/admin/workflows/${workflowId}/workflow-forms`, request)
 }
 
 export interface AdminWorkflowFormsQuery {

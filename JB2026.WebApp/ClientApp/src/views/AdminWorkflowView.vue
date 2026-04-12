@@ -83,11 +83,11 @@
 
           <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="showUnavailable('admin.workflow.actions.newWorkflow')">
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="openNew">
             {{ t('admin.workflow.actions.newWorkflow') }}
           </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedWorkflowId" @click="openPopup">
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedWorkflowId" @click="openEdit">
             {{ t('admin.workflow.actions.popup') }}
           </v-btn>
 
@@ -108,7 +108,7 @@
           height="62vh"
           class="workflow-table"
           @click:row="onRowClick"
-          @dblclick="openPopup"
+          @dblclick="openEdit"
         >
           <template #[`item.icon`]>
             <v-icon size="14" color="secondary">mdi-cog</v-icon>
@@ -120,6 +120,22 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="760" scrollable>
+      <AdminWorkflowRecordDialog
+        :item="editingItem"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -129,6 +145,7 @@ import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import { getAdminWorkflows } from '@/services/admin'
 import type { AdminWorkflowListItem } from '@/types/api'
+import AdminWorkflowRecordDialog from '@/components/forms/AdminWorkflowRecordDialog.vue'
 
 type WorkflowDisplayItem = AdminWorkflowListItem & {
   icon: string
@@ -144,6 +161,10 @@ const selectedWorkflowIds = ref<string[]>([])
 const sortDirection = ref<'asc' | 'desc'>('asc')
 const sortKey = ref('workflowName')
 const visibleColumnKeys = ref<string[]>(['icon', 'workflowName', 'ln', 'workTitle', 'workInstruction'])
+const dialogOpen = ref(false)
+const editingItem = ref<AdminWorkflowListItem | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
@@ -208,7 +229,6 @@ async function load() {
 }
 
 async function applyLookup() {
-  activeShortcut.value = 'All'
   await load()
 }
 
@@ -231,15 +251,42 @@ function toggleColumn(columnKey: string) {
 function onRowClick(_event: Event, payload: { item: AdminWorkflowListItem }) {
   if (checkboxMode.value) return
   selectedWorkflowIds.value = [payload.item.workflowId]
+  editingItem.value = payload.item
+  dialogOpen.value = true
 }
 
-function openPopup() {
+function openNew() {
+  editingItem.value = null
+  dialogOpen.value = true
+}
+
+function openEdit() {
   if (!selectedWorkflowId.value) {
     errorMessage.value = t('admin.workflow.messages.selectRecordFirst')
     return
   }
 
-  errorMessage.value = t('admin.workflow.messages.popupUnavailable')
+  editingItem.value = rows.value.find((item) => item.workflowId === selectedWorkflowId.value) ?? null
+  dialogOpen.value = true
+}
+
+function handleSaved(item: AdminWorkflowListItem) {
+  const idx = rows.value.findIndex((x) => x.workflowId === item.workflowId)
+  if (idx >= 0) {
+    rows.value[idx] = item
+  } else {
+    rows.value = [item, ...rows.value]
+  }
+
+  selectedWorkflowIds.value = [item.workflowId]
+  successMessage.value = t('admin.workflow.form.save')
+  saveSuccess.value = true
+}
+
+function handleDeleted(id: string) {
+  rows.value = rows.value.filter((x) => x.workflowId !== id)
+  selectedWorkflowIds.value = selectedWorkflowIds.value.filter((x) => x !== id)
+  dialogOpen.value = false
 }
 
 function showUnavailable(actionKey: string) {

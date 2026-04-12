@@ -1129,6 +1129,228 @@ public sealed class AdminController : ControllerBase
         return Ok(workflows);
     }
 
+    [HttpGet("workflows/{id:guid}")]
+    [ProducesResponseType(typeof(AdminWorkflowRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminWorkflowRecordResponse>> GetWorkflow(
+        [FromServices] IZWorkflowStoredProcedureGateway gateway,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var workflow = await gateway.SelectAsync(id, cancellationToken);
+        if (workflow is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new AdminWorkflowRecordResponse
+        {
+            WorkflowId = workflow.WorkflowId,
+            WorkflowName = workflow.WorkflowName ?? string.Empty,
+            WorkTitle = workflow.WorkTitle ?? string.Empty,
+            WorkInstruction = workflow.WorkInstruction ?? string.Empty,
+        });
+    }
+
+    [HttpPost("workflows")]
+    [ProducesResponseType(typeof(AdminWorkflowRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminWorkflowRecordResponse>> CreateWorkflow(
+        [FromServices] IZWorkflowStoredProcedureGateway gateway,
+        [FromBody] CreateAdminWorkflowRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new ValidationProblemDetails(ModelState));
+        }
+
+        var createRequest = new CreateZWorkflowStoredProcedureRequest(
+            WorkflowName: request.WorkflowName.Trim(),
+            WorkTitle: request.WorkTitle.Trim(),
+            WorkInstruction: request.WorkInstruction.Trim());
+
+        var newId = await gateway.InsertAsync(createRequest, cancellationToken);
+        var workflow = await gateway.SelectAsync(newId, cancellationToken);
+        if (workflow is null)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        var response = new AdminWorkflowRecordResponse
+        {
+            WorkflowId = workflow.WorkflowId,
+            WorkflowName = workflow.WorkflowName ?? string.Empty,
+            WorkTitle = workflow.WorkTitle ?? string.Empty,
+            WorkInstruction = workflow.WorkInstruction ?? string.Empty,
+        };
+
+        return CreatedAtAction(nameof(GetWorkflow), new { id = newId }, response);
+    }
+
+    [HttpPut("workflows/{id:guid}")]
+    [ProducesResponseType(typeof(AdminWorkflowRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminWorkflowRecordResponse>> UpdateWorkflow(
+        [FromServices] IZWorkflowStoredProcedureGateway gateway,
+        Guid id,
+        [FromBody] UpdateAdminWorkflowRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new ValidationProblemDetails(ModelState));
+        }
+
+        var existing = await gateway.SelectAsync(id, cancellationToken);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var updateRequest = new UpdateZWorkflowStoredProcedureRequest(
+            WorkflowId: id,
+            WorkflowName: request.WorkflowName.Trim(),
+            WorkTitle: request.WorkTitle.Trim(),
+            WorkInstruction: request.WorkInstruction.Trim());
+
+        await gateway.UpdateAsync(updateRequest, cancellationToken);
+
+        var workflow = await gateway.SelectAsync(id, cancellationToken);
+        return Ok(new AdminWorkflowRecordResponse
+        {
+            WorkflowId = workflow!.WorkflowId,
+            WorkflowName = workflow.WorkflowName ?? string.Empty,
+            WorkTitle = workflow.WorkTitle ?? string.Empty,
+            WorkInstruction = workflow.WorkInstruction ?? string.Empty,
+        });
+    }
+
+    [HttpDelete("workflows/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteWorkflow(
+        [FromServices] IZWorkflowStoredProcedureGateway workflowGateway,
+        [FromServices] IZWorkflowFormStoredProcedureGateway workflowFormGateway,
+        [FromServices] JB5LegacyReadContext readContext,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await workflowGateway.SelectAsync(id, cancellationToken);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var existingWorkflowForms = await readContext.Z_WorkflowForms
+            .AsNoTracking()
+            .Where(wf => wf.WorkflowId == id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var wf in existingWorkflowForms)
+        {
+            await workflowFormGateway.DeleteAsync(wf.WorkflowFormId, cancellationToken);
+        }
+
+        await workflowGateway.DeleteAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("workflows/{id:guid}/workflow-forms")]
+    [ProducesResponseType(typeof(IReadOnlyList<AdminWorkflowAssignedFormItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<AdminWorkflowAssignedFormItemResponse>>> GetWorkflowAssignedForms(
+        [FromServices] JB5LegacyReadContext readContext,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var workflowExists = await readContext.Z_Workflows.AsNoTracking().AnyAsync(w => w.WorkflowId == id, cancellationToken);
+        if (!workflowExists)
+        {
+            return NotFound();
+        }
+
+        var assigned = await readContext.Z_WorkflowForms
+            .AsNoTracking()
+            .Where(wf => wf.WorkflowId == id)
+            .Join(
+                readContext.Z_Forms.AsNoTracking(),
+                wf => wf.FormId,
+                form => form.FormId,
+                (wf, form) => new AdminWorkflowAssignedFormItemResponse
+                {
+                    WorkflowFormId = wf.WorkflowFormId,
+                    FormId = form.FormId,
+                    SeqNumber = wf.SeqNumber,
+                    FormName = form.FormName ?? string.Empty,
+                    FormNameChs = form.FormName_Chs ?? string.Empty,
+                    FormNameCht = form.FormName_Cht ?? string.Empty,
+                    MetadataXml = form.MetadataXml,
+                })
+            .OrderBy(item => item.SeqNumber)
+            .ToListAsync(cancellationToken);
+
+        return Ok(assigned);
+    }
+
+    [HttpPut("workflows/{id:guid}/workflow-forms")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SaveWorkflowAssignedForms(
+        [FromServices] JB5LegacyReadContext readContext,
+        [FromServices] IZWorkflowFormStoredProcedureGateway workflowFormGateway,
+        Guid id,
+        [FromBody] UpdateAdminWorkflowFormsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new ValidationProblemDetails(ModelState));
+        }
+
+        var workflowExists = await readContext.Z_Workflows.AsNoTracking().AnyAsync(w => w.WorkflowId == id, cancellationToken);
+        if (!workflowExists)
+        {
+            return NotFound();
+        }
+
+        var normalizedFormIds = (request.FormIds ?? [])
+            .Where(formId => formId != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        var validFormIds = await readContext.Z_Forms
+            .AsNoTracking()
+            .Where(form => normalizedFormIds.Contains(form.FormId))
+            .Select(form => form.FormId)
+            .ToListAsync(cancellationToken);
+
+        var validFormIdSet = validFormIds.ToHashSet();
+        var finalFormIds = normalizedFormIds.Where(formId => validFormIdSet.Contains(formId)).ToList();
+
+        var existingRows = await readContext.Z_WorkflowForms
+            .AsNoTracking()
+            .Where(wf => wf.WorkflowId == id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var row in existingRows)
+        {
+            await workflowFormGateway.DeleteAsync(row.WorkflowFormId, cancellationToken);
+        }
+
+        for (var i = 0; i < finalFormIds.Count; i++)
+        {
+            await workflowFormGateway.InsertAsync(new CreateZWorkflowFormStoredProcedureRequest(
+                WorkflowId: id,
+                FormId: finalFormIds[i],
+                SeqNumber: i), cancellationToken);
+        }
+
+        return NoContent();
+    }
+
     [HttpGet("workflow-forms")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminWorkflowFormListItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]

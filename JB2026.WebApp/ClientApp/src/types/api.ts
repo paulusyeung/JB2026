@@ -54,6 +54,39 @@ export interface AdminWorkflowListItem {
   workInstruction: string
 }
 
+export interface AdminWorkflowRecord {
+  workflowId: string
+  workflowName: string
+  workTitle: string
+  workInstruction: string
+}
+
+export interface CreateAdminWorkflowRequest {
+  workflowName: string
+  workTitle: string
+  workInstruction: string
+}
+
+export interface UpdateAdminWorkflowRequest {
+  workflowName: string
+  workTitle: string
+  workInstruction: string
+}
+
+export interface AdminWorkflowAssignedFormItem {
+  workflowFormId: string
+  formId: string
+  seqNumber: number
+  formName: string
+  formNameChs: string
+  formNameCht: string
+  metadataXml: string | null
+}
+
+export interface UpdateAdminWorkflowFormsRequest {
+  formIds: string[]
+}
+
 export interface AdminWorkflowFormListItem {
   formId: string
   formName: string
