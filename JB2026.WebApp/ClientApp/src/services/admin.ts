@@ -4,6 +4,7 @@ import type {
   AdminWorkflowListItem,
   AdminWorkflowFormListItem,
   AdminCustomerListItem,
+  AdminSupplierListItem,
   AdminOrderTypeWorkflowPayload,
   UpdateAdminOrderTypeWorkflowsRequest,
 } from '@/types/api'
@@ -62,8 +63,24 @@ export interface AdminCustomersQuery {
   take?: number
 }
 
+export interface AdminSuppliersQuery {
+  lookup?: string
+  take?: number
+}
+
 export async function getAdminCustomers(query: AdminCustomersQuery = {}): Promise<AdminCustomerListItem[]> {
   const response = await apiClient.get<AdminCustomerListItem[]>('/api/v2/admin/customers', {
+    params: {
+      lookup: query.lookup ?? '',
+      take: query.take ?? 500,
+    },
+  })
+
+  return response.data
+}
+
+export async function getAdminSuppliers(query: AdminSuppliersQuery = {}): Promise<AdminSupplierListItem[]> {
+  const response = await apiClient.get<AdminSupplierListItem[]>('/api/v2/admin/suppliers', {
     params: {
       lookup: query.lookup ?? '',
       take: query.take ?? 500,

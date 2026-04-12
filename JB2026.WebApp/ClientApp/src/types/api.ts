@@ -45,6 +45,18 @@ export interface AdminCustomerListItem {
   modifiedBy: string
 }
 
+export interface AdminSupplierListItem {
+  supplierId: string
+  supplierName: string
+  loginAccount: string
+  loginPassword: string
+  supplierCode: string
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
 export interface AdminOrderTypeWorkflowItem {
   workflowId: string
   workflowName: string

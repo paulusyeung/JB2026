@@ -88,6 +88,7 @@ export const smlMessages = {
           all: 'All',
         },
         actions: {
+          newSupplier: 'New Supplier',
           attachment: 'Attachment',
           export: 'Export',
           delete: 'Delete',

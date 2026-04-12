@@ -42,6 +42,9 @@
         </div>
 
         <div class="toolbar-bar mb-3">
+          <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-plus" disabled>
+            {{ t('sml.invoiceList.actions.newSupplier') }}
+          </v-btn>
           <v-btn size="small" variant="outlined" prepend-icon="mdi-paperclip" disabled>
             {{ t('sml.invoiceList.actions.attachment') }}
           </v-btn>

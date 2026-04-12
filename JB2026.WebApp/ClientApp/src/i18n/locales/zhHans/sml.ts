@@ -88,6 +88,7 @@ export const smlMessages = {
           all: '全部',
         },
         actions: {
+          newSupplier: '新增供应商',
           attachment: '附件',
           export: '导出',
           delete: '删除',

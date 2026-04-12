@@ -180,6 +180,8 @@ const router = createRouter({
           ? () => import('@/views/AdminUserView.vue')
         : route.path === '/admin/customer'
           ? () => import('@/views/AdminCustomerView.vue')
+        : route.path === '/admin/supplier'
+          ? () => import('@/views/AdminSupplierView.vue')
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),

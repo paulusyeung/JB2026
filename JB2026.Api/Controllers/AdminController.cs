@@ -80,6 +80,75 @@ public sealed class AdminController : ControllerBase
         };
     }
 
+    [HttpGet("suppliers")]
+    [ProducesResponseType(typeof(IReadOnlyList<AdminSupplierListItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<AdminSupplierListItemResponse>>> GetSuppliers(
+        [FromServices] JB5LegacyReadContext readContext,
+        [FromQuery] string? lookup,
+        [FromQuery] int take = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is <= 0 or > 1000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 1000."]
+            }));
+        }
+
+        var normalizedLookup = lookup?.Trim();
+
+        var rawQuery = readContext.vwSupplierList_Actives
+            .AsNoTracking()
+            .GroupJoin(
+                readContext.Suppliers.AsNoTracking(),
+                supplierView => supplierView.SupplierId,
+                supplier => supplier.SupplierId,
+                (supplierView, supplierGroup) => new { supplierView, supplierGroup })
+            .SelectMany(
+                x => x.supplierGroup.DefaultIfEmpty(),
+                (x, supplier) => new
+                {
+                    x.supplierView.SupplierId,
+                    x.supplierView.SupplierName,
+                    x.supplierView.LoginAccount,
+                    x.supplierView.LoginPassword,
+                    x.supplierView.CreatedOn,
+                    x.supplierView.CreatedBy,
+                    x.supplierView.ModifiedOn,
+                    x.supplierView.ModifiedBy,
+                    MetadataXml = supplier != null ? supplier.MetadataXml : null,
+                });
+
+        if (!string.IsNullOrWhiteSpace(normalizedLookup))
+        {
+            rawQuery = rawQuery.Where(row =>
+                row.SupplierName.Contains(normalizedLookup) ||
+                row.LoginAccount.Contains(normalizedLookup));
+        }
+
+        var rows = await rawQuery
+            .OrderBy(row => row.SupplierName)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        var result = rows.Select(row => new AdminSupplierListItemResponse
+        {
+            SupplierId = row.SupplierId,
+            SupplierName = row.SupplierName,
+            LoginAccount = row.LoginAccount,
+            LoginPassword = row.LoginPassword,
+            SupplierCode = TryExtractMetadataCode(row.MetadataXml, "SupplierCode"),
+            CreatedOn = row.CreatedOn,
+            CreatedBy = row.CreatedBy ?? string.Empty,
+            ModifiedOn = row.ModifiedOn,
+            ModifiedBy = row.ModifiedBy ?? string.Empty,
+        }).ToArray();
+
+        return Ok(result);
+    }
+
     [HttpGet("customers")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminCustomerListItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -139,7 +208,7 @@ public sealed class AdminController : ControllerBase
             CustomerName = row.CustomerName,
             LoginAccount = row.LoginAccount,
             LoginPassword = row.LoginPassword,
-            CustomerCode = TryExtractCustomerCode(row.MetadataXml),
+            CustomerCode = TryExtractMetadataCode(row.MetadataXml, "CustomerCode"),
             CreatedOn = row.CreatedOn,
             CreatedBy = row.CreatedBy ?? string.Empty,
             ModifiedOn = row.ModifiedOn,
@@ -149,7 +218,7 @@ public sealed class AdminController : ControllerBase
         return Ok(result);
     }
 
-    private static string TryExtractCustomerCode(string? metadataXml)
+    private static string TryExtractMetadataCode(string? metadataXml, string propertyName)
     {
         if (string.IsNullOrWhiteSpace(metadataXml))
         {
@@ -158,7 +227,7 @@ public sealed class AdminController : ControllerBase
 
         var trimmed = metadataXml.Trim();
 
-        if (TryExtractCustomerCodeFromJson(trimmed, out var jsonCode))
+        if (TryExtractMetadataCodeFromJson(trimmed, propertyName, out var jsonCode))
         {
             return jsonCode;
         }
@@ -166,20 +235,20 @@ public sealed class AdminController : ControllerBase
         try
         {
             var document = XDocument.Parse(trimmed);
-            var customerCodeElement = document
+            var codeElement = document
                 .Descendants()
-                .FirstOrDefault(element => string.Equals(element.Name.LocalName, "CustomerCode", StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(element => string.Equals(element.Name.LocalName, propertyName, StringComparison.OrdinalIgnoreCase));
 
-            if (customerCodeElement is not null)
+            if (codeElement is not null)
             {
-                return customerCodeElement.Value.Trim();
+                return codeElement.Value.Trim();
             }
 
             var metadataJsonElement = document
                 .Descendants()
                 .FirstOrDefault(element => string.Equals(element.Name.LocalName, "MetadataJson", StringComparison.OrdinalIgnoreCase));
 
-            if (metadataJsonElement is not null && TryExtractCustomerCodeFromJson(metadataJsonElement.Value, out var nestedJsonCode))
+            if (metadataJsonElement is not null && TryExtractMetadataCodeFromJson(metadataJsonElement.Value, propertyName, out var nestedJsonCode))
             {
                 return nestedJsonCode;
             }
@@ -192,7 +261,7 @@ public sealed class AdminController : ControllerBase
         return string.Empty;
     }
 
-    private static bool TryExtractCustomerCodeFromJson(string json, out string customerCode)
+    private static bool TryExtractMetadataCodeFromJson(string json, string propertyName, out string customerCode)
     {
         customerCode = string.Empty;
 
@@ -204,14 +273,14 @@ public sealed class AdminController : ControllerBase
                 return false;
             }
 
-            if (TryGetCustomerCodeProperty(document.RootElement, out customerCode))
+            if (TryGetMetadataCodeProperty(document.RootElement, propertyName, out customerCode))
             {
                 return true;
             }
 
             if (document.RootElement.TryGetProperty("MetadataJson", out var nestedMetadataJson)
                 && nestedMetadataJson.ValueKind == JsonValueKind.String
-                && TryExtractCustomerCodeFromJson(nestedMetadataJson.GetString() ?? string.Empty, out customerCode))
+                && TryExtractMetadataCodeFromJson(nestedMetadataJson.GetString() ?? string.Empty, propertyName, out customerCode))
             {
                 return true;
             }
@@ -224,13 +293,13 @@ public sealed class AdminController : ControllerBase
         return false;
     }
 
-    private static bool TryGetCustomerCodeProperty(JsonElement element, out string customerCode)
+    private static bool TryGetMetadataCodeProperty(JsonElement element, string propertyName, out string customerCode)
     {
         customerCode = string.Empty;
 
         foreach (var property in element.EnumerateObject())
         {
-            if (!string.Equals(property.Name, "CustomerCode", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
