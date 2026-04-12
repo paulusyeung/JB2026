@@ -61,6 +61,28 @@ export interface AdminWorkflowFormListItem {
   formNameCht: string
 }
 
+export interface AdminWorkflowFormRecord {
+  formId: string
+  formObjectEnum: number
+  formName: string
+  formNameChs: string
+  formNameCht: string
+  metadataXml: string | null
+}
+
+export interface CreateAdminWorkflowFormRequest {
+  formName: string
+  formNameChs: string
+  formNameCht: string
+}
+
+export interface UpdateAdminWorkflowFormRequest {
+  formName: string
+  formNameChs: string
+  formNameCht: string
+  metadataXml: string | null
+}
+
 export interface AdminCustomerListItem {
   customerId: string
   customerName: string

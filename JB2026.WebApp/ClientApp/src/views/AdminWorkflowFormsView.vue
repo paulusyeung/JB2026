@@ -83,11 +83,11 @@
 
           <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="showUnavailable('admin.workflowForms.actions.newForm')">
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="openNew">
             {{ t('admin.workflowForms.actions.newForm') }}
           </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedFormId" @click="openPopup">
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedFormId" @click="openEdit">
             {{ t('admin.workflowForms.actions.popup') }}
           </v-btn>
 
@@ -108,7 +108,7 @@
           height="62vh"
           class="workflow-forms-table"
           @click:row="onRowClick"
-          @dblclick="openPopup"
+          @dblclick="openEdit"
         >
           <template #[`item.icon`]>
             <v-icon size="14" color="secondary">mdi-form-select</v-icon>
@@ -120,6 +120,23 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="dialogOpen" max-width="560" scrollable>
+      <AdminWorkflowFormRecordDialog
+        :item="editingItem"
+        @saved="handleSaved"
+        @deleted="handleDeleted"
+        @duplicated="handleDuplicated"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -129,6 +146,7 @@ import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import { getAdminWorkflowForms } from '@/services/admin'
 import type { AdminWorkflowFormListItem } from '@/types/api'
+import AdminWorkflowFormRecordDialog from '@/components/forms/AdminWorkflowFormRecordDialog.vue'
 
 type WorkflowFormDisplayItem = AdminWorkflowFormListItem & {
   icon: string
@@ -144,6 +162,10 @@ const selectedFormIds = ref<string[]>([])
 const sortDirection = ref<'asc' | 'desc'>('asc')
 const sortKey = ref('formName')
 const visibleColumnKeys = ref<string[]>(['icon', 'formName', 'ln', 'formNameChs', 'formNameCht'])
+const dialogOpen = ref(false)
+const editingItem = ref<AdminWorkflowFormListItem | null>(null)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
@@ -229,19 +251,47 @@ function toggleColumn(columnKey: string) {
 function onRowClick(_event: Event, payload: { item: AdminWorkflowFormListItem }) {
   if (checkboxMode.value) return
   selectedFormIds.value = [payload.item.formId]
+  editingItem.value = payload.item
+  dialogOpen.value = true
 }
 
-function openPopup() {
+function openNew() {
+  editingItem.value = null
+  dialogOpen.value = true
+}
+
+function openEdit() {
   if (!selectedFormId.value) {
     errorMessage.value = t('admin.workflowForms.messages.selectRecordFirst')
     return
   }
-
-  errorMessage.value = t('admin.workflowForms.messages.popupUnavailable')
+  const found = rows.value.find((r) => r.formId === selectedFormId.value) ?? null
+  editingItem.value = found
+  dialogOpen.value = true
 }
 
-function showUnavailable(actionKey: string) {
-  errorMessage.value = t('admin.workflowForms.messages.actionUnavailable', { action: t(actionKey) })
+function handleSaved(item: AdminWorkflowFormListItem) {
+  const idx = rows.value.findIndex((r) => r.formId === item.formId)
+  if (idx >= 0) {
+    rows.value[idx] = item
+  } else {
+    rows.value = [item, ...rows.value]
+    selectedFormIds.value = [item.formId]
+  }
+  successMessage.value = t('admin.workflowForms.form.save')
+  saveSuccess.value = true
+}
+
+function handleDeleted(id: string) {
+  rows.value = rows.value.filter((r) => r.formId !== id)
+  selectedFormIds.value = selectedFormIds.value.filter((fid) => fid !== id)
+  dialogOpen.value = false
+}
+
+function handleDuplicated(item: AdminWorkflowFormListItem) {
+  rows.value = [item, ...rows.value]
+  selectedFormIds.value = [item.formId]
+  editingItem.value = item
 }
 </script>
 

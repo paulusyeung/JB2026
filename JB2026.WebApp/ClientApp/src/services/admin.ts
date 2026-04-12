@@ -4,6 +4,9 @@ import type {
   AdminUserRecord,
   AdminWorkflowListItem,
   AdminWorkflowFormListItem,
+  AdminWorkflowFormRecord,
+  CreateAdminWorkflowFormRequest,
+  UpdateAdminWorkflowFormRequest,
   AdminCustomerListItem,
   AdminCustomerRecord,
   AdminQuotationItemGroupListItem,
@@ -89,6 +92,30 @@ export async function getAdminWorkflowForms(query: AdminWorkflowFormsQuery = {})
     },
   })
 
+  return response.data
+}
+
+export async function getAdminWorkflowForm(id: string): Promise<AdminWorkflowFormRecord> {
+  const response = await apiClient.get<AdminWorkflowFormRecord>(`/api/v2/admin/workflow-forms/${id}`)
+  return response.data
+}
+
+export async function createAdminWorkflowForm(request: CreateAdminWorkflowFormRequest): Promise<AdminWorkflowFormRecord> {
+  const response = await apiClient.post<AdminWorkflowFormRecord>('/api/v2/admin/workflow-forms', request)
+  return response.data
+}
+
+export async function updateAdminWorkflowForm(id: string, request: UpdateAdminWorkflowFormRequest): Promise<AdminWorkflowFormRecord> {
+  const response = await apiClient.put<AdminWorkflowFormRecord>(`/api/v2/admin/workflow-forms/${id}`, request)
+  return response.data
+}
+
+export async function deleteAdminWorkflowForm(id: string): Promise<void> {
+  await apiClient.delete(`/api/v2/admin/workflow-forms/${id}`)
+}
+
+export async function duplicateAdminWorkflowForm(id: string): Promise<AdminWorkflowFormRecord> {
+  const response = await apiClient.post<AdminWorkflowFormRecord>(`/api/v2/admin/workflow-forms/${id}/duplicate`)
   return response.data
 }
 

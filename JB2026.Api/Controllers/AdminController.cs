@@ -1173,6 +1173,190 @@ public sealed class AdminController : ControllerBase
         return Ok(forms);
     }
 
+    [HttpGet("workflow-forms/{id:guid}")]
+    [ProducesResponseType(typeof(AdminWorkflowFormRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminWorkflowFormRecordResponse>> GetWorkflowForm(
+        [FromServices] IZFormStoredProcedureGateway gateway,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await gateway.SelectAsync(id, cancellationToken);
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new AdminWorkflowFormRecordResponse
+        {
+            FormId = record.FormId,
+            FormObjectEnum = record.FormObjectEnum,
+            FormName = record.FormName ?? string.Empty,
+            FormNameChs = record.FormName_Chs ?? string.Empty,
+            FormNameCht = record.FormName_Cht ?? string.Empty,
+            MetadataXml = record.MetadataXml,
+        });
+    }
+
+    [HttpPost("workflow-forms")]
+    [ProducesResponseType(typeof(AdminWorkflowFormRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminWorkflowFormRecordResponse>> CreateWorkflowForm(
+        [FromServices] IZFormStoredProcedureGateway gateway,
+        [FromBody] CreateAdminWorkflowFormRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new ValidationProblemDetails(ModelState));
+        }
+
+        var createRequest = new CreateZFormStoredProcedureRequest(
+            FormObjectEnum: 0,
+            FormName: request.FormName.Trim(),
+            FormName_Chs: request.FormNameChs.Trim(),
+            FormName_Cht: request.FormNameCht.Trim(),
+            MetadataXml: null);
+
+        var newId = await gateway.InsertAsync(createRequest, cancellationToken);
+
+        var record = await gateway.SelectAsync(newId, cancellationToken);
+        if (record is null)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        var response = new AdminWorkflowFormRecordResponse
+        {
+            FormId = record.FormId,
+            FormObjectEnum = record.FormObjectEnum,
+            FormName = record.FormName ?? string.Empty,
+            FormNameChs = record.FormName_Chs ?? string.Empty,
+            FormNameCht = record.FormName_Cht ?? string.Empty,
+            MetadataXml = record.MetadataXml,
+        };
+
+        return CreatedAtAction(nameof(GetWorkflowForm), new { id = newId }, response);
+    }
+
+    [HttpPut("workflow-forms/{id:guid}")]
+    [ProducesResponseType(typeof(AdminWorkflowFormRecordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminWorkflowFormRecordResponse>> UpdateWorkflowForm(
+        [FromServices] IZFormStoredProcedureGateway gateway,
+        Guid id,
+        [FromBody] UpdateAdminWorkflowFormRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new ValidationProblemDetails(ModelState));
+        }
+
+        var existing = await gateway.SelectAsync(id, cancellationToken);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var updateRequest = new UpdateZFormStoredProcedureRequest(
+            FormId: id,
+            FormObjectEnum: existing.FormObjectEnum,
+            FormName: request.FormName.Trim(),
+            FormName_Chs: request.FormNameChs.Trim(),
+            FormName_Cht: request.FormNameCht.Trim(),
+            MetadataXml: request.MetadataXml);
+
+        await gateway.UpdateAsync(updateRequest, cancellationToken);
+
+        var updated = await gateway.SelectAsync(id, cancellationToken);
+        return Ok(new AdminWorkflowFormRecordResponse
+        {
+            FormId = updated!.FormId,
+            FormObjectEnum = updated.FormObjectEnum,
+            FormName = updated.FormName ?? string.Empty,
+            FormNameChs = updated.FormName_Chs ?? string.Empty,
+            FormNameCht = updated.FormName_Cht ?? string.Empty,
+            MetadataXml = updated.MetadataXml,
+        });
+    }
+
+    [HttpDelete("workflow-forms/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteWorkflowForm(
+        [FromServices] IZFormStoredProcedureGateway gateway,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await gateway.SelectAsync(id, cancellationToken);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        await gateway.DeleteAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("workflow-forms/{id:guid}/duplicate")]
+    [ProducesResponseType(typeof(AdminWorkflowFormRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminWorkflowFormRecordResponse>> DuplicateWorkflowForm(
+        [FromServices] IZFormStoredProcedureGateway gateway,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var source = await gateway.SelectAsync(id, cancellationToken);
+        if (source is null)
+        {
+            return NotFound();
+        }
+
+        var baseName = source.FormName ?? string.Empty;
+        var dupName = GenerateDuplicateFormName(baseName);
+
+        var createRequest = new CreateZFormStoredProcedureRequest(
+            FormObjectEnum: source.FormObjectEnum,
+            FormName: dupName,
+            FormName_Chs: GenerateDuplicateFormName(source.FormName_Chs ?? string.Empty),
+            FormName_Cht: GenerateDuplicateFormName(source.FormName_Cht ?? string.Empty),
+            MetadataXml: source.MetadataXml);
+
+        var newId = await gateway.InsertAsync(createRequest, cancellationToken);
+
+        var record = await gateway.SelectAsync(newId, cancellationToken);
+        if (record is null)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        var response = new AdminWorkflowFormRecordResponse
+        {
+            FormId = record.FormId,
+            FormObjectEnum = record.FormObjectEnum,
+            FormName = record.FormName ?? string.Empty,
+            FormNameChs = record.FormName_Chs ?? string.Empty,
+            FormNameCht = record.FormName_Cht ?? string.Empty,
+            MetadataXml = record.MetadataXml,
+        };
+
+        return CreatedAtAction(nameof(GetWorkflowForm), new { id = newId }, response);
+    }
+
+    private static string GenerateDuplicateFormName(string originalName)
+    {
+        if (string.IsNullOrEmpty(originalName))
+        {
+            return "_1";
+        }
+
+        // Truncate to 7 chars then append _N suffix (max 10 chars total, matching legacy)
+        var truncated = originalName.Length >= 8 ? originalName[..7] : originalName;
+        return truncated + "_1";
+    }
+
     [HttpGet("quotation-items")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminQuotationItemListItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
