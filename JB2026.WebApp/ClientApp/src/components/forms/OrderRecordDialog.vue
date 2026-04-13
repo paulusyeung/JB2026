@@ -35,6 +35,26 @@
           />
         </v-col>
         <v-col cols="12" md="4">
+          <v-text-field
+            v-model="draft.orderedOn"
+            type="date"
+            :label="t('jobOrder.record.fields.orderedOn')"
+            variant="outlined"
+            density="compact"
+            :readonly="mode === 'edit'"
+          />
+        </v-col>
+        <v-col cols="12" md="4">
+          <v-text-field
+            :model-value="formatDate(mode === 'edit' ? orderModifiedOn : null)"
+            :label="t('jobOrder.record.fields.modifiedOn')"
+            variant="outlined"
+            density="compact"
+            readonly
+          />
+        </v-col>
+
+        <v-col cols="12" md="4">
           <v-select
             v-model="draft.customerName"
             :items="customerOptions"
@@ -45,37 +65,7 @@
             @update:model-value="handleCustomerChanged"
           />
         </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field
-            v-model="draft.orderedOn"
-            type="date"
-            :label="t('jobOrder.record.fields.orderedOn')"
-            variant="outlined"
-            density="compact"
-            :readonly="mode === 'edit'"
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field
-            :model-value="formatDate(mode === 'edit' ? orderModifiedOn : null)"
-            :label="t('jobOrder.record.fields.modifiedOn')"
-            variant="outlined"
-            density="compact"
-            readonly
-          />
-        </v-col>
-      </v-row>
-
-      <v-row dense>
         <v-col cols="12" md="4">
-          <v-text-field
-            v-model="draft.orderTitle"
-            :label="t('jobOrder.record.fields.brand')"
-            variant="outlined"
-            density="compact"
-          />
-        </v-col>
-        <v-col cols="12" md="2">
           <v-select
             v-model="draft.orderedBy"
             :items="orderedByOptions"
@@ -85,7 +75,25 @@
             :disabled="mode === 'edit'"
           />
         </v-col>
-        <v-col cols="12" md="2">
+        <v-col cols="12" md="4">
+          <v-text-field
+            :model-value="order?.invoiceRef || '-'"
+            :label="t('jobOrder.record.fields.invoiceNo')"
+            variant="outlined"
+            density="compact"
+            readonly
+          />
+        </v-col>
+
+        <v-col cols="12" md="4">
+          <v-text-field
+            v-model="draft.orderTitle"
+            :label="t('jobOrder.record.fields.brand')"
+            variant="outlined"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="12" md="4">
           <v-text-field
             v-model="draft.requiredOn"
             type="date"
@@ -95,27 +103,7 @@
             :readonly="mode === 'edit'"
           />
         </v-col>
-        <v-col cols="12" md="2">
-          <v-select
-            v-model="draft.paymentTerms"
-            :items="paymentTermsOptions"
-            :label="t('jobOrder.record.fields.paymentTerms')"
-            variant="outlined"
-            density="compact"
-            clearable
-            :disabled="mode === 'edit'"
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field
-            :model-value="order?.invoiceRef || '-'"
-            :label="t('jobOrder.record.fields.invoiceNo')"
-            variant="outlined"
-            density="compact"
-            readonly
-          />
-        </v-col>
-        <v-col cols="12" md="2">
+        <v-col cols="12" md="4">
           <v-text-field
             :model-value="formatAmount(order?.invoiceAmount)"
             :label="t('jobOrder.record.fields.invoiceAmount')"
