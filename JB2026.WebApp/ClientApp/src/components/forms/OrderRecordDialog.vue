@@ -135,9 +135,12 @@
         item-value="orderId"
         density="compact"
         :items-per-page="10"
-        class="order-record-grid"
+        class="order-record-grid text-no-wrap"
         @click:row="onRelatedRowClick"
       >
+        <template #[`header.attachments`]>
+          <v-icon size="small">mdi-paperclip</v-icon>
+        </template>
         <template #[`item.indicator`]="{ item }">
           <v-icon :color="item.orderId === orderId ? 'primary' : statusColor(item.status)" size="16">
             {{ item.orderId === orderId ? 'mdi-circle-slice-8' : statusIcon(item.status) }}
@@ -145,10 +148,23 @@
         </template>
         <template #[`item.orderNumber`]="{ item }">
           <v-btn variant="text" density="comfortable" class="px-0 text-none" @click.stop="emit('open-order', item.orderId)">
-            {{ item.orderNumber }}-{{ item.jobNumber }}
+            <v-icon color="success" size="16" class="mr-1">mdi-tag-outline</v-icon>
+            {{ item.orderNumber }}
           </v-btn>
         </template>
         <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
+        <template #[`item.attachments`]="{ item }">
+          <v-icon v-if="item.attachmentProductCount && item.attachmentProductCount > 0" color="success" size="16">mdi-circle</v-icon>
+        </template>
+        <template #[`header.customerAttachments`]>
+          <v-icon size="small">mdi-paperclip</v-icon>
+        </template>
+        <template #[`item.customerAttachments`]="{ item }">
+          <v-icon v-if="item.attachmentCustomerCount && item.attachmentCustomerCount > 0" color="error" size="16">mdi-circle-outline</v-icon>
+        </template>
+        <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+        <template #[`item.modifiedOn`]="{ item }">{{ formatDateTime(item.modifiedOn) }}</template>
+        <template #[`item.modifiedBy`]="{ item }">{{ formatUser(item.modifiedBy) }}</template>
       </v-data-table>
 
       <v-alert v-if="errorMessage" type="error" variant="tonal" class="mt-3">
@@ -192,6 +208,7 @@ const deleting = ref(false)
 const errorMessage = ref('')
 const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
+const userMap = ref<Record<string, string>>({})
 
 const draft = ref<JobOrderFormData>(props.order ? buildDraft(props.order) : buildCreateDraft())
 
@@ -213,14 +230,22 @@ const orderModifiedOn = computed(() => props.order?.modifiedOn ?? null)
 const orderId = computed(() => props.order?.orderId ?? null)
 
 const relatedHeaders = computed(() => [
-  { title: '', key: 'indicator', sortable: false, width: '28px' },
-  { title: t('jobOrder.headers.order'), key: 'orderNumber' },
-  { title: t('jobOrder.headers.jobNumber'), key: 'jobNumber', width: '80px' },
-  { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '120px' },
-  { title: t('jobOrder.headers.customer'), key: 'customerName' },
-  { title: t('jobOrder.record.fields.brand'), key: 'orderTitle' },
-  { title: t('jobOrder.orderList.headers.productCode'), key: 'productCode' },
-  { title: t('jobOrder.orderList.headers.customerRef'), key: 'customerRef' },
+  { title: t('jobOrder.headers.order'), key: 'orderNumber', width: '130px' },
+  { title: '', key: 'indicator', sortable: false, width: '36px' },
+  { title: '#', key: 'jobNumber', width: '40px' },
+  { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '110px' },
+  { title: t('jobOrder.headers.customer'), key: 'customerName', width: '160px' },
+  { title: t('jobOrder.record.fields.brand'), key: 'orderTitle', width: '200px' },
+  { title: t('jobOrder.orderList.headers.productCode'), key: 'productCode', width: '120px' },
+  { title: '', key: 'attachments', sortable: false, width: '40px' },
+  { title: 'Purchase Order', key: 'customerRef', width: '140px' },
+  { title: '', key: 'customerAttachments', sortable: false, width: '40px' },
+  { title: 'Sales Rep.', key: 'orderedBy', width: '120px' },
+  { title: 'Output Ref.', key: 'outputRef', width: '120px' },
+  { title: 'Required On', key: 'requiredOn', width: '110px' },
+  { title: 'Invoice No.', key: 'invoiceRef', width: '120px' },
+  { title: 'Modified On', key: 'modifiedOn', width: '140px' },
+  { title: 'Modified By', key: 'modifiedBy', width: '120px' },
 ])
 
 const customerOptions = computed(() => {
@@ -367,6 +392,12 @@ async function loadOrderedByOptions() {
     orderedByDynamicOptions.value = users
       .map((user) => user.displayName || user.username)
       .filter((value): value is string => Boolean(value && value.trim()))
+
+    const map: Record<string, string> = {}
+    for (const u of users) {
+      map[u.userId] = u.displayName || u.username
+    }
+    userMap.value = map
   } catch {
     // Keep fallback options from existing order rows when admin lookup fails.
     orderedByDynamicOptions.value = []
@@ -505,6 +536,16 @@ function formatDate(value: string | null | undefined) {
   const normalized = value.slice(0, 10)
   if (!normalized) return '-'
   return normalized
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-'
+  return value.slice(0, 16).replace('T', ' ')
+}
+
+function formatUser(userId: string | null | undefined): string {
+  if (!userId) return '-'
+  return userMap.value[userId] || userId
 }
 
 function formatAmount(value: number | null | undefined) {
