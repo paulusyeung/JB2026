@@ -209,21 +209,21 @@ function handleWorkflowFormsSaved() {
 
 <style scoped>
 .legacy-dialog {
-  background: #d7d7d7;
+  background: rgb(var(--v-theme-surface, 245, 245, 245));
 }
 
 .legacy-titlebar {
-  background: linear-gradient(180deg, #e5edf9, #cbdcf3);
-  border-bottom: 1px solid #9eb6d8;
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary, 25, 118, 210), 0.12), rgba(var(--v-theme-primary, 25, 118, 210), 0.22));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
 }
 
 .legacy-content {
-  background: #d7d7d7;
+  background: rgb(var(--v-theme-surface, 245, 245, 245));
 }
 
 .legacy-toolbar {
-  border: 1px solid #b8c7de;
-  background: linear-gradient(180deg, #eaf2ff, #d2e1f7);
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary, 25, 118, 210), 0.06), rgba(var(--v-theme-primary, 25, 118, 210), 0.14));
   padding: 6px;
 }
 
@@ -234,6 +234,6 @@ function handleWorkflowFormsSaved() {
 .legacy-label {
   padding-top: 8px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.8);
+  color: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.82);
 }
 </style>

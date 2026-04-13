@@ -157,8 +157,9 @@ async function load() {
     allForms.value = forms
     assignedForms.value = [...assigned].sort((a, b) => a.seqNumber - b.seqNumber)
 
-    if (availableForms.value.length > 0) {
-      selectedAvailableId.value = availableForms.value[0].formId
+    const firstAvailable = availableForms.value[0]
+    if (firstAvailable) {
+      selectedAvailableId.value = firstAvailable.formId
     }
     selectedAssignedIndex.value = assignedForms.value.length > 0 ? 0 : -1
   } catch {
@@ -172,14 +173,6 @@ function displayFormName(item: AdminWorkflowFormListItem) {
   return locale.value === 'zhHans'
     ? `${item.formName} - ${item.formNameChs}`
     : `${item.formName} - ${item.formNameCht}`
-}
-
-function displayAssignedName(item: AdminWorkflowAssignedFormItem) {
-  return locale.value === 'zhHans'
-    ? `${item.formName} - ${item.formNameChs}`
-    : locale.value === 'zhHant'
-      ? `${item.formName} - ${item.formNameCht}`
-      : `${item.formName}`
 }
 
 function addSelected() {
@@ -225,9 +218,7 @@ function moveUp(index: number) {
   }
 
   const next = [...assignedForms.value]
-  const tmp = next[index - 1]
-  next[index - 1] = next[index]
-  next[index] = tmp
+  ;[next[index - 1], next[index]] = [next[index]!, next[index - 1]!]
   assignedForms.value = next
   selectedAssignedIndex.value = index - 1
 }
@@ -238,9 +229,7 @@ function moveDown(index: number) {
   }
 
   const next = [...assignedForms.value]
-  const tmp = next[index + 1]
-  next[index + 1] = next[index]
-  next[index] = tmp
+  ;[next[index], next[index + 1]] = [next[index + 1]!, next[index]!]
   assignedForms.value = next
   selectedAssignedIndex.value = index + 1
 }
@@ -301,34 +290,34 @@ function controlStyle(control: PreviewControl) {
 
 <style scoped>
 .legacy-dialog {
-  background: #d7d7d7;
+  background: rgb(var(--v-theme-surface, 245, 245, 245));
 }
 
 .legacy-titlebar {
-  background: linear-gradient(180deg, #e5edf9, #cbdcf3);
-  border-bottom: 1px solid #9eb6d8;
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary, 25, 118, 210), 0.12), rgba(var(--v-theme-primary, 25, 118, 210), 0.22));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
 }
 
 .legacy-content {
-  background: #d7d7d7;
+  background: rgb(var(--v-theme-surface, 245, 245, 245));
 }
 
 .legacy-toolbar {
-  border: 1px solid #b8c7de;
-  background: linear-gradient(180deg, #eaf2ff, #d2e1f7);
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary, 25, 118, 210), 0.06), rgba(var(--v-theme-primary, 25, 118, 210), 0.14));
   padding: 6px;
 }
 
 .legacy-group-title {
   margin-bottom: 6px;
-  color: #1b54a5;
+  color: rgb(var(--v-theme-primary, 25, 118, 210));
   font-size: 13px;
 }
 
 .legacy-label {
   padding-top: 8px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.8);
+  color: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.82);
 }
 
 .legacy-btn {
@@ -351,8 +340,8 @@ function controlStyle(control: PreviewControl) {
   min-height: 560px;
   max-height: 560px;
   overflow: auto;
-  border: 1px solid #aeb9c8;
-  background: #f4f5f7;
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
+  background: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.04);
 }
 
 .selected-container {
@@ -360,19 +349,19 @@ function controlStyle(control: PreviewControl) {
   max-height: 560px;
   overflow: auto;
   padding-right: 4px;
-  border: 1px solid #aeb9c8;
-  background: #efefef;
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
+  background: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.06);
 }
 
 .form-panel {
   cursor: pointer;
-  border: 1px solid #7a7a7a;
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.28);
   border-radius: 0;
-  background: #efefef;
+  background: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.04);
 }
 
 .form-panel--active {
-  border-color: #2c5da7;
+  border-color: rgb(var(--v-theme-primary, 25, 118, 210));
 }
 
 .form-panel-body {
@@ -387,8 +376,8 @@ function controlStyle(control: PreviewControl) {
   min-height: 240px;
   max-height: 240px;
   overflow: auto;
-  background: #f7f7f7;
-  border: 1px solid #222;
+  background: rgb(var(--v-theme-surface, 245, 245, 245));
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.45);
 }
 
 .panel-side-actions {
@@ -400,9 +389,9 @@ function controlStyle(control: PreviewControl) {
 
 .selected-empty-box {
   min-height: 240px;
-  border: 1px solid #222;
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.45);
   margin: 12px;
-  background: #f4f4f4;
+  background: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.03);
 }
 
 .preview-control {
@@ -419,8 +408,9 @@ function controlStyle(control: PreviewControl) {
   width: 100%;
   height: 100%;
   font-size: 12px;
-  border: 1px solid #000;
-  background: #fff;
+  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.4);
+  background: rgb(var(--v-theme-surface, 245, 245, 245));
+  color: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.92);
   padding: 2px;
 }
 </style>
