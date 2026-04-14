@@ -110,10 +110,10 @@
             {{ rowNumber(index) }}
           </template>
           <template #[`item.createdOn`]="{ item }">
-            {{ formatDate(item.createdOn) }}
+            {{ formatDateYMD(item.createdOn) }}
           </template>
           <template #[`item.modifiedOn`]="{ item }">
-            {{ formatDate(item.modifiedOn) }}
+            {{ formatDateYMD(item.modifiedOn) }}
           </template>
         </v-data-table-server>
       </v-card-text>
@@ -271,7 +271,7 @@ function exportToCsv() {
 
         const val = row[key as keyof QuotationListItem]
         if (val == null) return '""'
-        if (dateKeys.has(key)) return `"${formatDate(String(val))}"`
+        if (dateKeys.has(key)) return `"${formatDateYMD(String(val))}"`
         return `"${String(val).replace(/"/g, '""')}"`
       })
       .join(','),
@@ -287,8 +287,14 @@ function exportToCsv() {
   URL.revokeObjectURL(url)
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
+function formatDateYMD(value: string | null | undefined) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return '-'
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 function rowNumber(index: number) {
