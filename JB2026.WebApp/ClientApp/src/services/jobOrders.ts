@@ -87,6 +87,17 @@ export async function getJobOrder(id: string): Promise<JobOrderRecord> {
   return response.data
 }
 
+export async function getJobPreviewBlob(orderId: string, fileName: string, attachmentType?: string): Promise<Blob> {
+  const response = await apiClient.get(`/api/Job/preview/${orderId}/${encodeURIComponent(fileName)}`, {
+    params: {
+      attachmentType,
+    },
+    responseType: 'blob',
+  })
+
+  return response.data as Blob
+}
+
 export async function deleteJobOrder(id: string): Promise<void> {
   await apiClient.delete(`/api/v2/job-orders/${id}`)
 }

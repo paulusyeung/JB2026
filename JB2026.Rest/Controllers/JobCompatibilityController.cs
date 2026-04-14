@@ -18,11 +18,16 @@ public sealed class JobCompatibilityController : ControllerBase
 
     private readonly IJobManagementRepository _repository;
     private readonly JB5LegacyReadContext _readContext;
+    private readonly IConfiguration _configuration;
 
-    public JobCompatibilityController(IJobManagementRepository repository, JB5LegacyReadContext readContext)
+    public JobCompatibilityController(
+        IJobManagementRepository repository,
+        JB5LegacyReadContext readContext,
+        IConfiguration configuration)
     {
         _repository = repository;
         _readContext = readContext;
+        _configuration = configuration;
     }
 
     [HttpGet("api/Job/{id:guid}")]
@@ -175,6 +180,43 @@ public sealed class JobCompatibilityController : ControllerBase
         return BuildPdfResponse(job, nopicture, nocontent: false, supplierid, selectedpds);
     }
 
+    [HttpGet("api/Job/preview/{orderId:guid}/{fileName}")]
+    public async Task<IActionResult> GetJobPreview(
+        Guid orderId,
+        string fileName,
+        [FromQuery] string? attachmentType,
+        CancellationToken cancellationToken)
+    {
+        var safeFileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+        {
+            return BadRequest("Invalid file name.");
+        }
+
+        var order = await _readContext.JobOrders
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
+
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        var orderNumber = order.OrderNumber ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(orderNumber))
+        {
+            return NotFound();
+        }
+
+        var locatedPath = LocatePreviewFile(orderId, orderNumber, order.JobNumber ?? 0, order.OrderedOn, safeFileName, attachmentType);
+        if (locatedPath is null)
+        {
+            return NotFound();
+        }
+
+        return PhysicalFile(locatedPath, GetContentType(locatedPath));
+    }
+
     private static FileContentResult BuildPdfResponse(
         JobDetailResponse job,
         bool nopicture,
@@ -294,6 +336,202 @@ public sealed class JobCompatibilityController : ControllerBase
     private static bool Contains(string value, string keyword)
     {
         return value.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string? LocatePreviewFile(
+        Guid orderId,
+        string orderNumber,
+        int jobNumber,
+        DateTime? orderedOn,
+        string fileName,
+        string? attachmentType)
+    {
+        var probes = new List<string>();
+        var normalizedAttachmentFolder = NormalizeFolderSegment(attachmentType);
+        var orderedDate = orderedOn ?? DateTime.Now;
+        var baseOrderNumber = ExtractBaseOrderNumber(orderNumber);
+        var jobFolder = $"{baseOrderNumber}-{jobNumber}";
+        var candidateFileNames = BuildPreviewFileNameCandidates(fileName);
+
+        var fileAgentRoot = _configuration["LegacyFiles:FileAgentRoot"];
+        foreach (var rootCandidate in ExpandRootCandidates(fileAgentRoot))
+        {
+            var legacyOrderFolder = Path.Combine(rootCandidate, baseOrderNumber);
+            probes.Add(legacyOrderFolder);
+
+            var migratedOrderFolder = Path.Combine(rootCandidate, "JB5", orderedDate.ToString("yyyy"), orderedDate.ToString("MM"), jobFolder);
+            probes.Add(migratedOrderFolder);
+
+            if (!string.IsNullOrWhiteSpace(normalizedAttachmentFolder))
+            {
+                probes.Add(Path.Combine(legacyOrderFolder, normalizedAttachmentFolder));
+                probes.Add(Path.Combine(migratedOrderFolder, normalizedAttachmentFolder));
+            }
+        }
+
+        var cloudDiskRoot = _configuration["LegacyFiles:CloudDiskRoot"];
+        foreach (var cloudRoot in ExpandRootCandidates(cloudDiskRoot))
+        {
+            probes.Add(Path.Combine(cloudRoot, "uploads", orderId.ToString("N")));
+        }
+
+        foreach (var folder in probes.Distinct())
+        {
+            foreach (var candidate in candidateFileNames)
+            {
+                var directPath = FindDirectPath(folder, candidate);
+                if (directPath is not null)
+                {
+                    return directPath;
+                }
+
+                var recursivePath = FindRecursivePathCaseInsensitive(folder, candidate);
+                if (recursivePath is not null)
+                {
+                    return recursivePath;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? FindDirectPath(string folder, string fileName)
+    {
+        if (!Directory.Exists(folder))
+        {
+            return null;
+        }
+
+        var path = Path.Combine(folder, fileName);
+        return System.IO.File.Exists(path) ? path : null;
+    }
+
+    private static string? FindRecursivePathCaseInsensitive(string folder, string fileName)
+    {
+        if (!Directory.Exists(folder))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Directory
+                .EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                .FirstOrDefault(path => string.Equals(Path.GetFileName(path), fileName, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static string NormalizeFolderSegment(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Replace("\\", string.Empty).Replace("/", string.Empty).Trim();
+        return normalized.All(char.IsDigit) ? normalized : string.Empty;
+    }
+
+    private static IReadOnlyList<string> ExpandRootCandidates(string? configuredRoot)
+    {
+        if (string.IsNullOrWhiteSpace(configuredRoot))
+        {
+            return Array.Empty<string>();
+        }
+
+        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            configuredRoot
+        };
+
+        if (configuredRoot.StartsWith("\\\\", StringComparison.Ordinal))
+        {
+            var parts = configuredRoot.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                var server = parts[0];
+                var share = parts[1];
+                var tail = parts.Skip(2).ToArray();
+
+                roots.Add('/' + string.Join('/', parts));
+
+                var mntPath = Path.Combine(new[] { "/mnt", server, share }.Concat(tail).ToArray());
+                roots.Add(mntPath);
+
+                var mediaPath = Path.Combine(new[] { "/media", server, share }.Concat(tail).ToArray());
+                roots.Add(mediaPath);
+            }
+        }
+
+        return roots.ToList();
+    }
+
+    private static string ExtractBaseOrderNumber(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        var lastDash = trimmed.LastIndexOf('-');
+        if (lastDash > 0)
+        {
+            var suffix = trimmed[(lastDash + 1)..];
+            if (suffix.All(char.IsDigit))
+            {
+                return trimmed[..lastDash];
+            }
+        }
+
+        return trimmed;
+    }
+
+    private static IReadOnlyList<string> BuildPreviewFileNameCandidates(string fileName)
+    {
+        var safe = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safe))
+        {
+            return Array.Empty<string>();
+        }
+
+        var candidates = new List<string> { safe };
+        var normalized = safe.ToLowerInvariant();
+
+        if (normalized.EndsWith(".pdf"))
+        {
+            candidates.Insert(0, $"{safe}.jpg");
+            candidates.Insert(1, $"{safe[..^4]}.jpg");
+            candidates.Add($"{safe[..^4]}.jpeg");
+            candidates.Add($"{safe[..^4]}.png");
+            candidates.Add($"{safe[..^4]}.webp");
+        }
+
+        if (normalized.EndsWith(".pdf.jpg"))
+        {
+            candidates.Add(safe[..^4]);
+        }
+
+        return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static string GetContentType(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" => "image/jpeg",
+            ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            _ => "application/octet-stream"
+        };
     }
 
     private async Task<(int Role, string Alias)> GetCurrentAccessAsync(CancellationToken cancellationToken)

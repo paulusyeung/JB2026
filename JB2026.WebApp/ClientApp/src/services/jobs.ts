@@ -44,6 +44,25 @@ export async function getJobDetail(id: string): Promise<JobDetail> {
   return response.data
 }
 
+export async function getJobPdfBlob(id: string): Promise<Blob> {
+  const response = await apiClient.get(`/api/Job/pdf/${id}`, {
+    responseType: 'blob',
+  })
+
+  return response.data as Blob
+}
+
+export async function uploadJobAttachment(orderId: string, file: File): Promise<void> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  await apiClient.post(`/api/CloudDisk/fileAgent/upload/${orderId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}
+
 /**
  * Persist a job order form (create or update).
  * Routes to POST /api/v2/jobs when orderId is null, PATCH /api/v2/jobs/{id} otherwise.

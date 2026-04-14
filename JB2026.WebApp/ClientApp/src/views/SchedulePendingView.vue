@@ -175,16 +175,34 @@
         :job="formJob"
         @saved="handleSaved"
         @cancel="formOpen = false"
+        @attachment="handleAttachment"
+        @print-order="handlePrintOrder"
+        @workflow="handleWorkflow"
+        @product-details-edit="handleProductDetailsEdit"
       />
     </v-dialog>
+
+    <JobOrderActionDialogs
+      :job="formJob"
+      v-model:attachment-open="attachmentDialogOpen"
+      v-model:product-details-open="productDetailsDialogOpen"
+      @updated="handleActionUpdated"
+      @error="showActionNotice"
+    />
+
+    <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
+      {{ actionNoticeMessage }}
+    </v-snackbar>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
-import { getJobDetail } from '@/services/jobs'
+import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
 import { getPendingSchedule } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -202,6 +220,10 @@ const sortDirection = ref<'asc' | 'desc'>('desc')
 const sortKey = ref('orderNumber')
 const formOpen = ref(false)
 const formJob = ref<JobDetail | null>(null)
+const actionNoticeOpen = ref(false)
+const actionNoticeMessage = ref('')
+const attachmentDialogOpen = ref(false)
+const productDetailsDialogOpen = ref(false)
 const visibleColumnKeys = ref<string[]>([
   'orderNumber',
   'orderType',
@@ -218,6 +240,7 @@ const visibleColumnKeys = ref<string[]>([
 
 const { t } = useI18n({ useScope: 'global' })
 const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const router = useRouter()
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.pending.commonQueryItems.none') },
@@ -429,6 +452,47 @@ function orderTypeMeta(orderType: number) {
       return { icon: 'mdi-shape-outline', color: 'secondary' }
     default:
       return { icon: 'mdi-tag-outline', color: 'success' }
+  }
+}
+
+function showActionNotice(message: string) {
+  actionNoticeMessage.value = message
+  actionNoticeOpen.value = true
+}
+
+function handleAttachment(job: JobDetail) {
+  formJob.value = job
+  attachmentDialogOpen.value = true
+}
+
+function handleProductDetailsEdit(job: JobDetail) {
+  formJob.value = job
+  productDetailsDialogOpen.value = true
+}
+
+async function handlePrintOrder(job: JobDetail) {
+  try {
+    const blob = await getJobPdfBlob(job.orderId)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch {
+    showActionNotice(t('jobForm.messages.printFailed'))
+  }
+}
+
+function handleWorkflow(job: JobDetail) {
+  void router.push({ name: 'admin-workflow', query: { orderId: job.orderId } })
+}
+
+async function handleActionUpdated() {
+  if (!formJob.value) return
+
+  try {
+    formJob.value = await getJobDetail(formJob.value.orderId)
+    await load()
+  } catch {
+    showActionNotice(t('jobOrder.pending.loadFailed'))
   }
 }
 </script>
