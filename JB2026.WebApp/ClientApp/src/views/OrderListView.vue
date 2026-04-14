@@ -195,12 +195,12 @@
             </div>
           </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ formatDateYMD(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ formatDateYMD(item.requiredOn) }}</template>
           <template #[`item.completedOn`]="{ item }">{{ formatDate(item.completedOn) }}</template>
           <template #[`item.modifiedOn`]="{ item }">{{ formatDate(item.modifiedOn) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
-          <template #[`item.invoiceAmount`]="{ item }">{{ formatQty(item.invoiceAmount) }}</template>
+          <template #[`item.invoiceAmount`]="{ item }">{{ item.invoiceAmount === 0 ? '' : formatQty(item.invoiceAmount) }}</template>
 
           <template #expanded-row="{ item }">
             <tr>
@@ -241,12 +241,12 @@
                     </div>
                   </template>
 
-                  <template #[`item.orderedOn`]="{ item: detail }">{{ formatDate(detail.orderedOn) }}</template>
-                  <template #[`item.requiredOn`]="{ item: detail }">{{ formatDate(detail.requiredOn) }}</template>
+                  <template #[`item.orderedOn`]="{ item: detail }">{{ formatDateYMD(detail.orderedOn) }}</template>
+                  <template #[`item.requiredOn`]="{ item: detail }">{{ formatDateYMD(detail.requiredOn) }}</template>
                   <template #[`item.completedOn`]="{ item: detail }">{{ formatDate(detail.completedOn) }}</template>
                   <template #[`item.modifiedOn`]="{ item: detail }">{{ formatDate(detail.modifiedOn) }}</template>
                   <template #[`item.modifiedBy`]="{ item: detail }">{{ detail.modifiedBy || '-' }}</template>
-                  <template #[`item.invoiceAmount`]="{ item: detail }">{{ formatQty(detail.invoiceAmount) }}</template>
+                  <template #[`item.invoiceAmount`]="{ item: detail }">{{ detail.invoiceAmount === 0 ? '' : formatQty(detail.invoiceAmount) }}</template>
                 </v-data-table>
               </td>
             </tr>
@@ -600,8 +600,16 @@ function formatDate(value: string | null | undefined) {
   return formatDateByLocale(value)
 }
 
+function formatDateYMD(value: string | null | undefined) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return '-'
+  return date.toISOString().slice(0, 10)
+}
+
 function formatQty(value: number) {
-  return formatNumber(value)
+  if (value === 0) return ''
+  return '$' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function statusColor(status: number) {
