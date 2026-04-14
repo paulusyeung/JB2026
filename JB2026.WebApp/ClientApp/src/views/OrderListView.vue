@@ -142,18 +142,6 @@
         >
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
 
-          <template #[`header.status`]>
-            <v-icon size="14" color="primary">mdi-flag</v-icon>
-          </template>
-
-          <template #[`header.attachProduct`]>
-            <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-          </template>
-
-          <template #[`header.attachCustomer`]>
-            <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-          </template>
-
           <template #[`item.expander`]="{ item }">
             <v-btn
               v-if="hasDetailRows(item)"
@@ -213,6 +201,18 @@
                   class="detail-grid"
                   @click:row="onDetailRowClick"
                 >
+                  <template #[`header.status`]>
+                    <v-icon size="14" color="primary">mdi-flag</v-icon>
+                  </template>
+
+                  <template #[`header.attachProduct`]>
+                    <v-icon size="16" color="grey darken-3">mdi-paperclip</v-icon>
+                  </template>
+
+                  <template #[`header.attachCustomer`]>
+                    <v-icon size="16" color="grey darken-3">mdi-paperclip</v-icon>
+                  </template>
+
                   <template #[`item.orderNumber`]="{ item: detail }">
                     <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEdit(detail)">
                       {{ detail.orderNumber }}-{{ detail.jobNumber }}
@@ -243,8 +243,8 @@
 
                   <template #[`item.orderedOn`]="{ item: detail }">{{ formatDateYMD(detail.orderedOn) }}</template>
                   <template #[`item.requiredOn`]="{ item: detail }">{{ formatDateYMD(detail.requiredOn) }}</template>
-                  <template #[`item.completedOn`]="{ item: detail }">{{ formatDate(detail.completedOn) }}</template>
-                  <template #[`item.modifiedOn`]="{ item: detail }">{{ formatDate(detail.modifiedOn) }}</template>
+                  <template #[`item.completedOn`]="{ item: detail }">{{ formatDateYMD1900(detail.completedOn) }}</template>
+                  <template #[`item.modifiedOn`]="{ item: detail }">{{ formatDateYMD(detail.modifiedOn) }}</template>
                   <template #[`item.modifiedBy`]="{ item: detail }">{{ detail.modifiedBy || '-' }}</template>
                   <template #[`item.invoiceAmount`]="{ item: detail }">{{ detail.invoiceAmount === 0 ? '' : formatQty(detail.invoiceAmount) }}</template>
                 </v-data-table>
@@ -346,9 +346,9 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.orderList.headers.orderedOn'), key: 'orderedOn', width: '120px' },
   { title: t('jobOrder.orderList.headers.customer'), key: 'customerName', minWidth: '240px' },
   { title: t('jobOrder.orderList.headers.orderTitle'), key: 'orderTitle', minWidth: '280px' },
-  { title: t('jobOrder.orderList.headers.attachProduct'), key: 'attachProduct', width: '72px', sortable: false },
+  { title: '', key: 'attachProduct', width: '72px', sortable: false, icon: 'mdi-paperclip' },
   { title: t('jobOrder.orderList.headers.customerRef'), key: 'customerRef', width: '160px' },
-  { title: t('jobOrder.orderList.headers.attachCustomer'), key: 'attachCustomer', width: '72px', sortable: false },
+  { title: '', key: 'attachCustomer', width: '72px', sortable: false, icon: 'mdi-paperclip' },
   { title: t('jobOrder.orderList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.orderList.headers.invoiceAmount'), key: 'invoiceAmount', align: 'end' as const, width: '120px' },
   { title: t('jobOrder.orderList.headers.invoiceRef'), key: 'invoiceRef', width: '120px' },
@@ -367,7 +367,17 @@ const sortableColumns = computed(() =>
 )
 
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
-const detailHeaders = computed(() => headers.value.filter((h) => h.key !== 'expander'))
+// Patch: Show clip icon for attachProduct/attachCustomer headers in detail table
+const detailHeaders = computed(() => {
+  return headers.value
+    .filter((h) => h.key !== 'expander')
+    .map((h) => {
+      if (h.key === 'attachProduct' || h.key === 'attachCustomer') {
+        return { ...h, title: '', icon: 'mdi-paperclip' }
+      }
+      return h
+    })
+})
 
 const displayedRows = computed(() => {
   const result = [...rows.value]
@@ -600,8 +610,19 @@ function formatDate(value: string | null | undefined) {
   return formatDateByLocale(value)
 }
 
+
 function formatDateYMD(value: string | null | undefined) {
   if (!value) return '-'
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return '-'
+  return date.toISOString().slice(0, 10)
+}
+
+// Format date as yyyy-MM-dd, show empty if value is '1900-01-01'
+function formatDateYMD1900(value: string | null | undefined) {
+  if (!value) return '-'
+  // Compare raw string to avoid timezone issues
+  if (typeof value === 'string' && value.slice(0, 10) === '1900-01-01') return ''
   const date = new Date(value)
   if (isNaN(date.getTime())) return '-'
   return date.toISOString().slice(0, 10)
