@@ -215,10 +215,10 @@
             </div>
           </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
-          <template #[`item.completedOn`]="{ item }">{{ formatDate(item.completedOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDate(item.modifiedOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ formatDateYMD(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ formatDateYMD(item.requiredOn) }}</template>
+          <template #[`item.completedOn`]="{ item }">{{ formatCompletedOn(item.completedOn) }}</template>
+          <template #[`item.modifiedOn`]="{ item }">{{ formatDateYMD(item.modifiedOn) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
           <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
           <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
@@ -545,9 +545,24 @@ function compositeOrderNumber(row: JobOrderRecord) {
   return row.jobNumber ? `${row.orderNumber}-${row.jobNumber}` : row.orderNumber
 }
 
-function formatDate(value: string | null | undefined) {
+
+function formatDateYMD(value: string | null | undefined) {
   if (!value) return '-'
-  return formatDateByLocale(value)
+  // Expecting value in ISO format or parseable by Date
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return '-'
+  // Format as yyyy-MM-dd
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function formatCompletedOn(value: string | null | undefined) {
+  if (!value) return '-'
+  // If value is exactly '1900-01-01' (or with time zeroed)
+  if (value.startsWith('1900-01-01')) return ''
+  return formatDateYMD(value)
 }
 
 function formatCurrency(value: number) {
