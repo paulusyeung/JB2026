@@ -83,6 +83,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
     public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith)
     {
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
 
         var query = _readContext.JobOrders
@@ -116,12 +117,13 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         return query
             .OrderBy(o => o.OrderNumber)
-            .Select(o => MapOrder(o))
+            .Select(o => MapOrder(o, userDisplayNameLookup))
             .ToList();
     }
 
     public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)
     {
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
 
         var query = _readContext.JobOrders
@@ -163,14 +165,15 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .OrderByDescending(o => o.OrderNumber)
             .ThenBy(o => o.JobNumber)
             .Take(take)
-            .Select(o => MapOrder(o))
+            .Select(o => MapOrder(o, userDisplayNameLookup))
             .ToList();
     }
 
     public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
     {
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
         return CompiledGetJobOrders(_readContext, take)
-            .Select(MapOrder)
+            .Select(order => MapOrder(order, userDisplayNameLookup))
             .ToList();
     }
 
@@ -213,8 +216,9 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
     public JobOrderResponse? GetJobOrder(Guid orderId)
     {
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var job = CompiledGetJobOrderById(_readContext, orderId);
-        return job is null ? null : MapOrder(job);
+        return job is null ? null : MapOrder(job, userDisplayNameLookup);
     }
 
     public async Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
@@ -248,7 +252,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         _writeContext.JobOrders.Add(order);
         await _writeContext.SaveChangesAsync();
 
-        return MapOrder(order);
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
+        return MapOrder(order, userDisplayNameLookup);
     }
 
     public async Task<JobOrderResponse?> UpdateJobOrder(Guid orderId, UpdateJobOrderRequest request, string actor)
@@ -272,7 +277,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         await _writeContext.SaveChangesAsync();
 
-        return MapOrder(order);
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
+        return MapOrder(order, userDisplayNameLookup);
     }
 
     public async Task<JobOrderResponse?> DeleteJobOrder(Guid orderId)
@@ -286,7 +292,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         _writeContext.JobOrders.Remove(order);
         await _writeContext.SaveChangesAsync();
 
-        return MapOrder(order);
+        var userDisplayNameLookup = BuildUserDisplayNameLookup();
+        return MapOrder(order, userDisplayNameLookup);
     }
 
     private static JobListItemResponse MapListItem(JobOrder job)
@@ -340,8 +347,20 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         };
     }
 
-    private static JobOrderResponse MapOrder(JobOrder job)
+    private static JobOrderResponse MapOrder(JobOrder job, IReadOnlyDictionary<Guid, string>? userDisplayNameLookup = null)
     {
+        var createdBy = job.CreatedBy.ToString();
+        if (userDisplayNameLookup is not null && userDisplayNameLookup.TryGetValue(job.CreatedBy, out var createdByDisplayName))
+        {
+            createdBy = createdByDisplayName;
+        }
+
+        var modifiedBy = job.ModifiedBy.ToString();
+        if (userDisplayNameLookup is not null && userDisplayNameLookup.TryGetValue(job.ModifiedBy, out var modifiedByDisplayName))
+        {
+            modifiedBy = modifiedByDisplayName;
+        }
+
         return new JobOrderResponse
         {
             OrderId = job.OrderId,
@@ -366,11 +385,38 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             PaymentTerms = job.PaymentTerms ?? string.Empty,
             Remarks = job.Remarks ?? string.Empty,
             Status = job.Status,
-            CreatedBy = job.CreatedBy.ToString(),
+            CreatedBy = createdBy,
             CreatedOn = job.CreatedOn,
-            ModifiedBy = job.ModifiedBy.ToString(),
+            ModifiedBy = modifiedBy,
             ModifiedOn = job.ModifiedOn
         };
+    }
+
+    private Dictionary<Guid, string> BuildUserDisplayNameLookup()
+    {
+        return _readContext.vwUserList_Actives
+            .AsNoTracking()
+            .Select(user => new
+            {
+                user.UserId,
+                user.UserAlias,
+                user.UserName,
+            })
+            .ToList()
+            .GroupBy(user => user.UserId)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var user = group.First();
+                    var displayName = string.IsNullOrWhiteSpace(user.UserAlias)
+                        ? user.UserName ?? string.Empty
+                        : user.UserAlias;
+
+                    return string.IsNullOrWhiteSpace(displayName)
+                        ? group.Key.ToString()
+                        : displayName.Trim();
+                });
     }
 
     private static string BuildCompositeOrderNumber(string? orderNumber, int? jobNumber)
