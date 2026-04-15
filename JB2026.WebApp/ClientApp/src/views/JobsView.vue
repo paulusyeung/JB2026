@@ -41,7 +41,7 @@
           </v-col>
           <v-col cols="12" sm="6">
             <label class="field-label">{{ t('jobs.requiredOn') }}</label>
-            <v-text-field :model-value="formatDate(jobsStore.selectedJob.requiredOn)" variant="outlined" readonly hide-details />
+            <v-text-field :model-value="format(jobsStore.selectedJob.requiredOn)" variant="outlined" readonly hide-details />
           </v-col>
           <v-col cols="12">
             <label class="field-label">{{ t('jobs.remarks') }}</label>
@@ -117,13 +117,14 @@ import JobsTable from '@/components/grids/JobsTable.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getJobPdfBlob } from '@/services/jobs'
 import { useJobsStore } from '@/stores/jobs'
 import type { JobDetail } from '@/types/api'
 
 const jobsStore = useJobsStore()
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale } = useLocaleFormatters()
+const { format } = useGlobalDateFormatter()
 
 const formOpen = ref(false)
 const formJob = ref<JobDetail | null>(null)
@@ -153,9 +154,7 @@ async function handleSaved() {
   }
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
-}
+
 
 function showActionNotice(message: string) {
   actionNoticeMessage.value = message

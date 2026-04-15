@@ -215,10 +215,10 @@
             </div>
           </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ formatDateYMD(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDateYMD(item.requiredOn) }}</template>
-          <template #[`item.completedOn`]="{ item }">{{ formatCompletedOn(item.completedOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDateYMD(item.modifiedOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
+          <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
+          <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
           <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
           <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
@@ -273,6 +273,7 @@ import { useTheme } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
 import { deleteJobOrder, getJobList } from '@/services/jobOrders'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
@@ -317,7 +318,8 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
-const { formatCurrency: formatCurrencyByLocale, formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatCurrency: formatCurrencyByLocale, formatNumber } = useLocaleFormatters()
 const theme = useTheme()
 const router = useRouter()
 const isDark = computed(() => theme.global.current.value.dark)
@@ -489,7 +491,7 @@ function exportToCsv() {
 
         const value = row[key as keyof JobOrderRecord]
         if (value == null || value === '') return '""'
-        if (dateKeys.has(key)) return `"${formatDate(value as string)}"`
+        if (dateKeys.has(key)) return `"${format(value as string, DATE_FORMATS.ISO_DATE)}"`
         if (typeof value === 'number' && key === 'invoiceAmount') return `"${formatCurrency(value)}"`
         return `"${String(value).replace(/"/g, '""')}"`
       })
@@ -546,24 +548,7 @@ function compositeOrderNumber(row: JobOrderRecord) {
 }
 
 
-function formatDateYMD(value: string | null | undefined) {
-  if (!value) return '-'
-  // Expecting value in ISO format or parseable by Date
-  const date = new Date(value)
-  if (isNaN(date.getTime())) return '-'
-  // Format as yyyy-MM-dd
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
 
-function formatCompletedOn(value: string | null | undefined) {
-  if (!value) return '-'
-  // If value is exactly '1900-01-01' (or with time zeroed)
-  if (value.startsWith('1900-01-01')) return ''
-  return formatDateYMD(value)
-}
 
 function formatCurrency(value: number) {
   return formatCurrencyByLocale(value)

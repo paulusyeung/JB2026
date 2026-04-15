@@ -96,8 +96,8 @@
             <span class="font-weight-medium">{{ item.purchaseOrder }}</span>
           </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.createdOn`]="{ item }">{{ formatDateTime(item.createdOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
 
           <template #[`item.isLabelPrinted`]="{ item }">
             <div class="d-flex justify-center">
@@ -134,11 +134,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getSmlRtfList } from '@/services/sml'
 import type { SmlRtfListHeader } from '@/types/api'
 
 const { t } = useI18n({ useScope: 'global' })
-const { activeLocale, formatDate: formatDateByLocale } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { activeLocale } = useLocaleFormatters()
 
 const lookup = ref('')
 const commonQuery = ref(1)
@@ -245,24 +247,7 @@ function onRowClick(_event: Event, payload: { item: SmlRtfListHeader }) {
   toggleExpandRow(payload.item)
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
-}
 
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  return new Intl.DateTimeFormat(activeLocale.value, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
 </script>
 
 <style scoped>

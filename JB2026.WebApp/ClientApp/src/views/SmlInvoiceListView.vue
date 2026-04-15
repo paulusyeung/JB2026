@@ -72,9 +72,9 @@
             <span class="font-weight-medium">{{ item.invoiceNumber }}</span>
           </template>
 
-          <template #[`item.invoiceDate`]="{ item }">{{ formatDate(item.invoiceDate) }}</template>
+          <template #[`item.invoiceDate`]="{ item }">{{ format(item.invoiceDate) }}</template>
           <template #[`item.invoiceAmount`]="{ item }">{{ formatAmount(item.invoiceAmount) }}</template>
-          <template #[`item.createdOn`]="{ item }">{{ formatDateTime(item.createdOn) }}</template>
+          <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
         </v-data-table>
 
         <div class="text-caption text-medium-emphasis mt-2">
@@ -89,11 +89,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getSmlInvoiceList } from '@/services/sml'
 import type { SmlInvoiceListRow } from '@/types/api'
 
 const { t } = useI18n({ useScope: 'global' })
-const { activeLocale, formatDate: formatDateByLocale } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { activeLocale } = useLocaleFormatters()
 
 const lookup = ref('')
 const commonQuery = ref(1)
@@ -152,24 +154,7 @@ async function applyLookup() {
   await load()
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
-}
 
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  return new Intl.DateTimeFormat(activeLocale.value, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
 
 function formatAmount(value: number) {
   return new Intl.NumberFormat(activeLocale.value, {

@@ -35,7 +35,7 @@
           item-value="headerId"
         >
           <template #[`item.quotedOn`]="{ item }">
-            {{ formatDate(item.quotedOn) }}
+            {{ format(item.quotedOn) }}
           </template>
           <template #[`item.totalCostA`]="{ item }">
             {{ formatMoney(item.totalCostA) }}
@@ -50,6 +50,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { runReport } from '@/services/reports'
 import type { ReportRunResponse } from '@/types/api'
 
@@ -58,7 +59,8 @@ const errorMessage = ref('')
 const result = ref<ReportRunResponse | null>(null)
 const startOn = ref(new Date().toISOString().slice(0, 10))
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatCurrency } = useLocaleFormatters()
+const { format } = useGlobalDateFormatter()
+const { formatCurrency } = useLocaleFormatters()
 
 const headers = computed(() => [
   { title: t('reports.headers.quote'), key: 'quoteNumberIndexPair' },
@@ -91,9 +93,7 @@ async function run() {
   }
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
-}
+
 
 function formatMoney(value: number) {
   return formatCurrency(value)

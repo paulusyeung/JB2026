@@ -153,8 +153,8 @@
             <v-chip size="small" color="secondary" variant="tonal">{{ formatQty(item.balance) }}</v-chip>
           </template>
 
-          <template #[`item.createdOn`]="{ item }">{{ formatDateCell(item.createdOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDateCell(item.modifiedOn) }}</template>
+          <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn) }}</template>
+          <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
 
         </v-data-table>
 
@@ -171,6 +171,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getStockProducts } from '@/services/stock'
 import type { StockProductListItem } from '@/types/api'
 
@@ -202,7 +203,8 @@ const visibleColumnKeys = ref<string[]>([
 ])
 
 const { t } = useI18n({ useScope: 'global' })
-const { formatCurrency, formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatCurrency, formatNumber } = useLocaleFormatters()
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
@@ -299,10 +301,7 @@ function formatQty(value: number) {
   return formatNumber(value)
 }
 
-function formatDateCell(value: string | null | undefined) {
-  if (!value) return '-'
-  return formatDateByLocale(value)
-}
+
 
 function showUnavailable(actionKey: string) {
   errorMessage.value = t('stock.messages.actionUnavailable', { action: t(actionKey) })
@@ -318,7 +317,7 @@ function exportToCsv() {
         if (h.key === 'ln') return '""'
         const val = row[h.key as keyof StockDisplayRow]
         if (val == null || val === '') return '""'
-        if (h.key === 'createdOn' || h.key === 'modifiedOn') return `"${formatDateCell(String(val))}"`
+        if (h.key === 'createdOn' || h.key === 'modifiedOn') return `"${format(String(val), DATE_FORMATS.ISO_DATE)}"`
         return `"${String(val).replace(/"/g, '""')}"`
       })
       .join(','),

@@ -40,8 +40,8 @@
               {{ item.orderNumber }}
             </v-btn>
           </template>
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
           <template #[`item.qty`]="{ item }">{{ formatQty(item.qty) }}</template>
         </v-data-table>
 
@@ -51,7 +51,7 @@
           <h4 class="text-subtitle-1 mb-2">{{ t('jobOrder.selectedOrder') }}</h4>
           <div class="text-body-2">{{ selected.orderNumber }}-{{ selected.jobNumber }} · {{ selected.customerName }}</div>
           <div class="text-body-2">{{ selected.orderTitle }}</div>
-          <div class="text-body-2">{{ t('jobOrder.requiredQty', { date: formatDate(selected.requiredOn), qty: formatQty(selected.qty) }) }}</div>
+          <div class="text-body-2">{{ t('jobOrder.requiredQty', { date: format(selected.requiredOn), qty: formatQty(selected.qty) }) }}</div>
         </div>
       </v-card-text>
     </v-card>
@@ -88,6 +88,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getJobOrder, getJobOrders } from '@/services/jobOrders'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import type { JobOrderRecord } from '@/types/api'
@@ -102,7 +103,8 @@ const formJob = ref<JobOrderRecord | null>(null)
 const saveSuccess = ref(false)
 const deleteSuccess = ref(false)
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 
 const headers = computed(() => [
   { title: t('jobOrder.headers.order'), key: 'orderNumber' },
@@ -195,9 +197,7 @@ async function handleOpenOrder(orderId: string) {
   }
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
-}
+
 
 function formatQty(value: number) {
   return formatNumber(value, { maximumFractionDigits: 2 })

@@ -107,8 +107,8 @@
           </template>
 
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
         </v-data-table>
 
         <div class="text-caption text-medium-emphasis mt-2">
@@ -154,6 +154,7 @@ import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
 import { getPackingSchedule } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePackingItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 
 const rows = ref<JobSchedulePackingItem[]>([])
 const loading = ref(false)
@@ -171,7 +172,8 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 
 const commonQueryItems = computed(() => [
@@ -280,7 +282,7 @@ function exportToCsv() {
         if (value == null || value === '') return '""'
 
         if (key === 'orderedOn' || key === 'requiredOn') {
-          return `"${formatDate(value as string)}"`
+          return `"${format(String(value), DATE_FORMATS.ISO_DATE)}"`
         }
 
         return `"${String(value).replace(/"/g, '""')}"`
@@ -298,10 +300,7 @@ function exportToCsv() {
   URL.revokeObjectURL(url)
 }
 
-function formatDate(value: string | null) {
-  if (!value) return '-'
-  return formatDateByLocale(value)
-}
+
 
 function workflowColor(status: number | null) {
   if (status == null) return 'grey-lighten-1'

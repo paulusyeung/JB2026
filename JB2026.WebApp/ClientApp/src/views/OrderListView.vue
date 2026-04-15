@@ -183,10 +183,10 @@
             </div>
           </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ formatDateYMD(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDateYMD(item.requiredOn) }}</template>
-          <template #[`item.completedOn`]="{ item }">{{ formatDate(item.completedOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDate(item.modifiedOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
+          <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
+          <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
           <template #[`item.invoiceAmount`]="{ item }">{{ item.invoiceAmount === 0 ? '' : formatQty(item.invoiceAmount) }}</template>
 
@@ -241,10 +241,10 @@
                     </div>
                   </template>
 
-                  <template #[`item.orderedOn`]="{ item: detail }">{{ formatDateYMD(detail.orderedOn) }}</template>
-                  <template #[`item.requiredOn`]="{ item: detail }">{{ formatDateYMD(detail.requiredOn) }}</template>
-                  <template #[`item.completedOn`]="{ item: detail }">{{ formatDateYMD1900(detail.completedOn) }}</template>
-                  <template #[`item.modifiedOn`]="{ item: detail }">{{ formatDateYMD(detail.modifiedOn) }}</template>
+                  <template #[`item.orderedOn`]="{ item: detail }">{{ format(detail.orderedOn) }}</template>
+                  <template #[`item.requiredOn`]="{ item: detail }">{{ format(detail.requiredOn) }}</template>
+                  <template #[`item.completedOn`]="{ item: detail }">{{ format(detail.completedOn) }}</template>
+                  <template #[`item.modifiedOn`]="{ item: detail }">{{ format(detail.modifiedOn) }}</template>
                   <template #[`item.modifiedBy`]="{ item: detail }">{{ detail.modifiedBy || '-' }}</template>
                   <template #[`item.invoiceAmount`]="{ item: detail }">{{ detail.invoiceAmount === 0 ? '' : formatQty(detail.invoiceAmount) }}</template>
                 </v-data-table>
@@ -278,6 +278,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import type { JobOrderRecord } from '@/types/api'
@@ -315,7 +316,8 @@ const formJob = ref<JobOrderRecord | null>(null)
 const deleting = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
@@ -568,7 +570,7 @@ function exportToCsv() {
         const key = h.key as keyof JobOrderRecord
         const val = row[key]
         if (val == null) return '""'
-        if (dateKeys.has(String(key))) return `"${formatDate(val as string)}"`
+        if (dateKeys.has(String(key))) return `"${format(val as string, DATE_FORMATS.ISO_DATE)}"`
         return `"${String(val).replace(/"/g, '""')}"`
       })
       .join(','),
@@ -605,28 +607,7 @@ async function confirmBatchDelete() {
   }
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '-'
-  return formatDateByLocale(value)
-}
 
-
-function formatDateYMD(value: string | null | undefined) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (isNaN(date.getTime())) return '-'
-  return date.toISOString().slice(0, 10)
-}
-
-// Format date as yyyy-MM-dd, show empty if value is '1900-01-01'
-function formatDateYMD1900(value: string | null | undefined) {
-  if (!value) return '-'
-  // Compare raw string to avoid timezone issues
-  if (typeof value === 'string' && value.slice(0, 10) === '1900-01-01') return ''
-  const date = new Date(value)
-  if (isNaN(date.getTime())) return '-'
-  return date.toISOString().slice(0, 10)
-}
 
 function formatQty(value: number) {
   if (value === 0) return ''

@@ -159,8 +159,8 @@
             </div>
           </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
         </v-data-table>
 
         <div class="text-caption text-medium-emphasis mt-2">
@@ -206,6 +206,7 @@ import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
 import { getPendingSchedule } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 
 const rows = ref<JobSchedulePendingItem[]>([])
 const loading = ref(false)
@@ -239,7 +240,8 @@ const visibleColumnKeys = ref<string[]>([
 ])
 
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 
 const commonQueryItems = computed(() => [
@@ -390,7 +392,7 @@ function exportToCsv() {
         if (value == null || value === '') return '""'
 
         if (key === 'orderedOn' || key === 'requiredOn') {
-          return `"${formatDate(value as string)}"`
+          return `"${format(String(value), DATE_FORMATS.ISO_DATE)}"`
         }
 
         return `"${String(value).replace(/"/g, '""')}"`
@@ -408,10 +410,7 @@ function exportToCsv() {
   URL.revokeObjectURL(url)
 }
 
-function formatDate(value: string | null) {
-  if (!value) return '-'
-  return formatDateByLocale(value)
-}
+
 
 function statusColor(status: number) {
   if (status <= 0) return 'grey'

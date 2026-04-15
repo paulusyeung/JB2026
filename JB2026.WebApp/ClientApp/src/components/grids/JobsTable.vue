@@ -32,7 +32,7 @@
         @click:row="handleSelect"
       >
         <template #[`item.requiredOn`]="{ item }">
-          {{ formatDate(item.requiredOn) }}
+          {{ format(item.requiredOn) }}
         </template>
         <template #[`item.qty`]="{ item }">
           {{ formatQty(item.qty) }}
@@ -66,7 +66,7 @@
               <span class="vt-cell">{{ item.customerName }}</span>
               <span class="vt-cell">{{ item.customerRef }}</span>
               <span class="vt-cell">{{ item.orderTitle }}</span>
-              <span class="vt-cell">{{ formatDate(item.requiredOn) }}</span>
+              <span class="vt-cell">{{ format(item.requiredOn) }}</span>
               <span class="vt-cell text-end">{{ formatQty(item.qty) }}</span>
               <span class="vt-cell">
                 <v-chip size="x-small" color="secondary" variant="tonal">{{ t('jobs.status', { value: item.status }) }}</v-chip>
@@ -86,6 +86,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useVirtualScrollThreshold } from '@/composables/useVirtualScrollThreshold'
 import { useJobsStore } from '@/stores/jobs'
 import type { JobListItem } from '@/types/api'
@@ -93,7 +94,8 @@ import type { JobListItem } from '@/types/api'
 const jobsStore = useJobsStore()
 const virtual = useVirtualScrollThreshold()
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 
 const headers = computed(() => [
   { title: t('jobs.table.headers.order'), key: 'orderNumber' },
@@ -125,9 +127,7 @@ function handleSelectVirtual(item: JobListItem) {
   void jobsStore.select(item.orderId)
 }
 
-function formatDate(value: string) {
-  return formatDateByLocale(value)
-}
+
 
 function formatQty(value: number) {
   return formatNumber(value, { maximumFractionDigits: 2 })

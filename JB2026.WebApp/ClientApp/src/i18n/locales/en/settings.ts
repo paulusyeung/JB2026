@@ -12,9 +12,18 @@ export const settingsMessages = {
         daysUnit: 'day(s)',
         gmailAccount: 'Gmail Account',
         gmailPassword: 'Gmail Password',
+        dateFormat: 'Date Format Preference',
       },
       actions: {
         save: 'Save',
+      },
+      dateFormatOptions: {
+        shortDate: 'Short Date (MM/DD/YYYY)',
+        shortDateTime: 'Short DateTime',
+        longDate: 'Long Date',
+        longDateTime: 'Long DateTime',
+        isoDate: 'ISO Date (YYYY-MM-DD)',
+        isoDateTime: 'ISO DateTime (UTC)',
       },
       commonQueryOptions: {
         none: 'None',

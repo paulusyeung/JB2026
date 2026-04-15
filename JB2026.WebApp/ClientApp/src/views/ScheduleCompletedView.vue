@@ -116,10 +116,10 @@
           </template>
 
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
-          <template #[`item.scheduledOn`]="{ item }">{{ formatDate(item.scheduledOn) }}</template>
-          <template #[`item.completedOn`]="{ item }">{{ formatDate(item.completedOn, true) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
+          <template #[`item.scheduledOn`]="{ item }">{{ format(item.scheduledOn) }}</template>
+          <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
         </v-data-table>
 
         <div class="text-caption text-medium-emphasis mt-2">
@@ -165,6 +165,7 @@ import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
 import { getCompletedSchedule, rescheduleCompletedOrders } from '@/services/scheduler'
 import type { JobDetail, JobScheduleCompletedItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 
 const rows = ref<JobScheduleCompletedItem[]>([])
 const loading = ref(false)
@@ -184,7 +185,8 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale, formatNumber } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 
 const commonQueryItems = computed(() => [
@@ -320,7 +322,7 @@ function exportToCsv() {
       const raw = item[key]
       const formatted =
         key === 'orderedOn' || key === 'requiredOn' || key === 'scheduledOn' || key === 'completedOn'
-          ? formatDate(raw as string | null, key === 'completedOn')
+          ? format(raw as string | null, key === 'completedOn' ? DATE_FORMATS.SHORT_DATETIME : DATE_FORMATS.ISO_DATE)
           : String(raw ?? '')
       return `"${formatted.replace(/"/g, '""')}"`
     })
@@ -350,22 +352,7 @@ function orderTypeMeta(orderType: number) {
   }
 }
 
-function formatDate(value: string | null | undefined, withTime = false) {
-  if (!value) {
-    return '-'
-  }
 
-  if (!withTime) {
-    return formatDateByLocale(value)
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '-'
-  }
-
-  return date.toLocaleString()
-}
 
 function showActionNotice(message: string) {
   actionNoticeMessage.value = message

@@ -105,6 +105,20 @@
               density="compact"
               hide-details
             />
+
+            <v-divider class="my-2" style="grid-column: 1 / -1" />
+
+            <label class="field-label" for="date-format">{{ t('settings.fields.dateFormat') }}</label>
+            <v-select
+              id="date-format"
+              v-model="currentFormat"
+              :items="dateFormatOptions"
+              item-title="label"
+              item-value="value"
+              variant="outlined"
+              density="compact"
+              hide-details
+            />
           </div>
 
           <div class="mt-4">
@@ -120,12 +134,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getSettings, updateSettings } from '@/services/settings'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import type { AppSettings } from '@/types/api'
 
 const loading = ref(false)
 const errorMessage = ref('')
 const savedMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
+const { currentFormat, DATE_FORMATS } = useGlobalDateFormatter()
+
 const model = ref<AppSettings>({
   companyName: 'JB2026 Printing',
   timeZone: 'Asia/Kuala_Lumpur',
@@ -141,6 +158,15 @@ const model = ref<AppSettings>({
   gmailAccount: '',
   gmailPassword: '',
 })
+
+const dateFormatOptions = computed(() => [
+  { value: DATE_FORMATS.SHORT_DATE, label: t('settings.dateFormatOptions.shortDate') },
+  { value: DATE_FORMATS.SHORT_DATETIME, label: t('settings.dateFormatOptions.shortDateTime') },
+  { value: DATE_FORMATS.LONG_DATE, label: t('settings.dateFormatOptions.longDate') },
+  { value: DATE_FORMATS.LONG_DATETIME, label: t('settings.dateFormatOptions.longDateTime') },
+  { value: DATE_FORMATS.ISO_DATE, label: t('settings.dateFormatOptions.isoDate') },
+  { value: DATE_FORMATS.ISO_DATETIME, label: t('settings.dateFormatOptions.isoDateTime') },
+])
 
 const commonQueryOptions = computed(() => [
   { value: 0, label: t('settings.commonQueryOptions.none') },

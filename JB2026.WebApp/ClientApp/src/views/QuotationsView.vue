@@ -110,10 +110,10 @@
             {{ rowNumber(index) }}
           </template>
           <template #[`item.createdOn`]="{ item }">
-            {{ formatDateYMD(item.createdOn) }}
+            {{ format(item.createdOn) }}
           </template>
           <template #[`item.modifiedOn`]="{ item }">
-            {{ formatDateYMD(item.modifiedOn) }}
+            {{ format(item.modifiedOn) }}
           </template>
         </v-data-table-server>
       </v-card-text>
@@ -140,6 +140,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import QuotationFormDialog from '@/components/forms/QuotationFormDialog.vue'
 import { useQuotationsStore } from '@/stores/quotations'
 import type { QuotationListItem } from '@/types/api'
@@ -148,7 +149,8 @@ type SortItem = { key: string, order: 'asc' | 'desc' }
 
 const store = useQuotationsStore()
 const { t } = useI18n({ useScope: 'global' })
-const { formatDate: formatDateByLocale } = useLocaleFormatters()
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatNumber } = useLocaleFormatters()
 
 const formOpen = ref(false)
 const formQuotation = ref<QuotationListItem | null>(null)
@@ -271,7 +273,7 @@ function exportToCsv() {
 
         const val = row[key as keyof QuotationListItem]
         if (val == null) return '""'
-        if (dateKeys.has(key)) return `"${formatDateYMD(String(val))}"`
+        if (dateKeys.has(key)) return `"${format(String(val), DATE_FORMATS.ISO_DATE)}"`
         return `"${String(val).replace(/"/g, '""')}"`
       })
       .join(','),
@@ -287,15 +289,7 @@ function exportToCsv() {
   URL.revokeObjectURL(url)
 }
 
-function formatDateYMD(value: string | null | undefined) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (isNaN(date.getTime())) return '-'
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
+
 
 function rowNumber(index: number) {
   return (store.page - 1) * store.itemsPerPage + index + 1
