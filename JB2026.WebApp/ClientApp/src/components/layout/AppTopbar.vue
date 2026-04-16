@@ -6,26 +6,22 @@
     </div>
 
     <div class="topbar-actions">
-      <v-btn-toggle
-        :model-value="selectedTheme"
-        mandatory
-        divided
-        rounded="xl"
-        color="primary"
-        variant="outlined"
-        class="theme-toggle"
-        :aria-label="t('topbar.theme')"
-        @update:model-value="handleThemeChange"
-      >
-        <v-btn value="light" size="small">
-          <v-icon start icon="mdi-white-balance-sunny" />
-          {{ t('topbar.lightTheme') }}
-        </v-btn>
-        <v-btn value="dark" size="small">
-          <v-icon start icon="mdi-weather-night" />
-          {{ t('topbar.darkTheme') }}
-        </v-btn>
-      </v-btn-toggle>
+      <v-menu :close-on-content-click="false" location="bottom end">
+        <template v-slot:activator="{ props }">
+          <v-btn
+            icon
+            v-bind="props"
+            variant="outlined"
+            color="primary"
+            class="mr-2"
+          >
+            <v-icon :icon="themeStore.isDark ? 'mdi-weather-night' : 'mdi-white-balance-sunny'" />
+          </v-btn>
+        </template>
+        <v-card min-width="300" class="pa-4">
+          <ThemeSettings />
+        </v-card>
+      </v-menu>
       <v-select
         :model-value="selectedLocale"
         :items="localeOptions"
@@ -56,14 +52,14 @@ import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { localeOptions, type AppLocale } from '@/i18n/messages'
 import { setLocale } from '@/i18n'
-import { useThemeStore, type AppTheme } from '@/stores/theme'
+import { useThemeStore } from '@/stores/theme'
+import ThemeSettings from '@/components/settings/ThemeSettings.vue'
 
 const session = useSessionStore()
 const themeStore = useThemeStore()
 const { t, locale } = useI18n({ useScope: 'global' })
 
 const selectedLocale = computed(() => locale.value as AppLocale)
-const selectedTheme = computed(() => themeStore.current)
 
 function handleLocaleChange(nextLocale: AppLocale | null) {
   if (!nextLocale) {
@@ -71,13 +67,5 @@ function handleLocaleChange(nextLocale: AppLocale | null) {
   }
 
   setLocale(nextLocale)
-}
-
-function handleThemeChange(nextTheme: AppTheme | null) {
-  if (!nextTheme) {
-    return
-  }
-
-  themeStore.setTheme(nextTheme)
 }
 </script>

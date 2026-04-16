@@ -10,9 +10,9 @@ import './styles/main.scss'
 
 const vuetify = createVuetify({
   theme: {
-    defaultTheme: 'jb2026Light',
+    defaultTheme: 'light-nature',
     themes: {
-      jb2026Light: {
+      'light-nature': {
         dark: false,
         colors: {
           background: '#f5f4ee',
@@ -27,7 +27,37 @@ const vuetify = createVuetify({
           info: '#406882',
         },
       },
-      jb2026Dark: {
+      'light-indigo': {
+        dark: false,
+        colors: {
+          background: '#f8fafc',
+          surface: '#ffffff',
+          surfaceVariant: '#e2e8f0',
+          primary: '#1e40af',
+          secondary: '#0ea5e9',
+          accent: '#f59e0b',
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          info: '#3b82f6',
+        },
+      },
+      'light-rose': {
+        dark: false,
+        colors: {
+          background: '#fff5f8',
+          surface: '#ffffff',
+          surfaceVariant: '#ffe4e6',
+          primary: '#e11d48',
+          secondary: '#fb7185',
+          accent: '#c026d3',
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          info: '#3b82f6',
+        },
+      },
+      'dark-forest': {
         dark: true,
         colors: {
           background: '#161916',
@@ -40,6 +70,36 @@ const vuetify = createVuetify({
           warning: '#e0ae53',
           error: '#ef8a8a',
           info: '#7fb2cf',
+        },
+      },
+      'dark-midnight': {
+        dark: true,
+        colors: {
+          background: '#020617',
+          surface: '#0f172a',
+          surfaceVariant: '#1e293b',
+          primary: '#38bdf8',
+          secondary: '#7dd3fc',
+          accent: '#818cf8',
+          success: '#34d399',
+          warning: '#fbbf24',
+          error: '#fb7185',
+          info: '#60a5fa',
+        },
+      },
+      'dark-amethyst': {
+        dark: true,
+        colors: {
+          background: '#1a1024',
+          surface: '#261a35',
+          surfaceVariant: '#352648',
+          primary: '#c084fc',
+          secondary: '#a855f7',
+          accent: '#f0abfc',
+          success: '#4ade80',
+          warning: '#fbbf24',
+          error: '#f87171',
+          info: '#818cf8',
         },
       },
     },

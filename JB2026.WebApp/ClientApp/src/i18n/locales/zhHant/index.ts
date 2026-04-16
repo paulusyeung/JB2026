@@ -19,6 +19,7 @@ import { schedulerMessages } from './scheduler'
 import { editorMessages } from './editor'
 import { jobFormMessages } from './jobForm'
 import { legacySliceMessages } from './legacySlice'
+import { themeMessages } from './theme'
 
 export const zhHantMessages = {
   app: appMessages,
@@ -42,4 +43,5 @@ export const zhHantMessages = {
   editor: editorMessages,
   jobForm: jobFormMessages,
   legacySlice: legacySliceMessages,
+  theme: themeMessages,
 } as const

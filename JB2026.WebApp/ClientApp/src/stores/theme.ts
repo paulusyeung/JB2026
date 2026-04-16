@@ -1,44 +1,94 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-const THEME_STORAGE_KEY = 'jb2026.theme'
+const THEME_STORAGE_KEY = 'jb2026.theme.v2'
+const LEGACY_THEME_STORAGE_KEY = 'jb2026.theme'
 
-export const appThemes = ['light', 'dark'] as const
+export const appModes = ['light', 'dark'] as const
+export type AppMode = (typeof appModes)[number]
 
-export type AppTheme = (typeof appThemes)[number]
+export const appSchemes = {
+  light: ['nature', 'indigo', 'rose'],
+  dark: ['forest', 'midnight', 'amethyst'],
+} as const
+
+export type AppScheme = string
+
+interface ThemeState {
+  mode: AppMode
+  scheme: string
+}
 
 export const useThemeStore = defineStore('theme', () => {
-  const current = ref<AppTheme>(readStoredTheme())
+  const state = ref<ThemeState>(readStoredTheme())
 
-  const isDark = computed(() => current.value === 'dark')
+  const mode = computed(() => state.value.mode)
+  const scheme = computed(() => state.value.scheme)
+  const isDark = computed(() => state.value.mode === 'dark')
+  const vuetifyTheme = computed(() => `${state.value.mode}-${state.value.scheme}`)
 
-  function setTheme(nextTheme: AppTheme) {
-    current.value = nextTheme
-    localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
+  function setMode(nextMode: AppMode) {
+    state.value.mode = nextMode
+    // Ensure scheme is valid for new mode, if not, reset to default
+    if (!(appSchemes[nextMode] as readonly string[]).includes(state.value.scheme)) {
+      state.value.scheme = nextMode === 'light' ? 'nature' : 'forest'
+    }
+    saveTheme()
+  }
+
+  function setScheme(nextScheme: string) {
+    state.value.scheme = nextScheme
+    saveTheme()
   }
 
   function toggleTheme() {
-    setTheme(isDark.value ? 'light' : 'dark')
+    setMode(isDark.value ? 'light' : 'dark')
+  }
+
+  function saveTheme() {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(state.value))
   }
 
   return {
-    current,
+    mode,
+    scheme,
     isDark,
-    setTheme,
+    vuetifyTheme,
+    setMode,
+    setScheme,
     toggleTheme,
   }
 })
 
-function readStoredTheme(): AppTheme {
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-
-  if (storedTheme === 'light' || storedTheme === 'dark') {
-    return storedTheme
+function readStoredTheme(): ThemeState {
+  // 1. Try new storage format
+  const stored = localStorage.getItem(THEME_STORAGE_KEY)
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored) as ThemeState
+      if (appModes.includes(parsed.mode)) {
+        return parsed
+      }
+    } catch (e) {
+      console.warn('Failed to parse theme settings', e)
+    }
   }
 
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  // 2. Try legacy migration
+  const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY)
+  if (legacy === 'light' || legacy === 'dark') {
+    return {
+      mode: legacy,
+      scheme: legacy === 'light' ? 'nature' : 'forest',
+    }
   }
 
-  return 'light'
+  // 3. Fallback to system preference
+  const systemMode =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+
+  return {
+    mode: systemMode,
+    scheme: systemMode === 'light' ? 'nature' : 'forest',
+  }
 }
