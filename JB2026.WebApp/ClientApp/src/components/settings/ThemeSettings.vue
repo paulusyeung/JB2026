@@ -66,7 +66,9 @@ const currentSchemes = computed(() => {
     rose: '#e11d48',
     forest: '#e29a60',
     midnight: '#38bdf8',
-    amethyst: '#c084fc'
+    amethyst: '#c084fc',
+    slate: '#475569',
+    obsidian: '#fbbf24'
   }
 
   return ids.map(id => ({

@@ -57,6 +57,21 @@ const vuetify = createVuetify({
           info: '#3b82f6',
         },
       },
+      'light-slate': {
+        dark: false,
+        colors: {
+          background: '#f8fafc',
+          surface: '#ffffff',
+          surfaceVariant: '#e2e8f0',
+          primary: '#475569',
+          secondary: '#94a3b8',
+          accent: '#0ea5e9',
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          info: '#3b82f6',
+        },
+      },
       'dark-forest': {
         dark: true,
         colors: {
@@ -100,6 +115,21 @@ const vuetify = createVuetify({
           warning: '#fbbf24',
           error: '#f87171',
           info: '#818cf8',
+        },
+      },
+      'dark-obsidian': {
+        dark: true,
+        colors: {
+          background: '#000000',
+          surface: '#121212',
+          surfaceVariant: '#262626',
+          primary: '#fbbf24',
+          secondary: '#78350f',
+          accent: '#eab308',
+          success: '#34d399',
+          warning: '#fbbf24',
+          error: '#fb7185',
+          info: '#60a5fa',
         },
       },
     },

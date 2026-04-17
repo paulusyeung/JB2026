@@ -8,8 +8,8 @@ export const appModes = ['light', 'dark'] as const
 export type AppMode = (typeof appModes)[number]
 
 export const appSchemes = {
-  light: ['nature', 'indigo', 'rose'],
-  dark: ['forest', 'midnight', 'amethyst'],
+  light: ['nature', 'indigo', 'rose', 'slate'],
+  dark: ['forest', 'midnight', 'amethyst', 'obsidian'],
 } as const
 
 export type AppScheme = string

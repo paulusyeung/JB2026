@@ -7,5 +7,7 @@ export const themeMessages = {
     forest: 'Forest',
     midnight: 'Midnight',
     amethyst: 'Amethyst',
+    slate: 'Slate',
+    obsidian: 'Obsidian',
   },
 } as const
