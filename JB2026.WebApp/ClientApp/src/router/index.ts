@@ -121,7 +121,7 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/AdminView.vue'),
-      meta: { requiresAuth: true, titleKey: 'routes.admin' },
+      meta: { requiresAuth: true, titleKey: 'routes.admin', roles: ['Admin'] },
     },
     {
       path: '/public',
@@ -133,7 +133,7 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),
-      meta: { requiresAuth: true, titleKey: 'routes.settings' },
+      meta: { requiresAuth: true, titleKey: 'routes.settings', roles: ['Admin'] },
     },
     {
       path: '/help',
@@ -189,7 +189,11 @@ const router = createRouter({
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
-      meta: { requiresAuth: true, titleKey: route.titleKey },
+      meta: { 
+        requiresAuth: true, 
+        titleKey: route.titleKey,
+        roles: route.path.startsWith('/admin') || route.path.startsWith('/settings') ? ['Admin'] : undefined
+      },
     })),
   ],
 })
@@ -208,6 +212,21 @@ router.beforeEach(async (to) => {
 
   if (to.name === 'login' && sessionStore.isAuthenticated) {
     return { name: 'dashboard' }
+  }
+
+  // Role checking
+  const requiredRoles = to.meta.roles as string[] | undefined
+  if (requiredRoles && requiredRoles.length > 0) {
+    const rawRole = sessionStore.profile?.role
+    const userRole = typeof rawRole === 'number' ? rawRole.toString() : rawRole?.toLowerCase().trim()
+    
+    if (!userRole || !requiredRoles.some((r) => {
+      const checkRole = r.toLowerCase().trim()
+      return checkRole === userRole || (checkRole === 'admin' && userRole === '4')
+    })) {
+      // If unauthorized, redirect to dashboard or a 403 page if it exists
+      return { name: 'dashboard' }
+    }
   }
 
   return true

@@ -35,14 +35,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useSessionStore } from '@/stores/session'
 import MenuItemRenderer from './MenuItemRenderer.vue'
 import { buildLegacyMenuItems } from './menuHelper'
 
 const { t } = useI18n({ useScope: 'global' })
+const sessionStore = useSessionStore()
 
 const items = computed(() => [
   { title: t('routes.dashboard'), to: '/dashboard', icon: 'mdi-view-dashboard-outline' },
 ])
 
-const legacyMenuItems = computed(() => buildLegacyMenuItems(t))
+const legacyMenuItems = computed(() => {
+  return buildLegacyMenuItems(t, sessionStore.profile?.role)
+})
 </script>

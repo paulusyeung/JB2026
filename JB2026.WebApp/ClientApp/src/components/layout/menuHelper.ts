@@ -5,10 +5,11 @@ export type MenuItem = {
   icon?: string
   to?: string
   children?: MenuItem[]
+  roles?: string[]
 }
 
-export function buildLegacyMenuItems(t: ComposerTranslation): MenuItem[] {
-  return [
+export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | undefined): MenuItem[] {
+  const items: MenuItem[] = [
     {
       title: t('routes.jobOrder'),
       icon: 'mdi-clipboard-text-outline',
@@ -57,6 +58,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation): MenuItem[] {
     {
       title: t('routes.admin'),
       icon: 'mdi-shield-account-outline',
+      roles: ['Admin'],
       children: [
         { title: t('routes.adminWorkflow'), to: '/admin/workflow', icon: 'mdi-source-branch' },
         { title: t('routes.adminWorkflowForms'), to: '/admin/workflow-forms', icon: 'mdi-file-tree-outline' },
@@ -78,13 +80,51 @@ export function buildLegacyMenuItems(t: ComposerTranslation): MenuItem[] {
     {
       title: t('routes.settings'),
       icon: 'mdi-cog-outline',
+      roles: ['Admin'],
       children: [
         { title: t('routes.settingsSystemParameters'), to: '/settings/system-parameters', icon: 'mdi-tune-vertical-variant' },
       ],
     },
   ]
+
+  return filterMenuItems(items, userRole)
 }
 
 export function hasChildren(item: MenuItem): boolean {
   return Array.isArray(item.children) && item.children.length > 0
+}
+
+export function filterMenuItems(items: MenuItem[], role: string | number | undefined): MenuItem[] {
+  const normalizedRole = typeof role === 'number' ? role.toString() : role?.toLowerCase().trim()
+  
+  return items
+    .filter((item) => {
+      // If roles are specified, check if user has one of them
+      if (item.roles && item.roles.length > 0) {
+        if (!normalizedRole) {
+          return false
+        }
+        
+        // Match against string names or original role values
+        return item.roles.some((r) => {
+          const checkRole = r.toLowerCase().trim()
+          return checkRole === normalizedRole || (checkRole === 'admin' && normalizedRole === '4')
+        })
+      }
+      return true
+    })
+    .map((item) => {
+      if (hasChildren(item)) {
+        const filteredChildren = filterMenuItems(item.children!, role)
+        return { ...item, children: filteredChildren }
+      }
+      return item
+    })
+    .filter((item) => {
+      // If it had children but they were all filtered out, and it has no 'to' path, hide it
+      if (hasChildren(item) && item.children!.length === 0 && !item.to) {
+        return false
+      }
+      return true
+    })
 }

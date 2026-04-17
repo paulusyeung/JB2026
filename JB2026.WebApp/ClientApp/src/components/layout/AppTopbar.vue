@@ -38,7 +38,7 @@
         <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
         <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
       </div>
-      <v-btn v-if="session.isAuthenticated" variant="outlined" color="primary" @click="session.logout()">
+      <v-btn v-if="session.isAuthenticated" variant="outlined" color="primary" @click="handleLogout">
         {{ t('topbar.signOut') }}
       </v-btn>
       <v-chip color="secondary" variant="flat">{{ t('topbar.spaHost') }}</v-chip>
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { localeOptions, type AppLocale } from '@/i18n/messages'
@@ -55,6 +56,7 @@ import { setLocale } from '@/i18n'
 import { useThemeStore } from '@/stores/theme'
 import ThemeSettings from '@/components/settings/ThemeSettings.vue'
 
+const router = useRouter()
 const session = useSessionStore()
 const themeStore = useThemeStore()
 const { t, locale } = useI18n({ useScope: 'global' })
@@ -67,5 +69,10 @@ function handleLocaleChange(nextLocale: AppLocale | null) {
   }
 
   setLocale(nextLocale)
+}
+
+function handleLogout() {
+  session.logout()
+  router.push({ name: 'login' })
 }
 </script>
