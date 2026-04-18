@@ -1,0 +1,13 @@
+name: modern-dashboard-redesign
+description: Redesign the dashboard to be more useful, modern, and feature-rich.
+status: proposing
+artifacts:
+  - id: proposal
+    type: markdown
+    path: proposal.md
+  - id: design
+    type: markdown
+    path: design.md
+  - id: tasks
+    type: markdown
+    path: tasks.md

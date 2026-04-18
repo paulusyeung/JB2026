@@ -4,9 +4,12 @@
       <div class="d-flex justify-space-between align-start mb-4">
         <div>
           <p class="eyebrow mb-2">{{ label }}</p>
-          <h3 class="text-h4 font-weight-bold">{{ value }}</h3>
+          <div class="d-flex align-center">
+            <h3 class="text-h4 font-weight-bold mr-3">{{ value }}</h3>
+            <TrendIndicator v-if="trend !== undefined" :value="trend" :inverse="inverse" />
+          </div>
         </div>
-        <v-icon :icon="icon" color="primary" size="28" />
+        <v-icon :icon="icon" :color="statusColor || 'primary'" size="28" />
       </div>
       <p class="text-body-2 text-medium-emphasis mb-0">{{ helper }}</p>
     </v-card-text>
@@ -14,10 +17,15 @@
 </template>
 
 <script setup lang="ts">
+import TrendIndicator from './TrendIndicator.vue';
+
 defineProps<{
   label: string
   value: string
   helper: string
   icon: string
+  trend?: number
+  inverse?: boolean
+  statusColor?: string
 }>()
 </script>
