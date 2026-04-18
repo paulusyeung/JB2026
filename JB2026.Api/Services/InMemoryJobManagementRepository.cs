@@ -32,7 +32,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return _jobs.TryGetValue(orderId, out var job) ? job.StyleTitles : Array.Empty<string>();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith)
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, DateOnly? startOn = null, DateOnly? endOn = null)
     {
         var today = DateTime.Today;
 
@@ -46,6 +46,18 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             4 => query.Where(j => j.RequiredOn >= today && j.RequiredOn <= today.AddDays(30)),
             _ => query
         };
+
+        if (startOn.HasValue)
+        {
+            var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
+            query = query.Where(j => j.OrderedOn >= lower);
+        }
+
+        if (endOn.HasValue)
+        {
+            var upper = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+            query = query.Where(j => j.OrderedOn < upper);
+        }
 
         if (!string.IsNullOrEmpty(startsWith) && startsWith != "All")
         {
@@ -65,7 +77,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 j.CustomerRef.Contains(token, StringComparison.OrdinalIgnoreCase));
         }
 
-        return query.OrderBy(j => j.OrderNumber).Select(MapOrder).ToList();
+        return query.OrderByDescending(j => j.OrderedOn).Select(MapOrder).ToList();
     }
 
     public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)

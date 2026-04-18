@@ -81,7 +81,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith)
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, DateOnly? startOn = null, DateOnly? endOn = null)
     {
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
@@ -98,6 +98,18 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             4 => query.Where(o => o.Status >= 2 && o.RequiredOn >= today && o.RequiredOn <= today.AddDays(30)),
             _ => query
         };
+
+        if (startOn.HasValue)
+        {
+            var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
+            query = query.Where(o => o.OrderedOn.HasValue && o.OrderedOn.Value >= lower);
+        }
+
+        if (endOn.HasValue)
+        {
+            var upper = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+            query = query.Where(o => o.OrderedOn.HasValue && o.OrderedOn.Value < upper);
+        }
 
         if (!string.IsNullOrEmpty(startsWith) && startsWith != "All")
         {
@@ -116,7 +128,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         }
 
         return query
-            .OrderBy(o => o.OrderNumber)
+            .OrderByDescending(o => o.OrderedOn)
             .Select(o => MapOrder(o, userDisplayNameLookup))
             .ToList();
     }
@@ -172,7 +184,11 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
     public IReadOnlyList<JobOrderResponse> GetJobOrders(int take)
     {
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
-        return CompiledGetJobOrders(_readContext, take)
+        return _readContext.JobOrders
+            .AsNoTracking()
+            .Where(order => !order.Retired && (order.JobNumber == null || order.JobNumber == 0))
+            .OrderByDescending(order => order.OrderedOn)
+            .Take(take)
             .Select(order => MapOrder(order, userDisplayNameLookup))
             .ToList();
     }

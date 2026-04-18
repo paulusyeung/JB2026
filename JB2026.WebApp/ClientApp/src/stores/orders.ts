@@ -9,6 +9,10 @@ export const useOrdersStore = defineStore('orders', () => {
   const filter = ref('')
   
   const rowCount = computed(() => rows.value.length)
+  const uniqueOrderCount = computed(() => {
+    const uniqueOrders = new Set(rows.value.map(r => r.orderNumber))
+    return uniqueOrders.size
+  })
 
   async function load(params: { 
     lookup?: string; 
@@ -31,6 +35,7 @@ export const useOrdersStore = defineStore('orders', () => {
     loading,
     filter,
     rowCount,
+    uniqueOrderCount,
     load
   }
 })

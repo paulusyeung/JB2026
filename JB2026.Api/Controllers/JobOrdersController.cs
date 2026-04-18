@@ -36,10 +36,16 @@ public sealed class JobOrdersController : ControllerBase
         [FromQuery] string? lookup,
         [FromQuery] int? commonQuery,
         [FromQuery] string? startsWith,
-        [FromQuery] string? listType)
+        [FromQuery] string? listType,
+        [FromQuery] DateOnly? startOn,
+        [FromQuery] DateOnly? endOn)
     {
         var isJobList = string.Equals(listType, "job", StringComparison.OrdinalIgnoreCase);
-        var hasFilters = !string.IsNullOrWhiteSpace(lookup) || commonQuery.GetValueOrDefault() > 0 || !string.IsNullOrWhiteSpace(startsWith);
+        var hasFilters = !string.IsNullOrWhiteSpace(lookup) 
+            || commonQuery.GetValueOrDefault() > 0 
+            || !string.IsNullOrWhiteSpace(startsWith)
+            || startOn.HasValue
+            || endOn.HasValue;
         var defaultTake = hasFilters ? _jobListOptions.FilteredTake : _jobListOptions.InitialTake;
         var maxTake = Math.Max(1, _jobListOptions.MaxTake);
         var requestedTake = take.GetValueOrDefault(defaultTake);
@@ -47,8 +53,8 @@ public sealed class JobOrdersController : ControllerBase
         var orders = isJobList
             ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake)
             : hasFilters
-            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith)
-            : _repository.GetJobOrders(take.GetValueOrDefault(100));
+            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, startOn, endOn)
+            : _repository.GetJobOrders(requestedTake);
 
         return Ok(orders);
     }

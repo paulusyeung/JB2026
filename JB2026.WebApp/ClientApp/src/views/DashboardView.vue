@@ -18,7 +18,7 @@
     <div class="grid-three mb-6">
       <KpiCard
         label="Orders Loaded"
-        :value="String(orders.rowCount)"
+        :value="String(orders.uniqueOrderCount)"
         helper="Total number of active orders"
         icon="mdi-cart-outline"
         :trend="0"
@@ -153,7 +153,7 @@ const chartData = computed(() => ({
       label: t('dashboard.volumeTrend.datasetLabel'),
       backgroundColor: chartPalette.value.bars,
       borderRadius: 12,
-      data: [orders.rowCount, jobs.filteredRows.length, quotations.rowCount],
+      data: [orders.uniqueOrderCount, jobs.filteredRows.length, quotations.rowCount],
     },
   ],
 }))
@@ -217,7 +217,7 @@ async function reload() {
   try {
     const params: any = {
       lookup: dashboardFilters.value.search,
-      take: 100, // Show a reasonable preview of records
+      take: 500, // Match Order List limit
     };
 
     // Determine commonQuery based on dateRange (matching EfJobManagementRepository logic)
