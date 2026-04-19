@@ -80,7 +80,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return query.OrderByDescending(j => j.OrderedOn).Select(MapOrder).ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
     {
         var today = DateTime.Today;
 
@@ -93,6 +93,18 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             2 => query.Where(j => j.Status >= 2 && j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-90)),
             _ => query
         };
+
+        if (startOn.HasValue)
+        {
+            var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
+            query = query.Where(j => j.OrderedOn >= lower);
+        }
+
+        if (endOn.HasValue)
+        {
+            var upper = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+            query = query.Where(j => j.OrderedOn < upper);
+        }
 
         if (!string.IsNullOrEmpty(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
         {

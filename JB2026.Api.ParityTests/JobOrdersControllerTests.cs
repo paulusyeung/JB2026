@@ -119,13 +119,13 @@ public sealed class JobOrdersControllerTests
             return [CreateResponse("job-orders")];
         }
 
-        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)
+        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
         {
             JobListCalled = true;
             return [CreateResponse("job-list")];
         }
 
-        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith)
+        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, DateOnly? startOn = null, DateOnly? endOn = null)
         {
             OrderListCalled = true;
             return [CreateResponse("order-list")];

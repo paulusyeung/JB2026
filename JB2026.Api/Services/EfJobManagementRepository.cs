@@ -133,7 +133,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take)
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
     {
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
@@ -151,6 +151,18 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             2 => query.Where(o => o.Status >= 2 && o.OrderedOn >= today.AddDays(-90) && o.OrderedOn < today.AddDays(1)),
             _ => query
         };
+
+        if (startOn.HasValue)
+        {
+            var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
+            query = query.Where(o => o.OrderedOn.HasValue && o.OrderedOn.Value >= lower);
+        }
+
+        if (endOn.HasValue)
+        {
+            var upper = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
+            query = query.Where(o => o.OrderedOn.HasValue && o.OrderedOn.Value < upper);
+        }
 
         if (!string.IsNullOrWhiteSpace(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
         {

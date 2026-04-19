@@ -51,7 +51,7 @@ public sealed class JobOrdersController : ControllerBase
         var requestedTake = take.GetValueOrDefault(defaultTake);
         var jobListTake = Math.Clamp(requestedTake, 1, maxTake);
         var orders = isJobList
-            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake)
+            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
             : hasFilters
             ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, startOn, endOn)
             : _repository.GetJobOrders(requestedTake);

@@ -4,12 +4,7 @@
       {{ error }}
     </v-alert>
 
-    <!-- Interactive Filters -->
-    <DashboardFilters
-      v-model:filters="dashboardFilters"
-      @refresh="reload"
-      class="mb-6"
-    />
+    <DashboardFilters v-model:filters="dashboardFilters" @refresh="reload" class="mb-6" />
 
     <v-overlay :model-value="loading" persistent class="align-center justify-center">
       <v-progress-circular indeterminate color="primary" size="64" />
@@ -25,7 +20,7 @@
       />
       <KpiCard
         :label="t('dashboard.kpi.jobsLoadedLabel')"
-        :value="String(jobs.rows.length)"
+        :value="String(jobListRows.length)"
         :helper="t('dashboard.kpi.jobsLoadedHelper')"
         icon="mdi-briefcase-clock-outline"
         :trend="5"
@@ -39,7 +34,7 @@
       />
     </div>
 
-    <!-- TODO: Implement a dedicated /stats/count API for the dashboard to show ACTUAL database counts 
+    <!-- TODO: Implement a dedicated /stats/count API for the dashboard to show ACTUAL database counts
          Current cards show count of records loaded in local store session (max 100) -->
 
     <v-row>
@@ -77,28 +72,28 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Bar, Line, Pie } from 'vue-chartjs'
 import {
+  ArcElement,
   BarElement,
   CategoryScale,
   Chart as ChartJS,
   Legend,
+  LineElement,
   LinearScale,
   PointElement,
-  LineElement,
-  ArcElement,
   Tooltip,
 } from 'chart.js'
-import { useFeatureFlagsStore } from '@/stores/featureFlags'
-import { useJobsStore } from '@/stores/jobs'
-import { useQuotationsStore } from '@/stores/quotations'
-import { useOrdersStore } from '@/stores/orders'
-import { useThemeStore } from '@/stores/theme'
+import { getJobList } from '@/services/jobOrders'
 import KpiCard from '@/components/cards/KpiCard.vue'
-import DashboardFilters from '@/components/layout/DashboardFilters.vue';
-import ActivityTimeline from '@/components/layout/ActivityTimeline.vue';
-import type { ActivityItem } from '@/components/layout/ActivityTimeline.vue';
+import ActivityTimeline from '@/components/layout/ActivityTimeline.vue'
+import DashboardFilters from '@/components/layout/DashboardFilters.vue'
+import { useFeatureFlagsStore } from '@/stores/featureFlags'
+import { useOrdersStore } from '@/stores/orders'
+import { useQuotationsStore } from '@/stores/quotations'
+import { useThemeStore } from '@/stores/theme'
+import type { ActivityItem } from '@/components/layout/ActivityTimeline.vue'
+import type { JobOrderRecord } from '@/types/api'
 
 const featureFlags = useFeatureFlagsStore()
-const jobs = useJobsStore()
 const quotations = useQuotationsStore()
 const orders = useOrdersStore()
 const themeStore = useThemeStore()
@@ -111,19 +106,20 @@ ChartJS.register(
   LineElement,
   ArcElement,
   Legend,
-  Tooltip
+  Tooltip,
 )
 
 const { t } = useI18n({ useScope: 'global' })
 
-const loading = ref(false);
-const error = ref<string | null>(null);
+const loading = ref(false)
+const error = ref<string | null>(null)
+const jobListRows = ref<JobOrderRecord[]>([])
 
-const chartType = ref<'bar' | 'line' | 'pie'>('bar');
+const chartType = ref<'bar' | 'line' | 'pie'>('bar')
 const dashboardFilters = ref({
   dateRange: 'Last 30 Days',
   search: '',
-});
+})
 
 const mockActivities = ref<ActivityItem[]>([
   { type: 'job', title: 'Job #9842 Updated', status: 'In Progress', timestamp: '2 mins ago' },
@@ -131,28 +127,28 @@ const mockActivities = ref<ActivityItem[]>([
   { type: 'invoice', title: 'Invoice #2024-05 Paid', status: 'Paid', timestamp: '1 hour ago' },
   { type: 'job', title: 'Job #9840 Completed', status: 'Completed', timestamp: '3 hours ago' },
   { type: 'system', title: 'System Maintenance', status: 'Scheduled', timestamp: 'Today' },
-]);
+])
 
-watch(dashboardFilters, () => {
-  reload();
-}, { deep: true });
+watch(
+  dashboardFilters,
+  () => {
+    void reload()
+  },
+  { deep: true },
+)
 
 onMounted(async () => {
   await reload()
 })
 
 const chartData = computed(() => ({
-  labels: [
-    'Orders',
-    t('dashboard.volumeTrend.labels.jobs'),
-    t('dashboard.volumeTrend.labels.quotations'),
-  ],
+  labels: ['Orders', t('dashboard.volumeTrend.labels.jobs'), t('dashboard.volumeTrend.labels.quotations')],
   datasets: [
     {
       label: t('dashboard.volumeTrend.datasetLabel'),
       backgroundColor: chartPalette.value.bars,
       borderRadius: 12,
-      data: [orders.uniqueOrderCount, jobs.filteredRows.length, quotations.rowCount],
+      data: [orders.uniqueOrderCount, jobListRows.value.length, quotations.rowCount],
     },
   ],
 }))
@@ -210,73 +206,81 @@ const chartOptions = computed(() => ({
   },
 }))
 
+function formatDateOnly(value: Date) {
+  return value.toISOString().slice(0, 10)
+}
+
+function buildDateRangeParams() {
+  const now = new Date()
+  const today = formatDateOnly(now)
+  const params: { startOn?: string; endOn?: string } = {}
+
+  switch (dashboardFilters.value.dateRange) {
+    case 'Today':
+      params.startOn = today
+      params.endOn = today
+      break
+    case 'Last 7 Days': {
+      const start = new Date(now)
+      start.setDate(start.getDate() - 6)
+      params.startOn = formatDateOnly(start)
+      params.endOn = today
+      break
+    }
+    case 'Last 30 Days': {
+      const start = new Date(now)
+      start.setDate(start.getDate() - 29)
+      params.startOn = formatDateOnly(start)
+      params.endOn = today
+      break
+    }
+    case 'Last 90 Days': {
+      const start = new Date(now)
+      start.setDate(start.getDate() - 89)
+      params.startOn = formatDateOnly(start)
+      params.endOn = today
+      break
+    }
+    case 'This Year':
+      params.startOn = `${now.getFullYear()}-01-01`
+      params.endOn = today
+      break
+    default:
+      break
+  }
+
+  return params
+}
+
 async function reload() {
-  loading.value = true;
-  error.value = null;
+  loading.value = true
+  error.value = null
+
   try {
-    const params: any = {
-      lookup: dashboardFilters.value.search,
-      take: 500, // Match Order List limit
-    };
-
-    // Determine commonQuery based on dateRange (matching EfJobManagementRepository logic)
-    if (dashboardFilters.value.dateRange === 'Last 7 Days') {
-      params.commonQuery = 1;
-    } else if (dashboardFilters.value.dateRange === 'Last 30 Days') {
-      params.commonQuery = 2;
+    const dateRangeParams = buildDateRangeParams()
+    const orderParams = {
+      lookup: dashboardFilters.value.search || undefined,
+      take: 500,
+      startOn: dateRangeParams.startOn,
+      endOn: dateRangeParams.endOn,
     }
+    const dateParam = dateRangeParams.startOn ? new Date(dateRangeParams.startOn) : undefined
 
-    // Calculate specific date range for other stores
-    const now = new Date();
-    let days = 30; // Default for Last 30 Days
-
-    if (dashboardFilters.value.dateRange === 'Today') {
-      params.startOn = now.toISOString().slice(0, 10);
-      params.endOn = now.toISOString().slice(0, 10);
-      days = 1;
-    } else if (dashboardFilters.value.dateRange === 'Last 7 Days') {
-      const d = new Date();
-      d.setDate(d.getDate() - 7);
-      params.startOn = d.toISOString().slice(0, 10);
-      days = 7;
-    } else if (dashboardFilters.value.dateRange === 'Last 30 Days') {
-      const d = new Date();
-      d.setDate(d.getDate() - 30);
-      params.startOn = d.toISOString().slice(0, 10);
-      days = 30;
-    } else if (dashboardFilters.value.dateRange === 'Last 90 Days') {
-      const d = new Date();
-      d.setDate(d.getDate() - 90);
-      params.startOn = d.toISOString().slice(0, 10);
-      days = 90;
-    } else if (dashboardFilters.value.dateRange === 'This Year') {
-      params.startOn = `${now.getFullYear()}-01-01`;
-      days = 365;
-    }
-    
-    // Pass the search query to stores that support it
-    const dateParam = params.startOn ? new Date(params.startOn) : undefined;
     await Promise.all([
       featureFlags.load(),
-      jobs.load(dateParam, days), 
+      getJobList(orderParams).then((rows) => {
+        jobListRows.value = rows
+      }),
       quotations.load(dateParam),
-      orders.load(params)
-    ]);
+      orders.load(orderParams),
+    ])
 
-    // If search is present but store doesn't support params in load(), 
-    // we use their internal filtering (search/keyword)
-    if (dashboardFilters.value.search) {
-      jobs.filter = dashboardFilters.value.search;
-      quotations.keyword = dashboardFilters.value.search;
-    } else {
-      jobs.filter = '';
-      quotations.keyword = '';
-    }
+    quotations.keyword = dashboardFilters.value.search || ''
   } catch (e) {
-    console.error('Failed to load dashboard data:', e);
-    error.value = 'Failed to load some dashboard components. Please try again.';
+    console.error('Failed to load dashboard data:', e)
+    error.value = 'Failed to load some dashboard components. Please try again.'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 </script>

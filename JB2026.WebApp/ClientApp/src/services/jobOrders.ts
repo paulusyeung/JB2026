@@ -58,6 +58,8 @@ export async function getJobList(params: {
   commonQuery?: number
   startsWith?: string
   take?: number
+  startOn?: string
+  endOn?: string
 }): Promise<JobOrderRecord[]> {
   const response = await apiClient.get<JobOrderRecord[]>('/api/v2/job-orders', {
     params: {
@@ -65,6 +67,8 @@ export async function getJobList(params: {
       commonQuery: params.commonQuery,
       startsWith: params.startsWith,
       take: params.take,
+      startOn: params.startOn,
+      endOn: params.endOn,
       listType: 'job',
     },
   })
