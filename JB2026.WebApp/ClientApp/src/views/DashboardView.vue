@@ -86,14 +86,12 @@ import { getJobList } from '@/services/jobOrders'
 import KpiCard from '@/components/cards/KpiCard.vue'
 import ActivityTimeline from '@/components/layout/ActivityTimeline.vue'
 import DashboardFilters from '@/components/layout/DashboardFilters.vue'
-import { useFeatureFlagsStore } from '@/stores/featureFlags'
 import { useOrdersStore } from '@/stores/orders'
 import { useQuotationsStore } from '@/stores/quotations'
 import { useThemeStore } from '@/stores/theme'
 import type { ActivityItem } from '@/components/layout/ActivityTimeline.vue'
 import type { JobOrderRecord } from '@/types/api'
 
-const featureFlags = useFeatureFlagsStore()
 const quotations = useQuotationsStore()
 const orders = useOrdersStore()
 const themeStore = useThemeStore()
@@ -267,7 +265,6 @@ async function reload() {
     const dateParam = dateRangeParams.startOn ? new Date(dateRangeParams.startOn) : undefined
 
     await Promise.all([
-      featureFlags.load(),
       getJobList(orderParams).then((rows) => {
         jobListRows.value = rows
       }),
