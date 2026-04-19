@@ -92,10 +92,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         query = commonQuery switch
         {
-            1 => query.Where(o => o.Status >= 2 && o.OrderedOn <= today && o.OrderedOn >= today.AddDays(-7)),
-            2 => query.Where(o => o.Status >= 2 && o.OrderedOn <= today && o.OrderedOn >= today.AddDays(-30)),
-            3 => query.Where(o => o.Status >= 2 && o.RequiredOn >= today && o.RequiredOn <= today.AddDays(7)),
-            4 => query.Where(o => o.Status >= 2 && o.RequiredOn >= today && o.RequiredOn <= today.AddDays(30)),
+            1 => query.Where(o => o.OrderedOn <= today && o.OrderedOn >= today.AddDays(-7)),
+            2 => query.Where(o => o.OrderedOn <= today && o.OrderedOn >= today.AddDays(-30)),
+            3 => query.Where(o => o.RequiredOn >= today && o.RequiredOn <= today.AddDays(7)),
+            4 => query.Where(o => o.RequiredOn >= today && o.RequiredOn <= today.AddDays(30)),
             _ => query
         };
 

@@ -26,12 +26,12 @@ export const useJobsStore = defineStore('jobs', () => {
     )
   })
 
-  async function load(date = new Date()) {
+  async function load(date = new Date(), days = 14) {
     loading.value = true
 
     try {
       const startOn = date.toISOString().slice(0, 10)
-      rows.value = await getJobs({ startOn, days: 14 })
+      rows.value = await getJobs({ startOn, days })
       if (rows.value.length > 0 && !selectedJob.value) {
         const firstRow = rows.value[0]
         if (firstRow) {

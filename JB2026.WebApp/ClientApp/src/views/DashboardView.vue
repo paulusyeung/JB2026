@@ -228,30 +228,37 @@ async function reload() {
 
     // Calculate specific date range for other stores
     const now = new Date();
+    let days = 30; // Default for Last 30 Days
+
     if (dashboardFilters.value.dateRange === 'Today') {
       params.startOn = now.toISOString().slice(0, 10);
       params.endOn = now.toISOString().slice(0, 10);
+      days = 1;
     } else if (dashboardFilters.value.dateRange === 'Last 7 Days') {
       const d = new Date();
       d.setDate(d.getDate() - 7);
       params.startOn = d.toISOString().slice(0, 10);
+      days = 7;
     } else if (dashboardFilters.value.dateRange === 'Last 30 Days') {
       const d = new Date();
       d.setDate(d.getDate() - 30);
       params.startOn = d.toISOString().slice(0, 10);
+      days = 30;
     } else if (dashboardFilters.value.dateRange === 'Last 90 Days') {
       const d = new Date();
       d.setDate(d.getDate() - 90);
       params.startOn = d.toISOString().slice(0, 10);
+      days = 90;
     } else if (dashboardFilters.value.dateRange === 'This Year') {
       params.startOn = `${now.getFullYear()}-01-01`;
+      days = 365;
     }
     
     // Pass the search query to stores that support it
     const dateParam = params.startOn ? new Date(params.startOn) : undefined;
     await Promise.all([
       featureFlags.load(),
-      jobs.load(dateParam), 
+      jobs.load(dateParam, days), 
       quotations.load(dateParam),
       orders.load(params)
     ]);
