@@ -47,6 +47,7 @@ export async function getOrderList(params: {
       take: params.take,
       startOn: params.startOn,
       endOn: params.endOn,
+      listType: 'order',
     },
   })
 

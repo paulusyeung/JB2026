@@ -81,14 +81,13 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, DateOnly? startOn = null, DateOnly? endOn = null)
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
     {
-        var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
 
-        var query = _readContext.JobOrders
+        var query = _readContext.vwOrderDetailLists
             .AsNoTracking()
-            .Where(order => !order.Retired && (order.JobNumber == null || order.JobNumber == 0));
+            .Where(order => !order.Retired && order.Status >= 0);
 
         query = commonQuery switch
         {
@@ -124,12 +123,15 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             query = query.Where(o =>
                 (o.OrderNumber != null && o.OrderNumber.Contains(lookup)) ||
                 (o.CustomerName != null && o.CustomerName.Contains(lookup)) ||
-                (o.CustomerRef != null && o.CustomerRef.Contains(lookup)));
+                (o.CustomerRef != null && o.CustomerRef.Contains(lookup)) ||
+                (o.OrderTitle != null && o.OrderTitle.Contains(lookup)));
         }
 
         return query
-            .OrderByDescending(o => o.OrderedOn)
-            .Select(o => MapOrder(o, userDisplayNameLookup))
+            .OrderByDescending(o => o.OrderNumber)
+            .ThenBy(o => o.JobNumber)
+            .Take(take)
+            .Select(MapOrder)
             .ToList();
     }
 
@@ -417,6 +419,39 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             CreatedOn = job.CreatedOn,
             ModifiedBy = modifiedBy,
             ModifiedOn = job.ModifiedOn
+        };
+    }
+
+    private static JobOrderResponse MapOrder(vwOrderDetailList order)
+    {
+        return new JobOrderResponse
+        {
+            OrderId = order.OrderId,
+            OrderType = order.OrderType,
+            OrderNumber = order.OrderNumber ?? string.Empty,
+            JobNumber = order.JobNumber?.ToString() ?? string.Empty,
+            CustomerName = order.CustomerName ?? string.Empty,
+            CustomerRef = order.CustomerRef ?? string.Empty,
+            OrderTitle = order.OrderTitle ?? string.Empty,
+            ProductCode = order.ProductCode ?? string.Empty,
+            ProductStyle = order.ProductStyle ?? string.Empty,
+            OutputRef = order.OutputRef ?? string.Empty,
+            InvoiceRef = order.InvoiceRef ?? string.Empty,
+            InvoiceAmount = order.InvoiceAmount,
+            AttachmentProductCount = order.Attachment_ProductCode ?? 0,
+            AttachmentCustomerCount = order.Attachment_CustomerRef ?? 0,
+            OrderedBy = order.OrderedBy ?? string.Empty,
+            OrderedOn = order.OrderedOn ?? DateTime.MinValue,
+            RequiredOn = order.RequiredOn ?? DateTime.MinValue,
+            CompletedOn = order.CompletedOn == default ? null : order.CompletedOn,
+            Qty = order.Qty,
+            PaymentTerms = order.PaymentTerms ?? string.Empty,
+            Remarks = order.Remarks ?? string.Empty,
+            Status = order.Status,
+            CreatedBy = order.CreatedBy ?? string.Empty,
+            CreatedOn = order.CreatedOn,
+            ModifiedBy = order.ModifiedBy,
+            ModifiedOn = order.ModifiedOn
         };
     }
 

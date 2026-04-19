@@ -32,11 +32,12 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return _jobs.TryGetValue(orderId, out var job) ? job.StyleTitles : Array.Empty<string>();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, DateOnly? startOn = null, DateOnly? endOn = null)
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
     {
         var today = DateTime.Today;
 
-        var query = _jobs.Values.AsEnumerable();
+        var query = _jobs.Values.AsEnumerable()
+            .Where(j => j.Status >= 0);
 
         query = commonQuery switch
         {
@@ -77,7 +78,12 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 j.CustomerRef.Contains(token, StringComparison.OrdinalIgnoreCase));
         }
 
-        return query.OrderByDescending(j => j.OrderedOn).Select(MapOrder).ToList();
+        return query
+            .OrderByDescending(j => j.OrderNumber)
+            .ThenBy(j => j.JobNumber)
+            .Take(take)
+            .Select(MapOrder)
+            .ToList();
     }
 
     public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)

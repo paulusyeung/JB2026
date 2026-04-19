@@ -41,6 +41,7 @@ public sealed class JobOrdersController : ControllerBase
         [FromQuery] DateOnly? endOn)
     {
         var isJobList = string.Equals(listType, "job", StringComparison.OrdinalIgnoreCase);
+        var isOrderList = string.Equals(listType, "order", StringComparison.OrdinalIgnoreCase);
         var hasFilters = !string.IsNullOrWhiteSpace(lookup) 
             || commonQuery.GetValueOrDefault() > 0 
             || !string.IsNullOrWhiteSpace(startsWith)
@@ -52,8 +53,10 @@ public sealed class JobOrdersController : ControllerBase
         var jobListTake = Math.Clamp(requestedTake, 1, maxTake);
         var orders = isJobList
             ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
+            : isOrderList
+            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
             : hasFilters
-            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, startOn, endOn)
+            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
             : _repository.GetJobOrders(requestedTake);
 
         return Ok(orders);

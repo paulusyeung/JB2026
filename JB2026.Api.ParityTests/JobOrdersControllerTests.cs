@@ -44,6 +44,22 @@ public sealed class JobOrdersControllerTests
     }
 
     [Fact]
+    public void GetAll_OrderListMode_UsesOrderListRepositoryPath()
+    {
+        var repository = new StubRepository();
+        var controller = CreateController(repository);
+
+        var result = controller.GetAll(500, null, 0, null, "order");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
+        Assert.Single(payload);
+        Assert.False(repository.JobListCalled);
+        Assert.True(repository.OrderListCalled);
+        Assert.False(repository.JobOrdersCalled);
+    }
+
+    [Fact]
     public void GetStats_InvalidTake_ReturnsBadRequest()
     {
         var repository = new StubRepository();
@@ -125,7 +141,7 @@ public sealed class JobOrdersControllerTests
             return [CreateResponse("job-list")];
         }
 
-        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, DateOnly? startOn = null, DateOnly? endOn = null)
+        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
         {
             OrderListCalled = true;
             return [CreateResponse("order-list")];
