@@ -122,7 +122,6 @@ const error = ref<string | null>(null);
 const chartType = ref<'bar' | 'line' | 'pie'>('bar');
 const dashboardFilters = ref({
   dateRange: 'Last 30 Days',
-  status: [],
   search: '',
 });
 

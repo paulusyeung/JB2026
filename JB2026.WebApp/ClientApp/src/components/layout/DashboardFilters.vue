@@ -12,7 +12,7 @@
           prepend-inner-icon="mdi-calendar"
         />
       </v-col>
-      <v-col cols="12" sm="4" md="3">
+      <v-col v-if="hasStatusFilter" cols="12" sm="4" md="3">
         <v-select
           v-model="filters.status"
           label="Status"
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { reactive, watch, computed } from 'vue';
 
 const props = defineProps<{
   initialFilters?: {
@@ -62,6 +62,10 @@ const filters = reactive({
   dateRange: props.initialFilters?.dateRange || 'Last 30 Days',
   status: props.initialFilters?.status || [],
   search: props.initialFilters?.search || '',
+});
+
+const hasStatusFilter = computed(() => {
+  return 'status' in (props.initialFilters || {});
 });
 
 const dateOptions = [
@@ -85,3 +89,4 @@ watch(filters, (newFilters) => {
   emit('update:filters', { ...newFilters });
 }, { deep: true });
 </script>
+
