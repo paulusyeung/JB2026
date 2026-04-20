@@ -2,19 +2,19 @@
 
 ## Group 1: Discovery and Responsive Baseline
 
-- [ ] Finalize supported viewport matrix for phone and tablet breakpoints
-- [ ] Catalog ClientApp routes by responsive complexity: standard, medium, exception
-- [ ] Define shared responsive patterns for shell, toolbars, filter bars, data lists, and dialogs
+- [x] Finalize supported viewport matrix for phone and tablet breakpoints
+- [x] Catalog ClientApp routes by responsive complexity: standard, medium, exception
+- [x] Define shared responsive patterns for shell, toolbars, filter bars, data lists, and dialogs
 
 ## Group 2: Shared Shell
 
-- [ ] Refactor the authenticated shell to use breakpoint-aware drawer behavior
-- [ ] Rework the topbar so language, theme, profile, and sign-out controls remain usable on narrow widths
-- [ ] Add shared responsive spacing and scroll-container rules in the global stylesheet
+- [x] Refactor the authenticated shell to use breakpoint-aware drawer behavior
+- [x] Rework the topbar so language, theme, profile, and sign-out controls remain usable on narrow widths
+- [x] Add shared responsive spacing and scroll-container rules in the global stylesheet
 
 ## Group 3: Standard Data Screens
 
-- [ ] Retrofit `StockView.vue` with a mobile-safe filter and data presentation
+- [x] Retrofit `StockView.vue` with a mobile-safe filter and data presentation
 - [ ] Retrofit `JobListView.vue` and `OrderListView.vue` with mobile-safe toolbars and list/table behavior
 - [ ] Retrofit admin CRUD views (`AdminUserView.vue`, `AdminCustomerView.vue`, `AdminSupplierView.vue`, workflow and quotation admin screens) using the same responsive pattern set
 - [ ] Audit dialogs and forms opened from list screens for narrow-width usability
@@ -32,9 +32,9 @@
 
 ## Group 6: Mobile Test Coverage
 
-- [ ] Add Playwright mobile viewport project configuration alongside desktop coverage
-- [ ] Extend smoke tests to validate shell navigation and at least the stock, jobs, and orders entry paths on mobile
-- [ ] Add regression checks for drawer behavior, topbar controls, and responsive table/list rendering
+- [x] Add Playwright mobile viewport project configuration alongside desktop coverage
+- [x] Extend smoke tests to validate shell navigation and at least the stock, jobs, and orders entry paths on mobile
+- [x] Add regression checks for drawer behavior, topbar controls, and responsive table/list rendering
 
 ## Group 7: Validation and Rollout
 

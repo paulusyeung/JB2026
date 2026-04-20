@@ -1,6 +1,10 @@
 export const topbarMessages = {
       phase: '第 6 階段',
       workspace: 'UI 現代化工作區',
+  navigation: '開啟導覽',
+  collapseNavigation: '收合導覽',
+  expandNavigation: '展開導覽',
+  moreActions: '更多操作',
       signOut: '登出',
       spaHost: 'SPA 主機',
       language: '語言',

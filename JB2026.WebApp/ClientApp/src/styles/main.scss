@@ -105,6 +105,18 @@ body {
   margin: 0;
 }
 
+.app-sidebar.v-navigation-drawer--rail {
+  .brand-lockup {
+    justify-content: center;
+    padding-inline: 0.75rem;
+  }
+
+  .brand-lockup > div:last-child,
+  .sidebar-card {
+    display: none;
+  }
+}
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -127,11 +139,34 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.topbar-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-nav-btn {
+  flex-shrink: 0;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.topbar-locale {
+  max-width: 180px;
+}
+
+.topbar-identity {
+  min-width: 0;
+}
+
+.topbar-menu-panel {
+  display: grid;
+  gap: 0.25rem;
 }
 
 .theme-toggle .v-btn {
@@ -249,5 +284,21 @@ body {
 @media (max-width: 760px) {
   .app-frame {
     padding: 1rem;
+  }
+
+  .brand-lockup {
+    padding: 1rem;
+  }
+
+  .sidebar-card {
+    margin: 0.75rem;
+  }
+
+  .topbar {
+    align-items: stretch;
+  }
+
+  .topbar-actions {
+    justify-content: space-between;
   }
 }

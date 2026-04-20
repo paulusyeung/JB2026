@@ -7,6 +7,7 @@ export const stockMessages = {
       actions: {
         columns: '栏位',
         sorting: '排序',
+        more: '更多',
         checkbox: '复选框',
         views: '视图',
         refresh: '刷新',

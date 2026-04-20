@@ -73,90 +73,176 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('stock.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('stock.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('stock.actions.views')">
-            {{ t('stock.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('stock.actions.views')">
+              {{ t('stock.actions.views') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="showUnavailable('stock.actions.attachment')">
-            {{ t('stock.actions.attachment') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="showUnavailable('stock.actions.attachment')">
+              {{ t('stock.actions.attachment') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click="exportToCsv">
-            {{ t('stock.actions.export') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click="exportToCsv">
+              {{ t('stock.actions.export') }}
+            </v-btn>
 
-          <v-btn
-            variant="outlined"
-            size="small"
-            color="primary"
-            prepend-icon="mdi-file-plus"
-            class="toolbar-new-product-btn"
-            @click="showUnavailable('stock.actions.newProduct')"
-          >
-            {{ t('stock.actions.newProduct') }}
-          </v-btn>
+            <v-btn
+              variant="outlined"
+              size="small"
+              color="primary"
+              prepend-icon="mdi-file-plus"
+              class="toolbar-new-product-btn"
+              @click="showUnavailable('stock.actions.newProduct')"
+            >
+              {{ t('stock.actions.newProduct') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
-            {{ t('stock.actions.delete') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
+              {{ t('stock.actions.delete') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
-            {{ t('stock.actions.stockInOut') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
+              {{ t('stock.actions.stockInOut') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" @click="showUnavailable('stock.actions.popup')">
-            {{ t('stock.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" @click="showUnavailable('stock.actions.popup')">
+              {{ t('stock.actions.popup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('stock.actions.more') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('stock.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('stock.actions.views')">
+                <v-list-item-title>{{ t('stock.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-paperclip" @click="showUnavailable('stock.actions.attachment')">
+                <v-list-item-title>{{ t('stock.actions.attachment') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click="exportToCsv">
+                <v-list-item-title>{{ t('stock.actions.export') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-plus" @click="showUnavailable('stock.actions.newProduct')">
+                <v-list-item-title>{{ t('stock.actions.newProduct') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
+                <v-list-item-title>{{ t('stock.actions.delete') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
+                <v-list-item-title>{{ t('stock.actions.stockInOut') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" @click="showUnavailable('stock.actions.popup')">
+                <v-list-item-title>{{ t('stock.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
             {{ t('stock.actions.selected', { count: selectedIds.length }) }}
           </span>
         </div>
 
-        <v-data-table
-          :headers="headers"
-          :items="displayedRows"
-          :loading="loading"
-          item-value="productId"
-          v-model="selectedIds"
-          :show-select="checkboxMode"
-          density="compact"
-          fixed-header
-          height="62vh"
-          class="stock-table"
-        >
-          <template #[`header.attachment`]>
-            <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-          </template>
+        <div v-if="isPhoneLayout" class="stock-mobile-list">
+          <v-card
+            v-for="row in displayedRows"
+            :key="row.productId"
+            rounded="lg"
+            elevation="0"
+            class="stock-mobile-card"
+          >
+            <div class="stock-mobile-card__header">
+              <div>
+                <div class="text-subtitle-2 font-weight-bold">{{ row.productName }}</div>
+                <div class="text-caption text-medium-emphasis">
+                  {{ row.stockNumber }} · {{ row.productCode }}
+                </div>
+              </div>
 
-          <template #[`item.attachment`]="{ item }">
-            <v-icon size="14" :color="item.attachmentCount > 0 ? 'success' : 'error'">
-              {{ item.attachmentCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
-            </v-icon>
-          </template>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedIds.includes(row.productId)"
+                density="compact"
+                hide-details
+                @click.stop="toggleSelected(row.productId)"
+              />
+            </div>
 
-          <template #[`item.sellingPrice`]="{ item }">
-            {{ formatMoney(item.sellingPrice) }}
-          </template>
+            <div class="stock-mobile-card__metrics">
+              <v-chip size="small" color="secondary" variant="tonal">
+                {{ t('stock.headers.balance') }}: {{ formatQty(row.balance) }}
+              </v-chip>
+              <span class="text-caption">{{ t('stock.headers.sellingPrice') }}: {{ formatMoney(row.sellingPrice) }}</span>
+              <span class="text-caption">{{ t('stock.headers.cogs') }}: {{ formatMoney(row.cogs) }}</span>
+            </div>
 
-          <template #[`item.cogs`]="{ item }">
-            {{ formatMoney(item.cogs) }}
-          </template>
+            <div class="stock-mobile-card__meta text-caption text-medium-emphasis">
+              <span>{{ t('stock.headers.createdOn') }}: {{ format(row.createdOn) }}</span>
+              <span>{{ t('stock.headers.modifiedOn') }}: {{ format(row.modifiedOn) }}</span>
+            </div>
 
-          <template #[`item.balance`]="{ item }">
-            <v-chip size="small" color="secondary" variant="tonal">{{ formatQty(item.balance) }}</v-chip>
-          </template>
+            <div class="stock-mobile-card__footer">
+              <v-chip size="x-small" :color="row.attachmentCount > 0 ? 'success' : 'error'" variant="tonal">
+                {{ t('stock.headers.attachment') }}: {{ row.attachmentCount }}
+              </v-chip>
+              <span class="text-caption text-medium-emphasis">{{ row.createdBy || '-' }} / {{ row.modifiedBy || '-' }}</span>
+            </div>
+          </v-card>
+        </div>
 
-          <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
+        <div v-else class="stock-table-shell">
+          <v-data-table
+            :headers="headers"
+            :items="displayedRows"
+            :loading="loading"
+            item-value="productId"
+            v-model="selectedIds"
+            :show-select="checkboxMode"
+            density="compact"
+            fixed-header
+            height="62vh"
+            class="stock-table"
+          >
+            <template #[`header.attachment`]>
+              <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+            </template>
 
-        </v-data-table>
+            <template #[`item.attachment`]="{ item }">
+              <v-icon size="14" :color="item.attachmentCount > 0 ? 'success' : 'error'">
+                {{ item.attachmentCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
+              </v-icon>
+            </template>
+
+            <template #[`item.sellingPrice`]="{ item }">
+              {{ formatMoney(item.sellingPrice) }}
+            </template>
+
+            <template #[`item.cogs`]="{ item }">
+              {{ formatMoney(item.cogs) }}
+            </template>
+
+            <template #[`item.balance`]="{ item }">
+              <v-chip size="small" color="secondary" variant="tonal">{{ formatQty(item.balance) }}</v-chip>
+            </template>
+
+            <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn) }}</template>
+            <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
+
+          </v-data-table>
+        </div>
 
         <div class="text-caption text-medium-emphasis mt-2">
           {{ t('stock.rows', { count: displayedRows.length }) }}
@@ -169,7 +255,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getStockProducts } from '@/services/stock'
@@ -206,7 +292,9 @@ const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatCurrency, formatNumber } = useLocaleFormatters()
 const theme = useTheme()
+const display = useDisplay()
 const isDark = computed(() => theme.global.current.value.dark)
+const isPhoneLayout = computed(() => display.smAndDown.value)
 
 const allHeaders = computed(() => [
   { title: '#', key: 'ln', width: '48px', sortable: false },
@@ -301,7 +389,14 @@ function formatQty(value: number) {
   return formatNumber(value)
 }
 
+function toggleSelected(productId: string) {
+  if (selectedIds.value.includes(productId)) {
+    selectedIds.value = selectedIds.value.filter((id) => id !== productId)
+    return
+  }
 
+  selectedIds.value = [...selectedIds.value, productId]
+}
 
 function showUnavailable(actionKey: string) {
   errorMessage.value = t('stock.messages.actionUnavailable', { action: t(actionKey) })
@@ -375,10 +470,41 @@ function exportToCsv() {
   min-width: 156px;
 }
 
+.stock-table-shell {
+  overflow-x: auto;
+}
+
 .stock-table {
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   overflow: hidden;
+}
+
+.stock-mobile-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.stock-mobile-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.stock-mobile-card__header,
+.stock-mobile-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.stock-mobile-card__metrics,
+.stock-mobile-card__meta {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .stock-table :deep(.v-table__wrapper > table > thead > tr > th),
@@ -405,6 +531,22 @@ function exportToCsv() {
 @media (max-width: 960px) {
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar-bar {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .stock-mobile-card__header,
+  .stock-mobile-card__footer {
+    flex-direction: column;
   }
 }
 </style>

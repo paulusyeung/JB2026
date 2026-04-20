@@ -1,10 +1,14 @@
 <template>
   <v-app :theme="vuetifyThemeName">
     <v-layout class="app-shell">
-      <AppSidebar />
+      <AppSidebar v-model="mobileNavOpen" :is-mobile="isMobile" :is-collapsed="desktopSidebarCollapsed" />
       <v-main>
         <div class="app-frame">
-          <AppTopbar />
+          <AppTopbar
+            :is-mobile="isMobile"
+            :is-sidebar-collapsed="desktopSidebarCollapsed"
+            @toggle-navigation="handleNavigationToggle"
+          />
           <router-view />
         </div>
       </v-main>
@@ -13,17 +17,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useTheme } from 'vuetify'
+import { computed, ref, watch } from 'vue'
+import { useDisplay, useTheme } from 'vuetify'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppTopbar from '@/components/layout/AppTopbar.vue'
-import ThemeSettings from '@/components/settings/ThemeSettings.vue'
 import { useThemeStore } from '@/stores/theme'
 
 const themeStore = useThemeStore()
 const theme = useTheme()
+const display = useDisplay()
+const mobileNavOpen = ref(false)
+const desktopSidebarCollapsed = ref(false)
 
 const vuetifyThemeName = computed(() => themeStore.vuetifyTheme)
+const isMobile = computed(() => display.mdAndDown.value)
+
+watch(isMobile, (mobile) => {
+  if (!mobile) {
+    mobileNavOpen.value = false
+  }
+})
 
 watch(
   () => themeStore.vuetifyTheme,
@@ -37,4 +50,13 @@ watch(
   },
   { immediate: true },
 )
+
+function handleNavigationToggle() {
+  if (isMobile.value) {
+    mobileNavOpen.value = !mobileNavOpen.value
+    return
+  }
+
+  desktopSidebarCollapsed.value = !desktopSidebarCollapsed.value
+}
 </script>

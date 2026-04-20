@@ -7,6 +7,7 @@ export const stockMessages = {
       actions: {
         columns: 'Columns',
         sorting: 'Sorting',
+        more: 'More',
         checkbox: 'Checkbox',
         views: 'Views',
         refresh: 'Refresh',

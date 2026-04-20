@@ -21,6 +21,20 @@ The design goal is not to force all workflows into phone parity. It is to make t
 - Add explicit responsive strategies for scheduler, calendar, and pivot-style analytics pages
 - Add mobile viewport test coverage to catch regressions early
 
+## Supported Viewport Matrix
+
+The first implementation pass targets these widths as the minimum verification set:
+
+| Class | Reference Widths | Notes |
+|------|------------------|-------|
+| Narrow phone | 360px, 390px | Primary phone support target |
+| Large phone | 430px | Covers larger modern phones |
+| Small tablet | 768px | Portrait tablet baseline |
+| Large tablet | 834px, 1024px | Tablet and compact landscape coverage |
+| Desktop | 1280px+ | Existing primary workflow baseline |
+
+Breakpoints should align to Vuetify display tiers where practical, with the first behavioral mobile switch occurring at `md` and below.
+
 ## Non-Goals
 
 - Full UX redesign of the Phase 6 application
@@ -117,6 +131,34 @@ Mobile viewport coverage must be part of the implementation, not a later polish 
 - Schedule views
 - SchedulerView FullCalendar screens
 - Pivot analytics screens
+
+## Route Complexity Catalog
+
+### Standard
+
+- Shared shell routes using simple cards, forms, or low-density lists
+- Settings, help, public content, login, dashboard summary cards
+
+### Medium
+
+- Stock, jobs, orders, quotations, reports, and admin CRUD list views
+- Dialog-heavy forms launched from list screens
+- Screens with filter bars, column pickers, and multi-action toolbars
+
+### Exception
+
+- ScheduleView, SchedulePendingView, ScheduleCompletedView, SchedulePackingView, SchedulePackingOnAirView
+- SchedulerView with FullCalendar
+- JobStatsView, SmlRtfStatsView, and SmlInvoiceStatsView using pivot analytics
+
+## Shared Responsive Patterns
+
+- Shell: permanent desktop drawer becomes temporary mobile drawer; topbar secondary actions collapse into menus on smaller widths
+- Toolbars: primary actions remain visible, secondary actions wrap or move into overflow menus
+- Filter bars: stack into a single column at tablet and phone widths
+- Data lists: choose between contained horizontal scrolling, reduced mobile column sets, or alternate list/card rendering based on density
+- Dialogs: use width limits that degrade cleanly to near-full-width on phones
+- Exception workflows: allow desktop-preferred handling where narrow-phone parity would materially harm usability
 
 ## Open Questions
 

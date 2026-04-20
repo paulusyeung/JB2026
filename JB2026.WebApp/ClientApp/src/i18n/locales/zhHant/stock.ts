@@ -7,6 +7,7 @@ export const stockMessages = {
       actions: {
         columns: '欄位',
         sorting: '排序',
+        more: '更多',
         checkbox: '核取方塊',
         views: '檢視',
         refresh: '重新整理',
