@@ -1,11 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
 
-async function injectFakeSession(page: Page) {
-  await page.addInitScript(() => {
+type ThemeMode = 'light' | 'dark'
+
+async function injectFakeSession(page: Page, mode: ThemeMode = 'light') {
+  await page.addInitScript((themeMode: ThemeMode) => {
     localStorage.setItem('jb2026.accessToken', 'mobile-smoke-fake-token')
     localStorage.setItem(
       'jb2026.sessionProfile',
       JSON.stringify({ userId: 'test', displayName: 'Mobile Smoke', role: 'Admin', email: 'mobile@test.local' }),
+    )
+    localStorage.setItem(
+      'jb2026.theme.v2',
+      JSON.stringify({ mode: themeMode, scheme: themeMode === 'dark' ? 'forest' : 'nature' }),
     )
   })
 }
@@ -76,6 +82,148 @@ async function mockMobileApiRoutes(page: Page) {
       ],
     }),
   )
+
+  await page.route('**/api/v2/quotations**', (route) =>
+    route.fulfill({ json: { rows: [], rowCount: 0, keyword: '' } }),
+  )
+
+  await page.route('**/api/v2/reports/run', (route) =>
+    route.fulfill({
+      json: {
+        reportName: 'Exceptional_Report',
+        generatedAtUtc: '2026-03-30T00:00:00Z',
+        totalRows: 1,
+        totalCostA: 123.45,
+        rows: [
+          {
+            headerId: '11111111-1111-1111-1111-111111111111',
+            machineType: '1',
+            quoteNumber: 1001,
+            quoteNumberIndex: 1,
+            quoteNumberIndexPair: '1001-1',
+            quotedOn: '2026-03-30T00:00:00Z',
+            quotedBy: 'tester',
+            approvedOn: null,
+            approvedBy: null,
+            printTitle: 'Exceptional report sample',
+            customerName: 'Acme',
+            printsSize: 'A4',
+            printsColor: '4C',
+            printsQty: 100,
+            materialName: 'Art Paper',
+            materialCost: 20,
+            totalCostA: 123.45,
+            unitCostA: 1.23,
+            status: 1,
+          },
+        ],
+      },
+    }),
+  )
+
+  await page.route('**/api/v2/settings', async (route) => {
+    const request = route.request()
+    if (request.method() === 'PUT') {
+      await route.fulfill({
+        json: {
+          companyName: 'JB2026 Printing',
+          timeZone: 'Asia/Kuala_Lumpur',
+          currencyCode: 'MYR',
+          enableLegacyFallback: true,
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        companyName: 'JB2026 Printing',
+        timeZone: 'Asia/Kuala_Lumpur',
+        currencyCode: 'MYR',
+        enableLegacyFallback: true,
+      },
+    })
+  })
+
+  await page.route('**/api/v2/public/content', (route) =>
+    route.fulfill({
+      json: [
+        {
+          slug: 'company-profile',
+          title: 'Company Profile',
+          summary: 'Overview of JB2026 printing capabilities and service scope.',
+          urlPath: '/public/company-profile',
+        },
+      ],
+    }),
+  )
+
+  await page.route('**/api/v2/help/articles', (route) =>
+    route.fulfill({
+      json: [
+        {
+          articleId: 'getting-started',
+          title: 'Getting Started',
+          category: 'Onboarding',
+          content: 'Learn how to navigate the JB2026 workspace and key modules.',
+        },
+      ],
+    }),
+  )
+
+  await page.route('**/api/v2/sml/invoice-stats**', (route) =>
+    route.fulfill({
+      json: {
+        generatedAtUtc: '2026-04-06T00:00:00Z',
+        rowCount: 2,
+        rows: [
+          {
+            customerName: 'SML DH',
+            invoiceNumber: '66200',
+            invoiceDate: '2015-01-15',
+            invoiceAmount: 17227.52,
+            createdOn: '2015-01-15T10:00:00Z',
+            createdBy: 'alice',
+            purchaseOrder: '5910444941',
+            productCode: '8MMACPY01T#002',
+            qty: 4944,
+            unit: 'pcs',
+            price: 0.16,
+            amount: 791.04,
+            year: 2015,
+            month: 1,
+          },
+          {
+            customerName: 'SML DH',
+            invoiceNumber: 'DH1',
+            invoiceDate: '2016-02-02',
+            invoiceAmount: 3406.48,
+            createdOn: '2016-02-02T10:00:00Z',
+            createdBy: 'bob',
+            purchaseOrder: '8110522367',
+            productCode: 'THEUAHY002#001',
+            qty: 4400,
+            unit: 'pcs',
+            price: 0.7742,
+            amount: 3406.48,
+            year: 2016,
+            month: 2,
+          },
+        ],
+      },
+    }),
+  )
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(async () =>
+      page.evaluate(() => ({
+        documentFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+        bodyFits: document.body.scrollWidth <= document.body.clientWidth + 1,
+      })),
+    )
+    .toEqual({ documentFits: true, bodyFits: true })
 }
 
 test.describe('mobile responsive flows', () => {
@@ -119,5 +267,43 @@ test.describe('mobile responsive flows', () => {
     await expect(page.getByText('Modern Job Order')).toBeVisible()
     await expect(page.getByText('Acme Corp')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Search' })).toBeVisible()
+  })
+
+  test('tier 2 views remain readable in dark mode on mobile', async ({ page }) => {
+    await injectFakeSession(page, 'dark')
+    await mockMobileApiRoutes(page)
+
+    const checks: Array<{ route: string; heading: string; hint: string }> = [
+      { route: '/app/quotations', heading: 'Quotation register', hint: 'Search quotations' },
+      { route: '/app/reports', heading: 'Reports runner', hint: 'Exceptional report sample' },
+      { route: '/app/settings', heading: 'Settings', hint: 'Save settings' },
+      { route: '/app/help', heading: 'Help center', hint: 'Getting Started' },
+      { route: '/app/public', heading: 'Public content', hint: 'Company Profile' },
+      { route: '/app/dashboard', heading: 'Dashboard', hint: 'Enabled slices' },
+    ]
+
+    for (const check of checks) {
+      await page.goto(check.route)
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+      await expect(page.getByRole('heading', { name: check.heading })).toBeVisible()
+      await expect(page.getByText(check.hint)).toBeVisible()
+      await expectNoHorizontalOverflow(page)
+    }
+  })
+
+  test('pivot invoice stats remains visible after theme switch on mobile', async ({ page }) => {
+    await injectFakeSession(page, 'dark')
+    await mockMobileApiRoutes(page)
+
+    await page.goto('/app/job-order/sml/invoice-stats')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(page.getByRole('heading', { name: 'Invoice stats' })).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Light' }).click()
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(page.locator('web-pivot-table')).toBeVisible()
+    await expectNoHorizontalOverflow(page)
   })
 })
