@@ -1,7 +1,7 @@
 <template>
   <section class="page-section">
     <v-card rounded="xl" elevation="0" class="panel-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3">
+      <v-card-title class="reports-toolbar d-flex flex-wrap align-center ga-3">
         <div>
           <h3 class="text-h6 mb-1">{{ t('reports.title') }}</h3>
           <p class="text-body-2 text-medium-emphasis mb-0">{{ t('reports.subtitle') }}</p>
@@ -9,13 +9,14 @@
         <v-spacer />
         <v-text-field
           v-model="startOn"
+          class="reports-toolbar__date"
           :label="t('reports.startDate')"
           type="date"
           density="comfortable"
           variant="solo-filled"
           hide-details
         />
-        <v-btn color="primary" :loading="loading" @click="run">{{ t('reports.runReport') }}</v-btn>
+        <v-btn color="primary" :loading="loading" class="reports-toolbar__run" @click="run">{{ t('reports.runReport') }}</v-btn>
       </v-card-title>
       <v-card-text>
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">
@@ -28,7 +29,16 @@
           <v-chip variant="outlined">{{ result.reportName }}</v-chip>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="result?.rows ?? []"
+          :columns="mobileColumns"
+          item-key="headerId"
+          :on-card-click="() => undefined"
+        />
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="result?.rows ?? []"
           :loading="loading"
@@ -49,10 +59,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { runReport } from '@/services/reports'
-import type { ReportRunResponse } from '@/types/api'
+import type { QuotationListItem, ReportRunResponse } from '@/types/api'
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -61,6 +73,7 @@ const startOn = ref(new Date().toISOString().slice(0, 10))
 const { t } = useI18n({ useScope: 'global' })
 const { format } = useGlobalDateFormatter()
 const { formatCurrency } = useLocaleFormatters()
+const { isPhoneLayout } = useResponsiveList()
 
 const headers = computed(() => [
   { title: t('reports.headers.quote'), key: 'quoteNumberIndexPair' },
@@ -69,6 +82,24 @@ const headers = computed(() => [
   { title: t('reports.headers.quotedOn'), key: 'quotedOn' },
   { title: t('reports.headers.quotedBy'), key: 'quotedBy' },
   { title: t('reports.headers.totalA'), key: 'totalCostA' },
+])
+
+const mobileColumns = computed<ListMobileCardColumn<QuotationListItem>[]>(() => [
+  { key: 'quoteNumberIndexPair', label: t('reports.headers.quote'), section: 'header', emphasis: true },
+  { key: 'customerName', label: t('reports.headers.customer'), section: 'header' },
+  { key: 'printTitle', label: t('reports.headers.title'), section: 'body' },
+  {
+    key: 'quotedOn',
+    label: t('reports.headers.quotedOn'),
+    section: 'footer',
+    formatter: (item) => format(item.quotedOn),
+  },
+  {
+    key: 'totalCostA',
+    label: t('reports.headers.totalA'),
+    section: 'footer',
+    formatter: (item) => formatMoney(item.totalCostA),
+  },
 ])
 
 onMounted(async () => {
@@ -99,3 +130,16 @@ function formatMoney(value: number) {
   return formatCurrency(value)
 }
 </script>
+
+<style scoped>
+.reports-toolbar__date {
+  min-width: 220px;
+}
+
+@media (max-width: 960px) {
+  .reports-toolbar__date,
+  .reports-toolbar__run {
+    width: 100%;
+  }
+}
+</style>

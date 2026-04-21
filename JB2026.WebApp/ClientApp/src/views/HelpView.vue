@@ -1,13 +1,13 @@
 <template>
   <section class="page-section">
     <v-card rounded="xl" elevation="0" class="panel-card">
-      <v-card-title class="d-flex align-center ga-3">
+      <v-card-title class="help-toolbar d-flex flex-wrap align-center ga-3">
         <div>
           <h3 class="text-h6 mb-1">{{ t('help.title') }}</h3>
           <p class="text-body-2 text-medium-emphasis mb-0">{{ t('help.subtitle') }}</p>
         </div>
         <v-spacer />
-        <v-btn color="primary" :loading="loading" @click="load">{{ t('common.refresh') }}</v-btn>
+        <v-btn color="primary" :loading="loading" class="help-toolbar__refresh" @click="load">{{ t('common.refresh') }}</v-btn>
       </v-card-title>
       <v-card-text>
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
@@ -55,3 +55,11 @@ async function load() {
   }
 }
 </script>
+
+<style scoped>
+@media (max-width: 960px) {
+  .help-toolbar__refresh {
+    width: 100%;
+  }
+}
+</style>

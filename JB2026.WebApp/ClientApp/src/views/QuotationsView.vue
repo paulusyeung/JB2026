@@ -73,26 +73,89 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('quotations.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('quotations.actions.checkbox') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
-            {{ t('quotations.actions.print') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
+              {{ t('quotations.actions.print') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="store.rows.length === 0" @click="exportToCsv">
-            {{ t('quotations.actions.export') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="store.rows.length === 0" @click="exportToCsv">
+              {{ t('quotations.actions.export') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('common.action') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('quotations.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-refresh" :disabled="store.loading" @click="refreshList">
+                <v-list-item-title>{{ t('common.refresh') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-printer" @click="printList">
+                <v-list-item-title>{{ t('quotations.actions.print') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="store.rows.length === 0" @click="exportToCsv">
+                <v-list-item-title>{{ t('quotations.actions.export') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-plus" @click="openCreate">
+                <v-list-item-title>{{ t('quotations.new') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
             {{ t('quotations.actions.selected', { count: selectedHeaderIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="store.rows"
+          :columns="mobileColumns"
+          item-key="headerId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedHeaderIdsAsString"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => openQuotation(item as QuotationListItem)"
+        >
+          <template #actions="{ item }">
+            <v-menu location="bottom end">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="text" size="small" class="text-none">
+                  {{ t('common.action') }}
+                  <v-icon end size="16">mdi-chevron-down</v-icon>
+                </v-btn>
+              </template>
+
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item prepend-icon="mdi-open-in-app" @click.stop="openQuotation(item as QuotationListItem)">
+                  <v-list-item-title>{{ t('common.open') }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-printer" @click.stop="printList">
+                  <v-list-item-title>{{ t('quotations.actions.print') }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="store.rows.length === 0" @click.stop="exportToCsv">
+                  <v-list-item-title>{{ t('quotations.actions.export') }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </template>
+        </ListMobileCard>
+
         <v-data-table-server
+          v-else
           v-model:page="store.page"
           v-model:items-per-page="store.itemsPerPage"
           v-model:sort-by="store.sortBy"
@@ -120,7 +183,7 @@
     </v-card>
   </section>
 
-  <v-dialog v-model="formOpen" max-width="860" scrollable>
+  <v-dialog v-model="formOpen" max-width="min(100%, 860px)" scrollable>
     <QuotationFormDialog
       :quotation="formQuotation"
       @saved="handleSave"
@@ -139,6 +202,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import QuotationFormDialog from '@/components/forms/QuotationFormDialog.vue'
@@ -169,6 +234,7 @@ const visibleColumnKeys = ref<string[]>([
 ])
 const sortDirection = ref<'asc' | 'desc'>('desc')
 const sortKey = ref('modifiedOn')
+const { isPhoneLayout } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: t('quotations.headers.quoteNumber'), key: 'quoteNumber' },
@@ -190,6 +256,25 @@ const sortableColumns = computed(() =>
 )
 
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
+const selectedHeaderIdsAsString = computed(() => selectedHeaderIds.value.map((id) => String(id)))
+
+const mobileColumns = computed<ListMobileCardColumn<QuotationListItem>[]>(() => [
+  { key: 'quoteNumberIndexPair', label: t('quotations.headers.quoteNumber'), section: 'header', emphasis: true },
+  { key: 'customerName', label: t('quotations.headers.customer'), section: 'header' },
+  { key: 'printTitle', label: t('quotations.headers.title'), section: 'body' },
+  {
+    key: 'createdOn',
+    label: t('quotations.headers.createdOn'),
+    section: 'footer',
+    formatter: (item) => format(item.createdOn),
+  },
+  {
+    key: 'modifiedOn',
+    label: t('quotations.headers.modifiedOn'),
+    section: 'footer',
+    formatter: (item) => format(item.modifiedOn),
+  },
+])
 
 watch([sortKey, sortDirection], () => {
   store.sortBy = [{ key: sortKey.value, order: sortDirection.value }] as SortItem[]
@@ -232,13 +317,33 @@ function openCreate() {
   formOpen.value = true
 }
 
+function openQuotation(quotation: QuotationListItem) {
+  formQuotation.value = quotation
+  formOpen.value = true
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const headerId = String(item.headerId ?? '')
+  if (!headerId) {
+    return
+  }
+
+  if (selected && !selectedHeaderIdsAsString.value.includes(headerId)) {
+    selectedHeaderIds.value = [...selectedHeaderIdsAsString.value, headerId]
+    return
+  }
+
+  if (!selected) {
+    selectedHeaderIds.value = selectedHeaderIdsAsString.value.filter((id) => id !== headerId)
+  }
+}
+
 function onRowClick(_event: Event, payload: { item: { raw: QuotationListItem } }) {
   if (checkboxMode.value) {
     return
   }
 
-  formQuotation.value = payload.item.raw
-  formOpen.value = true
+  openQuotation(payload.item.raw)
 }
 
 function handleSave(quotation: QuotationListItem) {

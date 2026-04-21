@@ -74,7 +74,7 @@
 
 ### Tier 2: Medium Complexity
 
-- [ ] **Task 2.1: Audit and Retrofit Quotations, Reports, Settings, Help, Public Views** (3–4h)
+- [x] **Task 2.1: Audit and Retrofit Quotations, Reports, Settings, Help, Public Views** (3–4h)
   - Audit each view for:
     - Dense tables → apply mobile card pattern where needed
     - Filter bars → ensure stacking at tablet/phone widths
