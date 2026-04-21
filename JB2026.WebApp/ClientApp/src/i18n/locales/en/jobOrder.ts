@@ -258,6 +258,14 @@ export const jobOrderMessages = {
         blank: '(blank)',
         empty: 'No records for current filters.',
         loadFailed: 'Unable to load job stats. Please verify API availability.',
+        mobilePreferredNotice: 'Desktop preferred for pivot analysis. Mobile mode shows a compact summary and a scrollable pivot.',
+        summary: {
+          title: 'Quick summary',
+          rows: 'Rows',
+          invoiceAmount: 'Invoice Amount',
+          cost: 'Cost',
+          grossProfit: 'Gross Profit %',
+        },
         rowFields: {
           salesRep: 'Sales Rep',
           customerName: 'Customer Name',

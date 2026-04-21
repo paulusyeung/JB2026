@@ -258,6 +258,14 @@ export const jobOrderMessages = {
         blank: '(空白)',
         empty: '目前篩選條件下沒有資料。',
         loadFailed: '無法載入作業統計，請確認 API 可用性。',
+        mobilePreferredNotice: '樞紐分析建議在桌面端使用。行動端會顯示精簡摘要與可橫向捲動的樞紐。',
+        summary: {
+          title: '快速摘要',
+          rows: '列數',
+          invoiceAmount: '發票金額',
+          cost: '成本',
+          grossProfit: '毛利率',
+        },
         rowFields: {
           salesRep: '業務員',
           customerName: '客戶名稱',

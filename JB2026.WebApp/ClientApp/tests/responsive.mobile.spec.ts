@@ -226,6 +226,82 @@ async function mockMobileApiRoutes(page: Page) {
       },
     }),
   )
+
+  await page.route('**/api/v2/job-orders/stats**', (route) =>
+    route.fulfill({
+      json: [
+        {
+          jobNumber: 'JB260331-01',
+          customerName: 'Acme Corp',
+          brand: 'Spring Catalog',
+          purchaseOrder: 'PO-001',
+          salesRep: 'Alice',
+          grossProfit: 0.32,
+          cost: 400,
+          invoiceAmount: 560,
+          invNumber: 'INV-001',
+          invDate: '2026-04-01',
+          year: 2026,
+          month: 4,
+        },
+        {
+          jobNumber: 'JB260331-02',
+          customerName: 'Beta Limited',
+          brand: 'Banner Set',
+          purchaseOrder: 'PO-002',
+          salesRep: 'Bob',
+          grossProfit: 0.2,
+          cost: 300,
+          invoiceAmount: 375,
+          invNumber: 'INV-002',
+          invDate: '2026-04-03',
+          year: 2026,
+          month: 4,
+        },
+      ],
+    }),
+  )
+
+  await page.route('**/api/v2/sml/rtf-stats**', (route) =>
+    route.fulfill({
+      json: {
+        generatedAtUtc: '2026-04-06T00:00:00Z',
+        rowCount: 2,
+        rows: [
+          {
+            purchaseOrder: '5910444941',
+            customerPO: 'CP-1001',
+            orderedOn: '2026-04-01',
+            orderedBy: 'alice',
+            originalPO: 'OP-1001',
+            salesOrder: 'SO-1001',
+            originalSO: 'OSO-1001',
+            productCode: '8MMACPY01T#002',
+            price: '0.16',
+            qty: '4944',
+            year: 2026,
+            month: 4,
+            amount: 791.04,
+          },
+          {
+            purchaseOrder: '8110522367',
+            customerPO: 'CP-1002',
+            orderedOn: '2026-04-02',
+            orderedBy: 'bob',
+            originalPO: 'OP-1002',
+            salesOrder: 'SO-1002',
+            originalSO: 'OSO-1002',
+            productCode: 'THEUAHY002#001',
+            price: '0.77',
+            qty: '4400',
+            year: 2026,
+            month: 4,
+            amount: 3406.48,
+          },
+        ],
+      },
+    }),
+  )
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -327,6 +403,30 @@ test.describe('mobile responsive flows', () => {
     await page.getByRole('button', { name: 'Light' }).click()
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(page.getByText('Desktop preferred for pivot analysis. Mobile mode shows a compact summary and a scrollable pivot.')).toBeVisible()
+    await expect(page.getByText('Quick summary')).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  })
+
+  test('job stats shows mobile summary and desktop-preferred notice', async ({ page }) => {
+    await page.goto('/app/job-order/job-stats')
+
+    await expect(page.getByRole('heading', { name: 'Job stats' })).toBeVisible()
+    await expect(page.getByText('Desktop preferred for pivot analysis. Mobile mode shows a compact summary and a scrollable pivot.')).toBeVisible()
+    await expect(page.getByText('Quick summary')).toBeVisible()
+    await expect(page.getByText('Gross Profit %')).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  })
+
+  test('rtf stats shows mobile summary and remains scroll-safe', async ({ page }) => {
+    await page.goto('/app/job-order/sml/rtf-stats')
+
+    await expect(page.getByRole('heading', { name: 'RTF stats' })).toBeVisible()
+    await expect(page.getByText('Desktop preferred for pivot analysis. Mobile mode shows a compact summary and a scrollable pivot.')).toBeVisible()
+    await expect(page.getByText('Quick summary')).toBeVisible()
+    await expect(page.getByText('Purchase Orders')).toBeVisible()
     await expect(page.locator('web-pivot-table')).toBeVisible()
     await expectNoHorizontalOverflow(page)
   })

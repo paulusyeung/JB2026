@@ -66,6 +66,14 @@ export const smlMessages = {
         blank: '(空白)',
         empty: '目前篩選條件下沒有資料。',
         page: '第 {page} / {pages} 頁（共 {count} 組）',
+        mobilePreferredNotice: '樞紐分析建議在桌面端使用。行動端會顯示精簡摘要與可橫向捲動的樞紐。',
+        summary: {
+          title: '快速摘要',
+          purchaseOrders: '採購單數',
+          rows: '筆數',
+          groups: '群組數',
+          amount: '金額',
+        },
         headers: {
           purchaseOrder: '採購單',
           productCode: '產品編號',
@@ -117,6 +125,15 @@ export const smlMessages = {
         empty: '目前篩選條件下沒有資料。',
         page: '第 {page} / {pages} 頁（共 {count} 個客戶）',
         invoiceTotal: '{invoiceNumber} 小計',
+        mobilePreferredNotice: '樞紐分析建議在桌面端使用。行動端會顯示精簡摘要與可橫向捲動的樞紐。',
+        summary: {
+          title: '快速摘要',
+          invoices: '發票數',
+          rows: '筆數',
+          invoiceAmount: '發票金額',
+          pivotAmount: '樞紐金額',
+          qty: '數量',
+        },
         headers: {
           customerName: '客戶名稱',
           invoiceNumber: '發票號碼',

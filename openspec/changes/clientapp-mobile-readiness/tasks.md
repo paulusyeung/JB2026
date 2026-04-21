@@ -121,7 +121,7 @@
     - Keep `timeGridWeek` but reduce control density
   - Add a "Desktop preferred for scheduling" notice on narrow phones
 
-- [ ] **Task 3.3: Audit Pivot Analytics Screens** (4–6h total)
+- [x] **Task 3.3: Audit Pivot Analytics Screens** (4–6h total)
   
   **3.3a: `SmlInvoiceStatsView.vue`** (2–3h)
   - On mobile: constrain pivot container height, enable horizontal scroll

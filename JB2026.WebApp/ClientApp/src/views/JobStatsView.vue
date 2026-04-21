@@ -92,14 +92,50 @@
 
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
 
+        <v-alert
+          v-if="isNarrowPhoneLayout"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mt-2 mb-3"
+        >
+          {{ t('jobOrder.jobStats.mobilePreferredNotice') }}
+        </v-alert>
+
         <div class="text-caption text-medium-emphasis mt-2 mb-2">
           {{ t('jobOrder.jobStats.rows', { count: formatNumber(filteredRows.length) }) }}
         </div>
 
+        <v-card v-if="isPhoneLayout" rounded="lg" variant="tonal" class="pivot-summary-card mb-3">
+          <v-card-text>
+            <div class="text-overline text-medium-emphasis mb-2">{{ t('jobOrder.jobStats.summary.title') }}</div>
+            <div class="pivot-summary-grid">
+              <div>
+                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.rows') }}</div>
+                <div class="text-body-2 font-weight-medium">{{ formatNumber(filteredRows.length) }}</div>
+              </div>
+              <div>
+                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.invoiceAmount') }}</div>
+                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(totalInvoiceAmount) }}</div>
+              </div>
+              <div>
+                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.cost') }}</div>
+                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(totalCost) }}</div>
+              </div>
+              <div>
+                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.grossProfit') }}</div>
+                <div class="text-body-2 font-weight-medium">{{ formatNumber(grossProfitRatioSummary, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
-        <div v-if="pivotMounted" class="pivot-shell">
-          <web-pivot-table ref="pivotRef" class="pivot-element" />
+        <div v-if="pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
+          <div class="pivot-shell__scroller">
+            <web-pivot-table ref="pivotRef" class="pivot-element" />
+          </div>
         </div>
 
         <div v-else-if="!pivotAvailable" class="text-body-2 text-medium-emphasis py-6 text-center">
@@ -117,6 +153,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getJobStats } from '@/services/jobOrders'
 import { useThemeStore } from '@/stores/theme'
@@ -158,7 +195,10 @@ const MAX_HYDRATE_ATTEMPTS = 8
 
 const { t, locale } = useI18n({ useScope: 'global' })
 const { formatNumber } = useLocaleFormatters()
+const display = useDisplay()
 const themeStore = useThemeStore()
+const isPhoneLayout = computed(() => display.smAndDown.value)
+const isNarrowPhoneLayout = computed(() => display.xs.value && display.width.value <= 430)
 const webPivotTheme = computed(() => {
   if (themeStore.current !== 'dark') {
     return {
@@ -294,6 +334,15 @@ const filteredRows = computed(() => {
     const rightJob = normalizeText(right.jobNumber).toLowerCase()
     return leftJob.localeCompare(rightJob)
   })
+})
+
+const totalInvoiceAmount = computed(() => filteredRows.value.reduce((total, row) => total + Number(row.invoiceAmount ?? 0), 0))
+const totalCost = computed(() => filteredRows.value.reduce((total, row) => total + Number(row.cost ?? 0), 0))
+const grossProfitRatioSummary = computed(() => {
+  if (totalInvoiceAmount.value <= 0) {
+    return 0
+  }
+  return (totalInvoiceAmount.value - totalCost.value) / totalInvoiceAmount.value
 })
 
 watch([lookup, month, rowField, measure], async () => {
@@ -656,6 +705,15 @@ function formatInvoiceAmountCurrency(value: unknown): string {
   })
 }
 
+function formatSummaryCurrency(value: number): string {
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })
+}
+
 function exportToCsv() {
   const header = [
     'Job Number',
@@ -726,17 +784,48 @@ function csvEscape(value: unknown): string {
 }
 
 .pivot-shell {
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid var(--pivot-shell-border);
   border-radius: 10px;
   background: var(--pivot-shell-bg);
   height: clamp(560px, calc(100vh - 340px), 720px);
 }
 
+.pivot-shell--mobile {
+  height: min(58vh, 520px);
+}
+
+.pivot-shell__scroller {
+  min-width: 840px;
+  height: 100%;
+}
+
+.pivot-summary-card {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.pivot-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
 .pivot-element {
   display: block;
   width: 100%;
   height: 100%;
+  min-width: 840px;
   min-height: 560px;
+}
+
+@media (max-width: 600px) {
+  .pivot-shell__scroller {
+    min-width: 760px;
+  }
+
+  .pivot-element {
+    min-width: 760px;
+    min-height: 500px;
+  }
 }
 </style>

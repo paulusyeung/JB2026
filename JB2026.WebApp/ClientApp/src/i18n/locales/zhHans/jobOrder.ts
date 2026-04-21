@@ -258,6 +258,14 @@ export const jobOrderMessages = {
         blank: '(空白)',
         empty: '当前筛选条件下没有记录。',
         loadFailed: '无法加载作业统计，请确认 API 可用性。',
+        mobilePreferredNotice: '枢纽分析建议在桌面端使用。移动端将显示精简摘要与可横向滚动的枢纽。',
+        summary: {
+          title: '快速摘要',
+          rows: '行数',
+          invoiceAmount: '发票金额',
+          cost: '成本',
+          grossProfit: '毛利率',
+        },
         rowFields: {
           salesRep: '业务员',
           customerName: '客户名称',

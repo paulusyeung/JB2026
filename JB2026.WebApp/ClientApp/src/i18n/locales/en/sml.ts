@@ -66,6 +66,14 @@ export const smlMessages = {
         blank: '(blank)',
         empty: 'No records found for current filters.',
         page: 'Page {page} / {pages} ({count} groups)',
+        mobilePreferredNotice: 'Desktop preferred for pivot analysis. Mobile mode shows a compact summary and a scrollable pivot.',
+        summary: {
+          title: 'Quick summary',
+          purchaseOrders: 'Purchase Orders',
+          rows: 'Rows',
+          groups: 'Groups',
+          amount: 'Amount',
+        },
         headers: {
           purchaseOrder: 'Purchase Order',
           productCode: 'Product Code',
@@ -117,6 +125,15 @@ export const smlMessages = {
         empty: 'No records found for current filters.',
         page: 'Page {page} / {pages} ({count} customers)',
         invoiceTotal: '{invoiceNumber} Total',
+        mobilePreferredNotice: 'Desktop preferred for pivot analysis. Mobile mode shows a compact summary and a scrollable pivot.',
+        summary: {
+          title: 'Quick summary',
+          invoices: 'Invoices',
+          rows: 'Rows',
+          invoiceAmount: 'Invoice Amount',
+          pivotAmount: 'Pivot Amount',
+          qty: 'Qty',
+        },
         headers: {
           customerName: 'Customer Name',
           invoiceNumber: 'Invoice Number',

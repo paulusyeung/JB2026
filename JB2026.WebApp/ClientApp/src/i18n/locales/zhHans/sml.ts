@@ -66,6 +66,14 @@ export const smlMessages = {
         blank: '(空)',
         empty: '当前筛选条件下没有记录。',
         page: '第 {page} / {pages} 页（共 {count} 组）',
+        mobilePreferredNotice: '枢纽分析建议在桌面端使用。移动端将显示精简摘要与可横向滚动的枢纽。',
+        summary: {
+          title: '快速摘要',
+          purchaseOrders: '采购单数',
+          rows: '行数',
+          groups: '分组数',
+          amount: '金额',
+        },
         headers: {
           purchaseOrder: '采购单',
           productCode: '产品编码',
@@ -117,6 +125,15 @@ export const smlMessages = {
         empty: '当前筛选条件下没有记录。',
         page: '第 {page} / {pages} 页（共 {count} 个客户）',
         invoiceTotal: '{invoiceNumber} 合计',
+        mobilePreferredNotice: '枢纽分析建议在桌面端使用。移动端将显示精简摘要与可横向滚动的枢纽。',
+        summary: {
+          title: '快速摘要',
+          invoices: '发票数',
+          rows: '行数',
+          invoiceAmount: '发票金额',
+          pivotAmount: '枢纽金额',
+          qty: '数量',
+        },
         headers: {
           customerName: '客户名称',
           invoiceNumber: '发票号',
