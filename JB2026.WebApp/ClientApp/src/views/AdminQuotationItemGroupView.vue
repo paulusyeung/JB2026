@@ -73,38 +73,81 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('admin.quotationItemGroup.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('admin.quotationItemGroup.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.quotationItemGroup.actions.views')">
-            {{ t('admin.quotationItemGroup.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.quotationItemGroup.actions.views')">
+              {{ t('admin.quotationItemGroup.actions.views') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-            {{ t('admin.quotationItemGroup.actions.refresh') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
+              {{ t('admin.quotationItemGroup.actions.refresh') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" disabled>
-            {{ t('admin.quotationItemGroup.actions.preference') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" disabled>
+              {{ t('admin.quotationItemGroup.actions.preference') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup">
-            {{ t('admin.quotationItemGroup.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup">
+              {{ t('admin.quotationItemGroup.actions.popup') }}
+            </v-btn>
 
-          <v-btn color="primary" size="small" prepend-icon="mdi-plus" @click="openNewItemGroup">
-            {{ t('admin.quotationItemGroup.actions.newItemGroup') }}
-          </v-btn>
+            <v-btn color="primary" size="small" prepend-icon="mdi-plus" @click="openNewItemGroup">
+              {{ t('admin.quotationItemGroup.actions.newItemGroup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('admin.quotationItemGroup.actions.views') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('admin.quotationItemGroup.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.quotationItemGroup.actions.views')">
+                <v-list-item-title>{{ t('admin.quotationItemGroup.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
+                <v-list-item-title>{{ t('admin.quotationItemGroup.actions.refresh') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-tune" disabled>
+                <v-list-item-title>{{ t('admin.quotationItemGroup.actions.preference') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup">
+                <v-list-item-title>{{ t('admin.quotationItemGroup.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-plus" @click="openNewItemGroup">
+                <v-list-item-title>{{ t('admin.quotationItemGroup.actions.newItemGroup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('admin.quotationItemGroup.actions.selected', { count: selectedItemGroupIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="displayedRows"
+          :columns="mobileColumns"
+          item-key="itemGroupId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedItemGroupIds"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => onMobileCardClick(item as AdminQuotationItemGroupDisplayItem)"
+        />
+
         <v-data-table
+          v-else
           v-model="selectedItemGroupIds"
           :headers="headers"
           :items="displayedRows"
@@ -121,8 +164,8 @@
             <v-icon size="14" color="secondary">mdi-shape-plus-outline</v-icon>
           </template>
 
-          <template #[`item.createdOn`]="{ item }">{{ formatDateTime(item.createdOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDateTime(item.modifiedOn) }}</template>
+          <template #[`item.createdOn`]='{ item }'>{{ formatDateTime(item.createdOn) }}</template>
+          <template #[`item.modifiedOn`]='{ item }'>{{ formatDateTime(item.modifiedOn) }}</template>
         </v-data-table>
 
         <div class="text-caption text-medium-emphasis mt-2">
@@ -153,6 +196,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import AdminQuotationItemGroupRecordDialog from '@/components/forms/AdminQuotationItemGroupRecordDialog.vue'
 import { getAdminQuotationItemGroups } from '@/services/admin'
@@ -192,6 +237,7 @@ const { t } = useI18n({ useScope: 'global' })
 const { activeLocale } = useLocaleFormatters()
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -206,7 +252,28 @@ const allHeaders = computed(() => [
   { title: t('admin.quotationItemGroup.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
+const headers = computed(() =>
+  allHeaders.value.filter((header) =>
+    visibleColumnKeys.value.includes(String(header.key)) &&
+    isColumnVisible(String(header.key), {
+      hideOnPhone: ['groupNameCht', 'groupNameChs', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+      hideOnTablet: ['groupNameCht', 'groupNameChs'],
+    }),
+  ),
+)
+
+const mobileColumns = computed<ListMobileCardColumn<AdminQuotationItemGroupDisplayItem>[]>(() => [
+  { key: 'groupNameEn', label: t('admin.quotationItemGroup.headers.groupNameEn'), section: 'header', emphasis: true },
+  { key: 'zone', label: t('admin.quotationItemGroup.headers.zone'), section: 'header' },
+  { key: 'groupNameChs', label: t('admin.quotationItemGroup.headers.groupNameChs'), section: 'body' },
+  { key: 'groupNameCht', label: t('admin.quotationItemGroup.headers.groupNameCht'), section: 'body' },
+  {
+    key: 'createdOn',
+    label: t('admin.quotationItemGroup.headers.createdOn'),
+    section: 'footer',
+    formatter: (item) => formatDateTime(item.createdOn),
+  },
+])
 
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })))
 
@@ -283,6 +350,28 @@ function onRowClick(_event: Event, payload: { item: AdminQuotationItemGroupDispl
 
   selectedItemGroupIds.value = [payload.item.itemGroupId]
   openPopup(payload.item.itemGroupId)
+}
+
+function onMobileCardClick(item: AdminQuotationItemGroupDisplayItem) {
+  if (checkboxMode.value) {
+    selectedItemGroupIds.value = [item.itemGroupId]
+    return
+  }
+
+  selectedItemGroupIds.value = [item.itemGroupId]
+  openPopup(item.itemGroupId)
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const itemGroupId = String(item.itemGroupId ?? '')
+  if (!itemGroupId) return
+
+  if (selected) {
+    selectedItemGroupIds.value = [...new Set([...selectedItemGroupIds.value, itemGroupId])]
+    return
+  }
+
+  selectedItemGroupIds.value = selectedItemGroupIds.value.filter((id) => id !== itemGroupId)
 }
 
 function openPopup(itemGroupId = selectedItemGroupId.value) {

@@ -73,38 +73,81 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('admin.supplier.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('admin.supplier.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.supplier.actions.views')">
-            {{ t('admin.supplier.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.supplier.actions.views')">
+              {{ t('admin.supplier.actions.views') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
-            {{ t('admin.supplier.actions.newSupplier') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
+              {{ t('admin.supplier.actions.newSupplier') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-            {{ t('admin.supplier.actions.refresh') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
+              {{ t('admin.supplier.actions.refresh') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.supplier.actions.preference')">
-            {{ t('admin.supplier.actions.preference') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.supplier.actions.preference')">
+              {{ t('admin.supplier.actions.preference') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedSupplierId" @click="openPopup">
-            {{ t('admin.supplier.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedSupplierId" @click="openPopup">
+              {{ t('admin.supplier.actions.popup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('admin.supplier.actions.views') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('admin.supplier.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.supplier.actions.views')">
+                <v-list-item-title>{{ t('admin.supplier.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-account-plus" @click="openNewSupplier">
+                <v-list-item-title>{{ t('admin.supplier.actions.newSupplier') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
+                <v-list-item-title>{{ t('admin.supplier.actions.refresh') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-tune" @click="showUnavailable('admin.supplier.actions.preference')">
+                <v-list-item-title>{{ t('admin.supplier.actions.preference') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedSupplierId" @click="openPopup">
+                <v-list-item-title>{{ t('admin.supplier.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('admin.supplier.actions.selected', { count: selectedSupplierIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="displayedRows"
+          :columns="mobileColumns"
+          item-key="supplierId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedSupplierIds"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => onMobileCardClick(item as AdminSupplierDisplayItem)"
+        />
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -122,8 +165,8 @@
             <v-icon size="14" color="secondary">mdi-truck-delivery</v-icon>
           </template>
 
-          <template #[`item.createdOn`]="{ item }">{{ formatDateCell(item.createdOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDateCell(item.modifiedOn) }}</template>
+          <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
+          <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
 
         <div class="text-caption text-medium-emphasis mt-2">
@@ -154,6 +197,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminSupplierRecordDialog from '@/components/forms/AdminSupplierRecordDialog.vue'
 import { getAdminSuppliers } from '@/services/admin'
 import type { AdminSupplierListItem, AdminSupplierRecord } from '@/types/api'
@@ -187,6 +232,7 @@ const visibleColumnKeys = ref<string[]>([
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -201,7 +247,28 @@ const allHeaders = computed(() => [
   { title: t('admin.supplier.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
+const headers = computed(() =>
+  allHeaders.value.filter((h) =>
+    visibleColumnKeys.value.includes(String(h.key)) &&
+    isColumnVisible(String(h.key), {
+      hideOnPhone: ['loginPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+      hideOnTablet: ['loginPassword'],
+    }),
+  ),
+)
+
+const mobileColumns = computed<ListMobileCardColumn<AdminSupplierDisplayItem>[]>(() => [
+  { key: 'supplierName', label: t('admin.supplier.headers.supplierName'), section: 'header', emphasis: true },
+  { key: 'supplierCode', label: t('admin.supplier.headers.supplierCode'), section: 'header' },
+  { key: 'loginAccount', label: t('admin.supplier.headers.loginAccount'), section: 'body' },
+  { key: 'createdBy', label: t('admin.supplier.headers.createdBy'), section: 'footer' },
+  {
+    key: 'modifiedOn',
+    label: t('admin.supplier.headers.modifiedOn'),
+    section: 'footer',
+    formatter: (item) => formatDateCell(item.modifiedOn),
+  },
+])
 
 const sortableColumns = computed(() =>
   allHeaders.value
@@ -274,6 +341,28 @@ function onRowClick(_event: Event, payload: { item: AdminSupplierListItem }) {
   if (checkboxMode.value) return
   selectedSupplierIds.value = [payload.item.supplierId]
   openPopup(payload.item.supplierId)
+}
+
+function onMobileCardClick(item: AdminSupplierDisplayItem) {
+  if (checkboxMode.value) {
+    selectedSupplierIds.value = [item.supplierId]
+    return
+  }
+
+  selectedSupplierIds.value = [item.supplierId]
+  openPopup(item.supplierId)
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const supplierId = String(item.supplierId ?? '')
+  if (!supplierId) return
+
+  if (selected) {
+    selectedSupplierIds.value = [...new Set([...selectedSupplierIds.value, supplierId])]
+    return
+  }
+
+  selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
 }
 
 function openPopup(supplierId = selectedSupplierId.value ?? editingSupplierId.value) {

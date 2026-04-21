@@ -73,38 +73,81 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('admin.customer.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('admin.customer.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.customer.actions.views')">
-            {{ t('admin.customer.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.customer.actions.views')">
+              {{ t('admin.customer.actions.views') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewCustomer">
-            {{ t('admin.customer.actions.newCustomer') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewCustomer">
+              {{ t('admin.customer.actions.newCustomer') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-            {{ t('admin.customer.actions.refresh') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
+              {{ t('admin.customer.actions.refresh') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.customer.actions.preference')">
-            {{ t('admin.customer.actions.preference') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.customer.actions.preference')">
+              {{ t('admin.customer.actions.preference') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedCustomerId" @click="openPopup">
-            {{ t('admin.customer.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedCustomerId" @click="openPopup">
+              {{ t('admin.customer.actions.popup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('admin.customer.actions.views') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('admin.customer.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.customer.actions.views')">
+                <v-list-item-title>{{ t('admin.customer.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-account-plus" @click="openNewCustomer">
+                <v-list-item-title>{{ t('admin.customer.actions.newCustomer') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
+                <v-list-item-title>{{ t('admin.customer.actions.refresh') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-tune" @click="showUnavailable('admin.customer.actions.preference')">
+                <v-list-item-title>{{ t('admin.customer.actions.preference') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedCustomerId" @click="openPopup">
+                <v-list-item-title>{{ t('admin.customer.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('admin.customer.actions.selected', { count: selectedCustomerIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="displayedRows"
+          :columns="mobileColumns"
+          item-key="customerId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedCustomerIds"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => onMobileCardClick(item as AdminCustomerDisplayItem)"
+        />
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -154,6 +197,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminCustomerRecordDialog from '@/components/forms/AdminCustomerRecordDialog.vue'
 import { getAdminCustomers } from '@/services/admin'
 import type { AdminCustomerListItem, AdminCustomerRecord } from '@/types/api'
@@ -191,6 +236,7 @@ const visibleColumnKeys = ref<string[]>([
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -205,7 +251,28 @@ const allHeaders = computed(() => [
   { title: t('admin.customer.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
+const headers = computed(() =>
+  allHeaders.value.filter((h) =>
+    visibleColumnKeys.value.includes(String(h.key)) &&
+    isColumnVisible(String(h.key), {
+      hideOnPhone: ['loginPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+      hideOnTablet: ['loginPassword'],
+    }),
+  ),
+)
+
+const mobileColumns = computed<ListMobileCardColumn<AdminCustomerDisplayItem>[]>(() => [
+  { key: 'customerName', label: t('admin.customer.headers.customerName'), section: 'header', emphasis: true },
+  { key: 'customerCode', label: t('admin.customer.headers.customerCode'), section: 'header' },
+  { key: 'loginAccount', label: t('admin.customer.headers.loginAccount'), section: 'body' },
+  { key: 'createdBy', label: t('admin.customer.headers.createdBy'), section: 'footer' },
+  {
+    key: 'modifiedOn',
+    label: t('admin.customer.headers.modifiedOn'),
+    section: 'footer',
+    formatter: (item) => formatDateCell(item.modifiedOn),
+  },
+])
 
 const sortableColumns = computed(() =>
   allHeaders.value
@@ -278,6 +345,28 @@ function onRowClick(_event: Event, payload: { item: AdminCustomerListItem }) {
   if (checkboxMode.value) return
   selectedCustomerIds.value = [payload.item.customerId]
   openPopup(payload.item.customerId)
+}
+
+function onMobileCardClick(item: AdminCustomerDisplayItem) {
+  if (checkboxMode.value) {
+    selectedCustomerIds.value = [item.customerId]
+    return
+  }
+
+  selectedCustomerIds.value = [item.customerId]
+  openPopup(item.customerId)
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const customerId = String(item.customerId ?? '')
+  if (!customerId) return
+
+  if (selected) {
+    selectedCustomerIds.value = [...new Set([...selectedCustomerIds.value, customerId])]
+    return
+  }
+
+  selectedCustomerIds.value = selectedCustomerIds.value.filter((id) => id !== customerId)
 }
 
 function openPopup(customerId = selectedCustomerId.value ?? editingCustomerId.value) {

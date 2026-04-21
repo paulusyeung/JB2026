@@ -73,38 +73,81 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('admin.user.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('admin.user.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.user.actions.views')">
-            {{ t('admin.user.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.user.actions.views')">
+              {{ t('admin.user.actions.views') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
-            {{ t('admin.user.actions.newUser') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
+              {{ t('admin.user.actions.newUser') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-            {{ t('admin.user.actions.refresh') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
+              {{ t('admin.user.actions.refresh') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.user.actions.preference')">
-            {{ t('admin.user.actions.preference') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.user.actions.preference')">
+              {{ t('admin.user.actions.preference') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedUserId" @click="openPopup">
-            {{ t('admin.user.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedUserId" @click="openPopup">
+              {{ t('admin.user.actions.popup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('admin.user.actions.views') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('admin.user.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.user.actions.views')">
+                <v-list-item-title>{{ t('admin.user.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-account-plus" @click="openNewUser">
+                <v-list-item-title>{{ t('admin.user.actions.newUser') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
+                <v-list-item-title>{{ t('admin.user.actions.refresh') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-tune" @click="showUnavailable('admin.user.actions.preference')">
+                <v-list-item-title>{{ t('admin.user.actions.preference') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedUserId" @click="openPopup">
+                <v-list-item-title>{{ t('admin.user.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('admin.user.actions.selected', { count: selectedUserIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="displayedRows"
+          :columns="mobileColumns"
+          item-key="userId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedUserIds"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => onMobileCardClick(item as AdminUserDisplayItem)"
+        />
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -156,6 +199,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
 import { getAdminUsers } from '@/services/admin'
 import type { AdminUser, AdminUserRecord } from '@/types/api'
@@ -193,6 +238,7 @@ const visibleColumnKeys = ref<string[]>([
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -207,7 +253,28 @@ const allHeaders = computed(() => [
   { title: t('admin.user.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
+const headers = computed(() =>
+  allHeaders.value.filter((h) =>
+    visibleColumnKeys.value.includes(String(h.key)) &&
+    isColumnVisible(String(h.key), {
+      hideOnPhone: ['userPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+      hideOnTablet: ['userPassword'],
+    }),
+  ),
+)
+
+const mobileColumns = computed<ListMobileCardColumn<AdminUserDisplayItem>[]>(() => [
+  { key: 'userAlias', label: t('admin.user.headers.userAlias'), section: 'header', emphasis: true },
+  { key: 'username', label: t('admin.user.headers.username'), section: 'header' },
+  { key: 'role', label: t('admin.user.headers.userRole'), section: 'body' },
+  { key: 'createdBy', label: t('admin.user.headers.createdBy'), section: 'footer' },
+  {
+    key: 'modifiedOn',
+    label: t('admin.user.headers.modifiedOn'),
+    section: 'footer',
+    formatter: (item) => formatDateCell(item.modifiedOn),
+  },
+])
 
 const sortableColumns = computed(() =>
   allHeaders.value
@@ -280,6 +347,28 @@ function onRowClick(_event: Event, payload: { item: AdminUser }) {
   if (checkboxMode.value) return
   selectedUserIds.value = [payload.item.userId]
   openPopup(payload.item.userId)
+}
+
+function onMobileCardClick(item: AdminUserDisplayItem) {
+  if (checkboxMode.value) {
+    selectedUserIds.value = [item.userId]
+    return
+  }
+
+  selectedUserIds.value = [item.userId]
+  openPopup(item.userId)
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const userId = String(item.userId ?? '')
+  if (!userId) return
+
+  if (selected) {
+    selectedUserIds.value = [...new Set([...selectedUserIds.value, userId])]
+    return
+  }
+
+  selectedUserIds.value = selectedUserIds.value.filter((id) => id !== userId)
 }
 
 function openPopup(userId = selectedUserId.value ?? editingUserId.value) {

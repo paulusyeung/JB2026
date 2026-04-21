@@ -73,30 +73,67 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('admin.workflowForms.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('admin.workflowForms.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.workflowForms.actions.views')">
-            {{ t('admin.workflowForms.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.workflowForms.actions.views')">
+              {{ t('admin.workflowForms.actions.views') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="openNew">
-            {{ t('admin.workflowForms.actions.newForm') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="openNew">
+              {{ t('admin.workflowForms.actions.newForm') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedFormId" @click="openEdit">
-            {{ t('admin.workflowForms.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedFormId" @click="openEdit">
+              {{ t('admin.workflowForms.actions.popup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('admin.workflowForms.actions.views') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('admin.workflowForms.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.workflowForms.actions.views')">
+                <v-list-item-title>{{ t('admin.workflowForms.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-plus" @click="openNew">
+                <v-list-item-title>{{ t('admin.workflowForms.actions.newForm') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedFormId" @click="openEdit">
+                <v-list-item-title>{{ t('admin.workflowForms.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('admin.workflowForms.actions.selected', { count: selectedFormIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="displayedRows"
+          :columns="mobileColumns"
+          item-key="formId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedFormIds"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => onMobileCardClick(item as WorkflowFormDisplayItem)"
+        />
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -144,6 +181,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import { getAdminWorkflowForms } from '@/services/admin'
 import type { AdminWorkflowFormListItem } from '@/types/api'
 import AdminWorkflowFormRecordDialog from '@/components/forms/AdminWorkflowFormRecordDialog.vue'
@@ -170,6 +209,7 @@ const successMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -179,7 +219,20 @@ const allHeaders = computed(() => [
   { title: t('admin.workflowForms.headers.formNameCht'), key: 'formNameCht', minWidth: '180px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
+const headers = computed(() =>
+  allHeaders.value.filter((h) =>
+    visibleColumnKeys.value.includes(String(h.key)) &&
+    isColumnVisible(String(h.key), {
+      hideOnPhone: ['formNameCht', 'formNameChs'],
+    }),
+  ),
+)
+
+const mobileColumns = computed<ListMobileCardColumn<WorkflowFormDisplayItem>[]>(() => [
+  { key: 'formName', label: t('admin.workflowForms.headers.formName'), section: 'header', emphasis: true },
+  { key: 'formNameChs', label: t('admin.workflowForms.headers.formNameChs'), section: 'body' },
+  { key: 'formNameCht', label: t('admin.workflowForms.headers.formNameCht'), section: 'footer' },
+])
 
 const sortableColumns = computed(() =>
   allHeaders.value
@@ -253,6 +306,29 @@ function onRowClick(_event: Event, payload: { item: AdminWorkflowFormListItem })
   selectedFormIds.value = [payload.item.formId]
   editingItem.value = payload.item
   dialogOpen.value = true
+}
+
+function onMobileCardClick(item: WorkflowFormDisplayItem) {
+  if (checkboxMode.value) {
+    selectedFormIds.value = [item.formId]
+    return
+  }
+
+  selectedFormIds.value = [item.formId]
+  editingItem.value = item
+  dialogOpen.value = true
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const formId = String(item.formId ?? '')
+  if (!formId) return
+
+  if (selected) {
+    selectedFormIds.value = [...new Set([...selectedFormIds.value, formId])]
+    return
+  }
+
+  selectedFormIds.value = selectedFormIds.value.filter((id) => id !== formId)
 }
 
 function openNew() {

@@ -73,30 +73,67 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('admin.workflow.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('admin.workflow.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.workflow.actions.views')">
-            {{ t('admin.workflow.actions.views') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.workflow.actions.views')">
+              {{ t('admin.workflow.actions.views') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="openNew">
-            {{ t('admin.workflow.actions.newWorkflow') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-plus" color="primary" @click="openNew">
+              {{ t('admin.workflow.actions.newWorkflow') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedWorkflowId" @click="openEdit">
-            {{ t('admin.workflow.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedWorkflowId" @click="openEdit">
+              {{ t('admin.workflow.actions.popup') }}
+            </v-btn>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('admin.workflow.actions.views') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('admin.workflow.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.workflow.actions.views')">
+                <v-list-item-title>{{ t('admin.workflow.actions.views') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-plus" @click="openNew">
+                <v-list-item-title>{{ t('admin.workflow.actions.newWorkflow') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedWorkflowId" @click="openEdit">
+                <v-list-item-title>{{ t('admin.workflow.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
             {{ t('admin.workflow.actions.selected', { count: selectedWorkflowIds.length }) }}
           </span>
         </div>
 
+        <ListMobileCard
+          v-if="isPhoneLayout"
+          :items="displayedRows"
+          :columns="mobileColumns"
+          item-key="workflowId"
+          :checkbox-mode="checkboxMode"
+          :selected-ids="selectedWorkflowIds"
+          :on-select="handleMobileSelect"
+          :on-card-click="(item) => onMobileCardClick(item as WorkflowDisplayItem)"
+        />
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -143,6 +180,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useResponsiveList } from '@/composables/useResponsiveList'
 import { getAdminWorkflows } from '@/services/admin'
 import type { AdminWorkflowListItem } from '@/types/api'
 import AdminWorkflowRecordDialog from '@/components/forms/AdminWorkflowRecordDialog.vue'
@@ -169,6 +208,7 @@ const successMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -178,7 +218,20 @@ const allHeaders = computed(() => [
   { title: t('admin.workflow.headers.workInstruction'), key: 'workInstruction', minWidth: '320px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
+const headers = computed(() =>
+  allHeaders.value.filter((header) =>
+    visibleColumnKeys.value.includes(String(header.key)) &&
+    isColumnVisible(String(header.key), {
+      hideOnPhone: ['workInstruction'],
+    }),
+  ),
+)
+
+const mobileColumns = computed<ListMobileCardColumn<WorkflowDisplayItem>[]>(() => [
+  { key: 'workflowName', label: t('admin.workflow.headers.workName'), section: 'header', emphasis: true },
+  { key: 'workTitle', label: t('admin.workflow.headers.workTitle'), section: 'body' },
+  { key: 'workInstruction', label: t('admin.workflow.headers.workInstruction'), section: 'footer' },
+])
 
 const sortableColumns = computed(() =>
   allHeaders.value
@@ -253,6 +306,29 @@ function onRowClick(_event: Event, payload: { item: AdminWorkflowListItem }) {
   selectedWorkflowIds.value = [payload.item.workflowId]
   editingItem.value = payload.item
   dialogOpen.value = true
+}
+
+function onMobileCardClick(item: WorkflowDisplayItem) {
+  if (checkboxMode.value) {
+    selectedWorkflowIds.value = [item.workflowId]
+    return
+  }
+
+  selectedWorkflowIds.value = [item.workflowId]
+  editingItem.value = item
+  dialogOpen.value = true
+}
+
+function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
+  const workflowId = String(item.workflowId ?? '')
+  if (!workflowId) return
+
+  if (selected) {
+    selectedWorkflowIds.value = [...new Set([...selectedWorkflowIds.value, workflowId])]
+    return
+  }
+
+  selectedWorkflowIds.value = selectedWorkflowIds.value.filter((id) => id !== workflowId)
 }
 
 function openNew() {
