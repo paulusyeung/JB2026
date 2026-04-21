@@ -29,7 +29,7 @@
   - Add mobile-specific CSS: `.job-mobile-card`, `.job-mobile-card__header`, `__body`, `__footer`
   - Pattern to follow: `StockView.vue` mobile card implementation
 
-- [ ] **Task 1.2: Retrofit `OrderListView.vue` with Mobile Card Pattern** (2.5–3.5h)
+- [x] **Task 1.2: Retrofit `OrderListView.vue` with Mobile Card Pattern** (2.5–3.5h)
   - Same approach as Task 1.1 — add `isPhoneLayout` computed
   - Mobile card rendering:
     - Master row card: order number, customer, brand, requiredOn, invoiceAmount

@@ -84,49 +84,189 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('jobOrder.orderList.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('jobOrder.orderList.actions.checkbox') }}
+            </v-btn>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
-            {{ t('jobOrder.orderList.actions.print') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
+              {{ t('jobOrder.orderList.actions.print') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
-            {{ t('jobOrder.orderList.actions.export') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
+              {{ t('jobOrder.orderList.actions.export') }}
+            </v-btn>
 
-          <v-btn
-            variant="outlined"
-            color="primary"
-            size="small"
-            prepend-icon="mdi-file-plus"
-            class="toolbar-new-order-btn"
-            @click="openCreate"
+            <v-btn
+              variant="outlined"
+              color="primary"
+              size="small"
+              prepend-icon="mdi-file-plus"
+              class="toolbar-new-order-btn"
+              @click="openCreate"
+            >
+              {{ t('jobOrder.orderList.actions.newOrder') }}
+            </v-btn>
+
+            <v-btn
+              v-if="checkboxMode && selectedOrderIds.length > 0"
+              variant="tonal"
+              color="error"
+              size="small"
+              prepend-icon="mdi-delete"
+              :loading="deleting"
+              @click="confirmBatchDelete"
+            >
+              {{ t('jobOrder.orderList.actions.deleteSelected') }}
+            </v-btn>
+
+            <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
+              {{ t('jobOrder.orderList.actions.selected', { count: selectedOrderIds.length }) }}
+            </span>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('jobOrder.jobList.actions.more') }}
+              </v-btn>
+            </template>
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('jobOrder.orderList.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-printer" @click="printList">
+                <v-list-item-title>{{ t('jobOrder.orderList.actions.print') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
+                <v-list-item-title>{{ t('jobOrder.orderList.actions.export') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-plus" @click="openCreate">
+                <v-list-item-title>{{ t('jobOrder.orderList.actions.newOrder') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="checkboxMode && selectedOrderIds.length > 0" prepend-icon="mdi-delete" :loading="deleting" @click="confirmBatchDelete">
+                <v-list-item-title>{{ t('jobOrder.orderList.actions.deleteSelected') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </div>
+
+        <div v-if="isPhoneLayout" class="order-mobile-list">
+          <v-card
+            v-for="master in masterRows"
+            :key="master.orderId"
+            rounded="lg"
+            elevation="0"
+            class="order-mobile-card"
           >
-            {{ t('jobOrder.orderList.actions.newOrder') }}
-          </v-btn>
+            <div class="order-mobile-card__header">
+              <div>
+                <div class="text-subtitle-2 font-weight-bold">{{ master.orderNumber }}</div>
+                <div class="text-caption text-medium-emphasis">{{ master.customerName || '-' }}</div>
+              </div>
 
-          <v-btn
-            v-if="checkboxMode && selectedOrderIds.length > 0"
-            variant="tonal"
-            color="error"
-            size="small"
-            prepend-icon="mdi-delete"
-            :loading="deleting"
-            @click="confirmBatchDelete"
-          >
-            {{ t('jobOrder.orderList.actions.deleteSelected') }}
-          </v-btn>
+              <div class="d-flex align-center ga-2">
+                <v-checkbox-btn
+                  v-if="checkboxMode"
+                  :model-value="selectedOrderIds.includes(master.orderId)"
+                  density="compact"
+                  hide-details
+                  @click.stop="toggleSelected(master.orderId)"
+                />
+                <v-btn
+                  v-if="hasDetailRows(master)"
+                  icon
+                  variant="text"
+                  size="small"
+                  @click.stop="toggleExpandRow(master)"
+                >
+                  <v-icon size="18">{{ isRowExpanded(master) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+                </v-btn>
+              </div>
+            </div>
 
-          <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
-            {{ t('jobOrder.orderList.actions.selected', { count: selectedOrderIds.length }) }}
-          </span>
+            <div class="order-mobile-card__body">
+              <div class="d-flex align-center ga-2 mb-2">
+                <v-chip size="small" :color="statusColor(master.status)" variant="tonal">
+                  <v-icon start size="12" :color="statusColor(master.status)">mdi-flag</v-icon>
+                  {{ master.status }}
+                </v-chip>
+                <span class="text-caption">{{ master.orderTitle || '-' }}</span>
+              </div>
+
+              <div class="order-mobile-card__metrics">
+                <span class="text-caption">{{ t('jobOrder.record.fields.brand') }}: {{ master.orderTitle || '-' }}</span>
+                <span class="text-caption">{{ t('jobOrder.record.fields.requiredOn') }}: {{ format(master.requiredOn) }}</span>
+                <span class="text-caption font-weight-medium">{{ t('jobOrder.record.fields.invoiceAmount') }}: {{ formatQty(master.invoiceAmount) || '-' }}</span>
+              </div>
+            </div>
+
+            <div class="order-mobile-card__meta text-caption text-medium-emphasis">
+              <span>{{ t('jobOrder.orderList.headers.orderedBy') }}: {{ master.orderedBy || '-' }}</span>
+              <span>{{ t('jobOrder.record.fields.orderedOn') }}: {{ format(master.orderedOn) }}</span>
+            </div>
+
+            <div class="order-mobile-card__actions">
+              <v-btn variant="text" size="small" class="text-none" @click="openEdit(master)">
+                {{ master.orderNumber }}
+              </v-btn>
+              <v-menu location="bottom end">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" variant="text" size="small" class="text-none">
+                    {{ t('jobOrder.jobList.actions.more') }}
+                    <v-icon end size="16">mdi-chevron-down</v-icon>
+                  </v-btn>
+                </template>
+                <v-list density="compact" class="toolbar-menu-list">
+                  <v-list-item prepend-icon="mdi-open-in-app" @click="openEdit(master)">
+                    <v-list-item-title>{{ master.orderNumber }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                    <v-list-item-title>{{ t('jobOrder.orderList.actions.checkbox') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-printer" @click="printList">
+                    <v-list-item-title>{{ t('jobOrder.orderList.actions.print') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
+                    <v-list-item-title>{{ t('jobOrder.orderList.actions.export') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-file-plus" @click="openCreate">
+                    <v-list-item-title>{{ t('jobOrder.orderList.actions.newOrder') }}</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </div>
+
+            <v-expand-transition>
+              <div v-if="hasDetailRows(master) && isRowExpanded(master)" class="order-mobile-card__details">
+                <div
+                  v-for="detail in detailRowsFor(master)"
+                  :key="detail.orderId"
+                  class="order-mobile-card__detail-row"
+                  @click="openEdit(detail)"
+                >
+                  <div class="d-flex justify-space-between align-start ga-2">
+                    <div>
+                      <div class="text-body-2 font-weight-medium">{{ detail.orderNumber }}-{{ detail.jobNumber }}</div>
+                      <div class="text-caption text-medium-emphasis">{{ detail.orderTitle || '-' }}</div>
+                    </div>
+                    <v-chip size="x-small" :color="statusColor(detail.status)" variant="tonal">
+                      {{ detail.status }}
+                    </v-chip>
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-1">
+                    {{ t('jobOrder.record.fields.requiredOn') }}: {{ format(detail.requiredOn) }}
+                  </div>
+                </div>
+              </div>
+            </v-expand-transition>
+          </v-card>
         </div>
 
         <v-data-table
+          v-else
           :headers="masterHeaders"
           :items="masterRows"
           :loading="loading"
@@ -259,7 +399,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="formOpen" max-width="1080" scrollable>
+    <v-dialog v-model="formOpen" max-width="min(100%, 1080px)" scrollable>
       <OrderRecordDialog
         v-if="formOpen"
         :order="formJob ?? undefined"
@@ -276,7 +416,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
@@ -319,7 +459,9 @@ const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
 const theme = useTheme()
+const display = useDisplay()
 const isDark = computed(() => theme.global.current.value.dark)
+const isPhoneLayout = computed(() => display.smAndDown.value)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.orderList.commonQueryItems.none') },
@@ -520,6 +662,15 @@ function toggleExpandRow(row: JobOrderRecord) {
   expandedMasterIds.value = [...expandedMasterIds.value, row.orderId]
 }
 
+function toggleSelected(orderId: string) {
+  if (selectedOrderIds.value.includes(orderId)) {
+    selectedOrderIds.value = selectedOrderIds.value.filter((id) => id !== orderId)
+    return
+  }
+
+  selectedOrderIds.value = [...selectedOrderIds.value, orderId]
+}
+
 async function onDetailRowClick(_event: Event, payload: { item: JobOrderRecord }) {
   await openEdit(payload.item)
 }
@@ -701,6 +852,71 @@ function statusColor(status: number) {
 
 .detail-grid :deep(tbody td) {
   font-size: 12px;
+}
+
+.order-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+.order-mobile-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.16);
+  background: rgba(246, 250, 255, 0.95);
+  padding: 12px;
+}
+
+.order-mobile-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.order-mobile-card__body {
+  margin-top: 8px;
+}
+
+.order-mobile-card__metrics {
+  display: grid;
+  gap: 4px;
+}
+
+.order-mobile-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.order-mobile-card__actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-mobile-card__details {
+  margin-top: 10px;
+  border-top: 1px solid rgba(var(--v-theme-primary), 0.2);
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.order-mobile-card__detail-row {
+  border: 1px solid rgba(var(--v-theme-primary), 0.18);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(var(--v-theme-surface), 0.96);
+  cursor: pointer;
+}
+
+.order-list-page--dark .order-mobile-card {
+  background: rgba(32, 46, 66, 0.9);
+}
+
+.order-list-page--dark .order-mobile-card__detail-row {
+  background: rgba(26, 38, 55, 0.95);
 }
 
 @media (max-width: 960px) {
