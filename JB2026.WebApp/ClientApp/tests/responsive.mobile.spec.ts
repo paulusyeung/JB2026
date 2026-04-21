@@ -184,6 +184,24 @@ async function mockMobileApiRoutes(page: Page) {
     }),
   )
 
+  await page.route('**/api/v2/job-schedules/pending**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/job-schedules/completed**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/job-schedules/packing**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/job-schedules/available**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/job-schedules/on-air**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/job-schedules/packing-on-air/available**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/job-schedules/packing-on-air**', (route) => route.fulfill({ json: [] }))
+
+  await page.route('**/api/v2/admin/workflows**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/admin/workflow-forms**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/admin/customers**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/admin/suppliers**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/admin/quotation-items**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/admin/quotation-item-groups**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v2/admin/order-type/workflows**', (route) =>
+    route.fulfill({ json: { availableWorkflows: [], selectedWorkflows: [] } }),
+  )
+
   await page.route('**/api/v2/sml/invoice-stats**', (route) =>
     route.fulfill({
       json: {
@@ -315,6 +333,20 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toEqual({ documentFits: true, bodyFits: true })
 }
 
+async function expectShellNavigationUsable(page: Page) {
+  await expect(page.getByRole('button', { name: 'More actions' })).toBeVisible()
+
+  const navToggle = page.getByRole('button', { name: 'Open navigation' })
+  if (await navToggle.isVisible()) {
+    await navToggle.click()
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    return
+  }
+
+  await expect(page.getByText('Core Modules')).toBeVisible()
+}
+
 test.describe('mobile responsive flows', () => {
   test.beforeEach(async ({ page }) => {
     await injectFakeSession(page)
@@ -429,5 +461,71 @@ test.describe('mobile responsive flows', () => {
     await expect(page.getByText('Purchase Orders')).toBeVisible()
     await expect(page.locator('web-pivot-table')).toBeVisible()
     await expectNoHorizontalOverflow(page)
+  })
+
+  test('tier 1 and tier 3 viewport QA matrix keeps layout and navigation usable', async ({ page }) => {
+    test.setTimeout(10 * 60 * 1000)
+
+    const tier1Viewports = [
+      { width: 360, height: 780 },
+      { width: 390, height: 844 },
+      { width: 430, height: 932 },
+      { width: 768, height: 1024 },
+      { width: 834, height: 1112 },
+      { width: 1024, height: 1366 },
+    ]
+
+    const tier3Viewports = [
+      { width: 360, height: 780 },
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+    ]
+
+    const tier1Routes = [
+      '/app/job-order/job-list',
+      '/app/job-order/order-list',
+      '/app/admin/user',
+      '/app/admin/customer',
+      '/app/admin/supplier',
+      '/app/admin/workflow',
+      '/app/admin/workflow-forms',
+      '/app/admin/order-type',
+      '/app/admin/quotation/item-group',
+      '/app/admin/quotation/item',
+    ]
+
+    const tier3Routes = [
+      '/app/job-order/schedule/scheduled',
+      '/app/job-order/schedule/pending',
+      '/app/job-order/schedule/completed',
+      '/app/job-order/schedule/packing',
+      '/app/job-order/schedule/packing-on-air',
+      '/app/scheduler',
+      '/app/job-order/sml/invoice-stats',
+      '/app/job-order/job-stats',
+      '/app/job-order/sml/rtf-stats',
+    ]
+
+    for (const viewport of tier1Viewports) {
+      await page.setViewportSize(viewport)
+
+      for (const route of tier1Routes) {
+        await page.goto(route)
+        await expect(page.locator('h1, h2').first()).toBeVisible()
+        await expectShellNavigationUsable(page)
+        await expectNoHorizontalOverflow(page)
+      }
+    }
+
+    for (const viewport of tier3Viewports) {
+      await page.setViewportSize(viewport)
+
+      for (const route of tier3Routes) {
+        await page.goto(route)
+        await expect(page.locator('h1, h2').first()).toBeVisible()
+        await expectShellNavigationUsable(page)
+        await expectNoHorizontalOverflow(page)
+      }
+    }
   })
 })

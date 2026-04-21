@@ -147,13 +147,18 @@
   - Test all Tier 3 views on: 360px, 390px, 768px
   - Verify no horizontal overflow on any viewport
   - Verify drawer toggle, topbar, and navigation work correctly
+  - Progress (2026-04-22): Added viewport matrix coverage in `JB2026.WebApp/ClientApp/tests/responsive.mobile.spec.ts` (`tier 1 and tier 3 viewport QA matrix keeps layout and navigation usable`).
+  - Blocker (2026-04-22): Local execution is currently blocked by missing Playwright system dependencies (`sudo npx playwright install-deps` required before rerun).
 
 - [ ] **Task 7.2: Confirm No Desktop Regressions** (1–2h)
   - Run existing Playwright desktop tests (`smoke.spec.ts`)
   - Verify all core list, dialog, and navigation flows still work on desktop
   - Verify desktop layout is unchanged (permanent drawer, full toolbar)
+  - Progress (2026-04-22): Installed Playwright Chromium binary with `npx playwright install chromium` and executed `npm run test:smoke -- --project=chromium tests/smoke.spec.ts`.
+  - Result (2026-04-22): 11 passed, 17 failed. Task remains open until desktop failures are triaged and resolved.
+  - Top failure clusters (2026-04-22): dashboard/topbar controls (theme/language), Tier 1 desktop headings/selectors (jobs/quotations/stock/admin/settings/help), form dialog fields (`Order Title`), and editor toolbar visibility.
 
-- [ ] **Task 7.3: Document Known Desktop-Preferred Workflows** (1h)
+- [x] **Task 7.3: Document Known Desktop-Preferred Workflows** (1h)
   - Create a `MOBILE_LIMITATIONS.md` file in the ClientApp directory
   - Document which workflows are desktop-preferred:
     - Scheduler board (`ScheduleView.vue`)
@@ -161,6 +166,7 @@
     - Pivot analytics screens
   - Document the responsive patterns used for each tier
   - Update this `tasks.md` with completion status
+  - Completed (2026-04-22): Added documentation at `JB2026.WebApp/ClientApp/MOBILE_LIMITATIONS.md`.
 
 ---
 
