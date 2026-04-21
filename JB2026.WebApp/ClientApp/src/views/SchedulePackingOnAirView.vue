@@ -25,7 +25,31 @@
             <div class="panel-header text-caption font-weight-bold text-medium-emphasis mb-1">
               {{ t('scheduler.packingOnAir.available.title') }} ({{ availableDisplay.length }})
             </div>
-            <div class="list-container">
+            <div v-if="isPhoneLayout" class="packing-mobile-list">
+              <v-card
+                v-for="(item, index) in availableDisplay"
+                :key="item.orderId"
+                rounded="lg"
+                elevation="0"
+                class="packing-mobile-card"
+                @click="toggleAvailableCheck(item.orderId)"
+              >
+                <div class="packing-mobile-card__header">
+                  <div>
+                    <div class="text-subtitle-2 font-weight-bold text-primary">{{ index + 1 }}. {{ item.orderNumber }}</div>
+                    <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
+                  </div>
+                  <v-checkbox-btn
+                    :model-value="checkedAvailable.includes(item.orderId)"
+                    density="compact"
+                    hide-details
+                    @click.stop="toggleAvailableCheck(item.orderId)"
+                  />
+                </div>
+                <div class="text-body-2 mt-1">{{ item.orderTitle }}</div>
+              </v-card>
+            </div>
+            <div v-else class="list-container">
               <table class="packing-table">
                 <colgroup>
                   <col class="col-check" />
@@ -97,7 +121,34 @@
             <div class="panel-header text-caption font-weight-bold text-medium-emphasis mb-1">
               {{ t('scheduler.packingOnAir.selected.title') }} ({{ selectedItems.length }})
             </div>
-            <div class="list-container">
+            <div v-if="isPhoneLayout" class="packing-mobile-list">
+              <v-card
+                v-for="(item, index) in selectedItems"
+                :key="item.orderId"
+                rounded="lg"
+                elevation="0"
+                class="packing-mobile-card"
+                @click="toggleSelectedCheck(item.orderId)"
+              >
+                <div class="packing-mobile-card__header">
+                  <div>
+                    <div class="text-subtitle-2 font-weight-bold text-primary">{{ index + 1 }}. {{ item.orderNumber }}</div>
+                    <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
+                  </div>
+                  <v-checkbox-btn
+                    :model-value="checkedSelected.includes(item.orderId)"
+                    density="compact"
+                    hide-details
+                    @click.stop="toggleSelectedCheck(item.orderId)"
+                  />
+                </div>
+                <div class="text-body-2 mt-1">{{ item.orderTitle }}</div>
+                <div class="text-caption text-medium-emphasis mt-1">
+                  {{ t('scheduler.packingOnAir.columns.remarks') }}: {{ item.remarks || '-' }}
+                </div>
+              </v-card>
+            </div>
+            <div v-else class="list-container">
               <table class="packing-table">
                 <colgroup>
                   <col class="col-check" />
@@ -195,6 +246,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 import {
   completePackingOnAir,
   getPackingOnAir,
@@ -206,6 +258,8 @@ import type { JobPackingOnAirAvailableItem, JobPackingOnAirItem } from '@/types/
 type SelectedState = JobPackingOnAirItem
 
 const { t } = useI18n({ useScope: 'global' })
+const display = useDisplay()
+const isPhoneLayout = computed(() => display.smAndDown.value)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -504,6 +558,22 @@ async function markCompleted() {
 .col-customer { width: 180px; min-width: 180px; }
 .col-title { min-width: 180px; }
 .col-remarks { width: 220px; min-width: 220px; }
+
+.packing-mobile-list {
+  display: grid;
+  gap: 10px;
+}
+
+.packing-mobile-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  padding: 10px;
+}
+
+.packing-mobile-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
 
 @media (max-width: 960px) {
   .packing-on-air-layout {

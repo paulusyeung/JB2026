@@ -12,7 +12,18 @@
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-4">
           {{ errorMessage }}
         </v-alert>
-        <FullCalendar :options="calendarOptions" />
+        <v-alert
+          v-if="isNarrowPhoneLayout"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ t('scheduler.mobilePreferredNotice') }}
+        </v-alert>
+        <div :class="['scheduler-calendar', { 'scheduler-calendar--phone': isPhoneLayout }]">
+          <FullCalendar :options="calendarOptions" />
+        </div>
       </v-card-text>
     </v-card>
   </section>
@@ -21,6 +32,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -31,12 +43,34 @@ import { getScheduleRange, updateScheduleTime } from '@/services/scheduler'
 const calendarEvents = ref<EventInput[]>([])
 const errorMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
+const display = useDisplay()
+
+const isPhoneLayout = computed(() => display.smAndDown.value)
+const isTabletLayout = computed(() => display.mdAndDown.value)
+const isNarrowPhoneLayout = computed(() => display.xs.value && display.width.value <= 430)
 
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  initialView: 'timeGridWeek',
+  initialView: isPhoneLayout.value ? 'dayGridMonth' : 'timeGridWeek',
+  headerToolbar: isPhoneLayout.value
+    ? {
+      left: 'prev,next',
+      center: 'title',
+      right: '',
+    }
+    : isTabletLayout.value
+      ? {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'timeGridWeek,dayGridMonth',
+      }
+      : {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay',
+      },
   editable: true,
-  height: 'auto',
+  height: isPhoneLayout.value ? '62vh' : 'auto',
   events: calendarEvents.value,
   eventDrop: async (info: EventDropArg) => {
     try {
@@ -94,3 +128,22 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.scheduler-calendar {
+  width: 100%;
+}
+
+.scheduler-calendar--phone :deep(.fc .fc-toolbar) {
+  row-gap: 8px;
+}
+
+.scheduler-calendar--phone :deep(.fc .fc-toolbar-title) {
+  font-size: 1.05rem;
+}
+
+.scheduler-calendar--phone :deep(.fc .fc-button) {
+  padding: 0.28rem 0.45rem;
+  font-size: 0.78rem;
+}
+</style>

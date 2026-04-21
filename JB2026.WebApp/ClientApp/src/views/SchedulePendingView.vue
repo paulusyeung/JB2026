@@ -103,7 +103,54 @@
           </v-btn>
         </div>
 
+        <div v-if="isPhoneLayout" class="pending-mobile-list mt-2">
+          <v-card
+            v-for="item in displayedRows"
+            :key="item.orderId"
+            rounded="lg"
+            elevation="0"
+            class="pending-mobile-card"
+            @click="openEditor(item)"
+          >
+            <div class="pending-mobile-card__header">
+              <div>
+                <div class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</div>
+                <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
+              </div>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedOrderIds.includes(item.orderId)"
+                density="compact"
+                hide-details
+                @click.stop="toggleSelectedOrder(item.orderId)"
+              />
+            </div>
+
+            <div class="text-body-2 mt-1">{{ item.orderTitle }}</div>
+
+            <div class="pending-mobile-card__chips mt-2">
+              <v-chip size="x-small" variant="tonal">{{ t('jobOrder.pending.headers.orderType') }}: {{ item.orderType }}</v-chip>
+              <v-chip size="x-small" variant="tonal" :color="statusColor(item.status)">{{ t('jobOrder.pending.headers.status') }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@1: {{ item.step1Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@2: {{ item.step2Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@3: {{ item.step3Status ?? '-' }}</v-chip>
+            </div>
+
+            <div class="pending-mobile-card__meta text-caption text-medium-emphasis mt-2">
+              <span>{{ t('jobOrder.pending.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
+              <span>{{ t('jobOrder.pending.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
+            </div>
+
+            <div class="pending-mobile-card__actions mt-2">
+              <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-open-in-app" @click.stop="openEditor(item)">
+                {{ t('jobOrder.pending.actions.popup') }}
+              </v-btn>
+            </div>
+          </v-card>
+        </div>
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -200,6 +247,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
@@ -243,6 +291,8 @@ const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
+const display = useDisplay()
+const isPhoneLayout = computed(() => display.smAndDown.value)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.pending.commonQueryItems.none') },
@@ -336,6 +386,15 @@ async function refreshList() {
   lookup.value = ''
   commonQuery.value = 0
   await load()
+}
+
+function toggleSelectedOrder(orderId: string) {
+  if (selectedOrderIds.value.includes(orderId)) {
+    selectedOrderIds.value = selectedOrderIds.value.filter((id) => id !== orderId)
+    return
+  }
+
+  selectedOrderIds.value = [...selectedOrderIds.value, orderId]
 }
 
 function toggleColumn(columnKey: string) {
@@ -532,6 +591,38 @@ async function handleActionUpdated() {
 
 .pending-list-table :deep(tbody td) {
   font-size: 12px;
+}
+
+.pending-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+.pending-mobile-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  padding: 12px;
+}
+
+.pending-mobile-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pending-mobile-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pending-mobile-card__meta {
+  display: grid;
+  gap: 2px;
+}
+
+.pending-mobile-card__actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (max-width: 960px) {

@@ -63,7 +63,48 @@
           </v-btn>
         </div>
 
+        <div v-if="isPhoneLayout" class="packing-mobile-list mt-2">
+          <v-card
+            v-for="item in displayedRows"
+            :key="item.orderId"
+            rounded="lg"
+            elevation="0"
+            class="packing-mobile-card"
+            @click="openEditor(item)"
+          >
+            <div class="packing-mobile-card__header">
+              <div>
+                <div class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</div>
+                <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
+              </div>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedOrderIds.includes(item.orderId)"
+                density="compact"
+                hide-details
+                @click.stop="toggleSelectedOrder(item.orderId)"
+              />
+            </div>
+
+            <div class="text-body-2 mt-1">{{ item.orderTitle }}</div>
+
+            <div class="packing-mobile-card__chips mt-2">
+              <v-chip size="x-small" variant="tonal">@1: {{ item.step1Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@2: {{ item.step2Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@3: {{ item.step3Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">LN: {{ item.ln }}</v-chip>
+            </div>
+
+            <div class="packing-mobile-card__meta text-caption text-medium-emphasis mt-2">
+              <span>{{ t('jobOrder.packing.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
+              <span>{{ t('jobOrder.packing.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
+              <span>{{ t('jobOrder.packing.headers.remarks') }}: {{ item.remarks || '-' }}</span>
+            </div>
+          </v-card>
+        </div>
+
         <v-data-table
+          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -148,6 +189,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
@@ -175,6 +217,8 @@ const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
+const display = useDisplay()
+const isPhoneLayout = computed(() => display.smAndDown.value)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.packing.commonQueryItems.none') },
@@ -237,6 +281,15 @@ async function refreshList() {
   lookup.value = ''
   commonQuery.value = 0
   await load()
+}
+
+function toggleSelectedOrder(orderId: string) {
+  if (selectedOrderIds.value.includes(orderId)) {
+    selectedOrderIds.value = selectedOrderIds.value.filter((id) => id !== orderId)
+    return
+  }
+
+  selectedOrderIds.value = [...selectedOrderIds.value, orderId]
 }
 
 function onRowClick(_event: Event, payload: { item: JobSchedulePackingItem }) {
@@ -386,6 +439,33 @@ async function handleActionUpdated() {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+}
+
+.packing-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+.packing-mobile-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  padding: 12px;
+}
+
+.packing-mobile-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.packing-mobile-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.packing-mobile-card__meta {
+  display: grid;
+  gap: 2px;
 }
 
 @media (max-width: 1200px) {

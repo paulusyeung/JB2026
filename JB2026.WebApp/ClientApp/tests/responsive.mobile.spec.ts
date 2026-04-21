@@ -171,6 +171,19 @@ async function mockMobileApiRoutes(page: Page) {
     }),
   )
 
+  await page.route('**/api/v2/job-schedules/range**', (route) =>
+    route.fulfill({
+      json: [
+        {
+          scheduleId: '11111111-1111-1111-1111-111111111111',
+          title: 'M1 - Test schedule slot',
+          startOn: '2026-04-07T09:00:00Z',
+          endOn: '2026-04-07T10:00:00Z',
+        },
+      ],
+    }),
+  )
+
   await page.route('**/api/v2/sml/invoice-stats**', (route) =>
     route.fulfill({
       json: {
@@ -267,6 +280,17 @@ test.describe('mobile responsive flows', () => {
     await expect(page.getByText('Modern Job Order')).toBeVisible()
     await expect(page.getByText('Acme Corp')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Search' })).toBeVisible()
+  })
+
+  test('scheduler route switches to simplified mobile calendar controls', async ({ page }) => {
+    await page.goto('/app/scheduler')
+
+    await expect(page.getByRole('heading', { name: 'Scheduler baseline' })).toBeVisible()
+    await expect(page.getByText('Desktop preferred for scheduling. Mobile mode shows a simplified calendar.')).toBeVisible()
+    await expect(page.locator('.fc-prev-button')).toBeVisible()
+    await expect(page.locator('.fc-next-button')).toBeVisible()
+    await expect(page.locator('.fc-today-button')).toHaveCount(0)
+    await expectNoHorizontalOverflow(page)
   })
 
   test('tier 2 views remain readable in dark mode on mobile', async ({ page }) => {

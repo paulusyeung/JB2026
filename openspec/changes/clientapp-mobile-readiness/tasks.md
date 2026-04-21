@@ -96,7 +96,7 @@
 
 ### Tier 3: Highest Complexity / Highest Risk
 
-- [ ] **Task 3.1: Prototype Mobile Treatment for Schedule Views** (7–11h total)
+- [x] **Task 3.1: Prototype Mobile Treatment for Schedule Views** (7–11h total)
   
   **3.1a: `ScheduleView.vue` (main scheduler board)** (4–6h)
   - On mobile: switch from 3-column horizontal layout to stacked vertical panels
@@ -112,7 +112,7 @@
   **3.1c: `SchedulePackingView.vue`, `SchedulePackingOnAirView.vue`** (1–2h each)
   - Audit for dense tables — apply mobile card pattern
 
-- [ ] **Task 3.2: Mobile Treatment for `SchedulerView.vue` (FullCalendar)** (2–3h)
+- [x] **Task 3.2: Mobile Treatment for `SchedulerView.vue` (FullCalendar)** (2–3h)
   - On mobile (`smAndDown`):
     - Change `initialView` from `'timeGridWeek'` to `'dayGridMonth'` or `'listWeek'`
     - Hide non-essential toolbar controls

@@ -12,7 +12,13 @@
         </v-btn>
 
         <!-- Machine filter -->
-        <v-btn-toggle v-model="machineFilter" mandatory density="compact" variant="outlined" class="machine-toggle">
+        <v-btn-toggle
+          v-model="machineFilter"
+          mandatory
+          density="compact"
+          variant="outlined"
+          :class="['machine-toggle', { 'machine-toggle--scroll': isPhoneLayout }]"
+        >
           <v-btn value="0" size="small">{{ t('scheduler.schedule.machine.all') }}</v-btn>
           <v-btn value="1" size="small">M1</v-btn>
           <v-btn value="2" size="small">M2</v-btn>
@@ -30,8 +36,17 @@
 
       <v-card-text class="pa-2">
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-2">{{ errorMessage }}</v-alert>
+        <v-alert
+          v-if="isNarrowPhoneLayout"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-2"
+        >
+          Desktop preferred for scheduling. Mobile mode shows a reduced view.
+        </v-alert>
 
-        <div class="schedule-layout">
+        <div :class="['schedule-layout', { 'schedule-layout--phone': isPhoneLayout }]">
           <!-- Available panel -->
           <div class="schedule-panel">
             <div class="panel-header text-caption font-weight-bold text-medium-emphasis mb-1">
@@ -84,7 +99,7 @@
           </div>
 
           <!-- Transfer button column -->
-          <div class="transfer-col d-flex flex-column align-center justify-center ga-1">
+          <div :class="['transfer-col', { 'transfer-col--phone': isPhoneLayout }, 'd-flex', 'flex-column', 'align-center', 'justify-center', 'ga-1']">
             <v-tooltip v-for="mc in [1,2,3,4,5]" :key="mc" :text="`→ M${mc}`" location="right">
               <template #activator="{ props }">
                 <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" color="primary"
@@ -177,9 +192,9 @@
                   <col class="col-light" />
                   <col class="col-light" />
                   <col class="col-light" />
-                  <col :style="{ width: `${scheduledColumnWidths.printQty}px` }" />
-                  <col :style="{ width: `${scheduledColumnWidths.printColor}px` }" />
-                  <col :style="{ width: `${scheduledColumnWidths.printSize}px` }" />
+                  <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printQty}px` }" />
+                  <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printColor}px` }" />
+                  <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printSize}px` }" />
                 </colgroup>
                 <thead>
                   <tr>
@@ -204,19 +219,19 @@
                     <th class="col-light">
                       <v-icon size="14">mdi-bell</v-icon>
                     </th>
-                    <th class="col-print-qty resizable-header" :style="{ width: `${scheduledColumnWidths.printQty}px` }">
+                    <th v-if="!isPhoneLayout" class="col-print-qty resizable-header" :style="{ width: `${scheduledColumnWidths.printQty}px` }">
                       <div class="header-content">
                         {{ t('scheduler.schedule.columns.printQty') }}
                         <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printQty')" />
                       </div>
                     </th>
-                    <th class="col-print-color resizable-header" :style="{ width: `${scheduledColumnWidths.printColor}px` }">
+                    <th v-if="!isPhoneLayout" class="col-print-color resizable-header" :style="{ width: `${scheduledColumnWidths.printColor}px` }">
                       <div class="header-content">
                         {{ t('scheduler.schedule.columns.printColor') }}
                         <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printColor')" />
                       </div>
                     </th>
-                    <th class="col-print-size resizable-header" :style="{ width: `${scheduledColumnWidths.printSize}px` }">
+                    <th v-if="!isPhoneLayout" class="col-print-size resizable-header" :style="{ width: `${scheduledColumnWidths.printSize}px` }">
                       <div class="header-content">
                         {{ t('scheduler.schedule.columns.printSize') }}
                         <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printSize')" />
@@ -249,9 +264,9 @@
                       <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
                       <span v-else>-</span>
                     </td>
-                    <td class="col-print-qty">{{ item.printQty }}</td>
-                    <td class="col-print-color">{{ item.printColor }}</td>
-                    <td class="col-print-size">{{ item.printSize }}</td>
+                    <td v-if="!isPhoneLayout" class="col-print-qty">{{ item.printQty }}</td>
+                    <td v-if="!isPhoneLayout" class="col-print-color">{{ item.printColor }}</td>
+                    <td v-if="!isPhoneLayout" class="col-print-size">{{ item.printSize }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -259,7 +274,7 @@
           </div>
 
           <!-- Right action column -->
-          <div class="action-col d-flex flex-column align-center ga-1">
+          <div :class="['action-col', { 'action-col--phone': isPhoneLayout }, 'd-flex', 'flex-column', 'align-center', 'ga-1']">
             <v-tooltip :text="t('scheduler.schedule.actions.moveTop')" location="left">
               <template #activator="{ props }">
                 <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" @click="moveScheduled('top')">
@@ -330,10 +345,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 import { getAvailableSchedule, getOnAirSchedule, saveScheduleBatch } from '@/services/scheduler'
 import type { JobScheduleAvailableItem, JobScheduleOnAirItem } from '@/types/api'
 
 const { t } = useI18n({ useScope: 'global' })
+const display = useDisplay()
+const isPhoneLayout = computed(() => display.smAndDown.value)
+const isNarrowPhoneLayout = computed(() => display.xs.value && display.width.value <= 430)
 
 // ─── state ────────────────────────────────────────────────────────────────────
 const loading = ref(false)
@@ -776,6 +795,16 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
   flex-shrink: 0;
 }
 
+.machine-toggle--scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.machine-toggle--scroll :deep(.v-btn) {
+  flex: 0 0 auto;
+}
+
 .schedule-layout {
   display: flex;
   gap: 4px;
@@ -890,5 +919,26 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .light-toolbar {
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+.schedule-layout--phone {
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  gap: 8px;
+}
+
+.schedule-layout--phone .schedule-panel {
+  min-height: 260px;
+}
+
+.transfer-col--phone,
+.action-col--phone {
+  flex-direction: row !important;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  width: 100%;
+  padding-top: 0;
+  overflow-x: auto;
 }
 </style>
