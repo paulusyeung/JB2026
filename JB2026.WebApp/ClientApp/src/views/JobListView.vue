@@ -92,138 +92,255 @@
             </v-card>
           </v-menu>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            {{ t('jobOrder.jobList.actions.checkbox') }}
-          </v-btn>
+          <template v-if="!isPhoneLayout">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+              {{ t('jobOrder.jobList.actions.checkbox') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
-            {{ t('jobOrder.jobList.actions.popup') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
+              {{ t('jobOrder.jobList.actions.popup') }}
+            </v-btn>
 
           <v-divider vertical class="mx-1" />
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
-            {{ t('jobOrder.jobList.actions.print') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
+              {{ t('jobOrder.jobList.actions.print') }}
+            </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
-            {{ t('jobOrder.jobList.actions.export') }}
-          </v-btn>
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
+              {{ t('jobOrder.jobList.actions.export') }}
+            </v-btn>
 
-          <v-btn
-            variant="outlined"
-            size="small"
-            color="primary"
-            prepend-icon="mdi-file-plus"
-            class="toolbar-new-order-btn"
-            @click="openNew"
-          >
-            {{ t('jobOrder.jobList.actions.newOrder') }}
-          </v-btn>
+            <v-btn
+              variant="outlined"
+              size="small"
+              color="primary"
+              prepend-icon="mdi-file-plus"
+              class="toolbar-new-order-btn"
+              @click="openNew"
+            >
+              {{ t('jobOrder.jobList.actions.newOrder') }}
+            </v-btn>
 
-          <v-btn
-            v-if="checkboxMode && selectedOrderIds.length > 0"
-            variant="tonal"
-            color="error"
-            size="small"
-            prepend-icon="mdi-delete"
-            :loading="deleting"
-            @click="confirmBatchDelete"
-          >
-            {{ t('jobOrder.jobList.actions.deleteSelected') }}
-          </v-btn>
+            <v-btn
+              v-if="checkboxMode && selectedOrderIds.length > 0"
+              variant="tonal"
+              color="error"
+              size="small"
+              prepend-icon="mdi-delete"
+              :loading="deleting"
+              @click="confirmBatchDelete"
+            >
+              {{ t('jobOrder.jobList.actions.deleteSelected') }}
+            </v-btn>
 
-          <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
-            {{ t('jobOrder.jobList.actions.selected', { count: selectedOrderIds.length }) }}
-          </span>
+            <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
+              {{ t('jobOrder.jobList.actions.selected', { count: selectedOrderIds.length }) }}
+            </span>
 
-          <span class="text-caption text-medium-emphasis" v-else-if="activeRow">
-            {{ t('jobOrder.jobList.selectedOrder', { order: compositeOrderNumber(activeRow) }) }}
-          </span>
+            <span class="text-caption text-medium-emphasis" v-else-if="activeRow">
+              {{ t('jobOrder.jobList.selectedOrder', { order: compositeOrderNumber(activeRow) }) }}
+            </span>
 
-          <span class="text-caption text-medium-emphasis" v-else>
-            {{ t('jobOrder.jobList.noSelection') }}
-          </span>
+            <span class="text-caption text-medium-emphasis" v-else>
+              {{ t('jobOrder.jobList.noSelection') }}
+            </span>
+          </template>
+
+          <v-menu v-else location="bottom end">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                {{ t('jobOrder.jobList.actions.more') }}
+              </v-btn>
+            </template>
+
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.popup') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-printer" @click="printList">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.export') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-file-plus" @click="openNew">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.newOrder') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="checkboxMode && selectedOrderIds.length > 0" prepend-icon="mdi-delete" :loading="deleting" @click="confirmBatchDelete">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.deleteSelected') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </div>
 
-        <v-data-table
-          :headers="headers"
-          :items="displayedRows"
-          :loading="loading"
-          v-model="selectedOrderIds"
-          :show-select="checkboxMode"
-          item-value="orderId"
-          density="compact"
-          fixed-header
-          height="62vh"
-          class="job-list-table"
-          @click:row="onRowClick"
-        >
-          <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
+        <div v-if="isPhoneLayout" class="job-mobile-list">
+          <v-card
+            v-for="(row, index) in displayedRows"
+            :key="row.orderId"
+            rounded="lg"
+            elevation="0"
+            class="job-mobile-card"
+            @click="openEditor(row)"
+          >
+            <div class="job-mobile-card__header">
+              <div class="d-flex align-center ga-2">
+                <v-icon size="18" :color="orderTypeMeta(row.orderType).color">
+                  {{ orderTypeMeta(row.orderType).icon }}
+                </v-icon>
+                <div>
+                  <div class="text-subtitle-2 font-weight-bold">{{ compositeOrderNumber(row) }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ row.customerName || '-' }}</div>
+                </div>
+              </div>
 
-          <template #[`header.orderType`]>
-            <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span>
-            <v-icon size="14" color="primary">mdi-tag-outline</v-icon>
-          </template>
-
-          <template #[`header.status`]>
-            <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span>
-            <v-icon size="14" color="primary">mdi-flag</v-icon>
-          </template>
-
-          <template #[`header.attachProduct`]>
-            <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span>
-            <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-          </template>
-
-          <template #[`header.attachCustomer`]>
-            <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span>
-            <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-          </template>
-
-          <template #[`item.orderType`]="{ item }">
-            <div class="d-flex justify-center">
-              <v-icon size="16" :color="orderTypeMeta(item.orderType).color">{{ orderTypeMeta(item.orderType).icon }}</v-icon>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedOrderIds.includes(row.orderId)"
+                density="compact"
+                hide-details
+                @click.stop="toggleSelected(row.orderId)"
+              />
             </div>
-          </template>
 
-          <template #[`item.orderNumber`]="{ item }">
-            <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEditor(item)">
-              {{ compositeOrderNumber(item) }}
-            </v-btn>
-          </template>
+            <div class="job-mobile-card__body">
+              <div class="d-flex align-center ga-2 mb-2">
+                <v-chip size="small" :color="statusColor(row.status)" variant="tonal">
+                  <v-icon start size="12" :color="statusColor(row.status)">mdi-flag</v-icon>
+                  {{ row.status }}
+                </v-chip>
+                <span class="text-caption">{{ row.orderTitle || '-' }}</span>
+              </div>
 
-          <template #[`item.status`]="{ item }">
-            <div class="d-flex justify-center">
-              <v-icon size="16" :color="statusColor(item.status)">mdi-flag</v-icon>
+              <div class="job-mobile-card__metrics">
+                <span class="text-caption">{{ t('jobOrder.jobList.headers.quotation') }}: {{ row.productStyle || '-' }}</span>
+                <span class="text-caption font-weight-medium">{{ t('jobOrder.jobList.headers.invoiceAmount') }}: {{ formatCurrency(row.invoiceAmount) }}</span>
+              </div>
             </div>
-          </template>
 
-          <template #[`item.attachProduct`]="{ item }">
-            <div class="d-flex justify-center">
-              <v-icon size="14" :color="item.attachmentProductCount > 0 ? 'success' : 'error'">
-                {{ item.attachmentProductCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
-              </v-icon>
+            <div class="job-mobile-card__footer text-caption text-medium-emphasis">
+              <span>{{ t('jobOrder.jobList.headers.orderedOn') }}: {{ format(row.orderedOn) }}</span>
+              <span>{{ t('jobOrder.jobList.headers.requiredOn') }}: {{ format(row.requiredOn) }}</span>
             </div>
-          </template>
 
-          <template #[`item.attachCustomer`]="{ item }">
-            <div class="d-flex justify-center">
-              <v-icon size="14" :color="item.attachmentCustomerCount > 0 ? 'success' : 'error'">
-                {{ item.attachmentCustomerCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
-              </v-icon>
+            <div class="job-mobile-card__meta text-caption text-medium-emphasis">
+              <span>{{ t('jobOrder.jobList.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
+              <span>{{ t('jobOrder.jobList.headers.modifiedOn') }}: {{ format(row.modifiedOn) }}</span>
             </div>
-          </template>
 
-          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
-          <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
-          <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
-          <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
-          <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
-          <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
-          <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
-        </v-data-table>
+            <div class="job-mobile-card__actions">
+              <v-menu location="bottom end">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" variant="text" size="small" class="text-none">
+                    {{ t('jobOrder.jobList.actions.more') }}
+                    <v-icon end size="16">mdi-chevron-down</v-icon>
+                  </v-btn>
+                </template>
+                <v-list density="compact" class="toolbar-menu-list">
+                  <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
+                    <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-open-in-app" :disabled="!row.orderId" @click.stop="openEditor(row)">
+                    <v-list-item-title>{{ t('jobOrder.jobList.actions.popup') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-printer" @click.stop="printList">
+                    <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click.stop="exportToCsv">
+                    <v-list-item-title>{{ t('jobOrder.jobList.actions.export') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-file-plus" @click.stop="openNew">
+                    <v-list-item-title>{{ t('jobOrder.jobList.actions.newOrder') }}</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </div>
+          </v-card>
+        </div>
+
+        <div v-else class="job-table-shell">
+          <v-data-table
+            :headers="headers"
+            :items="displayedRows"
+            :loading="loading"
+            v-model="selectedOrderIds"
+            :show-select="checkboxMode"
+            item-value="orderId"
+            density="compact"
+            fixed-header
+            height="62vh"
+            class="job-list-table"
+            @click:row="onRowClick"
+          >
+            <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
+
+            <template #[`header.orderType`]>
+              <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span>
+              <v-icon size="14" color="primary">mdi-tag-outline</v-icon>
+            </template>
+
+            <template #[`header.status`]>
+              <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span>
+              <v-icon size="14" color="primary">mdi-flag</v-icon>
+            </template>
+
+            <template #[`header.attachProduct`]>
+              <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span>
+              <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+            </template>
+
+            <template #[`header.attachCustomer`]>
+              <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span>
+              <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+            </template>
+
+            <template #[`item.orderType`]="{ item }">
+              <div class="d-flex justify-center">
+                <v-icon size="16" :color="orderTypeMeta(item.orderType).color">{{ orderTypeMeta(item.orderType).icon }}</v-icon>
+              </div>
+            </template>
+
+            <template #[`item.orderNumber`]="{ item }">
+              <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEditor(item)">
+                {{ compositeOrderNumber(item) }}
+              </v-btn>
+            </template>
+
+            <template #[`item.status`]="{ item }">
+              <div class="d-flex justify-center">
+                <v-icon size="16" :color="statusColor(item.status)">mdi-flag</v-icon>
+              </div>
+            </template>
+
+            <template #[`item.attachProduct`]="{ item }">
+              <div class="d-flex justify-center">
+                <v-icon size="14" :color="item.attachmentProductCount > 0 ? 'success' : 'error'">
+                  {{ item.attachmentProductCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
+                </v-icon>
+              </div>
+            </template>
+
+            <template #[`item.attachCustomer`]="{ item }">
+              <div class="d-flex justify-center">
+                <v-icon size="14" :color="item.attachmentCustomerCount > 0 ? 'success' : 'error'">
+                  {{ item.attachmentCustomerCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
+                </v-icon>
+              </div>
+            </template>
+
+            <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+            <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
+            <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
+            <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
+            <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
+            <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
+            <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
+            <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
+          </v-data-table>
+        </div>
 
         <div class="text-caption text-medium-emphasis mt-2">
           {{ t('jobOrder.jobList.rows', { count: formatNumber(displayedRows.length) }) }}
@@ -231,7 +348,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="formOpen" max-width="760" scrollable>
+    <v-dialog v-model="formOpen" max-width="min(100%, 760px)" scrollable>
       <JobOrderForm
         v-if="formOpen"
         :job="formJob ?? undefined"
@@ -269,7 +386,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useTheme } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -321,8 +438,10 @@ const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatCurrency: formatCurrencyByLocale, formatNumber } = useLocaleFormatters()
 const theme = useTheme()
+const display = useDisplay()
 const router = useRouter()
 const isDark = computed(() => theme.global.current.value.dark)
+const isPhoneLayout = computed(() => display.smAndDown.value)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.jobList.commonQueryItems.none') },
@@ -437,6 +556,15 @@ function toggleColumn(columnKey: string) {
   }
 
   visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
+}
+
+function toggleSelected(orderId: string) {
+  if (selectedOrderIds.value.includes(orderId)) {
+    selectedOrderIds.value = selectedOrderIds.value.filter((id) => id !== orderId)
+    return
+  }
+
+  selectedOrderIds.value = [...selectedOrderIds.value, orderId]
 }
 
 function onRowClick(_event: Event, payload: { item: JobOrderRecord }) {
@@ -689,6 +817,48 @@ async function handleActionUpdated() {
   font-size: 12px;
 }
 
+.job-table-shell {
+  overflow-x: auto;
+}
+
+.job-mobile-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.job-mobile-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.job-mobile-card:active {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.job-mobile-card__header,
+.job-mobile-card__footer,
+.job-mobile-card__meta,
+.job-mobile-card__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.job-mobile-card__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.job-mobile-card__metrics {
+  display: grid;
+  gap: 0.3rem;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -704,6 +874,24 @@ async function handleActionUpdated() {
 @media (max-width: 960px) {
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar-bar {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .job-mobile-card__header,
+  .job-mobile-card__footer,
+  .job-mobile-card__meta,
+  .job-mobile-card__actions {
+    flex-direction: column;
   }
 }
 </style>
