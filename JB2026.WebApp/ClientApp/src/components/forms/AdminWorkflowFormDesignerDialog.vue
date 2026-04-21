@@ -178,7 +178,7 @@
     </v-card-text>
 
     <!-- Add control name dialog -->
-    <v-dialog v-model="addControlDialog" max-width="340" persistent>
+    <v-dialog v-model="addControlDialog" max-width="min(100%, 340px)" scrollable persistent>
       <v-card>
         <v-card-title class="text-subtitle-1 pb-1">{{ pendingControlType }}</v-card-title>
         <v-card-text>

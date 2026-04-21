@@ -279,7 +279,7 @@
 
       <v-divider />
 
-      <v-card-actions class="pa-4 d-flex ga-2">
+      <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
         <v-spacer />
         <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('jobForm.actions.cancel') }}</v-btn>
         <v-btn color="primary" type="submit" :loading="saving" min-width="120">

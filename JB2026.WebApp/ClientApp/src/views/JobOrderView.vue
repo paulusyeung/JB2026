@@ -56,7 +56,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="formOpen" max-width="1080" scrollable>
+    <v-dialog v-model="formOpen" max-width="min(100%, 1080px)" scrollable>
       <OrderRecordDialog
         v-if="formJob"
         :order="formJob"

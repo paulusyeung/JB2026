@@ -76,7 +76,7 @@
   </section>
 
   <!-- Create / Edit job order dialog (Slice B — DevExpress form replacement) -->
-  <v-dialog v-model="formOpen" max-width="760" scrollable>
+  <v-dialog v-model="formOpen" max-width="min(100%, 760px)" scrollable>
     <JobOrderForm
       :job="formJob"
       @saved="handleSaved"

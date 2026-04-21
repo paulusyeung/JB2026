@@ -40,7 +40,7 @@
   - Filter bar already collapses at 960px
   - Complexity note: Master-detail rows — show master card with expand/collapse chevron for detail rows
 
-- [ ] **Task 1.3: Retrofit Admin CRUD Views (Batch Pattern)** (4–6h)
+- [x] **Task 1.3: Retrofit Admin CRUD Views (Batch Pattern)** (4–6h)
   - Create shared composable `useResponsiveList()` providing:
     - `isPhoneLayout` computed from `display.smAndDown`
     - `isTabletLayout` computed from `display.mdAndDown`
@@ -63,7 +63,7 @@
   - Filter bar already collapses at 960px in most views
   - Dialogs already have `max-width` — ensure they degrade to `min(100%, 760px)`
 
-- [ ] **Task 1.4: Audit and Fix Dialogs from List Screens** (2–3h)
+- [x] **Task 1.4: Audit and Fix Dialogs from List Screens** (2–3h)
   - Audit `JobOrderForm.vue`, `OrderRecordDialog.vue`, `AdminUserRecordDialog.vue`, and similar form dialogs
   - Ensure all dialogs use responsive width: `max-width="min(100%, 760px)"` or similar
   - Ensure `scrollable` is present on all dialogs

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="attachmentModel" max-width="760" scrollable>
+  <v-dialog v-model="attachmentModel" max-width="min(100%, 760px)" scrollable>
     <v-card>
       <v-card-title>{{ t('jobForm.dialogs.attachmentsTitle') }}</v-card-title>
       <v-card-text>
@@ -55,7 +55,7 @@
     </v-card>
   </v-dialog>
 
-  <v-dialog v-model="productDetailsModel" max-width="760" scrollable>
+  <v-dialog v-model="productDetailsModel" max-width="min(100%, 760px)" scrollable>
     <v-card>
       <v-card-title>{{ t('jobForm.dialogs.productDetailsTitle') }}</v-card-title>
       <v-card-text>

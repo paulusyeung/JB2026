@@ -89,7 +89,7 @@
       {{ errorMessage }}
     </v-alert>
 
-    <v-card-actions class="pa-4 d-flex ga-2">
+    <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
       <v-spacer />
       <v-btn variant="text" :disabled="saving || deleting || duplicating" @click="emit('cancel')">
         {{ t('admin.workflowForms.form.cancel') }}
@@ -97,7 +97,7 @@
     </v-card-actions>
 
     <!-- Designer dialog -->
-    <v-dialog v-model="designerOpen" max-width="1200" scrollable persistent>
+    <v-dialog v-model="designerOpen" max-width="min(100%, 1200px)" scrollable persistent>
       <AdminWorkflowFormDesignerDialog
         v-if="designerOpen && currentRecord"
         :record="currentRecord"

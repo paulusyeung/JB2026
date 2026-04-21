@@ -175,7 +175,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="dialogOpen" max-width="920" scrollable>
+    <v-dialog v-model="dialogOpen" max-width="min(100%, 920px)" scrollable>
       <AdminCustomerRecordDialog
         :customer-id="editingCustomerId"
         @saved="handleSaved"

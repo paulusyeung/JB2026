@@ -158,7 +158,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="dialogOpen" max-width="760" scrollable>
+    <v-dialog v-model="dialogOpen" max-width="min(100%, 760px)" scrollable>
       <AdminWorkflowRecordDialog
         :item="editingItem"
         @saved="handleSaved"

@@ -176,7 +176,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="dialogOpen" max-width="860" scrollable>
+    <v-dialog v-model="dialogOpen" max-width="min(100%, 860px)" scrollable>
       <AdminQuotationItemRecordDialog
         :item="editingItem"
         @saved="handleSaved"

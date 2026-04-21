@@ -174,7 +174,7 @@
 
     <v-divider />
 
-    <v-card-actions class="pa-4 d-flex ga-2">
+    <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
       <v-spacer />
       <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('jobOrder.dismiss') }}</v-btn>
       <v-btn color="primary" :loading="saving" @click="handleSave">{{ t('jobOrder.record.actions.save') }}</v-btn>

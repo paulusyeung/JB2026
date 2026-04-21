@@ -136,7 +136,7 @@
       {{ errorMessage }}
     </v-alert>
 
-    <v-card-actions class="pa-4 d-flex ga-2">
+    <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
       <v-spacer />
       <v-btn variant="text" :disabled="saving || deleting" @click="emit('cancel')">
         {{ t('admin.customer.form.cancel') }}

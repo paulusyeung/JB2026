@@ -67,12 +67,12 @@
       <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3">{{ errorMessage }}</v-alert>
     </v-card-text>
 
-    <v-card-actions class="pa-4">
+    <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
       <v-spacer />
       <v-btn variant="text" @click="emit('cancel')">{{ t('admin.workflow.form.cancel') }}</v-btn>
     </v-card-actions>
 
-    <v-dialog v-model="workflowFormsOpen" max-width="1280" scrollable>
+    <v-dialog v-model="workflowFormsOpen" max-width="min(100%, 1280px)" scrollable>
       <AdminWorkflowFormsDialog
         v-if="workflowFormsOpen && currentWorkflowId"
         :workflow-id="currentWorkflowId"
