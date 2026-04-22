@@ -385,6 +385,58 @@ export interface StockProductListItem {
   modifiedBy: string
 }
 
+export interface StockProductRecord {
+  productId: string
+  customerCode: string
+  categoryCode: string
+  sequenceNumber: string
+  stockNumber: string
+  productCode: string
+  productName: string
+  productionInfo: string
+  remarks: string
+  sellingPrice: number
+  cogs: number
+  balance: number
+  createdOn: string
+  createdBy: string
+  modifiedOn: string
+  modifiedBy: string
+}
+
+export interface StockProductRecordUpsertRequest {
+  customerCode: string
+  categoryCode: string
+  sequenceNumber: string
+  productCode: string
+  productName: string
+  productionInfo?: string
+  remarks?: string
+  sellingPrice: number
+  cogs: number
+}
+
+export interface StockProductMovementHistoryItem {
+  inOutId: string
+  inOutDate: string
+  reference: string
+  qty: number
+  runningBalance: number
+  modifiedOn: string
+  modifiedBy: string
+}
+
+export interface StockProductCodeValidationResponse {
+  isUnique: boolean
+}
+
+export interface StockProductNextNumberResponse {
+  customerCode: string
+  categoryCode: string
+  sequenceNumber: string
+  stockNumber: string
+}
+
 export interface RunReportRequest {
   reportName: string
   startOn: string

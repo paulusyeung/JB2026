@@ -145,4 +145,196 @@ public sealed class StockControllerTests
         var item = Assert.Single(items);
         Assert.Equal("P-ABC", item.ProductCode);
     }
+
+    [Fact]
+    public async Task ProductRecord_CreateUpdateDelete_WorksEndToEnd()
+    {
+        using var context = CreateContext(nameof(ProductRecord_CreateUpdateDelete_WorksEndToEnd));
+        var categoryId = Guid.NewGuid();
+        context.Z_Categories.Add(new Z_Category
+        {
+            CategoryId = categoryId,
+            CategoryCode = "CAT",
+            CategoryName = "Category",
+            CreatedOn = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+            ModifiedOn = DateTime.UtcNow,
+            ModifiedBy = Guid.NewGuid(),
+            Retired = false,
+        });
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+
+        var createResult = await controller.CreateProductRecord(new StockProductRecordUpsertRequest
+        {
+            CustomerCode = "CUS",
+            CategoryCode = "CAT",
+            SequenceNumber = "1",
+            ProductCode = "P-100",
+            ProductName = "Demo Product",
+            ProductionInfo = "Info",
+            Remarks = "Remarks",
+            SellingPrice = 12.5m,
+            COGS = 10.0m,
+        }, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
+        var createdBody = Assert.IsType<StockProductRecordResponse>(created.Value);
+        Assert.Equal("CUS-CAT-0001", createdBody.StockNumber);
+
+        var updateResult = await controller.UpdateProductRecord(createdBody.ProductId, new StockProductRecordUpsertRequest
+        {
+            CustomerCode = "CUS",
+            CategoryCode = "CAT",
+            SequenceNumber = "2",
+            ProductCode = "P-100-UPDATED",
+            ProductName = "Updated Product",
+            ProductionInfo = "Updated Info",
+            Remarks = "Updated Remarks",
+            SellingPrice = 14.5m,
+            COGS = 11.0m,
+        }, CancellationToken.None);
+
+        var updated = Assert.IsType<OkObjectResult>(updateResult.Result);
+        var updatedBody = Assert.IsType<StockProductRecordResponse>(updated.Value);
+        Assert.Equal("P-100-UPDATED", updatedBody.ProductCode);
+        Assert.Equal("CUS-CAT-0002", updatedBody.StockNumber);
+
+        var deleteResult = await controller.DeleteProductRecord(createdBody.ProductId, CancellationToken.None);
+        Assert.IsType<NoContentResult>(deleteResult);
+
+        var getAfterDelete = await controller.GetProductRecord(createdBody.ProductId, CancellationToken.None);
+        Assert.IsType<NotFoundResult>(getAfterDelete.Result);
+    }
+
+    [Fact]
+    public async Task ValidateProductCodeUniqueness_ExcludesCurrentProduct_WhenProvided()
+    {
+        using var context = CreateContext(nameof(ValidateProductCodeUniqueness_ExcludesCurrentProduct_WhenProvided));
+        var targetId = Guid.NewGuid();
+        context.Products.Add(new Product
+        {
+            ProductId = targetId,
+            ProductCode = "P-EXIST",
+            ProductName = "Existing",
+            StockNumber = "CUS-CAT-0001",
+            Balance = 10,
+            SellingPrice = 9,
+            COGS = 7,
+            MOQ = 1,
+            CreatedOn = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+            ModifiedOn = DateTime.UtcNow,
+            ModifiedBy = Guid.NewGuid(),
+            Retired = false,
+        });
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+
+        var selfResult = await controller.ValidateProductCodeUniqueness("P-EXIST", targetId, CancellationToken.None);
+        var selfOk = Assert.IsType<OkObjectResult>(selfResult.Result);
+        var selfBody = Assert.IsType<StockProductCodeValidationResponse>(selfOk.Value);
+        Assert.True(selfBody.IsUnique);
+
+        var otherResult = await controller.ValidateProductCodeUniqueness("P-EXIST", null, CancellationToken.None);
+        var otherOk = Assert.IsType<OkObjectResult>(otherResult.Result);
+        var otherBody = Assert.IsType<StockProductCodeValidationResponse>(otherOk.Value);
+        Assert.False(otherBody.IsUnique);
+    }
+
+    [Fact]
+    public async Task GetProductMovements_ReturnsRunningBalance()
+    {
+        using var context = CreateContext(nameof(GetProductMovements_ReturnsRunningBalance));
+        var productId = Guid.NewGuid();
+
+        context.StockInOuts.AddRange(
+            new StockInOut
+            {
+                InOutId = Guid.NewGuid(),
+                ProductId = productId,
+                InOutDate = new DateTime(2026, 1, 1),
+                Reference = "IN-1",
+                Qty = 10,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+            },
+            new StockInOut
+            {
+                InOutId = Guid.NewGuid(),
+                ProductId = productId,
+                InOutDate = new DateTime(2026, 1, 2),
+                Reference = "OUT-1",
+                Qty = -4,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+            });
+
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+        var result = await controller.GetProductMovements(productId, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsType<List<StockMovementHistoryItemResponse>>(ok.Value);
+        Assert.Equal(2, items.Count);
+        Assert.Equal(10, items[0].RunningBalance);
+        Assert.Equal(6, items[1].RunningBalance);
+    }
+
+    [Fact]
+    public async Task GetNextProductNumber_ReturnsIncrementedSequence()
+    {
+        using var context = CreateContext(nameof(GetNextProductNumber_ReturnsIncrementedSequence));
+
+        context.Products.AddRange(
+            new Product
+            {
+                ProductId = Guid.NewGuid(),
+                ProductCode = "P-1",
+                ProductName = "Alpha",
+                StockNumber = "CUS-CAT-0003",
+                Balance = 1,
+                SellingPrice = 1,
+                COGS = 1,
+                MOQ = 1,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false,
+            },
+            new Product
+            {
+                ProductId = Guid.NewGuid(),
+                ProductCode = "P-2",
+                ProductName = "Beta",
+                StockNumber = "CUS-CAT-0009",
+                Balance = 1,
+                SellingPrice = 1,
+                COGS = 1,
+                MOQ = 1,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false,
+            });
+
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+        var result = await controller.GetNextProductNumber("CUS", "CAT", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<StockProductNextNumberResponse>(ok.Value);
+        Assert.Equal("0010", body.SequenceNumber);
+        Assert.Equal("CUS-CAT-0010", body.StockNumber);
+    }
 }

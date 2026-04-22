@@ -1,0 +1,601 @@
+<template>
+  <v-dialog
+    :model-value="modelValue"
+    max-width="1100"
+    persistent
+    scrollable
+    @update:model-value="onDialogVisibilityChanged"
+  >
+    <v-card v-draggable-dialog class="product-record-dialog">
+      <v-card-title class="d-flex flex-wrap align-center ga-2">
+        <div class="text-h6">
+          {{ isEditMode ? t('stock.record.titleEdit') : t('stock.record.titleCreate') }}
+        </div>
+        <v-chip size="small" color="primary" variant="tonal">{{ isEditMode ? t('stock.record.modeEdit') : t('stock.record.modeCreate') }}</v-chip>
+        <v-spacer />
+        <v-btn icon="mdi-close" variant="text" @click="closeDialog" />
+      </v-card-title>
+
+      <v-divider />
+
+      <v-card-text>
+        <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
+        <v-alert v-if="infoMessage" type="info" variant="tonal" class="mb-3">{{ infoMessage }}</v-alert>
+
+        <v-form @submit.prevent>
+          <v-row class="mb-3" dense>
+            <v-col cols="12" lg="6">
+              <v-card variant="tonal" class="record-section-card h-100">
+                <v-card-title class="text-subtitle-1">{{ t('stock.record.identity') }}</v-card-title>
+                <v-card-text>
+                  <v-row dense align="end">
+                    <v-col cols="12" class="text-caption text-medium-emphasis pb-0">
+                      {{ t('stock.record.stockNumber') }}
+                    </v-col>
+                    <v-col cols="3" sm="3">
+                      <v-combobox
+                        ref="customerCodeField"
+                        v-model="form.customerCode"
+                        :label="t('stock.record.customerCode')"
+                        :items="customerCodeOptions"
+                        maxlength="8"
+                        density="comfortable"
+                        variant="outlined"
+                        hide-details="auto"
+                        :error-messages="errors.customerCode"
+                        @update:model-value="val => form.customerCode = String(val ?? '').toUpperCase()"
+                      />
+                    </v-col>
+                    <v-col cols="3" sm="3">
+                      <v-combobox
+                        v-model="form.categoryCode"
+                        :label="t('stock.record.categoryCode')"
+                        :items="categoryCodeOptions"
+                        maxlength="8"
+                        density="comfortable"
+                        variant="outlined"
+                        hide-details="auto"
+                        :error-messages="errors.categoryCode"
+                        @update:model-value="val => form.categoryCode = String(val ?? '').toUpperCase()"
+                      />
+                    </v-col>
+                    <v-col cols="6" sm="6">
+                      <v-text-field
+                        v-model="form.sequenceNumber"
+                        :label="t('stock.record.sequenceNumber')"
+                        maxlength="8"
+                        density="comfortable"
+                        variant="outlined"
+                        hide-details="auto"
+                        :error-messages="errors.sequenceNumber"
+                      >
+                        <template #append-inner>
+                          <v-tooltip :text="t('stock.record.nextNumber')" location="top">
+                            <template #activator="{ props: tooltipProps }">
+                              <v-btn
+                                v-bind="tooltipProps"
+                                icon
+                                size="x-small"
+                                variant="tonal"
+                                :loading="generatingNumber"
+                                @click="requestNextNumber"
+                              >
+                                <v-icon>mdi-counter</v-icon>
+                              </v-btn>
+                            </template>
+                          </v-tooltip>
+                        </template>
+                      </v-text-field>
+                    </v-col>
+                    <v-col cols="12" class="pt-1">
+                      <v-text-field
+                        :model-value="composedStockNumber"
+                        :label="t('stock.record.stockNumberComposed')"
+                        density="comfortable"
+                        variant="solo-filled"
+                        readonly
+                        hide-details
+                      />
+                    </v-col>
+                    <v-col cols="12">
+                      <v-text-field
+                        v-model="form.productCode"
+                        :label="t('stock.record.productCode')"
+                        density="comfortable"
+                        variant="outlined"
+                        :error-messages="errors.productCode"
+                      />
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" lg="6">
+              <v-card variant="tonal" class="record-section-card h-100">
+                <v-card-title class="text-subtitle-1">{{ t('stock.record.details') }}</v-card-title>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-text-field
+                        v-model="form.productName"
+                        :label="t('stock.record.productName')"
+                        density="comfortable"
+                        variant="outlined"
+                        :error-messages="errors.productName"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <v-textarea
+                        v-model="form.productionInfo"
+                        :label="t('stock.record.productionInfo')"
+                        density="comfortable"
+                        variant="outlined"
+                        rows="2"
+                        max-rows="4"
+                        auto-grow
+                      />
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <v-textarea
+                        v-model="form.remarks"
+                        :label="t('stock.record.remarks')"
+                        density="comfortable"
+                        variant="outlined"
+                        rows="2"
+                        max-rows="4"
+                        auto-grow
+                      />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model.number="form.sellingPrice"
+                        :label="t('stock.record.sellingPrice')"
+                        type="number"
+                        density="comfortable"
+                        variant="outlined"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model.number="form.cogs"
+                        :label="t('stock.record.cogs')"
+                        type="number"
+                        density="comfortable"
+                        variant="outlined"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        :model-value="String(form.balance)"
+                        :label="t('stock.record.balance')"
+                        density="comfortable"
+                        variant="solo-filled"
+                        readonly
+                      />
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <v-card v-if="isEditMode" variant="tonal">
+            <v-card-title class="text-subtitle-1">{{ t('stock.record.movementHistory') }}</v-card-title>
+            <v-card-text>
+              <v-data-table
+                :headers="movementHeaders"
+                :items="movementRows"
+                density="compact"
+                :items-per-page="10"
+                :loading="loadingMovements"
+                fixed-header
+                height="360"
+                class="movement-table"
+              >
+                <template #[`item.inOutDate`]="{ item }">{{ format(item.inOutDate) }}</template>
+              </v-data-table>
+            </v-card-text>
+          </v-card>
+        </v-form>
+      </v-card-text>
+
+      <v-divider />
+
+      <v-card-actions class="toolbar-actions">
+        <v-btn variant="outlined" prepend-icon="mdi-paperclip" @click="showGatedAction('stock.actions.attachment')">
+          {{ t('stock.actions.attachment') }}
+        </v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-swap-horizontal" @click="showGatedAction('stock.actions.stockInOut')">
+          {{ t('stock.actions.stockInOut') }}
+        </v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-printer" @click="showGatedAction('stock.record.print')">
+          {{ t('stock.record.print') }}
+        </v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-file-delimited-outline" @click="showGatedAction('stock.actions.export')">
+          {{ t('stock.actions.export') }}
+        </v-btn>
+
+        <v-spacer />
+
+        <v-btn color="primary" :loading="saving" @click="save(false)">{{ t('stock.record.save') }}</v-btn>
+        <v-btn color="primary" variant="tonal" :loading="saving" @click="save(true)">{{ t('stock.record.saveClose') }}</v-btn>
+        <v-btn
+          v-if="isEditMode"
+          color="error"
+          variant="outlined"
+          :loading="deleting"
+          @click="deleteRecord"
+        >
+          {{ t('stock.record.delete') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</template>
+
+<script setup lang="ts">
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import {
+  composeStockNumber,
+  createProductRecord,
+  deleteProductRecord,
+  getNextProductNumber,
+  getProductRecord,
+  getProductStockMovements,
+  parseStockNumber,
+  updateProductRecord,
+  validateProductCodeUniqueness,
+} from '@/services/stock'
+import type { StockProductMovementHistoryItem, StockProductRecordUpsertRequest } from '@/types/api'
+
+type ProductRecordMode = 'create' | 'edit'
+
+const props = defineProps<{
+  modelValue: boolean
+  mode: ProductRecordMode
+  productId: string | null
+  customerCodeOptions?: string[]
+  categoryCodeOptions?: string[]
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  saved: [productId: string]
+  deleted: [productId: string]
+  close: []
+}>()
+
+const { t } = useI18n({ useScope: 'global' })
+const { format } = useGlobalDateFormatter()
+
+const customerCodeField = ref()
+const loading = ref(false)
+const loadingMovements = ref(false)
+const generatingNumber = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
+const errorMessage = ref('')
+const infoMessage = ref('')
+const movementRows = ref<StockProductMovementHistoryItem[]>([])
+
+const currentMode = ref<ProductRecordMode>('create')
+const currentProductId = ref<string | null>(null)
+const originalProductCode = ref('')
+
+const form = reactive({
+  customerCode: '',
+  categoryCode: '',
+  sequenceNumber: '',
+  productCode: '',
+  productName: '',
+  productionInfo: '',
+  remarks: '',
+  sellingPrice: 0,
+  cogs: 0,
+  balance: 0,
+})
+
+const errors = reactive<Record<string, string[]>>({
+  customerCode: [],
+  categoryCode: [],
+  sequenceNumber: [],
+  productCode: [],
+  productName: [],
+})
+
+const isEditMode = computed(() => currentMode.value === 'edit' && !!currentProductId.value)
+
+const composedStockNumber = computed(() =>
+  composeStockNumber(form.customerCode, form.categoryCode, form.sequenceNumber),
+)
+
+const movementHeaders = computed(() => [
+  { title: t('stock.record.movementDate'), key: 'inOutDate' },
+  { title: t('stock.record.reference'), key: 'reference' },
+  { title: t('stock.record.quantity'), key: 'qty' },
+  { title: t('stock.record.runningBalance'), key: 'runningBalance' },
+  { title: t('stock.record.modifiedOn'), key: 'modifiedOn' },
+  { title: t('stock.record.modifiedBy'), key: 'modifiedBy' },
+])
+
+watch(
+  () => [props.modelValue, props.mode, props.productId],
+  async ([open]) => {
+    if (!open) {
+      return
+    }
+
+    await initializeDialog()
+  },
+  { immediate: true },
+)
+
+async function initializeDialog() {
+  clearMessages()
+  clearErrors()
+  currentMode.value = props.mode
+  currentProductId.value = props.productId
+
+  if (currentMode.value === 'edit' && currentProductId.value) {
+    await loadExistingRecord(currentProductId.value)
+    await loadMovements(currentProductId.value)
+  } else {
+    resetForm()
+    movementRows.value = []
+  }
+
+  await nextTick()
+  customerCodeField.value?.focus?.()
+}
+
+function resetForm() {
+  form.customerCode = ''
+  form.categoryCode = ''
+  form.sequenceNumber = ''
+  form.productCode = ''
+  form.productName = ''
+  form.productionInfo = ''
+  form.remarks = ''
+  form.sellingPrice = 0
+  form.cogs = 0
+  form.balance = 0
+  originalProductCode.value = ''
+}
+
+function clearMessages() {
+  errorMessage.value = ''
+  infoMessage.value = ''
+}
+
+function clearErrors() {
+  errors.customerCode = []
+  errors.categoryCode = []
+  errors.sequenceNumber = []
+  errors.productCode = []
+  errors.productName = []
+}
+
+async function loadExistingRecord(productId: string) {
+  loading.value = true
+  try {
+    const record = await getProductRecord(productId)
+    const parsed = parseStockNumber(record.stockNumber)
+
+    form.customerCode = record.customerCode || parsed.customerCode
+    form.categoryCode = record.categoryCode || parsed.categoryCode
+    form.sequenceNumber = record.sequenceNumber || parsed.sequenceNumber
+    form.productCode = record.productCode
+    form.productName = record.productName
+    form.productionInfo = record.productionInfo
+    form.remarks = record.remarks
+    form.sellingPrice = record.sellingPrice
+    form.cogs = record.cogs
+    form.balance = record.balance
+
+    originalProductCode.value = record.productCode
+  } catch {
+    errorMessage.value = t('stock.record.loadFailed')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadMovements(productId: string) {
+  loadingMovements.value = true
+  try {
+    movementRows.value = await getProductStockMovements(productId)
+  } catch {
+    movementRows.value = []
+  } finally {
+    loadingMovements.value = false
+  }
+}
+
+async function requestNextNumber() {
+  if (!form.customerCode.trim() || !form.categoryCode.trim()) {
+    errors.customerCode = form.customerCode.trim() ? [] : [t('stock.record.required')]
+    errors.categoryCode = form.categoryCode.trim() ? [] : [t('stock.record.required')]
+    return
+  }
+
+  generatingNumber.value = true
+  try {
+    const next = await getNextProductNumber(form.customerCode, form.categoryCode)
+    form.sequenceNumber = next.sequenceNumber
+  } catch {
+    errorMessage.value = t('stock.record.nextNumberFailed')
+  } finally {
+    generatingNumber.value = false
+  }
+}
+
+function validateRequiredFields() {
+  clearErrors()
+
+  errors.customerCode = form.customerCode.trim() ? [] : [t('stock.record.required')]
+  errors.categoryCode = form.categoryCode.trim() ? [] : [t('stock.record.required')]
+  errors.sequenceNumber = form.sequenceNumber.trim() ? [] : [t('stock.record.required')]
+  errors.productCode = form.productCode.trim() ? [] : [t('stock.record.required')]
+  errors.productName = form.productName.trim() ? [] : [t('stock.record.required')]
+
+  return Object.values(errors).every((bucket) => bucket.length === 0)
+}
+
+async function validateUniqueness() {
+  const nextCode = form.productCode.trim()
+  if (!nextCode) {
+    return false
+  }
+
+  const shouldCheck = currentMode.value === 'create' || nextCode !== originalProductCode.value
+  if (!shouldCheck) {
+    return true
+  }
+
+  try {
+    const isUnique = await validateProductCodeUniqueness(nextCode, currentProductId.value ?? undefined)
+    if (!isUnique) {
+      errors.productCode = [t('stock.record.uniqueCode')]
+      return false
+    }
+
+    return true
+  } catch {
+    errorMessage.value = t('stock.record.validationFailed')
+    return false
+  }
+}
+
+function buildPayload(): StockProductRecordUpsertRequest {
+  return {
+    customerCode: form.customerCode.trim(),
+    categoryCode: form.categoryCode.trim(),
+    sequenceNumber: form.sequenceNumber.trim(),
+    productCode: form.productCode.trim(),
+    productName: form.productName.trim(),
+    productionInfo: form.productionInfo.trim(),
+    remarks: form.remarks.trim(),
+    sellingPrice: Number(form.sellingPrice) || 0,
+    cogs: Number(form.cogs) || 0,
+  }
+}
+
+async function save(closeAfterSave: boolean) {
+  clearMessages()
+
+  if (!validateRequiredFields()) {
+    return
+  }
+
+  const isUnique = await validateUniqueness()
+  if (!isUnique) {
+    return
+  }
+
+  const confirmed = window.confirm(closeAfterSave ? t('stock.record.confirmSaveClose') : t('stock.record.confirmSave'))
+  if (!confirmed) {
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload = buildPayload()
+
+    if (isEditMode.value && currentProductId.value) {
+      const updated = await updateProductRecord(currentProductId.value, payload)
+      originalProductCode.value = updated.productCode
+      await loadMovements(updated.productId)
+      emit('saved', updated.productId)
+      if (closeAfterSave) {
+        closeDialog()
+      }
+      return
+    }
+
+    const created = await createProductRecord(payload)
+    currentMode.value = 'edit'
+    currentProductId.value = created.productId
+    originalProductCode.value = created.productCode
+    form.balance = created.balance
+    emit('saved', created.productId)
+
+    await loadMovements(created.productId)
+
+    if (closeAfterSave) {
+      closeDialog()
+    }
+  } catch {
+    errorMessage.value = t('stock.record.saveFailed')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteRecord() {
+  if (!currentProductId.value) {
+    return
+  }
+
+  const confirmed = window.confirm(t('stock.record.confirmDelete'))
+  if (!confirmed) {
+    return
+  }
+
+  deleting.value = true
+  try {
+    await deleteProductRecord(currentProductId.value)
+    emit('deleted', currentProductId.value)
+    closeDialog()
+  } catch {
+    errorMessage.value = t('stock.record.deleteFailed')
+  } finally {
+    deleting.value = false
+  }
+}
+
+function showGatedAction(actionKey: string) {
+  infoMessage.value = t('stock.messages.actionUnavailable', { action: t(actionKey) })
+}
+
+function closeDialog() {
+  emit('update:modelValue', false)
+  emit('close')
+}
+
+function onDialogVisibilityChanged(value: boolean) {
+  emit('update:modelValue', value)
+  if (!value) {
+    emit('close')
+  }
+}
+</script>
+
+<style scoped>
+.product-record-dialog {
+  border: 1px solid rgba(var(--v-theme-primary), 0.15);
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.movement-table :deep(.v-data-table__td) {
+  white-space: nowrap;
+}
+
+.record-section-card {
+  min-height: 100%;
+}
+
+@media (max-width: 800px) {
+  .toolbar-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

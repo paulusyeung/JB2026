@@ -118,7 +118,7 @@
               color="primary"
               prepend-icon="mdi-file-plus"
               class="toolbar-new-product-btn"
-              @click="showUnavailable('stock.actions.newProduct')"
+              @click="openCreateDialog"
             >
               {{ t('stock.actions.newProduct') }}
             </v-btn>
@@ -159,7 +159,7 @@
               <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click="exportToCsv">
                 <v-list-item-title>{{ t('stock.actions.export') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-file-plus" @click="showUnavailable('stock.actions.newProduct')">
+              <v-list-item prepend-icon="mdi-file-plus" @click="openCreateDialog">
                 <v-list-item-title>{{ t('stock.actions.newProduct') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
@@ -186,6 +186,10 @@
             rounded="lg"
             elevation="0"
             class="stock-mobile-card"
+            role="button"
+            tabindex="0"
+            @click="openEditDialog(row.productId)"
+            @keyup.enter="openEditDialog(row.productId)"
           >
             <div class="stock-mobile-card__header">
               <div>
@@ -238,6 +242,7 @@
             fixed-header
             height="62vh"
             class="stock-table"
+            @click:row="onRowClick"
           >
             <template #[`header.attachment`]>
               <v-icon size="14" color="primary">mdi-paperclip</v-icon>
@@ -272,6 +277,16 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <product-record-dialog
+      v-model="dialogOpen"
+      :mode="dialogMode"
+      :product-id="activeProductId"
+      :customer-code-options="customerCodeOptions"
+      :category-code-options="categoryCodeOptions"
+      @saved="onDialogSaved"
+      @deleted="onDialogDeleted"
+    />
   </section>
 </template>
 
@@ -282,7 +297,8 @@ import { useDisplay, useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { getStockProducts } from '@/services/stock'
+import { getStockProducts, parseStockNumber } from '@/services/stock'
+import ProductRecordDialog from '@/components/stock/ProductRecordDialog.vue'
 import type { StockProductListItem } from '@/types/api'
 
 type StockDisplayRow = StockProductListItem & {
@@ -290,6 +306,7 @@ type StockDisplayRow = StockProductListItem & {
 }
 
 type StockViewMode = 'detail' | 'card'
+type ProductDialogMode = 'create' | 'edit'
 
 const rows = ref<StockProductListItem[]>([])
 const loading = ref(false)
@@ -332,6 +349,9 @@ const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
+const dialogOpen = ref(false)
+const dialogMode = ref<ProductDialogMode>('create')
+const activeProductId = ref<string | null>(null)
 const detailViewLabel = computed(() => t('stock.actions.detailView'))
 const cardViewLabel = computed(() => t('stock.actions.cardView'))
 const isCardView = computed(() => viewMode.value === 'card')
@@ -383,6 +403,16 @@ const displayedRows = computed<StockDisplayRow[]>(() => {
   })
 
   return result.map((row, index) => ({ ...row, ln: index + 1 }))
+})
+
+const customerCodeOptions = computed(() => {
+  const codes = new Set(rows.value.map((r) => parseStockNumber(r.stockNumber).customerCode).filter(Boolean))
+  return [...codes].sort()
+})
+
+const categoryCodeOptions = computed(() => {
+  const codes = new Set(rows.value.map((r) => parseStockNumber(r.stockNumber).categoryCode).filter(Boolean))
+  return [...codes].sort()
 })
 
 onMounted(async () => {
@@ -440,6 +470,36 @@ function toggleSelected(productId: string) {
 
 function setViewMode(mode: StockViewMode) {
   viewMode.value = mode
+}
+
+function openCreateDialog() {
+  dialogMode.value = 'create'
+  activeProductId.value = null
+  dialogOpen.value = true
+}
+
+function openEditDialog(productId: string) {
+  dialogMode.value = 'edit'
+  activeProductId.value = productId
+  dialogOpen.value = true
+}
+
+function onRowClick(_event: Event, payload: unknown) {
+  const row = payload as { item?: { productId?: string; raw?: { productId?: string } } }
+  const productId = row?.item?.productId ?? row?.item?.raw?.productId
+  if (!productId) {
+    return
+  }
+
+  openEditDialog(productId)
+}
+
+async function onDialogSaved() {
+  await load()
+}
+
+async function onDialogDeleted() {
+  await load()
 }
 
 function showUnavailable(actionKey: string) {

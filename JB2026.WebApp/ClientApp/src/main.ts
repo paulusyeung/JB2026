@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { vDraggableDialog } from '@/directives/draggableDialog'
 import App from './App.vue'
 import router from './router'
 import { createVuetify } from 'vuetify'
@@ -141,4 +142,5 @@ app.use(createPinia())
 app.use(router)
 app.use(vuetify)
 app.use(i18n)
+app.directive('draggable-dialog', vDraggableDialog)
 app.mount('#app')
