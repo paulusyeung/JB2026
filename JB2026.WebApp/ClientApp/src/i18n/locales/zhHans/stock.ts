@@ -27,6 +27,7 @@ export const stockMessages = {
       messages: {
         loadFailed: '无法加载库存产品，请确认 API 可用性。',
         actionUnavailable: '{action} 在当前 API 切片中尚不可用。',
+        stockInOutSelectOne: '请选择恰好一条产品行以开启库存进出。',
       },
       headers: {
         ln: '序',
@@ -83,5 +84,24 @@ export const stockMessages = {
         confirmSave: '确认保存产品记录？',
         confirmSaveClose: '确认保存并关闭？',
         confirmDelete: '确认删除此产品记录？',
+      },
+      stockInOut: {
+        title: '库存进出交易',
+        stockNumber: '库存编号',
+        date: '日期',
+        reference: '参考',
+        qty: '数量（+/-）',
+        qtyHint: '正数 = 入库，负数 = 出库',
+        save: '保存',
+        saveClose: '保存并关闭',
+        confirmSave: '确认保存库存进出交易？',
+        confirmSaveClose: '确认保存并关闭？',
+        errors: {
+          stockRequired: '库存编号必填。',
+          productNotFound: '库存编号不对应任何现有产品。',
+          qtyRequired: '数量必填。',
+          qtyInvalid: '数量必须为非零整数。',
+          saveFailed: '无法保存库存进出交易。',
+        },
       },
     } as const

@@ -437,6 +437,18 @@ export interface StockProductNextNumberResponse {
   stockNumber: string
 }
 
+export interface StockInOutTransactionRequest {
+  inOutDate: string
+  reference?: string
+  qty: number
+}
+
+export interface StockInOutTransactionResult {
+  inOutId: string
+  productId: string
+  newBalance: number
+}
+
 export interface RunReportRequest {
   reportName: string
   startOn: string

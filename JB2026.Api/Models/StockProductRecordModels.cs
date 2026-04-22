@@ -88,3 +88,21 @@ public sealed class StockMovementHistoryItemResponse
 
     public required string ModifiedBy { get; init; }
 }
+
+public sealed class StockInOutTransactionRequest
+{
+    public required DateTime InOutDate { get; init; }
+
+    public string? Reference { get; init; }
+
+    public required int Qty { get; init; }
+}
+
+public sealed class StockInOutTransactionResult
+{
+    public required Guid InOutId { get; init; }
+
+    public required Guid ProductId { get; init; }
+
+    public required int NewBalance { get; init; }
+}

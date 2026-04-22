@@ -27,6 +27,7 @@ export const stockMessages = {
       messages: {
         loadFailed: 'Unable to load stock products. Please verify API availability.',
         actionUnavailable: '{action} is not available in the current API slice yet.',
+        stockInOutSelectOne: 'Select exactly one product row to open Stock In/Out.',
       },
       headers: {
         ln: '#',
@@ -84,5 +85,24 @@ export const stockMessages = {
         confirmSave: 'Save product record?',
         confirmSaveClose: 'Save product record and close?',
         confirmDelete: 'Delete this product record?',
+      },
+      stockInOut: {
+        title: 'Stock In/Out Transaction',
+        stockNumber: 'Stock Number',
+        date: 'Date',
+        reference: 'Reference',
+        qty: 'Quantity (+/-)',
+        qtyHint: 'Positive = stock in, negative = stock out',
+        save: 'Save',
+        saveClose: 'Save and Close',
+        confirmSave: 'Save stock in/out transaction?',
+        confirmSaveClose: 'Save stock in/out transaction and close?',
+        errors: {
+          stockRequired: 'Stock number is required.',
+          productNotFound: 'Stock number does not match an existing product.',
+          qtyRequired: 'Quantity is required.',
+          qtyInvalid: 'Quantity must be a non-zero integer.',
+          saveFailed: 'Unable to save stock in/out transaction.',
+        },
       },
     } as const

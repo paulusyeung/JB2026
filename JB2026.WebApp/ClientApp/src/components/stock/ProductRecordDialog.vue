@@ -210,7 +210,7 @@
         <v-btn variant="outlined" prepend-icon="mdi-paperclip" @click="showGatedAction('stock.actions.attachment')">
           {{ t('stock.actions.attachment') }}
         </v-btn>
-        <v-btn variant="outlined" prepend-icon="mdi-swap-horizontal" @click="showGatedAction('stock.actions.stockInOut')">
+        <v-btn variant="outlined" prepend-icon="mdi-swap-horizontal" :disabled="!isEditMode" @click="openStockInOutDialog">
           {{ t('stock.actions.stockInOut') }}
         </v-btn>
         <v-btn variant="outlined" prepend-icon="mdi-printer" @click="showGatedAction('stock.record.print')">
@@ -236,6 +236,13 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <stock-in-out-dialog
+    v-model="stockInOutDialogOpen"
+    :product-id="currentProductId"
+    :stock-number="composedStockNumber"
+    @saved="onStockInOutSaved"
+  />
 </template>
 
 <script setup lang="ts">
@@ -251,7 +258,8 @@ import {
   updateProductRecord,
   validateProductCodeUniqueness,
 } from '@/services/stock'
-import type { StockProductMovementHistoryItem, StockProductRecordUpsertRequest } from '@/types/api'
+import StockInOutDialog from '@/components/stock/StockInOutDialog.vue'
+import type { StockInOutTransactionResult, StockProductMovementHistoryItem, StockProductRecordUpsertRequest } from '@/types/api'
 
 type ProductRecordMode = 'create' | 'edit'
 type MovementHistoryRow = StockProductMovementHistoryItem & { rowNumber: number }
@@ -284,6 +292,7 @@ const errorMessage = ref('')
 const infoMessage = ref('')
 const movementRows = ref<MovementHistoryRow[]>([])
 const movementSortBy = ref([{ key: 'inOutDate', order: 'desc' as const }])
+const stockInOutDialogOpen = ref(false)
 
 const currentMode = ref<ProductRecordMode>('create')
 const currentProductId = ref<string | null>(null)
@@ -591,6 +600,22 @@ async function deleteRecord() {
 
 function showGatedAction(actionKey: string) {
   infoMessage.value = t('stock.messages.actionUnavailable', { action: t(actionKey) })
+}
+
+function openStockInOutDialog() {
+  if (!isEditMode.value) {
+    return
+  }
+  stockInOutDialogOpen.value = true
+}
+
+async function onStockInOutSaved(_result: StockInOutTransactionResult) {
+  if (currentProductId.value) {
+    await loadMovements(currentProductId.value)
+    const record = await getProductRecord(currentProductId.value)
+    form.balance = record.balance
+  }
+  emit('saved', currentProductId.value!)
 }
 
 function closeDialog() {

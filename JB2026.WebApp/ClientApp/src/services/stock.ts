@@ -1,5 +1,7 @@
 import { apiClient } from './api'
 import type {
+  StockInOutTransactionRequest,
+  StockInOutTransactionResult,
   StockProductCodeValidationResponse,
   StockProductListItem,
   StockProductMovementHistoryItem,
@@ -68,6 +70,33 @@ export async function validateProductCodeUniqueness(productCode: string, exclude
   })
 
   return response.data.isUnique
+}
+
+export async function createStockInOutTransaction(
+  productId: string,
+  request: StockInOutTransactionRequest,
+): Promise<StockInOutTransactionResult> {
+  const response = await apiClient.post<StockInOutTransactionResult>(
+    `/api/v2/stock/products/${productId}/transactions`,
+    request,
+  )
+  return response.data
+}
+
+export function mapStockInOutError(error: unknown): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } }).response
+    if (response?.status === 400 && response.data?.errors) {
+      const messages = Object.values(response.data.errors).flat()
+      if (messages.length > 0) {
+        return messages[0]
+      }
+    }
+    if (response?.status === 404) {
+      return 'stock.stockInOut.errors.productNotFound'
+    }
+  }
+  return 'stock.stockInOut.errors.saveFailed'
 }
 
 export function composeStockNumber(customerCode: string, categoryCode: string, sequenceNumber: string): string {

@@ -337,4 +337,176 @@ public sealed class StockControllerTests
         Assert.Equal("0010", body.SequenceNumber);
         Assert.Equal("CUS-CAT-0010", body.StockNumber);
     }
+
+    // Task 6.3: Integration/parity tests for transaction persistence and balance recalculation
+
+    private static Product CreateTestProduct(JB5LegacyReadContext context, int initialBalance = 100)
+    {
+        var product = new Product
+        {
+            ProductId = Guid.NewGuid(),
+            ProductCode = "TEST-001",
+            ProductName = "Test Product",
+            StockNumber = "TST-CAT-0001",
+            Balance = initialBalance,
+            SellingPrice = 10,
+            COGS = 7,
+            MOQ = 1,
+            CreatedOn = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+            ModifiedOn = DateTime.UtcNow,
+            ModifiedBy = Guid.NewGuid(),
+            Retired = false,
+        };
+
+        context.Products.Add(product);
+        context.SaveChanges();
+        return product;
+    }
+
+    [Fact]
+    public async Task CreateStockInOutTransaction_PositiveQty_AddsToBalance()
+    {
+        using var context = CreateContext(nameof(CreateStockInOutTransaction_PositiveQty_AddsToBalance));
+        var product = CreateTestProduct(context, initialBalance: 100);
+        var controller = CreateController(context);
+
+        var result = await controller.CreateStockInOutTransaction(product.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Reference = "IN-001",
+            Qty = 50,
+        }, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var body = Assert.IsType<StockInOutTransactionResult>(created.Value);
+        Assert.Equal(150, body.NewBalance);
+        Assert.Equal(product.ProductId, body.ProductId);
+
+        var updatedProduct = await context.Products.FindAsync(product.ProductId);
+        Assert.NotNull(updatedProduct);
+        Assert.Equal(150, updatedProduct!.Balance);
+
+        var movement = await context.StockInOuts.FirstOrDefaultAsync(m => m.ProductId == product.ProductId);
+        Assert.NotNull(movement);
+        Assert.Equal(50, movement!.Qty);
+        Assert.Equal("IN-001", movement.Reference);
+    }
+
+    [Fact]
+    public async Task CreateStockInOutTransaction_NegativeQty_SubtractsFromBalance()
+    {
+        using var context = CreateContext(nameof(CreateStockInOutTransaction_NegativeQty_SubtractsFromBalance));
+        var product = CreateTestProduct(context, initialBalance: 100);
+        var controller = CreateController(context);
+
+        var result = await controller.CreateStockInOutTransaction(product.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = -30,
+        }, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var body = Assert.IsType<StockInOutTransactionResult>(created.Value);
+        Assert.Equal(70, body.NewBalance);
+
+        var updatedProduct = await context.Products.FindAsync(product.ProductId);
+        Assert.Equal(70, updatedProduct!.Balance);
+    }
+
+    [Fact]
+    public async Task CreateStockInOutTransaction_ZeroQty_ReturnsBadRequest()
+    {
+        using var context = CreateContext(nameof(CreateStockInOutTransaction_ZeroQty_ReturnsBadRequest));
+        var product = CreateTestProduct(context);
+        var controller = CreateController(context);
+
+        var result = await controller.CreateStockInOutTransaction(product.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = 0,
+        }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task CreateStockInOutTransaction_UnknownProductId_ReturnsNotFound()
+    {
+        using var context = CreateContext(nameof(CreateStockInOutTransaction_UnknownProductId_ReturnsNotFound));
+        var controller = CreateController(context);
+
+        var result = await controller.CreateStockInOutTransaction(Guid.NewGuid(), new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = 10,
+        }, CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task CreateStockInOutTransaction_RetiredProduct_ReturnsNotFound()
+    {
+        using var context = CreateContext(nameof(CreateStockInOutTransaction_RetiredProduct_ReturnsNotFound));
+        var retiredProduct = new Product
+        {
+            ProductId = Guid.NewGuid(),
+            ProductCode = "RETIRED-001",
+            ProductName = "Retired Product",
+            StockNumber = "RET-CAT-0001",
+            Balance = 10,
+            SellingPrice = 1,
+            COGS = 1,
+            MOQ = 1,
+            CreatedOn = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+            ModifiedOn = DateTime.UtcNow,
+            ModifiedBy = Guid.NewGuid(),
+            Retired = true,
+        };
+        context.Products.Add(retiredProduct);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+        var result = await controller.CreateStockInOutTransaction(retiredProduct.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = 5,
+        }, CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task CreateStockInOutTransaction_MultipleTransactions_BalanceCumulatesCorrectly()
+    {
+        using var context = CreateContext(nameof(CreateStockInOutTransaction_MultipleTransactions_BalanceCumulatesCorrectly));
+        var product = CreateTestProduct(context, initialBalance: 0);
+        var controller = CreateController(context);
+
+        await controller.CreateStockInOutTransaction(product.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = 100,
+        }, CancellationToken.None);
+
+        await controller.CreateStockInOutTransaction(product.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = -40,
+        }, CancellationToken.None);
+
+        await controller.CreateStockInOutTransaction(product.ProductId, new StockInOutTransactionRequest
+        {
+            InOutDate = DateTime.Today,
+            Qty = 20,
+        }, CancellationToken.None);
+
+        var updatedProduct = await context.Products.FindAsync(product.ProductId);
+        Assert.Equal(80, updatedProduct!.Balance);
+
+        var movementCount = await context.StockInOuts.CountAsync(m => m.ProductId == product.ProductId);
+        Assert.Equal(3, movementCount);
+    }
 }

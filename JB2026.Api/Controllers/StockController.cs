@@ -190,6 +190,74 @@ public sealed class StockController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("products/{id:guid}/transactions")]
+    [ProducesResponseType(typeof(StockInOutTransactionResult), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<StockInOutTransactionResult>> CreateStockInOutTransaction(
+        Guid id,
+        [FromBody] StockInOutTransactionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null)
+        {
+            return BadRequest();
+        }
+
+        if (request.Qty == 0)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.Qty)] = ["Quantity must be a non-zero signed integer."]
+            }));
+        }
+
+        var product = await _readContext.Products
+            .FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
+
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        var now = DateTime.UtcNow;
+        var actor = GetActorGuid();
+
+        var transaction = new JB2026.EfCore.Models.StockInOut
+        {
+            InOutId = Guid.NewGuid(),
+            ProductId = product.ProductId,
+            InOutDate = request.InOutDate.Date,
+            Reference = request.Reference?.Trim(),
+            Qty = request.Qty,
+            CreatedOn = now,
+            CreatedBy = actor,
+            ModifiedOn = now,
+            ModifiedBy = actor,
+        };
+
+        _readContext.StockInOuts.Add(transaction);
+        product.Balance += request.Qty;
+        product.ModifiedOn = now;
+        product.ModifiedBy = actor;
+
+        await _readContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Stock in/out transaction {InOutId} created for product {ProductId} with qty {Qty}, new balance {Balance}",
+            transaction.InOutId, product.ProductId, request.Qty, product.Balance);
+
+        return CreatedAtAction(
+            nameof(GetProductMovements),
+            new { id = product.ProductId },
+            new StockInOutTransactionResult
+            {
+                InOutId = transaction.InOutId,
+                ProductId = product.ProductId,
+                NewBalance = product.Balance,
+            });
+    }
+
     [HttpGet("products/{id:guid}/movements")]
     [ProducesResponseType(typeof(IReadOnlyList<StockMovementHistoryItemResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<StockMovementHistoryItemResponse>>> GetProductMovements(

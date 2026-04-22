@@ -27,6 +27,7 @@ export const stockMessages = {
       messages: {
         loadFailed: '無法載入庫存產品，請確認 API 可用性。',
         actionUnavailable: '{action} 尚未在目前 API 切片中提供。',
+        stockInOutSelectOne: '請選擇剛好一筆產品列以開啟庫存進出。',
       },
       headers: {
         ln: '序',
@@ -83,5 +84,24 @@ export const stockMessages = {
         confirmSave: '確定儲存產品記錄？',
         confirmSaveClose: '確定儲存並關閉？',
         confirmDelete: '確定刪除此產品記錄？',
+      },
+      stockInOut: {
+        title: '庫存進出交易',
+        stockNumber: '庫存編號',
+        date: '日期',
+        reference: '參考',
+        qty: '數量（+/-）',
+        qtyHint: '正數 = 入庫，負數 = 出庫',
+        save: '儲存',
+        saveClose: '儲存並關閉',
+        confirmSave: '確定儲存庫存進出交易？',
+        confirmSaveClose: '確定儲存並關閉？',
+        errors: {
+          stockRequired: '庫存編號必填。',
+          productNotFound: '庫存編號不對應任何現有產品。',
+          qtyRequired: '數量必填。',
+          qtyInvalid: '數量必須為非零整數。',
+          saveFailed: '無法儲存庫存進出交易。',
+        },
       },
     } as const

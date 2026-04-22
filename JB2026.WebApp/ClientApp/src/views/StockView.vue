@@ -127,7 +127,7 @@
               {{ t('stock.actions.delete') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-swap-horizontal" :disabled="selectedIds.length !== 1" @click="openStockInOutDialog">
               {{ t('stock.actions.stockInOut') }}
             </v-btn>
           </template>
@@ -161,7 +161,7 @@
               <v-list-item prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
                 <v-list-item-title>{{ t('stock.actions.delete') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
+              <v-list-item prepend-icon="mdi-swap-horizontal" :disabled="selectedIds.length !== 1" @click="openStockInOutDialog">
                 <v-list-item-title>{{ t('stock.actions.stockInOut') }}</v-list-item-title>
               </v-list-item>
             </v-list>
@@ -280,6 +280,13 @@
       @saved="onDialogSaved"
       @deleted="onDialogDeleted"
     />
+
+    <stock-in-out-dialog
+      v-model="stockInOutDialogOpen"
+      :product-id="stockInOutProductId"
+      :stock-number="stockInOutStockNumber"
+      @saved="onStockInOutSaved"
+    />
   </section>
 </template>
 
@@ -292,7 +299,8 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getStockProducts, parseStockNumber } from '@/services/stock'
 import ProductRecordDialog from '@/components/stock/ProductRecordDialog.vue'
-import type { StockProductListItem } from '@/types/api'
+import StockInOutDialog from '@/components/stock/StockInOutDialog.vue'
+import type { StockInOutTransactionResult, StockProductListItem } from '@/types/api'
 
 type StockDisplayRow = StockProductListItem & {
   ln: number
@@ -345,6 +353,9 @@ const viewMode = viewSettings.viewMode
 const dialogOpen = ref(false)
 const dialogMode = ref<ProductDialogMode>('create')
 const activeProductId = ref<string | null>(null)
+const stockInOutDialogOpen = ref(false)
+const stockInOutProductId = ref<string | null>(null)
+const stockInOutStockNumber = ref('')
 const detailViewLabel = computed(() => t('stock.actions.detailView'))
 const cardViewLabel = computed(() => t('stock.actions.cardView'))
 const isCardView = computed(() => viewMode.value === 'card')
@@ -492,6 +503,27 @@ async function onDialogSaved() {
 }
 
 async function onDialogDeleted() {
+  await load()
+}
+
+function openStockInOutDialog() {
+  if (selectedIds.value.length !== 1) {
+    errorMessage.value = t('stock.messages.stockInOutSelectOne')
+    return
+  }
+
+  const productId = selectedIds.value[0]
+  const row = rows.value.find((r) => r.productId === productId)
+  if (!row) {
+    return
+  }
+
+  stockInOutProductId.value = productId ?? null
+  stockInOutStockNumber.value = row.stockNumber
+  stockInOutDialogOpen.value = true
+}
+
+async function onStockInOutSaved(_result: StockInOutTransactionResult) {
   await load()
 }
 
