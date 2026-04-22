@@ -130,10 +130,6 @@
             <v-btn variant="outlined" size="small" prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
               {{ t('stock.actions.stockInOut') }}
             </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" @click="showUnavailable('stock.actions.popup')">
-              {{ t('stock.actions.popup') }}
-            </v-btn>
           </template>
 
           <v-menu v-else location="bottom end">
@@ -167,9 +163,6 @@
               </v-list-item>
               <v-list-item prepend-icon="mdi-swap-horizontal" @click="showUnavailable('stock.actions.stockInOut')">
                 <v-list-item-title>{{ t('stock.actions.stockInOut') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-open-in-new" @click="showUnavailable('stock.actions.popup')">
-                <v-list-item-title>{{ t('stock.actions.popup') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
