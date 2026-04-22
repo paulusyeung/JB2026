@@ -258,6 +258,7 @@ import { useI18n } from 'vue-i18n'
 import { useDisplay, useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getStockProducts } from '@/services/stock'
 import type { StockProductListItem } from '@/types/api'
 
@@ -269,11 +270,16 @@ const rows = ref<StockProductListItem[]>([])
 const loading = ref(false)
 const keyword = ref('')
 const errorMessage = ref('')
-const checkboxMode = ref(false)
 const selectedIds = ref<string[]>([])
-const sortDirection = ref<'asc' | 'desc'>('asc')
-const sortKey = ref('stockNumber')
-const visibleColumnKeys = ref<string[]>([
+const { t } = useI18n({ useScope: 'global' })
+const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const { formatCurrency, formatNumber } = useLocaleFormatters()
+const theme = useTheme()
+const display = useDisplay()
+const isDark = computed(() => theme.global.current.value.dark)
+const isPhoneLayout = computed(() => display.smAndDown.value)
+
+const defaultColumnKeys = [
   'ln',
   'stockNumber',
   'productCode',
@@ -286,15 +292,19 @@ const visibleColumnKeys = ref<string[]>([
   'createdBy',
   'modifiedOn',
   'modifiedBy',
-])
+]
 
-const { t } = useI18n({ useScope: 'global' })
-const { format, DATE_FORMATS } = useGlobalDateFormatter()
-const { formatCurrency, formatNumber } = useLocaleFormatters()
-const theme = useTheme()
-const display = useDisplay()
-const isDark = computed(() => theme.global.current.value.dark)
-const isPhoneLayout = computed(() => display.smAndDown.value)
+const viewSettings = useViewSettings('stock', {
+  visibleColumns: defaultColumnKeys,
+  sortKey: 'stockNumber',
+  sortDirection: 'asc',
+  checkboxMode: false,
+})
+
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
 
 const allHeaders = computed(() => [
   { title: '#', key: 'ln', width: '48px', sortable: false },
@@ -395,7 +405,7 @@ function toggleSelected(productId: string) {
     return
   }
 
-  selectedIds.value = [...selectedIds.value, productId]
+  selectedIds.value = [...visibleColumnKeys.value, productId]
 }
 
 function showUnavailable(actionKey: string) {
