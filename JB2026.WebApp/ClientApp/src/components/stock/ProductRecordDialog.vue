@@ -189,6 +189,7 @@
               <v-data-table
                 :headers="movementHeaders"
                 :items="movementRows"
+                :sort-by="movementSortBy"
                 density="compact"
                 :items-per-page="10"
                 :loading="loadingMovements"
@@ -253,6 +254,7 @@ import {
 import type { StockProductMovementHistoryItem, StockProductRecordUpsertRequest } from '@/types/api'
 
 type ProductRecordMode = 'create' | 'edit'
+type MovementHistoryRow = StockProductMovementHistoryItem & { rowNumber: number }
 
 const props = defineProps<{
   modelValue: boolean
@@ -280,7 +282,8 @@ const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
 const infoMessage = ref('')
-const movementRows = ref<StockProductMovementHistoryItem[]>([])
+const movementRows = ref<MovementHistoryRow[]>([])
+const movementSortBy = ref([{ key: 'inOutDate', order: 'desc' as const }])
 
 const currentMode = ref<ProductRecordMode>('create')
 const currentProductId = ref<string | null>(null)
@@ -318,6 +321,7 @@ const composedStockNumber = computed(() => {
 })
 
 const movementHeaders = computed(() => [
+  { title: '#', key: 'rowNumber', sortable: false, align: 'end' as const, width: 64 },
   { title: t('stock.record.movementDate'), key: 'inOutDate' },
   { title: t('stock.record.reference'), key: 'reference' },
   { title: t('stock.record.quantity'), key: 'qty' },
@@ -420,9 +424,24 @@ async function loadExistingRecord(productId: string) {
 async function loadMovements(productId: string) {
   loadingMovements.value = true
   try {
-    movementRows.value = await getProductStockMovements(productId)
+    errorMessage.value = ''
+    const rows = await getProductStockMovements(productId)
+    const sortedRows = [...rows].sort((a, b) => {
+      const inOutDateDelta = new Date(b.inOutDate).getTime() - new Date(a.inOutDate).getTime()
+      if (inOutDateDelta !== 0) {
+        return inOutDateDelta
+      }
+
+      return new Date(b.modifiedOn).getTime() - new Date(a.modifiedOn).getTime()
+    })
+
+    movementRows.value = sortedRows.map((row, index) => ({
+      ...row,
+      rowNumber: index + 1,
+    }))
   } catch {
     movementRows.value = []
+    errorMessage.value = t('stock.record.loadFailed')
   } finally {
     loadingMovements.value = false
   }

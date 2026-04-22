@@ -196,19 +196,25 @@ public sealed class StockController : ControllerBase
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var movements = await _readContext.StockInOuts
-            .AsNoTracking()
-            .Where(item => item.ProductId == id)
-            .OrderBy(item => item.InOutDate)
-            .ThenBy(item => item.CreatedOn)
-            .Select(item => new
+        var movements = await (
+            from item in _readContext.StockInOuts.AsNoTracking()
+            where item.ProductId == id
+            join userInfo in _readContext.UserInfos.AsNoTracking() on item.ModifiedBy equals userInfo.UserId into userInfoGroup
+            from userInfo in userInfoGroup
+                .OrderByDescending(entry => entry.PrimaryRec)
+                .Take(1)
+                .DefaultIfEmpty()
+            orderby item.InOutDate, item.CreatedOn
+            select new
             {
                 item.InOutId,
                 item.InOutDate,
                 item.Reference,
                 item.Qty,
                 item.ModifiedOn,
-                item.ModifiedBy
+                item.ModifiedBy,
+                UserName = userInfo != null ? userInfo.UserName : null,
+                UserAlias = userInfo != null ? userInfo.UserAlias : null
             })
             .ToListAsync(cancellationToken);
 
@@ -216,6 +222,10 @@ public sealed class StockController : ControllerBase
         var result = movements.Select(item =>
         {
             runningBalance += item.Qty;
+            var alias = (item.UserAlias ?? string.Empty).Trim();
+            var name = (item.UserName ?? string.Empty).Trim();
+            var displayName = string.IsNullOrWhiteSpace(alias) ? name : alias;
+
             return new StockMovementHistoryItemResponse
             {
                 InOutId = item.InOutId,
@@ -224,7 +234,9 @@ public sealed class StockController : ControllerBase
                 Qty = item.Qty,
                 RunningBalance = runningBalance,
                 ModifiedOn = item.ModifiedOn,
-                ModifiedBy = item.ModifiedBy.ToString("D")
+                ModifiedBy = string.IsNullOrWhiteSpace(displayName)
+                    ? item.ModifiedBy.ToString("D")
+                    : displayName
             };
         }).ToList();
 
