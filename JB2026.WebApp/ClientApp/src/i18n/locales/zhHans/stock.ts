@@ -20,6 +20,8 @@ export const stockMessages = {
         sortBy: '排序字段',
         asc: '升序',
         desc: '降序',
+        detailView: '明细视图',
+        cardView: '卡片视图',
         selected: '已选 {count} 条',
       },
       messages: {

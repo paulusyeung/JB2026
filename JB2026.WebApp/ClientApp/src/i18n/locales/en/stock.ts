@@ -20,6 +20,8 @@ export const stockMessages = {
         sortBy: 'Sort By',
         asc: 'Asc',
         desc: 'Desc',
+        detailView: 'Detail view',
+        cardView: 'Card view',
         selected: '{count} selected',
       },
       messages: {

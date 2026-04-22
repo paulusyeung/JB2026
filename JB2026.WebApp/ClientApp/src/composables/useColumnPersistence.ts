@@ -7,6 +7,7 @@ interface ViewSettings {
   sortKey?: string
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
+  viewMode?: 'detail' | 'card'
 }
 
 /**
@@ -21,6 +22,7 @@ export function useViewSettings(viewId: string, defaults: {
   sortKey?: string
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
+  viewMode?: 'detail' | 'card'
 }) {
   const storageKey = `${STORAGE_PREFIX}${viewId}`
   
@@ -28,6 +30,7 @@ export function useViewSettings(viewId: string, defaults: {
   const sortKey = ref<string | undefined>(defaults.sortKey)
   const sortDirection = ref<'asc' | 'desc' | undefined>(defaults.sortDirection)
   const checkboxMode = ref<boolean | undefined>(defaults.checkboxMode)
+  const viewMode = ref<'detail' | 'card' | undefined>(defaults.viewMode)
 
   function load(): ViewSettings {
     const stored = localStorage.getItem(storageKey)
@@ -41,6 +44,7 @@ export function useViewSettings(viewId: string, defaults: {
           sortKey: parsed.sortKey ?? defaults.sortKey,
           sortDirection: parsed.sortDirection ?? defaults.sortDirection,
           checkboxMode: parsed.checkboxMode ?? defaults.checkboxMode,
+          viewMode: parsed.viewMode ?? defaults.viewMode,
         }
       } catch {
         // Ignore parse errors
@@ -51,6 +55,7 @@ export function useViewSettings(viewId: string, defaults: {
       sortKey: defaults.sortKey,
       sortDirection: defaults.sortDirection,
       checkboxMode: defaults.checkboxMode,
+      viewMode: defaults.viewMode,
     }
   }
 
@@ -64,20 +69,22 @@ export function useViewSettings(viewId: string, defaults: {
   if (loaded.sortKey !== undefined) sortKey.value = loaded.sortKey
   if (loaded.sortDirection !== undefined) sortDirection.value = loaded.sortDirection
   if (loaded.checkboxMode !== undefined) checkboxMode.value = loaded.checkboxMode
+  if (loaded.viewMode !== undefined) viewMode.value = loaded.viewMode
 
   // Watch for changes and save
   watch(
-    [visibleColumns, sortKey, sortDirection, checkboxMode],
+    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode],
     () => {
       save({
         visibleColumns: visibleColumns.value,
         sortKey: sortKey.value,
         sortDirection: sortDirection.value,
         checkboxMode: checkboxMode.value,
+        viewMode: viewMode.value,
       })
     },
     { deep: true }
   )
 
-  return { visibleColumns, sortKey, sortDirection, checkboxMode }
+  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode }
 }

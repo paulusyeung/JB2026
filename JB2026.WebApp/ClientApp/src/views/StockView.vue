@@ -78,9 +78,29 @@
               {{ t('stock.actions.checkbox') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('stock.actions.views')">
-              {{ t('stock.actions.views') }}
-            </v-btn>
+            <v-menu location="bottom">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                  {{ t('stock.actions.views') }}
+                </v-btn>
+              </template>
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item
+                  prepend-icon="mdi-table"
+                  :active="viewMode === 'detail'"
+                  @click="setViewMode('detail')"
+                >
+                  <v-list-item-title>{{ detailViewLabel }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  prepend-icon="mdi-view-grid-outline"
+                  :active="viewMode === 'card'"
+                  @click="setViewMode('card')"
+                >
+                  <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
 
             <v-divider vertical class="mx-1" />
 
@@ -127,8 +147,11 @@
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                 <v-list-item-title>{{ t('stock.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('stock.actions.views')">
-                <v-list-item-title>{{ t('stock.actions.views') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ detailViewLabel }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-paperclip" @click="showUnavailable('stock.actions.attachment')">
                 <v-list-item-title>{{ t('stock.actions.attachment') }}</v-list-item-title>
@@ -156,7 +179,7 @@
           </span>
         </div>
 
-        <div v-if="isPhoneLayout" class="stock-mobile-list">
+        <div v-if="isCardView" class="stock-mobile-list">
           <v-card
             v-for="row in displayedRows"
             :key="row.productId"
@@ -266,6 +289,8 @@ type StockDisplayRow = StockProductListItem & {
   ln: number
 }
 
+type StockViewMode = 'detail' | 'card'
+
 const rows = ref<StockProductListItem[]>([])
 const loading = ref(false)
 const keyword = ref('')
@@ -299,12 +324,17 @@ const viewSettings = useViewSettings('stock', {
   sortKey: 'stockNumber',
   sortDirection: 'asc',
   checkboxMode: false,
+  viewMode: 'detail',
 })
 
 const visibleColumnKeys = viewSettings.visibleColumns
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
+const detailViewLabel = computed(() => t('stock.actions.detailView'))
+const cardViewLabel = computed(() => t('stock.actions.cardView'))
+const isCardView = computed(() => viewMode.value === 'card')
 
 const allHeaders = computed(() => [
   { title: '#', key: 'ln', width: '48px', sortable: false },
@@ -405,7 +435,11 @@ function toggleSelected(productId: string) {
     return
   }
 
-  selectedIds.value = [...visibleColumnKeys.value, productId]
+  selectedIds.value = [...selectedIds.value, productId]
+}
+
+function setViewMode(mode: StockViewMode) {
+  viewMode.value = mode
 }
 
 function showUnavailable(actionKey: string) {
@@ -493,6 +527,8 @@ function exportToCsv() {
 .stock-mobile-list {
   display: grid;
   gap: 0.9rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: start;
 }
 
 .stock-mobile-card {
@@ -515,6 +551,11 @@ function exportToCsv() {
 .stock-mobile-card__meta {
   display: grid;
   gap: 0.45rem;
+}
+
+/* Snake-like stagger so cards don't feel like a rigid vertical stack. */
+.stock-mobile-list .stock-mobile-card:nth-child(2n) {
+  transform: translateY(14px);
 }
 
 .stock-table :deep(.v-table__wrapper > table > thead > tr > th),
@@ -546,6 +587,14 @@ function exportToCsv() {
   .toolbar-bar {
     align-items: stretch;
   }
+
+  .stock-mobile-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stock-mobile-list .stock-mobile-card:nth-child(2n) {
+    transform: translateY(10px);
+  }
 }
 
 @media (max-width: 600px) {
@@ -557,6 +606,14 @@ function exportToCsv() {
   .stock-mobile-card__header,
   .stock-mobile-card__footer {
     flex-direction: column;
+  }
+
+  .stock-mobile-list {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-mobile-list .stock-mobile-card:nth-child(2n) {
+    transform: none;
   }
 }
 </style>

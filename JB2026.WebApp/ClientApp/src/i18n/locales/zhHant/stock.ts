@@ -20,6 +20,8 @@ export const stockMessages = {
         sortBy: '排序欄位',
         asc: '升冪',
         desc: '降冪',
+        detailView: '明細檢視',
+        cardView: '卡片檢視',
         selected: '已選 {count} 筆',
       },
       messages: {
