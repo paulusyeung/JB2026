@@ -38,10 +38,11 @@
                         v-model="form.customerCode"
                         :label="t('stock.record.customerCode')"
                         :items="customerCodeOptions"
-                        maxlength="8"
+                        maxlength="3"
                         density="comfortable"
                         variant="outlined"
                         hide-details="auto"
+                        :disabled="isEditMode"
                         :error-messages="errors.customerCode"
                         @update:model-value="val => form.customerCode = String(val ?? '').toUpperCase()"
                       />
@@ -51,7 +52,7 @@
                         v-model="form.categoryCode"
                         :label="t('stock.record.categoryCode')"
                         :items="categoryCodeOptions"
-                        maxlength="8"
+                        maxlength="3"
                         density="comfortable"
                         variant="outlined"
                         hide-details="auto"
@@ -66,6 +67,7 @@
                         maxlength="8"
                         density="comfortable"
                         variant="outlined"
+                        :disabled="isEditMode"
                         hide-details="auto"
                         :error-messages="errors.sequenceNumber"
                       >
@@ -78,6 +80,7 @@
                                 size="x-small"
                                 variant="tonal"
                                 :loading="generatingNumber"
+                                :disabled="isEditMode"
                                 @click="requestNextNumber"
                               >
                                 <v-icon>mdi-counter</v-icon>
@@ -239,13 +242,11 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import {
-  composeStockNumber,
   createProductRecord,
   deleteProductRecord,
   getNextProductNumber,
   getProductRecord,
   getProductStockMovements,
-  parseStockNumber,
   updateProductRecord,
   validateProductCodeUniqueness,
 } from '@/services/stock'
@@ -308,9 +309,13 @@ const errors = reactive<Record<string, string[]>>({
 
 const isEditMode = computed(() => currentMode.value === 'edit' && !!currentProductId.value)
 
-const composedStockNumber = computed(() =>
-  composeStockNumber(form.customerCode, form.categoryCode, form.sequenceNumber),
-)
+const composedStockNumber = computed(() => {
+  const customer = form.customerCode.trim()
+  const category = form.categoryCode.trim()
+  const sequence = form.sequenceNumber.trim()
+
+  return [customer, category, sequence].filter((segment) => segment.length > 0).join('-')
+})
 
 const movementHeaders = computed(() => [
   { title: t('stock.record.movementDate'), key: 'inOutDate' },
@@ -378,15 +383,24 @@ function clearErrors() {
   errors.productName = []
 }
 
+function splitStockNumber(stockNumber: string) {
+  const normalized = (stockNumber || '').trim().replace(/-/g, '')
+  return {
+    customerCode: normalized.slice(0, 3),
+    categoryCode: normalized.slice(3, 6),
+    sequenceNumber: normalized.slice(6),
+  }
+}
+
 async function loadExistingRecord(productId: string) {
   loading.value = true
   try {
     const record = await getProductRecord(productId)
-    const parsed = parseStockNumber(record.stockNumber)
+    const parsed = splitStockNumber(record.stockNumber)
 
-    form.customerCode = record.customerCode || parsed.customerCode
-    form.categoryCode = record.categoryCode || parsed.categoryCode
-    form.sequenceNumber = record.sequenceNumber || parsed.sequenceNumber
+    form.customerCode = parsed.customerCode || record.customerCode
+    form.categoryCode = parsed.categoryCode || record.categoryCode
+    form.sequenceNumber = parsed.sequenceNumber || record.sequenceNumber
     form.productCode = record.productCode
     form.productName = record.productName
     form.productionInfo = record.productionInfo
