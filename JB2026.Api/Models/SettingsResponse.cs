@@ -2,6 +2,8 @@ namespace JB2026.Api.Models;
 
 public sealed class SettingsResponse
 {
+    public const string DefaultDateFormatPreference = "shortDate";
+
     public required string CompanyName { get; init; }
 
     public required string TimeZone { get; init; }
@@ -27,4 +29,6 @@ public sealed class SettingsResponse
     public string GmailAccount { get; init; } = string.Empty;
 
     public string GmailPassword { get; init; } = string.Empty;
+
+    public string DateFormatPreference { get; init; } = DefaultDateFormatPreference;
 }

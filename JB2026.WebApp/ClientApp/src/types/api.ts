@@ -597,6 +597,7 @@ export interface AppSettings {
   scheduleQueryRange: number
   gmailAccount: string
   gmailPassword: string
+  dateFormatPreference: string
 }
 
 export interface PublicContentItem {

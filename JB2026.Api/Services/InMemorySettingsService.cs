@@ -4,6 +4,18 @@ namespace JB2026.Api.Services;
 
 public sealed class InMemorySettingsService : ISettingsService
 {
+    private static readonly HashSet<string> SupportedDateFormats = new(StringComparer.Ordinal)
+    {
+        "shortDate",
+        "shortDateTime",
+        "shortTime",
+        "longDate",
+        "longDateTime",
+        "custom",
+        "isoDate",
+        "isoDateTime",
+    };
+
     private readonly object _sync = new();
     private SettingsResponse _settings = new()
     {
@@ -20,6 +32,7 @@ public sealed class InMemorySettingsService : ISettingsService
         ScheduleQueryRange = 1,
         GmailAccount = "job.book@marchehk.com",
         GmailPassword = "24110810",
+        DateFormatPreference = SettingsResponse.DefaultDateFormatPreference,
     };
 
     public SettingsResponse Get()
@@ -49,9 +62,23 @@ public sealed class InMemorySettingsService : ISettingsService
                 ScheduleQueryRange = request.ScheduleQueryRange,
                 GmailAccount = request.GmailAccount.Trim(),
                 GmailPassword = request.GmailPassword.Trim(),
+                DateFormatPreference = NormalizeDateFormatPreference(request.DateFormatPreference),
             };
 
             return _settings;
         }
+    }
+
+    private static string NormalizeDateFormatPreference(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return SettingsResponse.DefaultDateFormatPreference;
+        }
+
+        var trimmed = value.Trim();
+        return SupportedDateFormats.Contains(trimmed)
+            ? trimmed
+            : SettingsResponse.DefaultDateFormatPreference;
     }
 }

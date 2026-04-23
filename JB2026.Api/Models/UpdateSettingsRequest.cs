@@ -48,4 +48,7 @@ public sealed class UpdateSettingsRequest
 
     [StringLength(255)]
     public string GmailPassword { get; init; } = string.Empty;
+
+    [StringLength(32)]
+    public string DateFormatPreference { get; init; } = SettingsResponse.DefaultDateFormatPreference;
 }

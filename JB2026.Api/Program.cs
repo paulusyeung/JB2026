@@ -47,7 +47,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSection(LegacyIdentityOptions.SectionName));
 builder.Services.Configure<JobListOptions>(builder.Configuration.GetSection(JobListOptions.SectionName));
 builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
-builder.Services.AddSingleton<ISettingsService, InMemorySettingsService>();
+builder.Services.AddSingleton<InMemorySettingsService>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();
 builder.Services.AddSingleton<IHelpContentService, InMemoryHelpContentService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -91,9 +91,11 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddScoped<ISmlRtfExtractToDNStoredProcedureGateway, SmlRtfExtractToDNStoredProcedureGateway>();
 	builder.Services.AddScoped<IUserInfoStoredProcedureGateway, UserInfoStoredProcedureGateway>();
 	builder.Services.AddScoped<ISystemInfoStoredProcedureGateway, SystemInfoStoredProcedureGateway>();
+	builder.Services.AddScoped<ISettingsService, SystemInfoSettingsService>();
 }
 else
 {
+	builder.Services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<InMemorySettingsService>());
 	builder.Services.AddSingleton<IQuotationRepository, InMemoryQuotationRepository>();
 	builder.Services.AddSingleton<IJobManagementRepository, InMemoryJobManagementRepository>();
 }

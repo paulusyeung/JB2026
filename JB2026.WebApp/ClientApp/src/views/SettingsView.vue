@@ -157,6 +157,7 @@ const model = ref<AppSettings>({
   scheduleQueryRange: 1,
   gmailAccount: '',
   gmailPassword: '',
+  dateFormatPreference: DATE_FORMATS.SHORT_DATE,
 })
 
 const dateFormatOptions = computed(() => [
@@ -192,6 +193,9 @@ async function load() {
   savedMessage.value = ''
   try {
     model.value = await getSettings()
+    if (dateFormatOptions.value.some((option) => option.value === model.value.dateFormatPreference)) {
+      currentFormat.value = model.value.dateFormatPreference as typeof currentFormat.value
+    }
   } catch {
     errorMessage.value = t('settings.messages.loadFailed')
   } finally {
@@ -211,7 +215,11 @@ async function save() {
   savedMessage.value = ''
 
   try {
+    model.value.dateFormatPreference = currentFormat.value
     model.value = await updateSettings(model.value)
+    if (dateFormatOptions.value.some((option) => option.value === model.value.dateFormatPreference)) {
+      currentFormat.value = model.value.dateFormatPreference as typeof currentFormat.value
+    }
     savedMessage.value = t('settings.messages.saveSuccess')
   } catch {
     errorMessage.value = t('settings.messages.saveFailed')

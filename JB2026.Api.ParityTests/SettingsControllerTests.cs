@@ -20,6 +20,7 @@ public sealed class SettingsControllerTests
         var settings = Assert.IsType<SettingsResponse>(ok.Value);
 
         Assert.Equal("JB2026 Printing", settings.CompanyName);
+        Assert.Equal(SettingsResponse.DefaultDateFormatPreference, settings.DateFormatPreference);
     }
 
     [Fact]
@@ -34,6 +35,7 @@ public sealed class SettingsControllerTests
             TimeZone = "Asia/Singapore",
             CurrencyCode = "sgd",
             EnableLegacyFallback = false,
+            DateFormatPreference = "isoDate",
         });
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
@@ -43,6 +45,7 @@ public sealed class SettingsControllerTests
         Assert.Equal("Asia/Singapore", settings.TimeZone);
         Assert.Equal("SGD", settings.CurrencyCode);
         Assert.False(settings.EnableLegacyFallback);
+        Assert.Equal("isoDate", settings.DateFormatPreference);
     }
 
     private static SettingsController CreateController(ISettingsService service)
