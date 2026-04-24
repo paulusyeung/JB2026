@@ -12,9 +12,9 @@
 
     <div class="grid-three mb-6">
       <KpiCard
-        label="Orders Loaded"
+        :label="t('dashboard.kpi.ordersLoadedLabel')"
         :value="String(orders.uniqueOrderCount)"
-        helper="Total number of active orders"
+        :helper="t('dashboard.kpi.ordersLoadedHelper')"
         icon="mdi-cart-outline"
         :trend="0"
       />
@@ -92,6 +92,8 @@ import { useThemeStore } from '@/stores/theme'
 import type { ActivityItem } from '@/components/layout/ActivityTimeline.vue'
 import type { JobOrderRecord } from '@/types/api'
 
+type DateRangeKey = 'today' | 'last7Days' | 'last30Days' | 'last90Days' | 'thisYear' | 'allTime'
+
 const quotations = useQuotationsStore()
 const orders = useOrdersStore()
 const themeStore = useThemeStore()
@@ -115,16 +117,46 @@ const jobListRows = ref<JobOrderRecord[]>([])
 
 const chartType = ref<'bar' | 'line' | 'pie'>('bar')
 const dashboardFilters = ref({
-  dateRange: 'Last 30 Days',
+  dateRange: 'last30Days' as DateRangeKey,
   search: '',
 })
 
-const mockActivities = ref<ActivityItem[]>([
-  { type: 'job', title: 'Job #9842 Updated', status: 'In Progress', timestamp: '2 mins ago' },
-  { type: 'quote', title: 'New Quotation Drafted', status: 'Draft', timestamp: '15 mins ago' },
-  { type: 'invoice', title: 'Invoice #2024-05 Paid', status: 'Paid', timestamp: '1 hour ago' },
-  { type: 'job', title: 'Job #9840 Completed', status: 'Completed', timestamp: '3 hours ago' },
-  { type: 'system', title: 'System Maintenance', status: 'Scheduled', timestamp: 'Today' },
+const mockActivities = computed<ActivityItem[]>(() => [
+  {
+    type: 'job',
+    title: t('dashboard.activity.items.jobUpdated', { jobNumber: '9842' }),
+    status: t('dashboard.activity.statuses.inProgress'),
+    statusTone: 'warning',
+    timestamp: t('dashboard.activity.timestamps.twoMinutesAgo'),
+  },
+  {
+    type: 'quote',
+    title: t('dashboard.activity.items.newQuotationDrafted'),
+    status: t('dashboard.activity.statuses.draft'),
+    statusTone: 'primary',
+    timestamp: t('dashboard.activity.timestamps.fifteenMinutesAgo'),
+  },
+  {
+    type: 'invoice',
+    title: t('dashboard.activity.items.invoicePaid', { invoiceNumber: '2024-05' }),
+    status: t('dashboard.activity.statuses.paid'),
+    statusTone: 'success',
+    timestamp: t('dashboard.activity.timestamps.oneHourAgo'),
+  },
+  {
+    type: 'job',
+    title: t('dashboard.activity.items.jobCompleted', { jobNumber: '9840' }),
+    status: t('dashboard.activity.statuses.completed'),
+    statusTone: 'success',
+    timestamp: t('dashboard.activity.timestamps.threeHoursAgo'),
+  },
+  {
+    type: 'system',
+    title: t('dashboard.activity.items.systemMaintenance'),
+    status: t('dashboard.activity.statuses.scheduled'),
+    statusTone: 'primary',
+    timestamp: t('dashboard.activity.timestamps.today'),
+  },
 ])
 
 watch(
@@ -140,7 +172,11 @@ onMounted(async () => {
 })
 
 const chartData = computed(() => ({
-  labels: ['Orders', t('dashboard.volumeTrend.labels.jobs'), t('dashboard.volumeTrend.labels.quotations')],
+  labels: [
+    t('dashboard.volumeTrend.labels.orders'),
+    t('dashboard.volumeTrend.labels.jobs'),
+    t('dashboard.volumeTrend.labels.quotations'),
+  ],
   datasets: [
     {
       label: t('dashboard.volumeTrend.datasetLabel'),
@@ -214,32 +250,32 @@ function buildDateRangeParams() {
   const params: { startOn?: string; endOn?: string } = {}
 
   switch (dashboardFilters.value.dateRange) {
-    case 'Today':
+    case 'today':
       params.startOn = today
       params.endOn = today
       break
-    case 'Last 7 Days': {
+    case 'last7Days': {
       const start = new Date(now)
       start.setDate(start.getDate() - 6)
       params.startOn = formatDateOnly(start)
       params.endOn = today
       break
     }
-    case 'Last 30 Days': {
+    case 'last30Days': {
       const start = new Date(now)
       start.setDate(start.getDate() - 29)
       params.startOn = formatDateOnly(start)
       params.endOn = today
       break
     }
-    case 'Last 90 Days': {
+    case 'last90Days': {
       const start = new Date(now)
       start.setDate(start.getDate() - 89)
       params.startOn = formatDateOnly(start)
       params.endOn = today
       break
     }
-    case 'This Year':
+    case 'thisYear':
       params.startOn = `${now.getFullYear()}-01-01`
       params.endOn = today
       break
@@ -275,7 +311,7 @@ async function reload() {
     quotations.keyword = dashboardFilters.value.search || ''
   } catch (e) {
     console.error('Failed to load dashboard data:', e)
-    error.value = 'Failed to load some dashboard components. Please try again.'
+    error.value = t('dashboard.loadFailed')
   } finally {
     loading.value = false
   }
