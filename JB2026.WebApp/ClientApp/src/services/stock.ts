@@ -47,6 +47,13 @@ export async function deleteProductRecord(productId: string): Promise<StockProdu
   return response.data
 }
 
+export async function printProductRecord(productId: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(`/api/v2/stock/products/${productId}/print`, {
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 export async function getProductStockMovements(productId: string): Promise<StockProductMovementHistoryItem[]> {
   const response = await apiClient.get<StockProductMovementHistoryItem[]>(`/api/v2/stock/products/${productId}/movements`)
   return response.data
@@ -91,7 +98,7 @@ export function mapStockInOutError(error: unknown): string {
     if (response?.status === 400 && response.data?.errors) {
       const messages = Object.values(response.data.errors).flat()
       if (messages.length > 0) {
-        return messages[0]
+        return messages[0] ?? 'stock.stockInOut.errors.saveFailed'
       }
     }
     if (response?.status === 404) {
@@ -121,9 +128,9 @@ export function parseStockNumber(stockNumber: string): { customerCode: string; c
   const parts = normalized.split('-').map((part) => part.trim()).filter(Boolean)
   if (parts.length >= 3) {
     return {
-      customerCode: parts[0],
-      categoryCode: parts[1],
-      sequenceNumber: parts[2],
+      customerCode: parts[0] ?? '',
+      categoryCode: parts[1] ?? '',
+      sequenceNumber: parts[2] ?? '',
     }
   }
 

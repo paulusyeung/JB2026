@@ -141,5 +141,11 @@ public sealed class SmlControllerTests
 
         public (byte[] Content, string FileName)? GetPdf(Guid headerId)
             => null;
+
+        public QuotationListItemResponse Create(UpsertQuotationRequest request, string actor)
+            => throw new NotSupportedException();
+
+        public QuotationListItemResponse? Update(Guid headerId, UpsertQuotationRequest request, string actor)
+            => throw new NotSupportedException();
     }
 }

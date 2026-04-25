@@ -27,6 +27,11 @@ async function injectFakeSession(page: Page) {
 }
 
 async function mockApi(page: Page) {
+  const state = {
+    printRequestCount: 0,
+    forcePrintFailure: false,
+  }
+
   const products: ProductRow[] = [
     {
       productId: '11111111-1111-1111-1111-111111111111',
@@ -136,6 +141,29 @@ async function mockApi(page: Page) {
             modifiedBy: 'smoke',
           },
         ],
+      })
+      return
+    }
+
+    if (path.startsWith('/api/v2/stock/products/') && path.endsWith('/print') && request.method() === 'GET') {
+      state.printRequestCount += 1
+
+      if (state.forcePrintFailure) {
+        await route.fulfill({
+          status: 500,
+          json: {
+            title: 'Unable to generate stock print PDF',
+          },
+        })
+        return
+      }
+
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/pdf',
+        },
+        body: '%PDF-1.4\n% stock print test\n',
       })
       return
     }
@@ -254,6 +282,8 @@ async function mockApi(page: Page) {
 
     await route.fulfill({ json: [] })
   })
+
+  return state
 }
 
 test.describe('stock product record popup', () => {
@@ -353,6 +383,39 @@ test.describe('stock product record popup', () => {
 
     const deleteBtn = page.getByRole('button', { name: 'Delete' })
     await expect(deleteBtn).toBeDisabled()
+  })
+
+  test('print action sends request and shows fallback message when popup is blocked', async ({ page }) => {
+    await injectFakeSession(page)
+    const apiState = await mockApi(page)
+    await page.goto('/app/stock')
+
+    await page.evaluate(() => {
+      window.open = () => null
+    })
+
+    await page.getByText('A4 Art Paper 128gsm').click()
+    await expect(page.getByText('Edit Product Record')).toBeVisible()
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Print' }).click()
+
+    await expect(page.getByText('Popup was blocked. PDF downloaded instead.')).toBeVisible()
+    await expect.poll(() => apiState.printRequestCount).toBe(1)
+  })
+
+  test('print action shows localized error when print API fails', async ({ page }) => {
+    await injectFakeSession(page)
+    const apiState = await mockApi(page)
+    apiState.forcePrintFailure = true
+    await page.goto('/app/stock')
+
+    await page.getByText('A4 Art Paper 128gsm').click()
+    await expect(page.getByText('Edit Product Record')).toBeVisible()
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Print' }).click()
+
+    await expect(page.getByText('Unable to generate stock print PDF.')).toBeVisible()
+    await expect.poll(() => apiState.printRequestCount).toBe(1)
   })
 
   test('delete from toolbar with checkbox selection removes product', async ({ page }) => {

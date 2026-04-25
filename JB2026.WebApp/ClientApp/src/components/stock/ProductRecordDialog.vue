@@ -213,7 +213,13 @@
         <v-btn variant="outlined" prepend-icon="mdi-swap-horizontal" :disabled="!isEditMode" @click="openStockInOutDialog">
           {{ t('stock.actions.stockInOut') }}
         </v-btn>
-        <v-btn variant="outlined" prepend-icon="mdi-printer" @click="showGatedAction('stock.record.print')">
+        <v-btn
+          variant="outlined"
+          prepend-icon="mdi-printer"
+          :disabled="!isEditMode"
+          :loading="printing"
+          @click="printRecord"
+        >
           {{ t('stock.record.print') }}
         </v-btn>
         <v-btn variant="outlined" prepend-icon="mdi-file-delimited-outline" @click="showGatedAction('stock.actions.export')">
@@ -255,6 +261,7 @@ import {
   getNextProductNumber,
   getProductRecord,
   getProductStockMovements,
+  printProductRecord,
   updateProductRecord,
   validateProductCodeUniqueness,
 } from '@/services/stock'
@@ -288,6 +295,7 @@ const loadingMovements = ref(false)
 const generatingNumber = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
+const printing = ref(false)
 const errorMessage = ref('')
 const infoMessage = ref('')
 const movementRows = ref<MovementHistoryRow[]>([])
@@ -607,6 +615,33 @@ function openStockInOutDialog() {
     return
   }
   stockInOutDialogOpen.value = true
+}
+
+async function printRecord() {
+  if (!currentProductId.value || printing.value) {
+    return
+  }
+
+  clearMessages()
+  printing.value = true
+
+  try {
+    const blob = await printProductRecord(currentProductId.value)
+    const objectUrl = URL.createObjectURL(blob)
+    const popup = window.open(objectUrl, '_blank', 'noopener,noreferrer')
+
+    if (!popup) {
+      infoMessage.value = t('stock.record.printDownloaded')
+    } else {
+      infoMessage.value = t('stock.record.printOpened')
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+  } catch {
+    errorMessage.value = t('stock.record.printFailed')
+  } finally {
+    printing.value = false
+  }
 }
 
 async function onStockInOutSaved(_result: StockInOutTransactionResult) {

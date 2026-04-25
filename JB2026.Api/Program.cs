@@ -74,6 +74,8 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddScoped<ISupplierStoredProcedureGateway, SupplierStoredProcedureGateway>();
 	builder.Services.AddScoped<IProductAttachmentStoredProcedureGateway, ProductAttachmentStoredProcedureGateway>();
 	builder.Services.AddScoped<IStockInOutStoredProcedureGateway, StockInOutStoredProcedureGateway>();
+	builder.Services.AddScoped<IStockProductPrintComposer, StockProductPrintComposer>();
+	builder.Services.AddScoped<IStockProductPdfRenderer, StockProductPdfRenderer>();
 	builder.Services.AddScoped<ICustomerStoredProcedureGateway, CustomerStoredProcedureGateway>();
 	builder.Services.AddScoped<IInvoiceHeaderStoredProcedureGateway, InvoiceHeaderStoredProcedureGateway>();
 	builder.Services.AddScoped<IInvoiceItemStoredProcedureGateway, InvoiceItemStoredProcedureGateway>();

@@ -1,10 +1,12 @@
 using JB2026.Api.Controllers;
 using JB2026.Api.Models;
+using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace JB2026.Api.ParityTests;
@@ -22,7 +24,10 @@ public sealed class StockControllerTests
 
     private static StockController CreateController(JB5LegacyReadContext context)
     {
-        var controller = new StockController(context, NullLogger<StockController>.Instance);
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        var composer = new StockProductPrintComposer(context);
+        var renderer = new StockProductPdfRenderer(configuration);
+        var controller = new StockController(context, NullLogger<StockController>.Instance, configuration, composer, renderer);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()

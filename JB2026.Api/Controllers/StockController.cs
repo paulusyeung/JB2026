@@ -1,4 +1,5 @@
 using JB2026.Api.Models;
+using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -16,12 +17,53 @@ public sealed class StockController : ControllerBase
     private readonly JB5LegacyReadContext _readContext;
     private readonly ILogger<StockController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IStockProductPrintComposer _stockProductPrintComposer;
+    private readonly IStockProductPdfRenderer _stockProductPdfRenderer;
 
-    public StockController(JB5LegacyReadContext readContext, ILogger<StockController> logger, IConfiguration configuration)
+    public StockController(
+        JB5LegacyReadContext readContext,
+        ILogger<StockController> logger,
+        IConfiguration configuration,
+        IStockProductPrintComposer stockProductPrintComposer,
+        IStockProductPdfRenderer stockProductPdfRenderer)
     {
         _readContext = readContext;
         _logger = logger;
         _configuration = configuration;
+        _stockProductPrintComposer = stockProductPrintComposer;
+        _stockProductPdfRenderer = stockProductPdfRenderer;
+    }
+
+    [HttpGet("products/{id:guid}/print")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> PrintProductRecord(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var document = await _stockProductPrintComposer.ComposeAsync(id, cancellationToken);
+            if (document is null)
+            {
+                return NotFound();
+            }
+
+            var pdfContent = _stockProductPdfRenderer.Render(document);
+            var safeStockNumber = string.IsNullOrWhiteSpace(document.StockNumber)
+                ? id.ToString("N")
+                : document.StockNumber;
+
+            return File(pdfContent, "application/pdf", $"stock-record-{safeStockNumber}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate stock print PDF for product {ProductId}", id);
+            return Problem(
+                title: "Unable to generate stock print PDF",
+                detail: "An unexpected error occurred while generating the stock print report.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     [HttpGet("products/{id:guid}")]
