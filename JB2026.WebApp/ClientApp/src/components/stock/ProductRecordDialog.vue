@@ -198,6 +198,8 @@
                 class="movement-table"
               >
                 <template #[`item.inOutDate`]="{ item }">{{ format(item.inOutDate) }}</template>
+                <template #[`item.qty`]="{ item }">{{ formatNumber(item.qty) }}</template>
+                <template #[`item.runningBalance`]="{ item }">{{ formatNumber(item.runningBalance) }}</template>
               </v-data-table>
             </v-card-text>
           </v-card>
@@ -341,11 +343,16 @@ const movementHeaders = computed(() => [
   { title: '#', key: 'rowNumber', sortable: false, align: 'end' as const, width: 64 },
   { title: t('stock.record.movementDate'), key: 'inOutDate' },
   { title: t('stock.record.reference'), key: 'reference' },
-  { title: t('stock.record.quantity'), key: 'qty' },
-  { title: t('stock.record.runningBalance'), key: 'runningBalance' },
+  { title: t('stock.record.quantity'), key: 'qty', align: 'end' as const },
+  { title: t('stock.record.runningBalance'), key: 'runningBalance', align: 'end' as const },
   { title: t('stock.record.modifiedOn'), key: 'modifiedOn' },
   { title: t('stock.record.modifiedBy'), key: 'modifiedBy' },
 ])
+
+function formatNumber(value: number | undefined | null): string {
+  if (value == null) return ''
+  return value.toLocaleString()
+}
 
 watch(
   () => [props.modelValue, props.mode, props.productId],
