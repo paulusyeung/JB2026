@@ -31,6 +31,7 @@
         </div>
 
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
+        <v-alert v-if="successMessage" type="success" variant="tonal" class="mt-3 mb-2">{{ successMessage }}</v-alert>
 
         <div class="toolbar-bar mb-2">
           <v-menu location="bottom">
@@ -123,7 +124,14 @@
               {{ t('stock.actions.newProduct') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
+            <v-btn
+              variant="outlined"
+              size="small"
+              prepend-icon="mdi-delete"
+              :disabled="selectedIds.length === 0 || deleting"
+              :loading="deleting"
+              @click="startDelete"
+            >
               {{ t('stock.actions.delete') }}
             </v-btn>
 
@@ -158,7 +166,7 @@
               <v-list-item prepend-icon="mdi-file-plus" @click="openCreateDialog">
                 <v-list-item-title>{{ t('stock.actions.newProduct') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-delete" @click="showUnavailable('stock.actions.delete')">
+              <v-list-item prepend-icon="mdi-delete" :disabled="selectedIds.length === 0" @click="startDelete">
                 <v-list-item-title>{{ t('stock.actions.delete') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-swap-horizontal" :disabled="selectedIds.length !== 1" @click="openStockInOutDialog">
@@ -297,7 +305,7 @@ import { useDisplay, useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { getStockProducts, parseStockNumber } from '@/services/stock'
+import { getStockProducts, parseStockNumber, deleteProductRecord } from '@/services/stock'
 import ProductRecordDialog from '@/components/stock/ProductRecordDialog.vue'
 import StockInOutDialog from '@/components/stock/StockInOutDialog.vue'
 import type { StockInOutTransactionResult, StockProductListItem } from '@/types/api'
@@ -313,6 +321,8 @@ const rows = ref<StockProductListItem[]>([])
 const loading = ref(false)
 const keyword = ref('')
 const errorMessage = ref('')
+const successMessage = ref('')
+const deleting = ref(false)
 const selectedIds = ref<string[]>([])
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -502,8 +512,12 @@ async function onDialogSaved() {
   await load()
 }
 
-async function onDialogDeleted() {
+async function onDialogDeleted(_productId: string, outcome: string) {
   await load()
+  successMessage.value =
+    outcome === 'hardDeleted'
+      ? t('stock.messages.deleteHardDeletedSuccess')
+      : t('stock.messages.deleteRetiredSuccess')
 }
 
 function openStockInOutDialog() {
@@ -529,6 +543,61 @@ async function onStockInOutSaved(_result: StockInOutTransactionResult) {
 
 function showUnavailable(actionKey: string) {
   errorMessage.value = t('stock.messages.actionUnavailable', { action: t(actionKey) })
+}
+
+async function startDelete() {
+  if (selectedIds.value.length === 0) {
+    errorMessage.value = t('stock.messages.deleteSelectFirst')
+    return
+  }
+
+  const count = selectedIds.value.length
+  const message =
+    count === 1
+      ? t('stock.messages.confirmDeleteSingle')
+      : t('stock.messages.confirmDeleteBatch', { count })
+
+  if (!window.confirm(message)) {
+    return
+  }
+
+  const idsToDelete = [...selectedIds.value]
+  let successCount = 0
+  let failedCount = 0
+  let lastOutcome = ''
+
+  deleting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    for (const productId of idsToDelete) {
+      try {
+        const result = await deleteProductRecord(productId)
+        successCount++
+        lastOutcome = result.outcome
+      } catch {
+        failedCount++
+      }
+    }
+  } finally {
+    deleting.value = false
+  }
+
+  selectedIds.value = []
+  await load()
+
+  if (count === 1 && successCount === 1) {
+    successMessage.value =
+      lastOutcome === 'hardDeleted'
+        ? t('stock.messages.deleteHardDeletedSuccess')
+        : t('stock.messages.deleteRetiredSuccess')
+  } else if (count > 1) {
+    if (failedCount > 0) {
+      errorMessage.value = t('stock.messages.deleteBatchResult', { success: successCount, failed: failedCount })
+    } else {
+      successMessage.value = t('stock.messages.deleteBatchResult', { success: successCount, failed: 0 })
+    }
+  }
 }
 
 function exportToCsv() {

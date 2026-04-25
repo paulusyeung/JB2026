@@ -449,6 +449,11 @@ export interface StockInOutTransactionResult {
   newBalance: number
 }
 
+export interface StockProductDeleteResult {
+  productId: string
+  outcome: 'retired' | 'hardDeleted'
+}
+
 export interface RunReportRequest {
   reportName: string
   startOn: string

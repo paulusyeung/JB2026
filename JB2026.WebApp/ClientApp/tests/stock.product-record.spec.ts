@@ -248,7 +248,7 @@ async function mockApi(page: Page) {
       if (idx !== -1) {
         products.splice(idx, 1)
       }
-      await route.fulfill({ status: 204, body: '' })
+      await route.fulfill({ status: 200, json: { productId: id, outcome: 'retired' } })
       return
     }
 
@@ -327,5 +327,69 @@ test.describe('stock product record popup', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
 
     await expect(page.getByText('A4 Art Paper 128gsm')).toHaveCount(0)
+  })
+
+  test('delete action from dialog shows retired success message', async ({ page }) => {
+    page.on('dialog', (dialog) => dialog.accept())
+
+    await injectFakeSession(page)
+    await mockApi(page)
+    await page.goto('/app/stock')
+
+    await page.getByText('A4 Art Paper 128gsm').click()
+    await expect(page.getByText('Edit Product Record')).toBeVisible()
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+
+    await expect(page.getByText('Product retired. Delete again to permanently remove it.')).toBeVisible()
+  })
+
+  test('delete button in toolbar is disabled when no products selected', async ({ page }) => {
+    await injectFakeSession(page)
+    await mockApi(page)
+    await page.goto('/app/stock')
+
+    await expect(page.getByText('A4 Art Paper 128gsm')).toBeVisible()
+
+    const deleteBtn = page.getByRole('button', { name: 'Delete' })
+    await expect(deleteBtn).toBeDisabled()
+  })
+
+  test('delete from toolbar with checkbox selection removes product', async ({ page }) => {
+    page.on('dialog', (dialog) => dialog.accept())
+
+    await injectFakeSession(page)
+    await mockApi(page)
+    await page.goto('/app/stock')
+
+    await expect(page.getByText('A4 Art Paper 128gsm')).toBeVisible()
+
+    // Enable checkbox mode and select the row
+    await page.getByRole('button', { name: 'Checkbox' }).click()
+    await page.locator('.v-data-table .v-checkbox-btn').first().click()
+
+    // Delete button should now be enabled
+    const deleteBtn = page.getByRole('button', { name: 'Delete' })
+    await expect(deleteBtn).toBeEnabled()
+    await deleteBtn.click()
+
+    await expect(page.getByText('A4 Art Paper 128gsm')).toHaveCount(0)
+    await expect(page.getByText('Product retired. Delete again to permanently remove it.')).toBeVisible()
+  })
+
+  test('cancel delete confirmation leaves product unchanged', async ({ page }) => {
+    page.on('dialog', (dialog) => dialog.dismiss())
+
+    await injectFakeSession(page)
+    await mockApi(page)
+    await page.goto('/app/stock')
+
+    await page.getByText('A4 Art Paper 128gsm').click()
+    await expect(page.getByText('Edit Product Record')).toBeVisible()
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+
+    await expect(page.getByText('Edit Product Record')).toBeVisible()
+    await expect(page.getByText('A4 Art Paper 128gsm')).toBeVisible()
   })
 })

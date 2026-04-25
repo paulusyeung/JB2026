@@ -28,6 +28,12 @@ export const stockMessages = {
         loadFailed: 'Unable to load stock products. Please verify API availability.',
         actionUnavailable: '{action} is not available in the current API slice yet.',
         stockInOutSelectOne: 'Select exactly one product row to open Stock In/Out.',
+        deleteSelectFirst: 'Select one or more products before deleting.',
+        confirmDeleteSingle: 'Delete this product? If active, it will be retired. If already retired, it will be permanently removed.',
+        confirmDeleteBatch: 'Delete {count} selected products? Active products will be retired. Already-retired products will be permanently removed.',
+        deleteRetiredSuccess: 'Product retired. Delete again to permanently remove it.',
+        deleteHardDeletedSuccess: 'Product permanently deleted.',
+        deleteBatchResult: '{success} product(s) processed, {failed} failed.',
       },
       headers: {
         ln: '#',

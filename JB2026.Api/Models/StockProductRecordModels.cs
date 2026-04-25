@@ -106,3 +106,11 @@ public sealed class StockInOutTransactionResult
 
     public required int NewBalance { get; init; }
 }
+
+public sealed class StockProductDeleteResult
+{
+    public required Guid ProductId { get; init; }
+
+    /// <summary>Lifecycle outcome: "retired" or "hardDeleted".</summary>
+    public required string Outcome { get; init; }
+}

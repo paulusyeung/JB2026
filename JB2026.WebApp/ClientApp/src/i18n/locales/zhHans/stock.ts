@@ -28,6 +28,12 @@ export const stockMessages = {
         loadFailed: '无法加载库存产品，请确认 API 可用性。',
         actionUnavailable: '{action} 在当前 API 切片中尚不可用。',
         stockInOutSelectOne: '请选择恰好一条产品行以开启库存进出。',
+        deleteSelectFirst: '请先选择一条或多条产品后再执行删除。',
+        confirmDeleteSingle: '确认删除此产品？若为有效产品将先停用，若已停用则永久删除。',
+        confirmDeleteBatch: '确认删除已选的 {count} 条产品？有效产品将先停用，已停用产品将永久删除。',
+        deleteRetiredSuccess: '产品已停用，再次删除可永久移除。',
+        deleteHardDeletedSuccess: '产品已永久删除。',
+        deleteBatchResult: '{success} 条已处理，{failed} 条失败。',
       },
       headers: {
         ln: '序',

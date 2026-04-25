@@ -275,7 +275,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   saved: [productId: string]
-  deleted: [productId: string]
+  deleted: [productId: string, outcome: string]
   close: []
 }>()
 
@@ -588,8 +588,8 @@ async function deleteRecord() {
 
   deleting.value = true
   try {
-    await deleteProductRecord(currentProductId.value)
-    emit('deleted', currentProductId.value)
+    const result = await deleteProductRecord(currentProductId.value)
+    emit('deleted', currentProductId.value, result.outcome)
     closeDialog()
   } catch {
     errorMessage.value = t('stock.record.deleteFailed')

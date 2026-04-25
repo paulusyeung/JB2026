@@ -3,6 +3,7 @@ import type {
   StockInOutTransactionRequest,
   StockInOutTransactionResult,
   StockProductCodeValidationResponse,
+  StockProductDeleteResult,
   StockProductListItem,
   StockProductMovementHistoryItem,
   StockProductNextNumberResponse,
@@ -41,8 +42,9 @@ export async function updateProductRecord(productId: string, payload: StockProdu
   return response.data
 }
 
-export async function deleteProductRecord(productId: string): Promise<void> {
-  await apiClient.delete(`/api/v2/stock/products/${productId}`)
+export async function deleteProductRecord(productId: string): Promise<StockProductDeleteResult> {
+  const response = await apiClient.delete<StockProductDeleteResult>(`/api/v2/stock/products/${productId}`)
+  return response.data
 }
 
 export async function getProductStockMovements(productId: string): Promise<StockProductMovementHistoryItem[]> {

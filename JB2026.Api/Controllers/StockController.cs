@@ -4,6 +4,7 @@ using JB2026.EfCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace JB2026.Api.Controllers;
 
@@ -14,11 +15,13 @@ public sealed class StockController : ControllerBase
 {
     private readonly JB5LegacyReadContext _readContext;
     private readonly ILogger<StockController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public StockController(JB5LegacyReadContext readContext, ILogger<StockController> logger)
+    public StockController(JB5LegacyReadContext readContext, ILogger<StockController> logger, IConfiguration configuration)
     {
         _readContext = readContext;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [HttpGet("products/{id:guid}")]
@@ -170,24 +173,115 @@ public sealed class StockController : ControllerBase
     }
 
     [HttpDelete("products/{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(StockProductDeleteResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteProductRecord(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<StockProductDeleteResult>> DeleteProductRecord(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        var product = await _readContext.Products.FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
+        var product = await _readContext.Products
+            .FirstOrDefaultAsync(item => item.ProductId == id, cancellationToken);
+
         if (product is null)
         {
             return NotFound();
         }
 
-        product.Retired = true;
-        product.RetiredOn = DateTime.UtcNow;
-        product.RetiredBy = GetActorGuid();
-        product.ModifiedOn = DateTime.UtcNow;
-        product.ModifiedBy = product.RetiredBy.Value;
+        if (!product.Retired)
+        {
+            // First-pass: retire the product (soft delete)
+            var actor = GetActorGuid();
+            var now = DateTime.UtcNow;
+            product.Retired = true;
+            product.RetiredOn = now;
+            product.RetiredBy = actor;
+            product.ModifiedOn = now;
+            product.ModifiedBy = actor;
 
+            await _readContext.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Product {ProductId} retired by {Actor}",
+                product.ProductId, actor);
+
+            return Ok(new StockProductDeleteResult
+            {
+                ProductId = product.ProductId,
+                Outcome = "retired"
+            });
+        }
+
+        // Second-pass: hard delete with cascading cleanup
+        await HardDeleteProductAsync(product, cancellationToken);
+
+        return Ok(new StockProductDeleteResult
+        {
+            ProductId = id,
+            Outcome = "hardDeleted"
+        });
+    }
+
+    private async Task HardDeleteProductAsync(Product product, CancellationToken cancellationToken)
+    {
+        // Remove stock in/out movement rows
+        var stockMovements = await _readContext.StockInOuts
+            .Where(item => item.ProductId == product.ProductId)
+            .ToListAsync(cancellationToken);
+        _readContext.StockInOuts.RemoveRange(stockMovements);
+
+        // Remove product attachment rows and physical image files
+        var attachments = await _readContext.ProductAttachments
+            .Where(item => item.ProductId == product.ProductId)
+            .ToListAsync(cancellationToken);
+
+        var productPictureRoot = _configuration["LegacyFiles:ProductPictureRoot"];
+        if (!string.IsNullOrWhiteSpace(productPictureRoot) && !string.IsNullOrWhiteSpace(product.StockNumber))
+        {
+            foreach (var attachment in attachments)
+            {
+                if (!string.IsNullOrWhiteSpace(attachment.OriginalFileName))
+                {
+                    var filePath = Path.Combine(productPictureRoot, product.StockNumber, attachment.OriginalFileName);
+                    try
+                    {
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Failed to delete physical file {FilePath} for attachment {AttachmentId} during hard delete of product {ProductId}",
+                            filePath, attachment.AttachmentId, product.ProductId);
+                    }
+                }
+            }
+
+            // Remove the product picture directory if empty after file cleanup
+            var productDir = Path.Combine(productPictureRoot, product.StockNumber);
+            try
+            {
+                if (Directory.Exists(productDir) && !Directory.EnumerateFiles(productDir).Any())
+                {
+                    Directory.Delete(productDir);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to remove product picture directory {Dir} during hard delete of product {ProductId}",
+                    productDir, product.ProductId);
+            }
+        }
+
+        _readContext.ProductAttachments.RemoveRange(attachments);
+        _readContext.Products.Remove(product);
         await _readContext.SaveChangesAsync(cancellationToken);
-        return NoContent();
+
+        _logger.LogInformation(
+            "Product {ProductId} hard-deleted: {MovementCount} stock movements and {AttachmentCount} attachments removed",
+            product.ProductId, stockMovements.Count, attachments.Count);
     }
 
     [HttpPost("products/{id:guid}/transactions")]

@@ -28,6 +28,12 @@ export const stockMessages = {
         loadFailed: '無法載入庫存產品，請確認 API 可用性。',
         actionUnavailable: '{action} 尚未在目前 API 切片中提供。',
         stockInOutSelectOne: '請選擇剛好一筆產品列以開啟庫存進出。',
+        deleteSelectFirst: '請先選擇一筆或多筆產品後再執行刪除。',
+        confirmDeleteSingle: '確定刪除此產品？若為有效產品將先下架，若已下架則永久刪除。',
+        confirmDeleteBatch: '確定刪除所選的 {count} 筆產品？有效產品將先下架，已下架產品將永久刪除。',
+        deleteRetiredSuccess: '產品已下架，再次刪除可永久移除。',
+        deleteHardDeletedSuccess: '產品已永久刪除。',
+        deleteBatchResult: '{success} 筆已處理，{failed} 筆失敗。',
       },
       headers: {
         ln: '序',
