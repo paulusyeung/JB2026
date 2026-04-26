@@ -1,0 +1,29 @@
+# Dependencies — never send to Docker daemon; installed fresh in the build stage
+node_modules/
+
+# Vite build output — the Dockerfile builds this inside the container
+dist/
+
+# Test artefacts
+tests/
+test-results/
+
+# Git history — not needed in image and can be large
+.git/
+
+# Logs and local build output
+*.log
+vite-build.txt
+build.log
+
+# Local environment files — these contain dev-only values that must not
+# be baked into the image.  Vite's `production` mode doesn't read
+# .env.development anyway, but exclude them for clarity and safety.
+.env.*
+
+# IDE / editor state
+.vscode/
+.idea/
+
+# OpenSpec change tracking files — not part of the app source
+openspec/

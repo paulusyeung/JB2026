@@ -1,0 +1,67 @@
+name: Build and Publish ClientApp Docker Image
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build and Push to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Normalize the image name to lowercase so GHCR path requirements
+      # are satisfied regardless of repository name casing.
+      - name: Set lowercase image name
+        id: image
+        run: |
+          echo "name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/clientapp" \
+            >> "$GITHUB_OUTPUT"
+
+      # Only authenticate on push events; PRs must not push to the registry.
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate image tags according to the tagging strategy:
+      #   • All pushes   → short commit SHA (no prefix, e.g. "a1b2c3d")
+      #   • main push    → additionally tagged "latest"
+      #   • other branch → additionally tagged with sanitized branch name
+      #   • PRs          → tags generated but not pushed (push: false below)
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: JB2026.WebApp/ClientApp
+          # push=false on PRs: validates the build without publishing to GHCR
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Remote layer cache stored in GHCR to speed up subsequent builds.
+          # Cache writes are skipped on PRs to avoid auth errors from forks.
+          cache-from: type=registry,ref=${{ steps.image.outputs.name }}:buildcache
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache,mode=max', steps.image.outputs.name) || '' }}
