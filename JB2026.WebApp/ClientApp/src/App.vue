@@ -61,9 +61,7 @@ watch(
 watch(
   () => themeStore.vuetifyTheme,
   (themeName) => {
-    // Vuetify 3.4+ recommendation: use theme.global.name.value but the warning specifically 
-    // asks to use theme.name if using the theme object correctly from useTheme()
-    theme.global.name.value = themeName
+    theme.change(themeName)
     document.documentElement.dataset.theme = themeStore.mode
     document.documentElement.dataset.scheme = themeStore.scheme
     document.documentElement.style.colorScheme = themeStore.mode
