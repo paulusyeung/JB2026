@@ -90,7 +90,7 @@
                         </template>
                       </v-text-field>
                     </v-col>
-                    <v-col cols="12" class="pt-1">
+                    <v-col cols="12" class="py-3">
                       <v-text-field
                         :model-value="composedStockNumber"
                         :label="t('stock.record.stockNumberComposed')"
