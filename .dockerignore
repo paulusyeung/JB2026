@@ -1,0 +1,32 @@
+# Git history and repository metadata
+.git/
+.gitignore
+.gitattributes
+
+# Build output and package caches
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+
+# Test assets and reports
+**/*Tests/
+**/test-results/
+**/coverage/
+
+# IDE/editor state
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Local logs and env files
+*.log
+.env
+.env.*
+
+# OpenSpec and docs are not needed for image build context
+openspec/
+docs/
+spikes/
+path/

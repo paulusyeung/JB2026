@@ -8,6 +8,11 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddJb2026Foundation();
 
+var isRunningInContainer = string.Equals(
+	Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+	"true",
+	StringComparison.OrdinalIgnoreCase);
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -54,6 +59,12 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICurrentUserProfileService, HttpContextCurrentUserProfileService>();
 
 var primaryConnectionString = builder.Configuration.GetConnectionString("Primary");
+if (isRunningInContainer && string.IsNullOrWhiteSpace(primaryConnectionString))
+{
+	throw new InvalidOperationException(
+		"Missing required configuration: ConnectionStrings__Primary must be provided when running in a container.");
+}
+
 if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 {
 	builder.Services.AddDbContext<JB5LegacyReadContext>(options =>
@@ -110,6 +121,7 @@ app.UseSwaggerUI();
 
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new { Service = "JB2026.Api", Status = "Running" }));
+app.MapGet("/healthz", () => Results.Ok(new { Status = "Healthy" }));
 
 app.Run();
 
