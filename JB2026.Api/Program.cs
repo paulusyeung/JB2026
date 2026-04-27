@@ -2,10 +2,14 @@ using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.Infrastructure.Extensions;
+using JB2026.Reporting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = LicenseType.Community;
+FontRegistry.EnsureInitialized();
 builder.AddJb2026Foundation();
 
 var isRunningInContainer = string.Equals(

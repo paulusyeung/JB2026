@@ -26,7 +26,7 @@ public sealed class StockControllerTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
         var composer = new StockProductPrintComposer(context);
-        var renderer = new StockProductPdfRenderer(configuration);
+        var renderer = new StockProductPdfRenderer();
         var controller = new StockController(context, NullLogger<StockController>.Instance, configuration, composer, renderer);
         controller.ControllerContext = new ControllerContext
         {

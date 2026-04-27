@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JB2026.WebApp.Tests", "JB20
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JB2026.Rest.Tests", "JB2026.Rest.Tests\JB2026.Rest.Tests.csproj", "{FB223F76-E1BC-4735-A523-0BED7992B2CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JB2026.Reporting", "JB2026.Reporting\JB2026.Reporting.csproj", "{DA49A6CE-4EED-493A-AB88-5D52F2E33406}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x64.Build.0 = Release|Any CPU
 		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x86.ActiveCfg = Release|Any CPU
 		{FB223F76-E1BC-4735-A523-0BED7992B2CC}.Release|x86.Build.0 = Release|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Debug|x64.Build.0 = Debug|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Debug|x86.Build.0 = Debug|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Release|x64.ActiveCfg = Release|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Release|x64.Build.0 = Release|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Release|x86.ActiveCfg = Release|Any CPU
+		{DA49A6CE-4EED-493A-AB88-5D52F2E33406}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

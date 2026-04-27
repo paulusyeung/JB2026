@@ -4,10 +4,12 @@
     <ProjectReference Include="..\JB2026.Infrastructure\JB2026.Infrastructure.csproj" />
     <ProjectReference Include="..\JB2026.EfCore\JB2026.EfCore.csproj" />
     <ProjectReference Include="..\JB2026.DataAccess\JB2026.DataAccess.csproj" />
+    <ProjectReference Include="..\JB2026.Reporting\JB2026.Reporting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+    <PackageReference Include="QuestPDF" Version="2026.2.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.0" />
   </ItemGroup>

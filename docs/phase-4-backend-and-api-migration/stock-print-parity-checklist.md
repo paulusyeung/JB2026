@@ -15,7 +15,7 @@ Reference artifact: legacy stock PDF sample (report viewer screenshot provided d
 ## Movement table parity
 
 - [ ] Columns appear in expected order: row/date/reference/qty/balance/modified on/modified by
-- [ ] Row order is newest-first by movement date then modified timestamp
+- [ ] Row order is oldest-first by movement date then modified timestamp
 - [ ] Row numbering starts at 1 and increments by 1
 - [ ] Quantity signs (+/-) are preserved
 - [ ] Running balance values are correct by row

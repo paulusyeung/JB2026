@@ -17,8 +17,8 @@
   - MOQ and current balance
   - Movement rows with row number, date, reference, quantity, running balance, modified timestamp, modified by
 - Movement rows are sorted deterministically by:
-  1. `InOutDate` descending
-  2. `ModifiedOn` descending
+  1. `InOutDate` ascending
+  2. `ModifiedOn` ascending
 - Row numbers are assigned after sorting, starting at `1`
 
 ## Frontend integration
@@ -32,11 +32,13 @@
 
 ## Configuration
 
-- Optional key: `StockPrint:FontName`
-- Default: `Helvetica`
-- Purpose: set PDF base font name used by renderer output
+- Renderer engine: QuestPDF Community (`LicenseType.Community`)
+- Font loading: embedded resources initialized at application startup through `FontRegistry`
+- Embedded fonts:
+  - `Lato-Regular.ttf` (Latin)
+  - `NotoSansCJKsc-Regular.otf` (CJK)
 
 ## Operational notes
 
 - Structured error logging is emitted with product ID context on print failures.
-- If multilingual glyph rendering quality is insufficient in deployment, configure a Unicode-capable font name and validate with CJK fixtures before release.
+- The renderer no longer uses configurable system font names. Update `FontRegistry` for any font changes and re-run CJK fixture tests.
