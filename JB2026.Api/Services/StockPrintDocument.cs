@@ -101,7 +101,7 @@ public sealed class StockPrintDocument : DocumentBase<StockProductPrintDocument>
         {
             column.Spacing(3);
             column.Item().Element(e => ComposeLabelValue(e, "Stock Number:", Model.StockNumber));
-            column.Item().Element(e => ComposeLabelValue(e, "Product Code:", Model.ProductCode));
+            column.Item().Element(e => ComposeLabelValue(e, "Product Code:", Model.ProductCode, UseCjkFallback(Model.ProductCode)));
             column.Item().Element(e => ComposeLabelValue(e, "Product Name:", Model.ProductName, UseCjkFallback(Model.ProductName)));
         });
     }
