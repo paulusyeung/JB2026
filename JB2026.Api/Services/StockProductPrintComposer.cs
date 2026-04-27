@@ -87,11 +87,7 @@ public sealed class StockProductPrintComposer : IStockProductPrintComposer
         return new StockProductPrintDocument
         {
             ProductId = product.ProductId,
-            StockNumber = string.IsNullOrEmpty(product.StockNumber)
-                ? string.Empty
-                : product.StockNumber.Length >= 11
-                    ? string.Format("{0}-{1}-{2}", product.StockNumber.Substring(0, 3), product.StockNumber.Substring(3, 3), product.StockNumber.Substring(6))
-                    : product.StockNumber,
+            StockNumber = product.StockNumber ?? string.Empty,
             ProductCode = product.ProductCode ?? string.Empty,
             ProductName = product.ProductName ?? string.Empty,
             ProductionInfo = product.Description ?? string.Empty,

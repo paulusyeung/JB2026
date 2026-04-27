@@ -100,7 +100,7 @@ public sealed class StockPrintDocument : DocumentBase<StockProductPrintDocument>
         container.Column(column =>
         {
             column.Spacing(3);
-            column.Item().Element(e => ComposeLabelValue(e, "Stock Number:", Model.StockNumber));
+            column.Item().Element(e => ComposeLabelValue(e, "Stock Number:", FormatStockNumber(Model.StockNumber)));
             column.Item().Element(e => ComposeLabelValue(e, "Product Code:", Model.ProductCode, UseCjkFallback(Model.ProductCode)));
             column.Item().Element(e => ComposeLabelValue(e, "Product Name:", Model.ProductName, UseCjkFallback(Model.ProductName)));
         });
@@ -146,6 +146,18 @@ public sealed class StockPrintDocument : DocumentBase<StockProductPrintDocument>
                 ModifiedBy = row.ModifiedBy
             })
             .ToList();
+    }
+
+    private static string FormatStockNumber(string stockNumber)
+    {
+        if (string.IsNullOrEmpty(stockNumber))
+        {
+            return string.Empty;
+        }
+
+        return stockNumber.Length >= 11
+            ? string.Format("{0}-{1}-{2}", stockNumber.Substring(0, 3), stockNumber.Substring(3, 3), stockNumber.Substring(6))
+            : stockNumber;
     }
 
     private static bool UseCjkFallback(string? value)
