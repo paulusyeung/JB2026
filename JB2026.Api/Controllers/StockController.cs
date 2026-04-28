@@ -558,7 +558,7 @@ public sealed class StockController : ControllerBase
             .Select(product => new StockProductListItemResponse
             {
                 ProductId = product.ProductId,
-                StockNumber = product.StockNumber ?? string.Empty,
+                   StockNumber = product.StockNumber ?? string.Empty,
                 ProductCode = product.ProductCode ?? string.Empty,
                 ProductName = product.ProductName ?? string.Empty,
                 Balance = product.Balance,
@@ -681,4 +681,5 @@ public sealed class StockController : ControllerBase
 
         return Guid.NewGuid();
     }
+
 }

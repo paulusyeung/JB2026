@@ -134,6 +134,17 @@ export function parseStockNumber(stockNumber: string): { customerCode: string; c
     }
   }
 
+  // No dashes found - try to extract components from concatenated format
+  // Pattern: first 3 chars = customer, next 3 chars = category, rest = sequence
+  if (normalized.length >= 6) {
+    return {
+      customerCode: normalized.substring(0, 3).trim(),
+      categoryCode: normalized.substring(3, 6).trim(),
+      sequenceNumber: normalized.substring(6).trim(),
+    }
+  }
+
+  // If less than 6 characters, can't determine format
   return {
     customerCode: '',
     categoryCode: '',

@@ -196,7 +196,7 @@
               <div>
                 <div class="text-subtitle-2 font-weight-bold">{{ row.productName }}</div>
                 <div class="text-caption text-medium-emphasis">
-                  {{ row.stockNumber }} · {{ row.productCode }}
+                  {{ formatStockNumber(row.stockNumber) }} · {{ row.productCode }}
                 </div>
               </div>
 
@@ -247,6 +247,10 @@
           >
             <template #[`header.attachment`]>
               <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+            </template>
+
+            <template #[`item.stockNumber`]="{ item }">
+              {{ formatStockNumber(item.stockNumber) }}
             </template>
 
             <template #[`item.attachment`]="{ item }">
@@ -394,6 +398,25 @@ const sortableColumns = computed(() =>
 )
 
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
+
+function formatStockNumber(stockNumber: string): string {
+  const normalized = String(stockNumber ?? '').trim()
+  if (!normalized) {
+    return ''
+  }
+
+  // Keep compatibility with both dashed and legacy compact formats from DB.
+  const compact = normalized.replace(/[^a-zA-Z0-9]/g, '')
+  if (compact.length >= 7) {
+    const customerCode = compact.slice(0, 3)
+    const categoryCode = compact.slice(3, 6)
+    const sequenceNumber = compact.slice(6)
+    return [customerCode, categoryCode, sequenceNumber].join('-')
+  }
+
+  const parsed = parseStockNumber(normalized)
+  return [parsed.customerCode, parsed.categoryCode, parsed.sequenceNumber].filter((part) => part).join('-') || normalized
+}
 
 const displayedRows = computed<StockDisplayRow[]>(() => {
   const key = sortKey.value as keyof StockProductListItem

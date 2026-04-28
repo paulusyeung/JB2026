@@ -1,0 +1,1 @@
+import{bt as m,bu as n,bv as u,l as c}from"./index-BrtXdEGj.js";import{u as F}from"./useLocaleFormatters-DZuYNKIU.js";function p(){const r=m(),{activeLocale:a}=F();return{currentFormat:c({get:()=>r.currentFormat,set:t=>r.setCurrentFormat(t)}),format:(t,e,s)=>{const o=s||a.value;return e?u(t,e,o):r.format(t,o)},setFormat:t=>{r.setCurrentFormat(t)},DATE_FORMATS:n}}export{p as u};
