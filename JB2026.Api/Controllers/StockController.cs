@@ -1,11 +1,12 @@
 using JB2026.Api.Models;
+using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Controllers;
 
@@ -16,20 +17,20 @@ public sealed class StockController : ControllerBase
 {
     private readonly JB5LegacyReadContext _readContext;
     private readonly ILogger<StockController> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly LegacyFilesOptions _legacyFiles;
     private readonly IStockProductPrintComposer _stockProductPrintComposer;
     private readonly IStockProductPdfRenderer _stockProductPdfRenderer;
 
     public StockController(
         JB5LegacyReadContext readContext,
         ILogger<StockController> logger,
-        IConfiguration configuration,
+        IOptions<LegacyFilesOptions> legacyFiles,
         IStockProductPrintComposer stockProductPrintComposer,
         IStockProductPdfRenderer stockProductPdfRenderer)
     {
         _readContext = readContext;
         _logger = logger;
-        _configuration = configuration;
+        _legacyFiles = legacyFiles.Value;
         _stockProductPrintComposer = stockProductPrintComposer;
         _stockProductPdfRenderer = stockProductPdfRenderer;
     }
@@ -276,7 +277,7 @@ public sealed class StockController : ControllerBase
             .Where(item => item.ProductId == product.ProductId)
             .ToListAsync(cancellationToken);
 
-        var productPictureRoot = _configuration["LegacyFiles:ProductPictureRoot"];
+        var productPictureRoot = _legacyFiles.ProductPictureRoot;
         if (!string.IsNullOrWhiteSpace(productPictureRoot) && !string.IsNullOrWhiteSpace(product.StockNumber))
         {
             foreach (var attachment in attachments)

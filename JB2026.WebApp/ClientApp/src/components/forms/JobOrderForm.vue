@@ -1,11 +1,23 @@
 <template>
   <v-form ref="formRef" @submit.prevent="handleSubmit">
-    <v-card>
-      <v-card-title class="pa-6 pb-2">
-        <h2 class="text-h5">{{ isNew ? t('jobForm.newTitle') : t('jobForm.editTitle') }}</h2>
-        <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
-          {{ t('jobForm.subtitle') }}
-        </p>
+    <v-card class="legacy-draggable-card" :style="cardStyle">
+      <v-card-title class="pa-6 pb-2 legacy-header">
+        <div class="legacy-title-row">
+          <div class="legacy-drag-handle" @pointerdown="startDrag">
+            <h2 class="text-h5">{{ isNew ? t('jobForm.newTitle') : t('jobForm.editTitle') }}</h2>
+            <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
+              {{ t('jobForm.subtitle') }}
+            </p>
+          </div>
+
+          <v-btn
+            icon="mdi-close"
+            size="small"
+            variant="text"
+            class="legacy-close-btn"
+            @click="emit('cancel')"
+          />
+        </div>
 
         <div class="legacy-toolbar mt-4">
           <v-btn variant="tonal" color="primary" :disabled="isNew" @click="handleAttachmentClick">
@@ -328,8 +340,13 @@ const legacyPrintingPaper = ref('')
 const legacyFinishingOutput = ref('')
 const legacyPackagingRequirement = ref('')
 const previewImageUrl = ref<string | null>(null)
+const dragOffset = ref({ x: 0, y: 0 })
+const dragPointer = ref<{ id: number; startX: number; startY: number; originX: number; originY: number } | null>(null)
 
 const isNew = computed(() => props.job === null)
+const cardStyle = computed(() => ({
+  transform: `translate(${dragOffset.value.x}px, ${dragOffset.value.y}px)`,
+}))
 
 const draft = ref<JobOrderFormData>(buildDraft(props.job))
 
@@ -357,6 +374,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  stopDrag()
   clearPreviewImage()
 })
 
@@ -544,6 +562,44 @@ function clearPreviewImage() {
   previewImageUrl.value = null
 }
 
+function startDrag(event: PointerEvent) {
+  if (event.button !== 0) {
+    return
+  }
+
+  dragPointer.value = {
+    id: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: dragOffset.value.x,
+    originY: dragOffset.value.y,
+  }
+
+  window.addEventListener('pointermove', handleDrag)
+  window.addEventListener('pointerup', stopDrag)
+}
+
+function handleDrag(event: PointerEvent) {
+  if (!dragPointer.value || event.pointerId !== dragPointer.value.id) {
+    return
+  }
+
+  dragOffset.value = {
+    x: dragPointer.value.originX + (event.clientX - dragPointer.value.startX),
+    y: dragPointer.value.originY + (event.clientY - dragPointer.value.startY),
+  }
+}
+
+function stopDrag(event?: PointerEvent) {
+  if (event && dragPointer.value && event.pointerId !== dragPointer.value.id) {
+    return
+  }
+
+  dragPointer.value = null
+  window.removeEventListener('pointermove', handleDrag)
+  window.removeEventListener('pointerup', stopDrag)
+}
+
 async function loadPreviewImage(job: JobDetail) {
   clearPreviewImage()
 
@@ -583,6 +639,32 @@ async function loadPreviewImage(job: JobDetail) {
 </script>
 
 <style scoped>
+.legacy-draggable-card {
+  transition: box-shadow 0.18s ease;
+  will-change: transform;
+}
+
+.legacy-header {
+  user-select: none;
+}
+
+.legacy-title-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.legacy-drag-handle {
+  flex: 1;
+  min-width: 0;
+  cursor: move;
+  touch-action: none;
+}
+
+.legacy-close-btn {
+  flex-shrink: 0;
+}
+
 .legacy-form-surface {
   background: #d9d9d9;
   color: #1f2328;

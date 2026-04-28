@@ -1,7 +1,9 @@
 using JB2026.Api.Models;
+using JB2026.Api.Options;
 using JB2026.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Controllers;
 
@@ -13,18 +15,18 @@ public sealed class JobsController : ControllerBase
     private readonly IJobManagementRepository _repository;
     private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly ILogger<JobsController> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly LegacyFilesOptions _legacyFiles;
 
     public JobsController(
         IJobManagementRepository repository,
         ICurrentUserProfileService currentUserProfileService,
         ILogger<JobsController> logger,
-        IConfiguration configuration)
+        IOptions<LegacyFilesOptions> legacyFiles)
     {
         _repository = repository;
         _currentUserProfileService = currentUserProfileService;
         _logger = logger;
-        _configuration = configuration;
+        _legacyFiles = legacyFiles.Value;
     }
 
     [HttpGet("range")]
@@ -186,8 +188,7 @@ public sealed class JobsController : ControllerBase
         var candidateFileNames = BuildPreviewFileNameCandidates(fileName);
         var normalizedAttachmentFolder = NormalizeFolderSegment(attachmentType);
 
-        var fileAgentRoot = _configuration["LegacyFiles:FileAgentRoot"];
-        foreach (var rootCandidate in ExpandRootCandidates(fileAgentRoot))
+        foreach (var rootCandidate in GetLegacyPreviewRoots())
         {
             var legacyOrderFolder = Path.Combine(rootCandidate, orderNumber);
             probes.Add(legacyOrderFolder);
@@ -202,7 +203,7 @@ public sealed class JobsController : ControllerBase
             }
         }
 
-        var cloudDiskRoot = _configuration["LegacyFiles:CloudDiskRoot"];
+        var cloudDiskRoot = _legacyFiles.CloudDiskRoot;
         foreach (var cloudRoot in ExpandRootCandidates(cloudDiskRoot))
         {
             probes.Add(Path.Combine(cloudRoot, "uploads", orderId.ToString("N")));
@@ -239,6 +240,21 @@ public sealed class JobsController : ControllerBase
         }
 
         return null;
+    }
+
+    private IReadOnlyList<string> GetLegacyPreviewRoots()
+    {
+        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var configuredRoot in new[] { _legacyFiles.FileAgentRoot, _legacyFiles.InBox })
+        {
+            foreach (var expandedRoot in ExpandRootCandidates(configuredRoot))
+            {
+                roots.Add(expandedRoot);
+            }
+        }
+
+        return roots.ToList();
     }
 
     private static IReadOnlyList<string> BuildPreviewFileNameCandidates(string fileName)
