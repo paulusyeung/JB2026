@@ -3,6 +3,8 @@ using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +21,7 @@ public sealed class StockController : ControllerBase
     private const long MaxUploadBytes = 25 * 1024 * 1024;
 
     private readonly JB5LegacyReadContext _readContext;
+    private readonly JB5LegacyWriteContext _writeContext;
     private readonly ILogger<StockController> _logger;
     private readonly LegacyFilesOptions _legacyFiles;
     private readonly IStockProductPrintComposer _stockProductPrintComposer;
@@ -27,6 +30,7 @@ public sealed class StockController : ControllerBase
 
     public StockController(
         JB5LegacyReadContext readContext,
+        JB5LegacyWriteContext writeContext,
         ILogger<StockController> logger,
         IOptions<LegacyFilesOptions> legacyFiles,
         IStockProductPrintComposer stockProductPrintComposer,
@@ -34,6 +38,7 @@ public sealed class StockController : ControllerBase
         IProductAttachmentStoredProcedureGateway? productAttachmentGateway = null)
     {
         _readContext = readContext;
+        _writeContext = writeContext;
         _logger = logger;
         _legacyFiles = legacyFiles.Value;
         _stockProductPrintComposer = stockProductPrintComposer;
@@ -714,7 +719,7 @@ public sealed class StockController : ControllerBase
             }));
         }
 
-        var product = await _readContext.Products
+        var product = await _writeContext.Products
             .FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
 
         if (product is null)
@@ -738,12 +743,12 @@ public sealed class StockController : ControllerBase
             ModifiedBy = actor,
         };
 
-        _readContext.StockInOuts.Add(transaction);
+        _writeContext.StockInOuts.Add(transaction);
         product.Balance += request.Qty;
         product.ModifiedOn = now;
         product.ModifiedBy = actor;
 
-        await _readContext.SaveChangesAsync(cancellationToken);
+        await _writeContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Stock in/out transaction {InOutId} created for product {ProductId} with qty {Qty}, new balance {Balance}",
@@ -1038,13 +1043,23 @@ public sealed class StockController : ControllerBase
 
     private Guid GetActorGuid()
     {
-        var raw = User?.Identity?.Name;
-        if (!string.IsNullOrWhiteSpace(raw) && Guid.TryParse(raw, out var userId))
+        var claimCandidates = new[]
         {
-            return userId;
+            User?.FindFirstValue(ClaimTypes.NameIdentifier),
+            User?.FindFirstValue(JwtRegisteredClaimNames.Sub),
+            User?.Identity?.Name,
+        };
+
+        foreach (var raw in claimCandidates)
+        {
+            if (!string.IsNullOrWhiteSpace(raw) && Guid.TryParse(raw, out var userId))
+            {
+                return userId;
+            }
         }
 
-        return Guid.NewGuid();
+        _logger.LogWarning("Unable to resolve actor GUID from authenticated user claims. Using Guid.Empty for audit fields.");
+        return Guid.Empty;
     }
 
 }

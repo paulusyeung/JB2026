@@ -83,6 +83,24 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-dialog v-model="showSaveConfirm" max-width="460">
+    <v-card>
+      <v-card-title>{{ t('stock.stockInOut.title') }}</v-card-title>
+      <v-card-text>
+        {{ pendingCloseAfterSave ? t('stock.stockInOut.confirmSaveClose') : t('stock.stockInOut.confirmSave') }}
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="showSaveConfirm = false">
+          {{ t('common.cancel') }}
+        </v-btn>
+        <v-btn color="primary" variant="flat" :loading="saving" @click="confirmSave">
+          {{ t('stock.stockInOut.save') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -108,6 +126,8 @@ const { t } = useI18n({ useScope: 'global' })
 const qtyField = ref()
 const saving = ref(false)
 const errorMessage = ref('')
+const showSaveConfirm = ref(false)
+const pendingCloseAfterSave = ref(false)
 
 const form = reactive({
   inOutDate: '',
@@ -186,12 +206,17 @@ async function save(closeAfterSave: boolean) {
     return
   }
 
-  const confirmed = window.confirm(
-    closeAfterSave ? t('stock.stockInOut.confirmSaveClose') : t('stock.stockInOut.confirmSave'),
-  )
-  if (!confirmed) {
+  pendingCloseAfterSave.value = closeAfterSave
+  showSaveConfirm.value = true
+}
+
+async function confirmSave() {
+  if (!props.productId) {
+    showSaveConfirm.value = false
     return
   }
+
+  showSaveConfirm.value = false
 
   saving.value = true
   errorMessage.value = ''
@@ -204,7 +229,8 @@ async function save(closeAfterSave: boolean) {
 
     emit('saved', result)
 
-    if (closeAfterSave) {
+    if (pendingCloseAfterSave.value) {
+      await nextTick()
       closeDialog()
     } else {
       form.qty = ''
