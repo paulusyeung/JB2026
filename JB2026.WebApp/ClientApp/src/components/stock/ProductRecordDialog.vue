@@ -209,7 +209,7 @@
       <v-divider />
 
       <v-card-actions class="toolbar-actions">
-        <v-btn variant="outlined" prepend-icon="mdi-paperclip" @click="showGatedAction('stock.actions.attachment')">
+        <v-btn variant="outlined" prepend-icon="mdi-paperclip" :disabled="!isEditMode" @click="openAttachmentDialog">
           {{ t('stock.actions.attachment') }}
         </v-btn>
         <v-btn variant="outlined" prepend-icon="mdi-swap-horizontal" :disabled="!isEditMode" @click="openStockInOutDialog">
@@ -251,12 +251,21 @@
     :stock-number="composedStockNumber"
     @saved="onStockInOutSaved"
   />
+
+  <stock-attachment-dialog
+    v-model="stockAttachmentDialogOpen"
+    :product-id="currentProductId"
+    :stock-number="composedStockNumber"
+    :can-delete="canDeleteAttachments"
+    @changed="onAttachmentChanged"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { useSessionStore } from '@/stores/session'
 import {
   createProductRecord,
   deleteProductRecord,
@@ -268,6 +277,7 @@ import {
   validateProductCodeUniqueness,
 } from '@/services/stock'
 import StockInOutDialog from '@/components/stock/StockInOutDialog.vue'
+import StockAttachmentDialog from '@/components/stock/StockAttachmentDialog.vue'
 import type { StockInOutTransactionResult, StockProductMovementHistoryItem, StockProductRecordUpsertRequest } from '@/types/api'
 
 type ProductRecordMode = 'create' | 'edit'
@@ -290,6 +300,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' })
 const { format } = useGlobalDateFormatter()
+const sessionStore = useSessionStore()
 
 const customerCodeField = ref()
 const loading = ref(false)
@@ -303,6 +314,7 @@ const infoMessage = ref('')
 const movementRows = ref<MovementHistoryRow[]>([])
 const movementSortBy = ref([{ key: 'inOutDate', order: 'desc' as const }])
 const stockInOutDialogOpen = ref(false)
+const stockAttachmentDialogOpen = ref(false)
 
 const currentMode = ref<ProductRecordMode>('create')
 const currentProductId = ref<string | null>(null)
@@ -330,6 +342,11 @@ const errors = reactive<Record<string, string[]>>({
 })
 
 const isEditMode = computed(() => currentMode.value === 'edit' && !!currentProductId.value)
+const canDeleteAttachments = computed(() => {
+  const rawRole = sessionStore.profile?.role
+  const normalizedRole = typeof rawRole === 'number' ? rawRole.toString() : String(rawRole ?? '').toLowerCase().trim()
+  return normalizedRole === 'admin' || normalizedRole === '4'
+})
 
 const composedStockNumber = computed(() => {
   const customer = form.customerCode.trim()
@@ -622,6 +639,24 @@ function openStockInOutDialog() {
     return
   }
   stockInOutDialogOpen.value = true
+}
+
+function openAttachmentDialog() {
+  if (!isEditMode.value || !currentProductId.value) {
+    errorMessage.value = t('stock.attachments.errors.selectSingleProduct')
+    return
+  }
+
+  stockAttachmentDialogOpen.value = true
+}
+
+async function onAttachmentChanged() {
+  if (!currentProductId.value) {
+    return
+  }
+
+  await loadExistingRecord(currentProductId.value)
+  emit('saved', currentProductId.value)
 }
 
 async function printRecord() {

@@ -105,7 +105,7 @@
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="showUnavailable('stock.actions.attachment')">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="openStockAttachmentDialog">
               {{ t('stock.actions.attachment') }}
             </v-btn>
 
@@ -157,7 +157,7 @@
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
                 <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-paperclip" @click="showUnavailable('stock.actions.attachment')">
+              <v-list-item prepend-icon="mdi-paperclip" @click="openStockAttachmentDialog">
                 <v-list-item-title>{{ t('stock.actions.attachment') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click="exportToCsv">
@@ -299,6 +299,14 @@
       :stock-number="stockInOutStockNumber"
       @saved="onStockInOutSaved"
     />
+
+    <stock-attachment-dialog
+      v-model="stockAttachmentDialogOpen"
+      :product-id="stockAttachmentProductId"
+      :stock-number="stockAttachmentStockNumber"
+      :can-delete="canDeleteAttachments"
+      @changed="onAttachmentChanged"
+    />
   </section>
 </template>
 
@@ -310,8 +318,10 @@ import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getStockProducts, parseStockNumber, deleteProductRecord } from '@/services/stock'
+import { useSessionStore } from '@/stores/session'
 import ProductRecordDialog from '@/components/stock/ProductRecordDialog.vue'
 import StockInOutDialog from '@/components/stock/StockInOutDialog.vue'
+import StockAttachmentDialog from '@/components/stock/StockAttachmentDialog.vue'
 import type { StockInOutTransactionResult, StockProductListItem } from '@/types/api'
 
 type StockDisplayRow = StockProductListItem & {
@@ -331,10 +341,16 @@ const selectedIds = ref<string[]>([])
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatCurrency, formatNumber } = useLocaleFormatters()
+const sessionStore = useSessionStore()
 const theme = useTheme()
 const display = useDisplay()
 const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
+const canDeleteAttachments = computed(() => {
+  const rawRole = sessionStore.profile?.role
+  const normalizedRole = typeof rawRole === 'number' ? rawRole.toString() : String(rawRole ?? '').toLowerCase().trim()
+  return normalizedRole === 'admin' || normalizedRole === '4'
+})
 
 const defaultColumnKeys = [
   'ln',
@@ -370,6 +386,9 @@ const activeProductId = ref<string | null>(null)
 const stockInOutDialogOpen = ref(false)
 const stockInOutProductId = ref<string | null>(null)
 const stockInOutStockNumber = ref('')
+const stockAttachmentDialogOpen = ref(false)
+const stockAttachmentProductId = ref<string | null>(null)
+const stockAttachmentStockNumber = ref('')
 const detailViewLabel = computed(() => t('stock.actions.detailView'))
 const cardViewLabel = computed(() => t('stock.actions.cardView'))
 const isCardView = computed(() => viewMode.value === 'card')
@@ -558,6 +577,27 @@ function openStockInOutDialog() {
   stockInOutProductId.value = productId ?? null
   stockInOutStockNumber.value = row.stockNumber
   stockInOutDialogOpen.value = true
+}
+
+function openStockAttachmentDialog() {
+  if (selectedIds.value.length !== 1) {
+    errorMessage.value = t('stock.attachments.errors.selectSingleProduct')
+    return
+  }
+
+  const productId = selectedIds.value[0]
+  const row = rows.value.find((item) => item.productId === productId)
+  if (!row) {
+    return
+  }
+
+  stockAttachmentProductId.value = productId
+  stockAttachmentStockNumber.value = formatStockNumber(row.stockNumber)
+  stockAttachmentDialogOpen.value = true
+}
+
+async function onAttachmentChanged() {
+  await load()
 }
 
 async function onStockInOutSaved(_result: StockInOutTransactionResult) {

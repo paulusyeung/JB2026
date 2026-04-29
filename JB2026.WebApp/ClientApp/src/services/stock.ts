@@ -1,5 +1,7 @@
 import { apiClient } from './api'
 import type {
+  StockProductAttachment,
+  StockProductAttachmentDeleteResult,
   StockInOutTransactionRequest,
   StockInOutTransactionResult,
   StockProductCodeValidationResponse,
@@ -92,6 +94,45 @@ export async function createStockInOutTransaction(
   return response.data
 }
 
+export async function getProductAttachments(productId: string): Promise<StockProductAttachment[]> {
+  const response = await apiClient.get<StockProductAttachment[]>(`/api/v2/stock/products/${productId}/attachments`)
+  return response.data
+}
+
+export async function uploadProductAttachments(productId: string, files: File[]): Promise<StockProductAttachment[]> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('files', file)
+  }
+
+  const response = await apiClient.post<StockProductAttachment[]>(
+    `/api/v2/stock/products/${productId}/attachments`,
+    formData,
+  )
+
+  return response.data
+}
+
+export async function deleteProductAttachments(productId: string, attachmentIds: string[]): Promise<StockProductAttachmentDeleteResult> {
+  const response = await apiClient.delete<StockProductAttachmentDeleteResult>(`/api/v2/stock/products/${productId}/attachments`, {
+    data: {
+      attachmentIds,
+    },
+  })
+  return response.data
+}
+
+export async function getProductAttachmentBlob(productId: string, attachmentId: string, inline = false): Promise<Blob> {
+  const response = await apiClient.get(`/api/v2/stock/products/${productId}/attachments/${attachmentId}`, {
+    params: {
+      inline,
+    },
+    responseType: 'blob',
+  })
+
+  return response.data as Blob
+}
+
 export function mapStockInOutError(error: unknown): string {
   if (error && typeof error === 'object' && 'response' in error) {
     const response = (error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } }).response
@@ -150,4 +191,33 @@ export function parseStockNumber(stockNumber: string): { customerCode: string; c
     categoryCode: '',
     sequenceNumber: normalized,
   }
+}
+
+export function mapStockAttachmentError(error: unknown): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } }).response
+    if (response?.status === 400 && response.data?.errors) {
+      const messages = Object.values(response.data.errors).flat()
+      if (messages.length > 0) {
+        const message = messages[0] ?? ''
+        if (message.toLowerCase().includes('25mb')) {
+          return 'stock.attachments.errors.fileTooLarge'
+        }
+        return 'stock.attachments.errors.validationFailed'
+      }
+    }
+
+    if (response?.status === 404) {
+      return 'stock.attachments.errors.productNotFound'
+    }
+
+    if (response?.status) {
+      const detail = (response.data as { detail?: string; title?: string })?.detail
+        ?? (response.data as { detail?: string; title?: string })?.title
+        ?? JSON.stringify(response.data).slice(0, 200)
+      return `stock.attachments.errors.generalFailure (HTTP ${response.status}: ${detail})`
+    }
+  }
+
+  return 'stock.attachments.errors.generalFailure'
 }

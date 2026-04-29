@@ -114,3 +114,34 @@ public sealed class StockProductDeleteResult
     /// <summary>Lifecycle outcome: "retired" or "hardDeleted".</summary>
     public required string Outcome { get; init; }
 }
+
+public sealed class StockProductAttachmentListItemResponse
+{
+    public required Guid AttachmentId { get; init; }
+
+    public required Guid ProductId { get; init; }
+
+    public required int AttachmentIndex { get; init; }
+
+    public required string FileName { get; init; }
+
+    public required string FileExtension { get; init; }
+
+    public required long FileSizeBytes { get; init; }
+
+    public required bool ExistsOnDisk { get; init; }
+}
+
+public sealed class StockProductAttachmentDeleteRequest
+{
+    public required IReadOnlyList<Guid> AttachmentIds { get; init; }
+}
+
+public sealed class StockProductAttachmentDeleteResult
+{
+    public required Guid ProductId { get; init; }
+
+    public required int RequestedCount { get; init; }
+
+    public required int DeletedCount { get; init; }
+}

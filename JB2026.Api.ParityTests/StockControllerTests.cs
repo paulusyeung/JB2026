@@ -1,12 +1,12 @@
 using JB2026.Api.Controllers;
 using JB2026.Api.Models;
+using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace JB2026.Api.ParityTests;
@@ -24,10 +24,10 @@ public sealed class StockControllerTests
 
     private static StockController CreateController(JB5LegacyReadContext context)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        var options = Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions());
         var composer = new StockProductPrintComposer(context);
         var renderer = new StockProductPdfRenderer();
-        var controller = new StockController(context, NullLogger<StockController>.Instance, configuration, composer, renderer);
+        var controller = new StockController(context, NullLogger<StockController>.Instance, options, composer, renderer);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -207,10 +207,161 @@ public sealed class StockControllerTests
         Assert.Equal("CUS-CAT-0002", updatedBody.StockNumber);
 
         var deleteResult = await controller.DeleteProductRecord(createdBody.ProductId, CancellationToken.None);
-        Assert.IsType<NoContentResult>(deleteResult);
+        var deleteOk = Assert.IsType<OkObjectResult>(deleteResult.Result);
+        var deleteBody = Assert.IsType<StockProductDeleteResult>(deleteOk.Value);
+        Assert.Equal("retired", deleteBody.Outcome);
 
         var getAfterDelete = await controller.GetProductRecord(createdBody.ProductId, CancellationToken.None);
         Assert.IsType<NotFoundResult>(getAfterDelete.Result);
+    }
+
+    [Fact]
+    public async Task ProductAttachmentEndpoints_ListUploadDownloadDelete_WorkEndToEnd()
+    {
+        using var context = CreateContext(nameof(ProductAttachmentEndpoints_ListUploadDownloadDelete_WorkEndToEnd));
+        var tempRoot = Path.Combine(Path.GetTempPath(), "jb2026-stock-attachments", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var product = new Product
+            {
+                ProductId = Guid.NewGuid(),
+                ProductCode = "P-ATTACH-001",
+                ProductName = "Attachment Product",
+                StockNumber = "CUS-CAT-0001",
+                Balance = 0,
+                SellingPrice = 1,
+                COGS = 1,
+                MOQ = 1,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false,
+            };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+
+            var options = Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions
+            {
+                ProductPictureRoot = tempRoot
+            });
+
+            var controller = new StockController(
+                context,
+                NullLogger<StockController>.Instance,
+                options,
+                new StockProductPrintComposer(context),
+                new StockProductPdfRenderer());
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            };
+
+            var payload = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("hello-attachment"));
+            var formFile = new FormFile(payload, 0, payload.Length, "files", "demo-image.png")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/png"
+            };
+
+            var uploadResult = await controller.UploadProductAttachments(product.ProductId, [formFile], CancellationToken.None);
+            var uploadCreated = Assert.IsType<CreatedAtActionResult>(uploadResult.Result);
+            var uploadedItems = Assert.IsAssignableFrom<IReadOnlyList<StockProductAttachmentListItemResponse>>(uploadCreated.Value);
+            var uploaded = Assert.Single(uploadedItems);
+            Assert.Equal(product.ProductId, uploaded.ProductId);
+            Assert.True(uploaded.ExistsOnDisk);
+
+            var listResult = await controller.GetProductAttachments(product.ProductId, CancellationToken.None);
+            var listOk = Assert.IsType<OkObjectResult>(listResult.Result);
+            var listItems = Assert.IsAssignableFrom<IReadOnlyList<StockProductAttachmentListItemResponse>>(listOk.Value);
+            Assert.Single(listItems);
+
+            var downloadResult = await controller.DownloadProductAttachment(product.ProductId, uploaded.AttachmentId, inline: true, CancellationToken.None);
+            var physical = Assert.IsType<PhysicalFileResult>(downloadResult);
+            Assert.Equal("image/png", physical.ContentType);
+
+            var deleteResult = await controller.DeleteProductAttachments(
+                product.ProductId,
+                new StockProductAttachmentDeleteRequest
+                {
+                    AttachmentIds = [uploaded.AttachmentId]
+                },
+                CancellationToken.None);
+
+            var deleteOk = Assert.IsType<OkObjectResult>(deleteResult.Result);
+            var deleteBody = Assert.IsType<StockProductAttachmentDeleteResult>(deleteOk.Value);
+            Assert.Equal(1, deleteBody.RequestedCount);
+            Assert.Equal(1, deleteBody.DeletedCount);
+
+            var listAfterDeleteResult = await controller.GetProductAttachments(product.ProductId, CancellationToken.None);
+            var listAfterDeleteOk = Assert.IsType<OkObjectResult>(listAfterDeleteResult.Result);
+            var listAfterDeleteItems = Assert.IsAssignableFrom<IReadOnlyList<StockProductAttachmentListItemResponse>>(listAfterDeleteOk.Value);
+            Assert.Empty(listAfterDeleteItems);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task UploadProductAttachments_RejectsOversizedFile()
+    {
+        using var context = CreateContext(nameof(UploadProductAttachments_RejectsOversizedFile));
+        var product = new Product
+        {
+            ProductId = Guid.NewGuid(),
+            ProductCode = "P-ATTACH-002",
+            ProductName = "Attachment Product",
+            StockNumber = "CUS-CAT-0002",
+            Balance = 0,
+            SellingPrice = 1,
+            COGS = 1,
+            MOQ = 1,
+            CreatedOn = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+            ModifiedOn = DateTime.UtcNow,
+            ModifiedBy = Guid.NewGuid(),
+            Retired = false,
+        };
+        context.Products.Add(product);
+        await context.SaveChangesAsync();
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), "jb2026-stock-attachments", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var options = Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions
+            {
+                ProductPictureRoot = tempRoot
+            });
+
+            var controller = new StockController(
+                context,
+                NullLogger<StockController>.Instance,
+                options,
+                new StockProductPrintComposer(context),
+                new StockProductPdfRenderer());
+
+            var stream = new MemoryStream(new byte[26 * 1024 * 1024]);
+            var file = new FormFile(stream, 0, stream.Length, "files", "too-large.bin");
+
+            var result = await controller.UploadProductAttachments(product.ProductId, [file], CancellationToken.None);
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+            Assert.IsType<ValidationProblemDetails>(badRequest.Value);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
     }
 
     [Fact]

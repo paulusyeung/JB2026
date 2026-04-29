@@ -454,6 +454,26 @@ export interface StockProductDeleteResult {
   outcome: 'retired' | 'hardDeleted'
 }
 
+export interface StockProductAttachment {
+  attachmentId: string
+  productId: string
+  attachmentIndex: number
+  fileName: string
+  fileExtension: string
+  fileSizeBytes: number
+  existsOnDisk: boolean
+}
+
+export interface StockProductAttachmentDeleteRequest {
+  attachmentIds: string[]
+}
+
+export interface StockProductAttachmentDeleteResult {
+  productId: string
+  requestedCount: number
+  deletedCount: number
+}
+
 export interface RunReportRequest {
   reportName: string
   startOn: string

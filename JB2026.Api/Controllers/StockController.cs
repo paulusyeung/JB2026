@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace JB2026.Api.Controllers;
 
@@ -15,24 +16,331 @@ namespace JB2026.Api.Controllers;
 [Route("api/v2/stock")]
 public sealed class StockController : ControllerBase
 {
+    private const long MaxUploadBytes = 25 * 1024 * 1024;
+
     private readonly JB5LegacyReadContext _readContext;
     private readonly ILogger<StockController> _logger;
     private readonly LegacyFilesOptions _legacyFiles;
     private readonly IStockProductPrintComposer _stockProductPrintComposer;
     private readonly IStockProductPdfRenderer _stockProductPdfRenderer;
+    private readonly IProductAttachmentStoredProcedureGateway? _productAttachmentGateway;
 
     public StockController(
         JB5LegacyReadContext readContext,
         ILogger<StockController> logger,
         IOptions<LegacyFilesOptions> legacyFiles,
         IStockProductPrintComposer stockProductPrintComposer,
-        IStockProductPdfRenderer stockProductPdfRenderer)
+        IStockProductPdfRenderer stockProductPdfRenderer,
+        IProductAttachmentStoredProcedureGateway? productAttachmentGateway = null)
     {
         _readContext = readContext;
         _logger = logger;
         _legacyFiles = legacyFiles.Value;
         _stockProductPrintComposer = stockProductPrintComposer;
         _stockProductPdfRenderer = stockProductPdfRenderer;
+        _productAttachmentGateway = productAttachmentGateway;
+    }
+
+    [HttpGet("products/{id:guid}/attachments")]
+    [ProducesResponseType(typeof(IReadOnlyList<StockProductAttachmentListItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<StockProductAttachmentListItemResponse>>> GetProductAttachments(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var product = await _readContext.Products
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
+
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        var attachments = await _readContext.ProductAttachments
+            .AsNoTracking()
+            .Where(item => item.ProductId == id)
+            .OrderBy(item => item.AttachmentIndex)
+            .ThenBy(item => item.OriginalFileName)
+            .Select(item => new
+            {
+                item.AttachmentId,
+                item.ProductId,
+                item.AttachmentIndex,
+                FileName = item.OriginalFileName ?? string.Empty
+            })
+            .ToListAsync(cancellationToken);
+
+        var result = attachments.Select(item =>
+        {
+            var path = ResolveProductAttachmentPath(product.StockNumber, item.FileName);
+            var exists = !string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path);
+            var size = exists ? new FileInfo(path!).Length : 0;
+
+            return new StockProductAttachmentListItemResponse
+            {
+                AttachmentId = item.AttachmentId,
+                ProductId = item.ProductId,
+                AttachmentIndex = item.AttachmentIndex,
+                FileName = item.FileName,
+                FileExtension = Path.GetExtension(item.FileName) ?? string.Empty,
+                FileSizeBytes = size,
+                ExistsOnDisk = exists
+            };
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpPost("products/{id:guid}/attachments")]
+    [ProducesResponseType(typeof(IReadOnlyList<StockProductAttachmentListItemResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [RequestSizeLimit(MaxUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
+    public async Task<ActionResult<IReadOnlyList<StockProductAttachmentListItemResponse>>> UploadProductAttachments(
+        Guid id,
+        [FromForm] List<IFormFile> files,
+        CancellationToken cancellationToken = default)
+    {
+        var product = await _readContext.Products
+            .FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
+
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        if (files.Count == 0)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(files)] = ["At least one file is required."]
+            }));
+        }
+
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+            {
+                return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [nameof(files)] = [$"File '{file.FileName}' is empty."]
+                }));
+            }
+
+            if (file.Length > MaxUploadBytes)
+            {
+                return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [nameof(files)] = [$"File '{file.FileName}' exceeds the 25MB upload limit."]
+                }));
+            }
+        }
+
+        var productDir = EnsureProductAttachmentDirectory(product.StockNumber);
+        if (string.IsNullOrWhiteSpace(productDir))
+        {
+            return Problem(
+                title: "Attachment storage unavailable",
+                detail: "Legacy file storage path for product attachments is not configured.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        var nextIndex = await _readContext.ProductAttachments
+            .Where(item => item.ProductId == id)
+            .Select(item => (int?)item.AttachmentIndex)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var now = DateTime.UtcNow;
+        var actor = GetActorGuid();
+        var uploaded = new List<StockProductAttachmentListItemResponse>();
+
+        foreach (var file in files)
+        {
+            var safeOriginal = Path.GetFileName(file.FileName);
+            var fileName = EnsureUniqueAttachmentFileName(productDir, safeOriginal);
+            var fullPath = Path.Combine(productDir, fileName);
+
+            await using (var stream = System.IO.File.Create(fullPath))
+            {
+                await file.CopyToAsync(stream, cancellationToken);
+            }
+
+            var entity = new ProductAttachment
+            {
+                AttachmentId = Guid.NewGuid(),
+                ProductId = id,
+                AttachmentIndex = ++nextIndex,
+                OriginalFileName = fileName
+            };
+
+            _readContext.ProductAttachments.Add(entity);
+            product.ModifiedOn = now;
+            product.ModifiedBy = actor;
+
+            uploaded.Add(new StockProductAttachmentListItemResponse
+            {
+                AttachmentId = entity.AttachmentId,
+                ProductId = id,
+                AttachmentIndex = entity.AttachmentIndex,
+                FileName = fileName,
+                FileExtension = Path.GetExtension(fileName) ?? string.Empty,
+                FileSizeBytes = file.Length,
+                ExistsOnDisk = true
+            });
+        }
+
+        await _readContext.SaveChangesAsync(cancellationToken);
+        return CreatedAtAction(nameof(GetProductAttachments), new { id }, uploaded);
+    }
+
+    [HttpDelete("products/{id:guid}/attachments")]
+    [ProducesResponseType(typeof(StockProductAttachmentDeleteResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<StockProductAttachmentDeleteResult>> DeleteProductAttachments(
+        Guid id,
+        [FromBody] StockProductAttachmentDeleteRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (request?.AttachmentIds is null || request.AttachmentIds.Count == 0)
+            {
+                return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [nameof(request.AttachmentIds)] = ["At least one attachment id is required."]
+                }));
+            }
+
+            var product = await _readContext.Products
+                .FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
+
+            if (product is null)
+            {
+                return NotFound();
+            }
+
+            var requestedIds = request.AttachmentIds.Distinct().ToList();
+            var requestedIdSet = requestedIds.ToHashSet();
+            var productAttachments = await _readContext.ProductAttachments
+                .Where(item => item.ProductId == id)
+                .ToListAsync(cancellationToken);
+            var attachments = productAttachments
+                .Where(item => requestedIdSet.Contains(item.AttachmentId))
+                .ToList();
+
+            var deletedCount = 0;
+            var needsEfSave = false;
+            foreach (var attachment in attachments)
+            {
+                var path = ResolveProductAttachmentPath(product.StockNumber, attachment.OriginalFileName ?? string.Empty);
+                if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Failed to delete physical file {FilePath} for product {ProductId} attachment {AttachmentId}",
+                            path,
+                            id,
+                            attachment.AttachmentId);
+                    }
+                }
+
+                var deletedInDb = false;
+                if (_productAttachmentGateway is not null)
+                {
+                    try
+                    {
+                        await _productAttachmentGateway.DeleteAsync(attachment.AttachmentId, cancellationToken);
+                        deletedInDb = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Stored procedure delete failed for product {ProductId} attachment {AttachmentId}; falling back to EF delete.",
+                            id,
+                            attachment.AttachmentId);
+                    }
+                }
+
+                if (!deletedInDb)
+                {
+                    _readContext.ProductAttachments.Remove(attachment);
+                    needsEfSave = true;
+                }
+
+                deletedCount++;
+            }
+
+            if (needsEfSave)
+            {
+                await _readContext.SaveChangesAsync(cancellationToken);
+            }
+
+            return Ok(new StockProductAttachmentDeleteResult
+            {
+                ProductId = id,
+                RequestedCount = requestedIds.Count,
+                DeletedCount = deletedCount
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete product attachments for product {ProductId}", id);
+            var detail = ex.GetBaseException().Message;
+            return Problem(
+                title: "Unable to delete product attachments",
+                detail: detail,
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpGet("products/{id:guid}/attachments/{attachmentId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadProductAttachment(
+        Guid id,
+        Guid attachmentId,
+        [FromQuery] bool inline = false,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await (
+            from product in _readContext.Products.AsNoTracking()
+            join attachment in _readContext.ProductAttachments.AsNoTracking()
+                on product.ProductId equals attachment.ProductId
+            where product.ProductId == id && !product.Retired && attachment.AttachmentId == attachmentId
+            select new
+            {
+                product.StockNumber,
+                FileName = attachment.OriginalFileName ?? string.Empty
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        var path = ResolveProductAttachmentPath(record.StockNumber, record.FileName);
+        if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+        {
+            return NotFound();
+        }
+
+        var contentType = GetContentType(path);
+        if (inline)
+        {
+            Response.Headers.ContentDisposition = $"inline; filename=\"{record.FileName}\"";
+            return PhysicalFile(path, contentType);
+        }
+
+        return PhysicalFile(path, contentType, record.FileName);
     }
 
     [HttpGet("products/{id:guid}/print")]
@@ -325,6 +633,63 @@ public sealed class StockController : ControllerBase
         _logger.LogInformation(
             "Product {ProductId} hard-deleted: {MovementCount} stock movements and {AttachmentCount} attachments removed",
             product.ProductId, stockMovements.Count, attachments.Count);
+    }
+
+    private string EnsureUniqueAttachmentFileName(string productDir, string fileName)
+    {
+        var safeBase = Path.GetFileNameWithoutExtension(fileName);
+        if (string.IsNullOrWhiteSpace(safeBase))
+        {
+            safeBase = "attachment";
+        }
+
+        var extension = Path.GetExtension(fileName);
+        var candidate = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            candidate = $"{safeBase}{extension}";
+        }
+
+        var counter = 1;
+        while (System.IO.File.Exists(Path.Combine(productDir, candidate)))
+        {
+            candidate = $"{safeBase} ({counter}){extension}";
+            counter++;
+        }
+
+        return candidate;
+    }
+
+    private string? EnsureProductAttachmentDirectory(string? stockNumber)
+    {
+        if (string.IsNullOrWhiteSpace(_legacyFiles.ProductPictureRoot) || string.IsNullOrWhiteSpace(stockNumber))
+        {
+            return null;
+        }
+
+        var productDir = Path.Combine(_legacyFiles.ProductPictureRoot, stockNumber);
+        Directory.CreateDirectory(productDir);
+        return productDir;
+    }
+
+    private string? ResolveProductAttachmentPath(string? stockNumber, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(_legacyFiles.ProductPictureRoot)
+            || string.IsNullOrWhiteSpace(stockNumber)
+            || string.IsNullOrWhiteSpace(fileName))
+        {
+            return null;
+        }
+
+        return Path.Combine(_legacyFiles.ProductPictureRoot, stockNumber, Path.GetFileName(fileName));
+    }
+
+    private static string GetContentType(string filePath)
+    {
+        var provider = new FileExtensionContentTypeProvider();
+        return provider.TryGetContentType(filePath, out var contentType)
+            ? contentType
+            : "application/octet-stream";
     }
 
     [HttpPost("products/{id:guid}/transactions")]
