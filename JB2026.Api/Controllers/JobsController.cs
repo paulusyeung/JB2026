@@ -125,8 +125,9 @@ public sealed class JobsController : ControllerBase
             }
         }
 
+        const int attachmentType = 0;
         var baseOrderNumber = ExtractBaseOrderNumber(job.OrderNumber);
-        var attachmentDir = EnsureJobAttachmentDirectory(baseOrderNumber);
+        var attachmentDir = EnsureJobAttachmentDirectory(baseOrderNumber, attachmentType);
         if (string.IsNullOrWhiteSpace(attachmentDir))
         {
             return Problem(
@@ -135,10 +136,11 @@ public sealed class JobsController : ControllerBase
                 statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        var nextIndex = await _readContext.JobAttachments
+        var maxIndex = await _readContext.JobAttachments
             .Where(attachment => attachment.OrderId == id)
             .Select(attachment => (int?)attachment.AttachmentIndex)
-            .MaxAsync(cancellationToken) ?? 0;
+            .MaxAsync(cancellationToken);
+        var nextIndex = maxIndex.HasValue ? maxIndex.Value + 1 : 0;
 
         foreach (var file in files)
         {
@@ -153,8 +155,8 @@ public sealed class JobsController : ControllerBase
 
             await _jobAttachmentGateway.InsertAsync(new CreateJobAttachmentStoredProcedureRequest(
                 OrderId: id,
-                AttachmentType: 0,
-                AttachmentIndex: ++nextIndex,
+                AttachmentType: attachmentType,
+                AttachmentIndex: nextIndex++,
                 OriginalFileName: fileName),
                 cancellationToken);
         }
@@ -362,7 +364,7 @@ public sealed class JobsController : ControllerBase
         return candidate;
     }
 
-    private string? EnsureJobAttachmentDirectory(string orderNumber)
+    private string? EnsureJobAttachmentDirectory(string orderNumber, int? attachmentType = null)
     {
         if (string.IsNullOrWhiteSpace(orderNumber))
         {
@@ -382,6 +384,11 @@ public sealed class JobsController : ControllerBase
         }
 
         var attachmentDir = Path.Combine(root, orderNumber);
+        if (attachmentType.HasValue)
+        {
+            attachmentDir = Path.Combine(attachmentDir, attachmentType.Value.ToString());
+        }
+
         Directory.CreateDirectory(attachmentDir);
         return attachmentDir;
     }
