@@ -97,11 +97,23 @@
               {{ t('jobOrder.jobList.actions.checkbox') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
-              {{ t('jobOrder.jobList.actions.popup') }}
-            </v-btn>
+            <v-menu location="bottom">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                  {{ t('jobOrder.jobList.actions.views') }}
+                </v-btn>
+              </template>
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                  <v-list-item-title>{{ detailViewLabel }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                  <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
 
-          <v-divider vertical class="mx-1" />
+            <v-divider vertical class="mx-1" />
 
             <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
               {{ t('jobOrder.jobList.actions.print') }}
@@ -158,8 +170,11 @@
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
-                <v-list-item-title>{{ t('jobOrder.jobList.actions.popup') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ detailViewLabel }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-printer" @click="printList">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
@@ -177,7 +192,7 @@
           </v-menu>
         </div>
 
-        <div v-if="isPhoneLayout" class="job-mobile-list">
+        <div v-if="isCardView" class="job-mobile-list">
           <v-card
             v-for="(row, index) in displayedRows"
             :key="row.orderId"
@@ -242,9 +257,6 @@
                 <v-list density="compact" class="toolbar-menu-list">
                   <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
-                  </v-list-item>
-                  <v-list-item prepend-icon="mdi-open-in-app" :disabled="!row.orderId" @click.stop="openEditor(row)">
-                    <v-list-item-title>{{ t('jobOrder.jobList.actions.popup') }}</v-list-item-title>
                   </v-list-item>
                   <v-list-item prepend-icon="mdi-printer" @click.stop="printList">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
@@ -391,9 +403,12 @@ import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
 import { deleteJobOrder, getJobList } from '@/services/jobOrders'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
+
+type JobListViewMode = 'detail' | 'card'
 
 const rows = ref<JobOrderRecord[]>([])
 const loading = ref(false)
@@ -401,12 +416,9 @@ const deleting = ref(false)
 const errorMessage = ref('')
 const lookup = ref('')
 const commonQuery = ref(0)
-const checkboxMode = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const activeOrderId = ref<string | null>(null)
-const sortDirection = ref<'asc' | 'desc'>('desc')
-const sortKey = ref('orderNumber')
-const visibleColumnKeys = ref<string[]>([
+const defaultColumnKeys = [
   'orderType',
   'ln',
   'orderNumber',
@@ -425,7 +437,19 @@ const visibleColumnKeys = ref<string[]>([
   'modifiedOn',
   'modifiedBy',
   'completedOn',
-])
+]
+const viewSettings = useViewSettings('joblist', {
+  visibleColumns: defaultColumnKeys,
+  sortKey: 'orderNumber',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
 const formOpen = ref(false)
 const formJob = ref<JobDetail | null>(null)
 const saveSuccess = ref(false)
@@ -442,6 +466,9 @@ const display = useDisplay()
 const router = useRouter()
 const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
+const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
+const cardViewLabel = computed(() => t('jobOrder.jobList.actions.cardView'))
+const isCardView = computed(() => viewMode.value === 'card')
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.jobList.commonQueryItems.none') },
@@ -485,23 +512,25 @@ const showInitialWindowNotice = computed(() => !hasActiveFilters.value && rows.v
 
 const displayedRows = computed(() => {
   const result = [...rows.value]
-  const key = sortKey.value as keyof JobOrderRecord
+  const key = (sortKey.value ?? 'orderNumber') as keyof JobOrderRecord
+  const direction = sortDirection.value ?? 'desc'
 
   result.sort((lhs, rhs) => {
     const leftValue = valueForSort(lhs, key)
     const rightValue = valueForSort(rhs, key)
 
     if (leftValue == null && rightValue == null) return 0
-    if (leftValue == null) return sortDirection.value === 'asc' ? -1 : 1
-    if (rightValue == null) return sortDirection.value === 'asc' ? 1 : -1
+    if (leftValue == null) return direction === 'asc' ? -1 : 1
+    if (rightValue == null) return direction === 'asc' ? 1 : -1
 
     if (typeof leftValue === 'number' && typeof rightValue === 'number') {
-      return sortDirection.value === 'asc' ? leftValue - rightValue : rightValue - leftValue
+      return direction === 'asc' ? leftValue - rightValue : rightValue - leftValue
     }
 
     const left = String(leftValue)
     const right = String(rightValue)
-    return sortDirection.value === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+    const compareOptions: Intl.CollatorOptions = { numeric: true, sensitivity: 'base' }
+    return direction === 'asc' ? left.localeCompare(right, undefined, compareOptions) : right.localeCompare(left, undefined, compareOptions)
   })
 
   return result
@@ -567,16 +596,26 @@ function toggleSelected(orderId: string) {
   selectedOrderIds.value = [...selectedOrderIds.value, orderId]
 }
 
-function onRowClick(_event: Event, payload: { item: JobOrderRecord }) {
-  activeOrderId.value = payload.item.orderId
+function setViewMode(mode: JobListViewMode) {
+  viewMode.value = mode
 }
 
-async function openPopup() {
-  if (!activeRow.value) {
+async function onRowClick(event: Event, payload: unknown) {
+  if (checkboxMode.value) {
     return
   }
 
-  await openEditor(activeRow.value)
+  const row = payload as { item?: JobOrderRecord | { raw?: JobOrderRecord } }
+  const record = (row?.item as JobOrderRecord | undefined) ?? row?.item?.raw
+  if (!record) {
+    return
+  }
+
+  if ((event.target as HTMLElement | null)?.closest('a,button,[role="button"],input,label,.v-selection-control')) {
+    return
+  }
+
+  await openEditor(record)
 }
 
 async function openEditor(record: JobOrderRecord) {
@@ -824,6 +863,14 @@ async function handleActionUpdated() {
 .job-mobile-list {
   display: grid;
   gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .job-mobile-list {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
+  }
 }
 
 .job-mobile-card {
