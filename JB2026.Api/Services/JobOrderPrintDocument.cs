@@ -349,7 +349,22 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private static bool IsSectionHeadingLine(string line)
     {
-        return Regex.IsMatch(line, @"^\s*\d+\s*[\.)、．]?\s*.+[:：]\s*$");
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return false;
+        }
+
+        // Legacy print details usually start sections with numbered markers like
+        // "1.印刷內容:", "5.數碼印刷: Fuji", or "9.過膠（文膜）".
+        if (Regex.IsMatch(trimmed, @"^\d{1,3}\s*[\.)、．]\s*\S.+$"))
+        {
+            return true;
+        }
+
+        // Some source text drops the dot after OCR/import, but still keeps the
+        // section-like pattern "{number} {title}: ...".
+        return Regex.IsMatch(trimmed, @"^\d{1,3}\s+\S.{0,40}[:：].*$");
     }
 
     private static void RenderFormattedMultiline(
