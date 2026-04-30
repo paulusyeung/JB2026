@@ -129,7 +129,9 @@ public sealed class JobsControllerTests
             readContext,
             currentUserProfileService,
             NullLogger<JobsController>.Instance,
-            Options.Create(new LegacyFilesOptions()));
+            Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions()),
+            new JobOrderPrintComposer(readContext, Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions())),
+            new JobOrderPdfRenderer());
 
         controller.ControllerContext = new ControllerContext
         {

@@ -96,6 +96,13 @@
     @error="showActionNotice"
   />
 
+  <JobOrderPrintManagerDialog
+    v-model="printManagerOpen"
+    :order-id="printManagerJob?.orderId ?? null"
+    :order-number="printManagerJob?.orderNumber ?? ''"
+    :style-titles="printManagerJob?.styleTitles"
+  />
+
   <!-- Save-success snackbar -->
   <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
     {{ t('jobs.saved') }}
@@ -116,9 +123,9 @@ import { useRouter } from 'vue-router'
 import JobsTable from '@/components/grids/JobsTable.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import { getJobPdfBlob } from '@/services/jobs'
 import { useJobsStore } from '@/stores/jobs'
 import type { JobDetail } from '@/types/api'
 
@@ -133,6 +140,8 @@ const actionNoticeOpen = ref(false)
 const actionNoticeMessage = ref('')
 const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
 const router = useRouter()
 
 function openCreate() {
@@ -171,15 +180,9 @@ function handleProductDetailsEdit(job: JobDetail) {
   productDetailsDialogOpen.value = true
 }
 
-async function handlePrintOrder(job: JobDetail) {
-  try {
-    const blob = await getJobPdfBlob(job.orderId)
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    showActionNotice(t('jobForm.messages.printFailed'))
-  }
+function handlePrintOrder(job: JobDetail) {
+  printManagerJob.value = job
+  printManagerOpen.value = true
 }
 
 function handleWorkflow(job: JobDetail) {

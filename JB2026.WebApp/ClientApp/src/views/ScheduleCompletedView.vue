@@ -189,6 +189,13 @@
       @error="showActionNotice"
     />
 
+    <JobOrderPrintManagerDialog
+      v-model="printManagerOpen"
+      :order-id="printManagerJob?.orderId ?? null"
+      :order-number="printManagerJob?.orderNumber ?? ''"
+      :style-titles="printManagerJob?.styleTitles"
+    />
+
     <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
       {{ actionNoticeMessage }}
     </v-snackbar>
@@ -202,7 +209,8 @@ import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
-import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
+import { getJobDetail } from '@/services/jobs'
 import { getCompletedSchedule, rescheduleCompletedOrders } from '@/services/scheduler'
 import type { JobDetail, JobScheduleCompletedItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -224,6 +232,8 @@ const actionNoticeOpen = ref(false)
 const actionNoticeMessage = ref('')
 const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -421,15 +431,9 @@ function handleProductDetailsEdit(job: JobDetail) {
   productDetailsDialogOpen.value = true
 }
 
-async function handlePrintOrder(job: JobDetail) {
-  try {
-    const blob = await getJobPdfBlob(job.orderId)
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    showActionNotice(t('jobForm.messages.printFailed'))
-  }
+function handlePrintOrder(job: JobDetail) {
+  printManagerJob.value = job
+  printManagerOpen.value = true
 }
 
 function handleWorkflow(job: JobDetail) {

@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { JobDetail, JobListItem, JobOrderFormData } from '@/types/api'
+import type { JobDetail, JobListItem, JobOrderFormData, JobOrderPrintRequest } from '@/types/api'
 
 interface CreateJobRequest {
   orderNumber: string
@@ -49,6 +49,13 @@ export async function getJobPdfBlob(id: string): Promise<Blob> {
     responseType: 'blob',
   })
 
+  return response.data as Blob
+}
+
+export async function printJobOrder(id: string, options: JobOrderPrintRequest): Promise<Blob> {
+  const response = await apiClient.post(`/api/v2/jobs/${id}/print`, options, {
+    responseType: 'blob',
+  })
   return response.data as Blob
 }
 

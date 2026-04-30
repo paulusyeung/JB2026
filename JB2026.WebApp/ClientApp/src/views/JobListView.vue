@@ -393,6 +393,13 @@
       @error="showActionNotice"
     />
 
+    <JobOrderPrintManagerDialog
+      v-model="printManagerOpen"
+      :order-id="printManagerJob?.orderId ?? null"
+      :order-number="printManagerJob?.orderNumber ?? ''"
+      :style-titles="printManagerJob?.styleTitles"
+    />
+
     <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
       {{ t('jobOrder.saved') }}
       <template #actions>
@@ -413,10 +420,11 @@ import { useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { getJobDetail, getJobPdfBlob } from '@/services/jobs'
+import { getJobDetail } from '@/services/jobs'
 import { deleteJobOrder, getJobList } from '@/services/jobOrders'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 
@@ -469,6 +477,8 @@ const actionNoticeOpen = ref(false)
 const actionNoticeMessage = ref('')
 const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -673,8 +683,31 @@ async function handleSaved() {
   await load()
 }
 
-function printList() {
-  window.print()
+async function printList() {
+  let targetOrderId: string | null = null
+
+  if (checkboxMode.value) {
+    if (selectedOrderIds.value.length !== 1) {
+      showActionNotice(t('jobOrder.jobList.noSelection'))
+      return
+    }
+
+    targetOrderId = selectedOrderIds.value[0] ?? null
+  } else {
+    targetOrderId = activeOrderId.value
+  }
+
+  if (!targetOrderId) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
+  }
+
+  try {
+    printManagerJob.value = await getJobDetail(targetOrderId)
+    printManagerOpen.value = true
+  } catch {
+    showActionNotice(t('jobOrder.openEditFailed'))
+  }
 }
 
 function exportToCsv() {
@@ -801,14 +834,8 @@ function handleProductDetailsEdit(job: JobDetail) {
 }
 
 async function handlePrintOrder(job: JobDetail) {
-  try {
-    const blob = await getJobPdfBlob(job.orderId)
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    showActionNotice(t('jobForm.messages.printFailed'))
-  }
+  printManagerJob.value = job
+  printManagerOpen.value = true
 }
 
 function handleWorkflow(job: JobDetail) {

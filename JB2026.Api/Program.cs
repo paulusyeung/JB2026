@@ -92,6 +92,8 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddScoped<IStockInOutStoredProcedureGateway, StockInOutStoredProcedureGateway>();
 	builder.Services.AddScoped<IStockProductPrintComposer, StockProductPrintComposer>();
 	builder.Services.AddScoped<IStockProductPdfRenderer, StockProductPdfRenderer>();
+	builder.Services.AddScoped<IJobOrderPrintComposer, JobOrderPrintComposer>();
+	builder.Services.AddScoped<IJobOrderPdfRenderer, JobOrderPdfRenderer>();
 	builder.Services.AddScoped<ICustomerStoredProcedureGateway, CustomerStoredProcedureGateway>();
 	builder.Services.AddScoped<IInvoiceHeaderStoredProcedureGateway, InvoiceHeaderStoredProcedureGateway>();
 	builder.Services.AddScoped<IInvoiceItemStoredProcedureGateway, InvoiceItemStoredProcedureGateway>();

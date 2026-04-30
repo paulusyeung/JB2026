@@ -23,6 +23,8 @@ public sealed class JobsController : ControllerBase
     private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly ILogger<JobsController> _logger;
     private readonly LegacyFilesOptions _legacyFiles;
+    private readonly IJobOrderPrintComposer _jobOrderPrintComposer;
+    private readonly IJobOrderPdfRenderer _jobOrderPdfRenderer;
 
     public JobsController(
         IJobManagementRepository repository,
@@ -30,7 +32,9 @@ public sealed class JobsController : ControllerBase
         JB5LegacyReadContext readContext,
         ICurrentUserProfileService currentUserProfileService,
         ILogger<JobsController> logger,
-        IOptions<LegacyFilesOptions> legacyFiles)
+        IOptions<LegacyFilesOptions> legacyFiles,
+        IJobOrderPrintComposer jobOrderPrintComposer,
+        IJobOrderPdfRenderer jobOrderPdfRenderer)
     {
         _repository = repository;
         _jobAttachmentGateway = jobAttachmentGateway;
@@ -38,6 +42,8 @@ public sealed class JobsController : ControllerBase
         _currentUserProfileService = currentUserProfileService;
         _logger = logger;
         _legacyFiles = legacyFiles.Value;
+        _jobOrderPrintComposer = jobOrderPrintComposer;
+        _jobOrderPdfRenderer = jobOrderPdfRenderer;
     }
 
     [HttpGet("range")]
@@ -74,6 +80,38 @@ public sealed class JobsController : ControllerBase
         }
 
         return Ok(job);
+    }
+
+    [HttpPost("{id:guid}/print")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> PrintJobOrder(Guid id, [FromBody] JobOrderPrintRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var document = await _jobOrderPrintComposer.ComposeAsync(id, request, cancellationToken);
+            if (document is null)
+            {
+                return NotFound();
+            }
+
+            var pdfContent = _jobOrderPdfRenderer.Render(document);
+            var safeOrderNumber = string.IsNullOrWhiteSpace(document.OrderNumber)
+                ? id.ToString("N")
+                : document.OrderNumber;
+
+            return File(pdfContent, "application/pdf", $"job-order-{safeOrderNumber}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate job-order print PDF for order {OrderId} with options {@PrintOptions}", id, request);
+            return Problem(
+                title: "Unable to generate job-order print PDF",
+                detail: "An unexpected error occurred while generating the job order print report.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     [HttpPost("{id:guid}/attachments")]

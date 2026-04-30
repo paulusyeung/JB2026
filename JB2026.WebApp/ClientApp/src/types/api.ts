@@ -344,6 +344,13 @@ export interface JobDetail extends JobListItem {
   attachments: JobAttachment[]
 }
 
+export interface JobOrderPrintRequest {
+  layout: string
+  noPicture: boolean
+  noProductDetails: boolean
+  selectedWorkflowIndices: number[]
+}
+
 export interface QuotationListItem {
   headerId: string
   machineType: string
