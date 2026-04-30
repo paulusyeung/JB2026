@@ -115,6 +115,10 @@
 
             <v-divider vertical class="mx-1" />
 
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="openAttachmentDialog">
+              {{ t('jobForm.actions.attachment') }}
+            </v-btn>
+
             <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
               {{ t('jobOrder.jobList.actions.print') }}
             </v-btn>
@@ -175,6 +179,9 @@
               </v-list-item>
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
                 <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-paperclip" @click="openAttachmentDialog">
+                <v-list-item-title>{{ t('jobForm.actions.attachment') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-printer" @click="printList">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
@@ -257,6 +264,9 @@
                 <v-list density="compact" class="toolbar-menu-list">
                   <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-paperclip" @click.stop="openAttachmentDialog">
+                    <v-list-item-title>{{ t('jobForm.actions.attachment') }}</v-list-item-title>
                   </v-list-item>
                   <v-list-item prepend-icon="mdi-printer" @click.stop="printList">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
@@ -627,6 +637,33 @@ async function openEditor(record: JobOrderRecord) {
     formOpen.value = true
   } catch {
     errorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function openAttachmentDialog() {
+  let targetOrderId: string | null = null
+
+  if (checkboxMode.value) {
+    if (selectedOrderIds.value.length !== 1) {
+      showActionNotice(t('jobOrder.jobList.noSelection'))
+      return
+    }
+
+    targetOrderId = selectedOrderIds.value[0] ?? null
+  } else {
+    targetOrderId = activeOrderId.value
+  }
+
+  if (!targetOrderId) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
+  }
+
+  try {
+    const job = await getJobDetail(targetOrderId)
+    handleAttachment(job)
+  } catch {
+    showActionNotice(t('jobOrder.openEditFailed'))
   }
 }
 
