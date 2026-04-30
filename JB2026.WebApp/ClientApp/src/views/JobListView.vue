@@ -351,11 +351,13 @@
             <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
-          </v-data-table>
-        </div>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('jobOrder.jobList.rows', { count: formatNumber(displayedRows.length) }) }}
+            <template v-slot:[`footer.prepend`]>
+              <span class="job-list-table__count text-medium-emphasis">
+                {{ t('jobOrder.jobList.rows', { count: formatNumber(displayedRows.length) }) }}
+              </span>
+            </template>
+          </v-data-table>
         </div>
       </v-card-text>
     </v-card>
@@ -833,6 +835,13 @@ async function handleActionUpdated() {
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   overflow: hidden;
+}
+
+.job-list-table__count {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-end: auto;
+  white-space: nowrap;
 }
 
 .job-list-table :deep(.v-table__wrapper > table > thead > tr > th),
