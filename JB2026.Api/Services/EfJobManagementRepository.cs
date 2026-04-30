@@ -369,6 +369,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                 .OrderBy(attachment => attachment.AttachmentIndex)
                 .Select(attachment => new JobAttachmentResponse
                 {
+                    AttachmentId = attachment.AttachmentId,
                     FileName = attachment.OriginalFileName ?? string.Empty,
                     ContentType = "application/octet-stream",
                     Length = 0

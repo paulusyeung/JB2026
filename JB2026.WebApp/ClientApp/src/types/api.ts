@@ -329,6 +329,7 @@ export interface JobListItem {
 }
 
 export interface JobAttachment {
+  attachmentId: string
   fileName: string
   fileExtension: string
   attachmentType: string

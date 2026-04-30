@@ -54,11 +54,15 @@ export async function getJobPdfBlob(id: string): Promise<Blob> {
 
 export async function uploadJobAttachment(orderId: string, file: File): Promise<void> {
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('files', file)
 
-  await apiClient.post(`/api/CloudDisk/fileAgent/upload/${orderId}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
+  await apiClient.post(`/api/v2/jobs/${orderId}/attachments`, formData)
+}
+
+export async function deleteJobAttachments(orderId: string, attachmentIds: string[]): Promise<void> {
+  await apiClient.delete(`/api/v2/jobs/${orderId}/attachments`, {
+    data: {
+      attachmentIds,
     },
   })
 }

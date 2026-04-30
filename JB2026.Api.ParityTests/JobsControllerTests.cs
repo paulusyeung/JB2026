@@ -1,9 +1,13 @@
 using JB2026.Api.Controllers;
 using JB2026.Api.Models;
 using JB2026.Api.Services;
+using JB2026.Api.Options;
+using JB2026.EfCore.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.ParityTests;
 
@@ -114,7 +118,19 @@ public sealed class JobsControllerTests
 
     private static JobsController CreateController(IJobManagementRepository repository, ICurrentUserProfileService currentUserProfileService)
     {
-        var controller = new JobsController(repository, currentUserProfileService, NullLogger<JobsController>.Instance);
+        var readContext = new JB5LegacyReadContext(
+            new DbContextOptionsBuilder<JB5LegacyReadContext>()
+                .UseInMemoryDatabase($"jobs-controller-tests-{Guid.NewGuid():N}")
+                .Options);
+
+        var controller = new JobsController(
+            repository,
+            new StubJobAttachmentStoredProcedureGateway(),
+            readContext,
+            currentUserProfileService,
+            NullLogger<JobsController>.Instance,
+            Options.Create(new LegacyFilesOptions()));
+
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -238,5 +254,20 @@ public sealed class JobsControllerTests
 
         public Task<JobOrderResponse?> DeleteJobOrder(Guid orderId)
             => Task.FromResult<JobOrderResponse?>(null);
+    }
+
+    private sealed class StubJobAttachmentStoredProcedureGateway : IJobAttachmentStoredProcedureGateway
+    {
+        public Task<JobAttachmentStoredProcedureRecord?> SelectAsync(Guid attachmentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<JobAttachmentStoredProcedureRecord?>(null);
+
+        public Task<Guid> InsertAsync(CreateJobAttachmentStoredProcedureRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(Guid.NewGuid());
+
+        public Task<bool> UpdateAsync(UpdateJobAttachmentStoredProcedureRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        public Task<bool> DeleteAsync(Guid attachmentId, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
     }
 }

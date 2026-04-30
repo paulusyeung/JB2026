@@ -1,8 +1,11 @@
 using JB2026.Api.Models;
 using JB2026.Api.Options;
 using JB2026.Api.Services;
+using JB2026.EfCore.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Controllers;
@@ -12,18 +15,26 @@ namespace JB2026.Api.Controllers;
 [Route("api/v2/jobs")]
 public sealed class JobsController : ControllerBase
 {
+    private const long MaxUploadBytes = 25 * 1024 * 1024;
+
     private readonly IJobManagementRepository _repository;
+    private readonly IJobAttachmentStoredProcedureGateway _jobAttachmentGateway;
+    private readonly JB5LegacyReadContext _readContext;
     private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly ILogger<JobsController> _logger;
     private readonly LegacyFilesOptions _legacyFiles;
 
     public JobsController(
         IJobManagementRepository repository,
+        IJobAttachmentStoredProcedureGateway jobAttachmentGateway,
+        JB5LegacyReadContext readContext,
         ICurrentUserProfileService currentUserProfileService,
         ILogger<JobsController> logger,
         IOptions<LegacyFilesOptions> legacyFiles)
     {
         _repository = repository;
+        _jobAttachmentGateway = jobAttachmentGateway;
+        _readContext = readContext;
         _currentUserProfileService = currentUserProfileService;
         _logger = logger;
         _legacyFiles = legacyFiles.Value;
@@ -63,6 +74,150 @@ public sealed class JobsController : ControllerBase
         }
 
         return Ok(job);
+    }
+
+    [HttpPost("{id:guid}/attachments")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [RequestSizeLimit(MaxUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
+    public async Task<ActionResult> UploadAttachments(
+        Guid id,
+        [FromForm] List<IFormFile> files,
+        CancellationToken cancellationToken = default)
+    {
+        var job = _repository.GetJobDetail(id);
+        if (job is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Job not found",
+                Detail = $"No job exists for order id '{id}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        if (files.Count == 0)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(files)] = ["At least one file is required."]
+            }));
+        }
+
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+            {
+                return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [nameof(files)] = [$"File '{file.FileName}' is empty."]
+                }));
+            }
+
+            if (file.Length > MaxUploadBytes)
+            {
+                return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [nameof(files)] = [$"File '{file.FileName}' exceeds the 25MB upload limit."]
+                }));
+            }
+        }
+
+        var baseOrderNumber = ExtractBaseOrderNumber(job.OrderNumber);
+        var attachmentDir = EnsureJobAttachmentDirectory(baseOrderNumber);
+        if (string.IsNullOrWhiteSpace(attachmentDir))
+        {
+            return Problem(
+                title: "Attachment storage unavailable",
+                detail: "Legacy file storage path for job attachments is not configured.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        var nextIndex = await _readContext.JobAttachments
+            .Where(attachment => attachment.OrderId == id)
+            .Select(attachment => (int?)attachment.AttachmentIndex)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        foreach (var file in files)
+        {
+            var safeOriginal = Path.GetFileName(file.FileName);
+            var fileName = EnsureUniqueAttachmentFileName(attachmentDir, safeOriginal);
+            var fullPath = Path.Combine(attachmentDir, fileName);
+
+            await using (var stream = System.IO.File.Create(fullPath))
+            {
+                await file.CopyToAsync(stream, cancellationToken);
+            }
+
+            await _jobAttachmentGateway.InsertAsync(new CreateJobAttachmentStoredProcedureRequest(
+                OrderId: id,
+                AttachmentType: 0,
+                AttachmentIndex: ++nextIndex,
+                OriginalFileName: fileName),
+                cancellationToken);
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/attachments")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> DeleteAttachments(
+        Guid id,
+        [FromBody] JobAttachmentDeleteRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var job = _repository.GetJobDetail(id);
+        if (job is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Job not found",
+                Detail = $"No job exists for order id '{id}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        if (request.AttachmentIds.Count == 0)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.AttachmentIds)] = ["At least one attachment id is required."]
+            }));
+        }
+
+        var baseOrderNumber = ExtractBaseOrderNumber(job.OrderNumber);
+        foreach (var attachmentId in request.AttachmentIds.Distinct())
+        {
+            var record = await _jobAttachmentGateway.SelectAsync(attachmentId, cancellationToken);
+            if (record is null || record.OrderId != id)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(record.OriginalFileName))
+            {
+                var filePath = LocatePreviewFile(
+                    id,
+                    baseOrderNumber,
+                    job.OrderedOn,
+                    record.OriginalFileName,
+                    record.AttachmentType.ToString());
+
+                if (!string.IsNullOrWhiteSpace(filePath) && System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+
+            await _jobAttachmentGateway.DeleteAsync(attachmentId, cancellationToken);
+        }
+
+        return NoContent();
     }
 
     [HttpPost]
@@ -180,6 +335,55 @@ public sealed class JobsController : ControllerBase
     private string GetActor()
     {
         return _currentUserProfileService.GetCurrentUser()?.Username ?? User.Identity?.Name ?? "system";
+    }
+
+    private string EnsureUniqueAttachmentFileName(string attachmentDir, string fileName)
+    {
+        var safeBase = Path.GetFileNameWithoutExtension(fileName);
+        if (string.IsNullOrWhiteSpace(safeBase))
+        {
+            safeBase = "attachment";
+        }
+
+        var extension = Path.GetExtension(fileName);
+        var candidate = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            candidate = $"{safeBase}{extension}";
+        }
+
+        var counter = 1;
+        while (System.IO.File.Exists(Path.Combine(attachmentDir, candidate)))
+        {
+            candidate = $"{safeBase} ({counter}){extension}";
+            counter++;
+        }
+
+        return candidate;
+    }
+
+    private string? EnsureJobAttachmentDirectory(string orderNumber)
+    {
+        if (string.IsNullOrWhiteSpace(orderNumber))
+        {
+            return null;
+        }
+
+        var candidates = new List<string>();
+        candidates.AddRange(ExpandRootCandidates(_legacyFiles.FileAgentRoot));
+        candidates.AddRange(ExpandRootCandidates(_legacyFiles.InBox));
+
+        var root = candidates.FirstOrDefault(Directory.Exists)
+            ?? candidates.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate));
+
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return null;
+        }
+
+        var attachmentDir = Path.Combine(root, orderNumber);
+        Directory.CreateDirectory(attachmentDir);
+        return attachmentDir;
     }
 
     private string? LocatePreviewFile(Guid orderId, string orderNumber, DateTime orderedOn, string fileName, string? attachmentType)

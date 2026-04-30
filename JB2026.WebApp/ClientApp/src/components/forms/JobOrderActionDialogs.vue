@@ -68,6 +68,17 @@
             {{ t('jobForm.actions.download') }}
           </v-btn>
 
+          <v-btn
+            variant="outlined"
+            color="error"
+            prepend-icon="mdi-delete"
+            :disabled="selectedKeys.length === 0 || busyAction"
+            :loading="deleting"
+            @click="deleteSelected"
+          >
+            {{ t('jobForm.actions.deleteSelected') }}
+          </v-btn>
+
           <v-spacer />
 
           <span class="text-caption text-medium-emphasis">
@@ -165,13 +176,31 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-dialog v-model="showDeleteConfirm" max-width="460">
+    <v-card>
+      <v-card-title>{{ t('jobForm.actions.deleteSelected') }}</v-card-title>
+      <v-card-text>
+        {{ t('jobForm.messages.confirmDeleteAttachments', { count: selectedKeys.length }) }}
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="showDeleteConfirm = false">
+          {{ t('jobForm.actions.cancel') }}
+        </v-btn>
+        <v-btn color="error" variant="flat" :loading="deleting" @click="confirmDeleteSelected">
+          {{ t('jobForm.actions.deleteSelected') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getJobPreviewBlob } from '@/services/jobOrders'
-import { saveJob, uploadJobAttachment } from '@/services/jobs'
+import { deleteJobAttachments, saveJob, uploadJobAttachment } from '@/services/jobs'
 import type { JobAttachment, JobDetail, JobOrderFormData } from '@/types/api'
 
 type AttachmentSizeMode = 'small' | 'medium' | 'large' | 'x-large'
@@ -194,6 +223,7 @@ const { t } = useI18n({ useScope: 'global' })
 const uploading = ref(false)
 const openingSelection = ref(false)
 const downloading = ref(false)
+const deleting = ref(false)
 const savingProductDetails = ref(false)
 const errorMessage = ref('')
 const infoMessage = ref('')
@@ -202,6 +232,7 @@ const selectedKeys = ref<string[]>([])
 const sizeMode = ref<AttachmentSizeMode>('medium')
 const productDetails = ref('')
 const previewUrls = ref<Record<string, string>>({})
+const showDeleteConfirm = ref(false)
 
 const tileSizeMap: Record<AttachmentSizeMode, number> = {
   small: 84,
@@ -219,7 +250,7 @@ const tileCssVariables = computed(() => {
 
 const iconSize = computed(() => Math.max(22, Math.floor(tileSizeMap[sizeMode.value] * 0.34)))
 const attachments = computed(() => props.job?.attachments ?? [])
-const busyAction = computed(() => uploading.value || openingSelection.value || downloading.value)
+const busyAction = computed(() => uploading.value || openingSelection.value || downloading.value || deleting.value)
 
 const attachmentModel = computed({
   get: () => props.attachmentOpen,
@@ -248,6 +279,7 @@ watch(
       selectedUpload.value = []
       errorMessage.value = ''
       infoMessage.value = ''
+      showDeleteConfirm.value = false
       revokeAllPreviewUrls()
       return
     }
@@ -255,6 +287,17 @@ watch(
     await loadImagePreviews()
   },
   { immediate: true },
+)
+
+watch(
+  () => (props.job?.attachments ?? []).map((attachment) => attachment.attachmentId).join('|'),
+  async () => {
+    if (!props.attachmentOpen) {
+      return
+    }
+
+    await loadImagePreviews()
+  },
 )
 
 function attachmentKey(attachment: JobAttachment): string {
@@ -400,6 +443,41 @@ async function downloadSelected() {
     errorMessage.value = t('jobForm.messages.attachmentDownloadFailed')
   } finally {
     downloading.value = false
+  }
+}
+
+function deleteSelected() {
+  if (selectedKeys.value.length === 0) {
+    return
+  }
+
+  showDeleteConfirm.value = true
+}
+
+async function confirmDeleteSelected() {
+  if (!props.job || selectedKeys.value.length === 0) {
+    showDeleteConfirm.value = false
+    return
+  }
+
+  deleting.value = true
+  errorMessage.value = ''
+  infoMessage.value = ''
+  showDeleteConfirm.value = false
+
+  try {
+    const attachmentIds = attachments.value
+      .filter((attachment) => selectedKeys.value.includes(attachmentKey(attachment)))
+      .map((attachment) => attachment.attachmentId)
+
+    await deleteJobAttachments(props.job.orderId, attachmentIds)
+    selectedKeys.value = []
+    emit('updated')
+    infoMessage.value = t('jobForm.messages.attachmentDeleteSuccess')
+  } catch {
+    errorMessage.value = t('jobForm.messages.attachmentDeleteFailed')
+  } finally {
+    deleting.value = false
   }
 }
 

@@ -297,6 +297,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Attachments = job.Attachments
                 .Select(attachment => new JobAttachmentResponse
                 {
+                    AttachmentId = Guid.Empty,
                     FileName = attachment.FileName,
                     ContentType = attachment.ContentType,
                     Length = attachment.Length
