@@ -58,7 +58,7 @@ export const jobFormMessages = {
           xLarge: '超大',
         },
         productDetailsTitle: '编辑产品内容',
-        productDetailsHint: '在当前迁移切片中，此操作会更新订单标题。',
+        productDetailsHint: '可在此编辑并保存产品内容的 HTML。',
         printManager: {
           title: '打印工单',
           orderNumber: '订单号',

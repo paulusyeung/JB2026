@@ -301,6 +301,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         order.Qty = request.Qty;
         order.PaymentTerms = request.PaymentTerms;
         order.Remarks = request.Remarks;
+        if (request.ProductDetails is not null)
+        {
+            order.ProductDetails = request.ProductDetails;
+        }
         order.Status = request.Status;
         order.ModifiedBy = ParseActorGuidOrFallback(actor);
         order.ModifiedOn = DateTime.UtcNow;
@@ -359,6 +363,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             Qty = job.Qty ?? 0m,
             PaymentTerms = job.PaymentTerms ?? string.Empty,
             Remarks = job.Remarks ?? string.Empty,
+            ProductDetails = job.ProductDetails ?? string.Empty,
             StyleTitles = job.JobWorkflows
                 .OrderBy(workflow => workflow.WorkIndex)
                 .Select(workflow => workflow.WorkTitle)
@@ -403,6 +408,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             OrderTitle = job.OrderTitle ?? string.Empty,
             ProductCode = job.ProductCode ?? string.Empty,
             ProductStyle = job.ProductStyle ?? string.Empty,
+            ProductDetails = job.ProductDetails ?? string.Empty,
             OutputRef = job.OutputRef ?? string.Empty,
             InvoiceRef = job.InvoiceRef ?? string.Empty,
             InvoiceAmount = job.InvoiceAmount ?? 0m,
@@ -436,6 +442,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             OrderTitle = order.OrderTitle ?? string.Empty,
             ProductCode = order.ProductCode ?? string.Empty,
             ProductStyle = order.ProductStyle ?? string.Empty,
+            ProductDetails = order.ProductDetails ?? string.Empty,
             OutputRef = order.OutputRef ?? string.Empty,
             InvoiceRef = order.InvoiceRef ?? string.Empty,
             InvoiceAmount = order.InvoiceAmount,

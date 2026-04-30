@@ -28,6 +28,8 @@ public sealed class UpdateJobOrderRequest
     [StringLength(512)]
     public string Remarks { get; init; } = string.Empty;
 
+    public string? ProductDetails { get; init; }
+
     [Range(0, 99)]
     public int Status { get; init; }
 }

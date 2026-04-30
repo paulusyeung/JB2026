@@ -150,14 +150,9 @@
           {{ t('jobForm.dialogs.productDetailsHint') }}
         </v-alert>
 
-        <v-textarea
-          v-model="productDetails"
-          :label="t('jobForm.fields.productDetails')"
-          rows="8"
-          density="comfortable"
-          variant="outlined"
-          :disabled="savingProductDetails || !job"
-        />
+          <div class="product-details-editor" :class="{ 'product-details-editor--disabled': savingProductDetails || !job }">
+            <Ckeditor :editor="htmlEditor" v-model="productDetails" :config="editorConfig" />
+        </div>
       </v-card-text>
       <v-divider />
       <v-card-actions>
@@ -199,6 +194,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Ckeditor } from '@ckeditor/ckeditor5-vue'
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 import { getJobPreviewBlob } from '@/services/jobOrders'
 import { deleteJobAttachments, saveJob, uploadJobAttachment } from '@/services/jobs'
 import type { JobAttachment, JobDetail, JobOrderFormData } from '@/types/api'
@@ -219,6 +216,35 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const htmlEditor = ClassicEditor
+
+const editorConfig = {
+  licenseKey: 'GPL',
+  toolbar: {
+    items: [
+      'undo',
+      'redo',
+      '|',
+      'heading',
+      '|',
+      'bold',
+      'italic',
+      'link',
+      '|',
+      'bulletedList',
+      'numberedList',
+      '|',
+      'outdent',
+      'indent',
+      '|',
+      'blockQuote',
+      'insertTable',
+      'mediaEmbed',
+      'imageUpload',
+    ],
+    shouldNotGroupWhenFull: true,
+  },
+}
 
 const uploading = ref(false)
 const openingSelection = ref(false)
@@ -266,7 +292,7 @@ watch(
   () => [props.productDetailsOpen, props.job?.orderId],
   () => {
     if (!props.productDetailsOpen) return
-    productDetails.value = props.job?.orderTitle ?? ''
+    productDetails.value = props.job?.productDetails ?? ''
   },
   { immediate: true },
 )
@@ -510,7 +536,7 @@ async function saveProductDetails() {
       orderId: props.job.orderId,
       orderNumber: props.job.orderNumber,
       jobNumber: '',
-      orderTitle: productDetails.value,
+      orderTitle: props.job.orderTitle,
       customerName: props.job.customerName,
       customerRef: props.job.customerRef,
       orderedBy: props.job.orderedBy,
@@ -520,6 +546,7 @@ async function saveProductDetails() {
       status: props.job.status,
       paymentTerms: props.job.paymentTerms ?? '',
       remarks: props.job.remarks ?? '',
+      productDetails: productDetails.value,
     }
 
     await saveJob(payload)
@@ -624,6 +651,22 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   gap: 4px;
+}
+
+.product-details-editor {
+  border: 1px solid rgba(var(--v-theme-outline), 0.45);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.product-details-editor :deep(.ck-editor__editable_inline) {
+  min-height: 320px;
+  max-height: 60vh;
+}
+
+.product-details-editor--disabled {
+  opacity: 0.72;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {

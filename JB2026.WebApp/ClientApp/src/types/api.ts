@@ -340,6 +340,7 @@ export interface JobAttachment {
 export interface JobDetail extends JobListItem {
   paymentTerms: string
   remarks: string
+  productDetails: string
   styleTitles: string[]
   attachments: JobAttachment[]
 }
@@ -806,6 +807,7 @@ export interface JobOrderFormData {
   status: number
   paymentTerms: string
   remarks: string
+  productDetails?: string
 }
 
 export interface JobOrderRecord {
@@ -818,6 +820,7 @@ export interface JobOrderRecord {
   orderTitle: string
   productCode: string
   productStyle: string
+  productDetails: string
   outputRef: string
   invoiceRef: string
   invoiceAmount: number

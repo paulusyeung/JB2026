@@ -217,6 +217,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Qty = request.Qty,
             PaymentTerms = request.PaymentTerms,
             Remarks = request.Remarks,
+            ProductDetails = string.Empty,
             Status = request.Status,
             CreatedBy = actor,
             CreatedOn = timestamp,
@@ -244,6 +245,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Qty = request.Qty,
             PaymentTerms = request.PaymentTerms,
             Remarks = request.Remarks,
+            ProductDetails = request.ProductDetails ?? current.ProductDetails,
             Status = request.Status,
             ModifiedBy = actor,
             ModifiedOn = DateTime.UtcNow,
@@ -293,6 +295,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Qty = job.Qty,
             PaymentTerms = job.PaymentTerms,
             Remarks = job.Remarks,
+            ProductDetails = job.ProductDetails,
             StyleTitles = job.StyleTitles,
             Attachments = job.Attachments
                 .Select(attachment => new JobAttachmentResponse
@@ -319,6 +322,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             OrderTitle = job.OrderTitle,
             ProductCode = string.Empty,
             ProductStyle = job.StyleTitles.FirstOrDefault() ?? string.Empty,
+            ProductDetails = job.ProductDetails,
             OutputRef = string.Empty,
             InvoiceRef = string.Empty,
             InvoiceAmount = 0m,
@@ -357,6 +361,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 Qty = 1200m,
                 PaymentTerms = "30 days",
                 Remarks = "Priority print run for launch window.",
+                ProductDetails = "<p>Carton front</p><p>Carton reverse</p><p>Insert leaflet</p>",
                 Status = 2,
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 3, 21, 9, 0, 0, DateTimeKind.Utc),
@@ -381,6 +386,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 Qty = 640m,
                 PaymentTerms = "COD",
                 Remarks = "Customer requested satin stock.",
+                ProductDetails = "<p>A1 poster</p><p>A3 handbill</p>",
                 Status = 1,
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 3, 24, 9, 0, 0, DateTimeKind.Utc),
@@ -404,6 +410,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 Qty = 2500m,
                 PaymentTerms = "45 days",
                 Remarks = "Awaiting final proof approval.",
+                ProductDetails = "<p>Cover</p><p>Section dividers</p><p>Product spreads</p>",
                 Status = 0,
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 3, 27, 9, 0, 0, DateTimeKind.Utc),
@@ -430,6 +437,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public required decimal Qty { get; init; }
         public required string PaymentTerms { get; init; }
         public required string Remarks { get; init; }
+        public required string ProductDetails { get; init; }
         public required int Status { get; init; }
         public required string CreatedBy { get; init; }
         public required DateTime CreatedOn { get; init; }

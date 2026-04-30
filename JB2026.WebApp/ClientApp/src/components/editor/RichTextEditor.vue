@@ -26,6 +26,30 @@ const { t } = useI18n({ useScope: 'global' })
 const content = ref(t('editor.sampleHtml'))
 
 const config = {
-  toolbar: ['undo', 'redo', '|', 'bold', 'italic', 'link', '|', 'bulletedList', 'numberedList', '|', 'insertTable'],
+  licenseKey: 'GPL',
+  toolbar: {
+    items: [
+      'undo',
+      'redo',
+      '|',
+      'heading',
+      '|',
+      'bold',
+      'italic',
+      'link',
+      '|',
+      'bulletedList',
+      'numberedList',
+      '|',
+      'outdent',
+      'indent',
+      '|',
+      'blockQuote',
+      'insertTable',
+      'mediaEmbed',
+      'imageUpload',
+    ],
+    shouldNotGroupWhenFull: true,
+  },
 }
 </script>

@@ -23,6 +23,7 @@ interface UpdateJobRequest {
   qty: number
   paymentTerms: string
   remarks: string
+  productDetails?: string
   status: number
 }
 
@@ -88,6 +89,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       qty: data.qty,
       paymentTerms: data.paymentTerms,
       remarks: data.remarks,
+      productDetails: data.productDetails,
       status: data.status,
     }
 

@@ -213,13 +213,7 @@
                   <span>{{ t('jobForm.actions.editProductDetails') }}</span>
                 </v-tooltip>
               </div>
-              <v-textarea
-                v-model="legacyProductDetails"
-                variant="outlined"
-                rows="5"
-                density="compact"
-                class="legacy-notes-box"
-              />
+              <div class="legacy-product-details-html" v-html="legacyProductDetails" />
             </div>
 
             <div class="legacy-attribute-grid mt-3">
@@ -414,15 +408,11 @@ const legacyType = computed(() => {
   const match = statusOptions.value.find((item) => item.value === draft.value.status)
   return match?.label ?? ''
 })
-const legacyProductDetails = computed({
-  get: () => {
-    if (legacyRecord.value?.productStyle) return legacyRecord.value.productStyle
-    if (props.job?.styleTitles?.length) return props.job.styleTitles.join('\n')
-    return draft.value.orderTitle
-  },
-  set: () => {
-    // Display-only area in this migration phase.
-  },
+const legacyProductDetails = computed(() => {
+  if (legacyRecord.value?.productDetails?.trim()) return legacyRecord.value.productDetails
+  if (legacyRecord.value?.productStyle?.trim()) return legacyRecord.value.productStyle
+  if (props.job?.styleTitles?.length) return props.job.styleTitles.join('<br>')
+  return draft.value.orderTitle
 })
 
 // ---------------------------------------------------------------------------
@@ -666,6 +656,7 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 .legacy-form-surface {
+  --legacy-notes-height: 188px;
   background: #d9d9d9;
   color: #1f2328;
 }
@@ -711,12 +702,36 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 .legacy-notes-box {
-  min-height: 188px;
+  min-height: var(--legacy-notes-height);
+}
+
+:deep(.legacy-notes-box .v-input__control),
+:deep(.legacy-notes-box .v-field),
+:deep(.legacy-notes-box .v-field__input) {
+  min-height: var(--legacy-notes-height);
+  height: var(--legacy-notes-height);
+}
+
+:deep(.legacy-notes-box textarea) {
+  height: 100%;
+  overflow-y: auto;
 }
 
 .legacy-product-details-wrap {
   width: calc(100% - 26px);
   position: relative;
+}
+
+.legacy-product-details-html {
+  min-height: var(--legacy-notes-height);
+  max-height: var(--legacy-notes-height);
+  overflow-y: auto;
+  border: 1px solid #9a9a9a;
+  border-radius: 4px;
+  background: #f3f3f3;
+  padding: 12px 14px;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .legacy-product-details-actions {
@@ -818,6 +833,12 @@ async function loadPreviewImage(job: JobDetail) {
 :deep(.v-theme--dark) .legacy-preview {
   border-color: #555f6b;
   background: #1f252b;
+}
+
+:deep(.v-theme--dark) .legacy-product-details-html {
+  border-color: #5d6672;
+  background: #2b333c;
+  color: #edf2f7;
 }
 
 :deep(.v-theme--dark) .legacy-preview-header {

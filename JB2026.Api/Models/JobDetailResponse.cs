@@ -26,6 +26,8 @@ public sealed class JobDetailResponse
 
     public required string Remarks { get; init; }
 
+    public required string ProductDetails { get; init; }
+
     public required string[] StyleTitles { get; init; }
 
     public required IReadOnlyList<JobAttachmentResponse> Attachments { get; init; }

@@ -58,7 +58,7 @@ export const jobFormMessages = {
           xLarge: '特大',
         },
         productDetailsTitle: '編輯產品內容',
-        productDetailsHint: '在目前遷移切片中，此操作會更新訂單標題。',
+        productDetailsHint: '可在此編輯並儲存產品內容的 HTML。',
       },
       messages: {
         attachmentUnavailable: '{order} 的附件管理尚未在此切片提供。',

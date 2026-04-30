@@ -58,7 +58,7 @@ export const jobFormMessages = {
           xLarge: 'X-Large',
         },
         productDetailsTitle: 'Edit Product Details',
-        productDetailsHint: 'This updates Order Title in the current migration slice.',
+        productDetailsHint: 'Edit and save the Product Details HTML content.',
         printManager: {
           title: 'Print Order',
           orderNumber: 'Order Number',
@@ -99,7 +99,7 @@ export const jobFormMessages = {
         draft: 'Draft',
         inProgress: 'In Progress',
         onHold: 'On Hold',
-        completed: 'Completed',
+          productDetailsHint: 'Edit and save the Product Details HTML content.',
         cancelled: 'Cancelled',
       },
       paymentTerms: {
