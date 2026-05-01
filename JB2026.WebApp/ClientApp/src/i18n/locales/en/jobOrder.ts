@@ -111,6 +111,7 @@ export const jobOrderMessages = {
         },
         batchDeleteConfirm: 'Delete {count} selected job(s)? This action cannot be undone.',
         batchDeleteFailed: 'One or more jobs could not be deleted.',
+        batchDeleteResult: 'Deleted {succeeded} of {total} job(s). {failed} could not be deleted.',
         commonQueryItems: {
           none: 'None',
           ordered30: 'Ordered in last 30 days',

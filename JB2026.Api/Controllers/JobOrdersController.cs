@@ -15,17 +15,20 @@ public sealed class JobOrdersController : ControllerBase
     private readonly IJobManagementRepository _repository;
     private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly JobListOptions _jobListOptions;
+    private readonly LegacyFilesOptions _legacyFiles;
     private readonly ILogger<JobOrdersController> _logger;
 
     public JobOrdersController(
         IJobManagementRepository repository,
         ICurrentUserProfileService currentUserProfileService,
         IOptions<JobListOptions> jobListOptions,
+        IOptions<LegacyFilesOptions> legacyFiles,
         ILogger<JobOrdersController> logger)
     {
         _repository = repository;
         _currentUserProfileService = currentUserProfileService;
         _jobListOptions = jobListOptions.Value;
+        _legacyFiles = legacyFiles.Value;
         _logger = logger;
     }
 
@@ -156,6 +159,19 @@ public sealed class JobOrdersController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<JobOrderResponse>> Delete(Guid id)
     {
+        // Load job detail before deleting so we have attachment info for file cleanup
+        var jobDetail = _repository.GetJobDetail(id);
+        if (jobDetail is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Job order not found",
+                Detail = $"No job order exists for order id '{id}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        // Delete DB records: workflow forms, workflows, attachments, order, and rebuild sibling job numbers
         var order = await _repository.DeleteJobOrder(id);
         if (order is null)
         {
@@ -167,8 +183,84 @@ public sealed class JobOrdersController : ControllerBase
             });
         }
 
-        _logger.LogInformation("Deleted job order {OrderId}", id);
+        // Delete physical attachment files (best-effort: log warnings, do not fail the request)
+        if (jobDetail.Attachments.Count > 0)
+        {
+            DeleteAttachmentFiles(id, jobDetail);
+        }
+
+        _logger.LogInformation(
+            "Deleted job order {OrderId} ({WorkflowCount} workflows, {AttachmentCount} attachments)",
+            id, jobDetail.StyleTitles.Length, jobDetail.Attachments.Count);
         return Ok(order);
+    }
+
+    private void DeleteAttachmentFiles(Guid orderId, JobDetailResponse jobDetail)
+    {
+        var baseOrderNumber = ExtractBaseOrderNumber(jobDetail.OrderNumber);
+        var rootCandidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_legacyFiles.FileAgentRoot))
+            rootCandidates.Add(_legacyFiles.FileAgentRoot);
+        if (!string.IsNullOrWhiteSpace(_legacyFiles.InBox))
+            rootCandidates.Add(_legacyFiles.InBox);
+
+        foreach (var attachment in jobDetail.Attachments)
+        {
+            if (string.IsNullOrWhiteSpace(attachment.FileName))
+                continue;
+
+            var probes = new List<string>();
+            var typeFolder = attachment.AttachmentType.ToString();
+
+            foreach (var root in rootCandidates)
+            {
+                var orderDir = Path.Combine(root, baseOrderNumber);
+                probes.Add(Path.Combine(orderDir, typeFolder, attachment.FileName));
+                probes.Add(Path.Combine(orderDir, attachment.FileName));
+            }
+
+            if (!string.IsNullOrWhiteSpace(_legacyFiles.CloudDiskRoot))
+            {
+                probes.Add(Path.Combine(_legacyFiles.CloudDiskRoot, "uploads", orderId.ToString("N"), attachment.FileName));
+            }
+
+            var deleted = false;
+            foreach (var path in probes)
+            {
+                try
+                {
+                    if (System.IO.File.Exists(path))
+                    {
+                        System.IO.File.Delete(path);
+                        deleted = true;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Failed to delete attachment file {FilePath} for attachment {AttachmentId} during delete of job order {OrderId}",
+                        path, attachment.AttachmentId, orderId);
+                }
+            }
+
+            if (!deleted)
+            {
+                _logger.LogDebug(
+                    "No physical file found for attachment {AttachmentId} (file: {FileName}) of job order {OrderId}; skipping file cleanup",
+                    attachment.AttachmentId, attachment.FileName, orderId);
+            }
+        }
+    }
+
+    private static string ExtractBaseOrderNumber(string compositeOrderNumber)
+    {
+        var dashIndex = compositeOrderNumber.LastIndexOf('-');
+        if (dashIndex > 0 && int.TryParse(compositeOrderNumber[(dashIndex + 1)..], out _))
+        {
+            return compositeOrderNumber[..dashIndex];
+        }
+        return compositeOrderNumber;
     }
 
     private string GetActor()

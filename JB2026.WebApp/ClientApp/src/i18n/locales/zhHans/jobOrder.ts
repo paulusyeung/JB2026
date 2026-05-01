@@ -111,6 +111,7 @@ export const jobOrderMessages = {
         },
         batchDeleteConfirm: '确定删除所选 {count} 条作业？此操作无法撤销。',
         batchDeleteFailed: '部分作业无法删除。',
+        batchDeleteResult: '已删除 {total} 条中的 {succeeded} 条，{failed} 条无法删除。',
         commonQueryItems: {
           none: '无',
           ordered30: '最近 30 天下单',

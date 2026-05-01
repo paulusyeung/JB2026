@@ -317,13 +317,52 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
     public async Task<JobOrderResponse?> DeleteJobOrder(Guid orderId)
     {
-        var order = CompiledGetWriteJobOrderById(_writeContext, orderId);
+        var order = await _writeContext.JobOrders
+            .Include(o => o.JobWorkflows)
+                .ThenInclude(w => w.JobWorkflowForms)
+            .Include(o => o.JobAttachments)
+            .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
         if (order is null)
         {
             return null;
         }
 
+        // Delete JobWorkflowForms before JobWorkflows (FK constraint)
+        var workflowForms = order.JobWorkflows.SelectMany(w => w.JobWorkflowForms).ToList();
+        if (workflowForms.Count > 0)
+        {
+            _writeContext.JobWorkflowForms.RemoveRange(workflowForms);
+        }
+
+        if (order.JobWorkflows.Count > 0)
+        {
+            _writeContext.JobWorkflows.RemoveRange(order.JobWorkflows);
+        }
+
+        if (order.JobAttachments.Count > 0)
+        {
+            _writeContext.JobAttachments.RemoveRange(order.JobAttachments);
+        }
+
         _writeContext.JobOrders.Remove(order);
+
+        // Rebuild sibling job numbers if this order had a job number
+        if (order.JobNumber.HasValue && order.JobNumber.Value > 0 && !string.IsNullOrEmpty(order.OrderNumber))
+        {
+            var siblings = await _writeContext.JobOrders
+                .Where(o => o.OrderNumber == order.OrderNumber
+                    && o.OrderId != order.OrderId
+                    && o.JobNumber.HasValue
+                    && o.JobNumber.Value > order.JobNumber.Value)
+                .ToListAsync();
+
+            foreach (var sibling in siblings)
+            {
+                sibling.JobNumber = sibling.JobNumber!.Value - 1;
+            }
+        }
+
         await _writeContext.SaveChangesAsync();
 
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
@@ -377,7 +416,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                     AttachmentId = attachment.AttachmentId,
                     FileName = attachment.OriginalFileName ?? string.Empty,
                     ContentType = "application/octet-stream",
-                    Length = 0
+                    Length = 0,
+                    AttachmentType = attachment.AttachmentType
                 })
                 .ToList()
         };

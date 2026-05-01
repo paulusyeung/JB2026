@@ -111,6 +111,7 @@ export const jobOrderMessages = {
         },
         batchDeleteConfirm: '確定刪除所選 {count} 筆作業？此操作無法復原。',
         batchDeleteFailed: '部分作業無法刪除。',
+        batchDeleteResult: '已刪除 {total} 筆中的 {succeeded} 筆，{failed} 筆無法刪除。',
         commonQueryItems: {
           none: '無',
           ordered30: '最近 30 天下單',

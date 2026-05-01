@@ -115,11 +115,11 @@
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="openAttachmentDialog">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" :disabled="attachmentAndPrintDisabled" @click="openAttachmentDialog">
               {{ t('jobForm.actions.attachment') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" :disabled="attachmentAndPrintDisabled" @click="printList">
               {{ t('jobOrder.jobList.actions.print') }}
             </v-btn>
 
@@ -139,11 +139,11 @@
             </v-btn>
 
             <v-btn
-              v-if="checkboxMode && selectedOrderIds.length > 0"
               variant="tonal"
               color="error"
               size="small"
               prepend-icon="mdi-delete"
+              :disabled="selectedOrderIds.length === 0 || deleting"
               :loading="deleting"
               @click="confirmBatchDelete"
             >
@@ -180,10 +180,10 @@
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
                 <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-paperclip" @click="openAttachmentDialog">
+              <v-list-item prepend-icon="mdi-paperclip" :disabled="attachmentAndPrintDisabled" @click="openAttachmentDialog">
                 <v-list-item-title>{{ t('jobForm.actions.attachment') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-printer" @click="printList">
+              <v-list-item prepend-icon="mdi-printer" :disabled="attachmentAndPrintDisabled" @click="printList">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
@@ -192,7 +192,7 @@
               <v-list-item prepend-icon="mdi-file-plus" @click="openNew">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.newOrder') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item v-if="checkboxMode && selectedOrderIds.length > 0" prepend-icon="mdi-delete" :loading="deleting" @click="confirmBatchDelete">
+              <v-list-item prepend-icon="mdi-delete" :disabled="selectedOrderIds.length === 0 || deleting" @click="confirmBatchDelete">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.deleteSelected') }}</v-list-item-title>
               </v-list-item>
             </v-list>
@@ -201,7 +201,7 @@
 
         <div v-if="isCardView" class="job-mobile-list">
           <v-card
-            v-for="(row, index) in displayedRows"
+            v-for="row in displayedRows"
             :key="row.orderId"
             rounded="lg"
             elevation="0"
@@ -265,10 +265,10 @@
                   <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
                   </v-list-item>
-                  <v-list-item prepend-icon="mdi-paperclip" @click.stop="openAttachmentDialog">
+                  <v-list-item prepend-icon="mdi-paperclip" :disabled="attachmentAndPrintDisabled" @click.stop="openAttachmentDialog">
                     <v-list-item-title>{{ t('jobForm.actions.attachment') }}</v-list-item-title>
                   </v-list-item>
-                  <v-list-item prepend-icon="mdi-printer" @click.stop="printList">
+                  <v-list-item prepend-icon="mdi-printer" :disabled="attachmentAndPrintDisabled" @click.stop="printList">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
                   </v-list-item>
                   <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click.stop="exportToCsv">
@@ -375,7 +375,7 @@
     <v-dialog v-model="formOpen" max-width="min(100%, 760px)" scrollable>
       <JobOrderForm
         v-if="formOpen"
-        :job="formJob ?? undefined"
+        :job="formJob"
         @saved="handleSaved"
         @cancel="formOpen = false"
         @attachment="handleAttachment"
@@ -532,6 +532,9 @@ const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: St
 const hasActiveFilters = computed(() => lookup.value.trim().length > 0 || commonQuery.value > 0)
 const showInitialWindowNotice = computed(() => !hasActiveFilters.value && rows.value.length > 0)
 
+const hasSingleSelection = computed(() => selectedOrderIds.value.length === 1)
+const attachmentAndPrintDisabled = computed(() => !hasSingleSelection.value)
+
 const displayedRows = computed(() => {
   const result = [...rows.value]
   const key = (sortKey.value ?? 'orderNumber') as keyof JobOrderRecord
@@ -628,7 +631,8 @@ async function onRowClick(event: Event, payload: unknown) {
   }
 
   const row = payload as { item?: JobOrderRecord | { raw?: JobOrderRecord } }
-  const record = (row?.item as JobOrderRecord | undefined) ?? row?.item?.raw
+  const item = row?.item
+  const record: JobOrderRecord | undefined = item && 'raw' in item ? item.raw : item
   if (!record) {
     return
   }
@@ -653,16 +657,12 @@ async function openEditor(record: JobOrderRecord) {
 async function openAttachmentDialog() {
   let targetOrderId: string | null = null
 
-  if (checkboxMode.value) {
-    if (selectedOrderIds.value.length !== 1) {
-      showActionNotice(t('jobOrder.jobList.noSelection'))
-      return
-    }
-
-    targetOrderId = selectedOrderIds.value[0] ?? null
-  } else {
-    targetOrderId = activeOrderId.value
+  if (selectedOrderIds.value.length !== 1) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
   }
+
+  targetOrderId = selectedOrderIds.value[0] ?? null
 
   if (!targetOrderId) {
     showActionNotice(t('jobOrder.jobList.noSelection'))
@@ -686,16 +686,12 @@ async function handleSaved() {
 async function printList() {
   let targetOrderId: string | null = null
 
-  if (checkboxMode.value) {
-    if (selectedOrderIds.value.length !== 1) {
-      showActionNotice(t('jobOrder.jobList.noSelection'))
-      return
-    }
-
-    targetOrderId = selectedOrderIds.value[0] ?? null
-  } else {
-    targetOrderId = activeOrderId.value
+  if (selectedOrderIds.value.length !== 1) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
   }
+
+  targetOrderId = selectedOrderIds.value[0] ?? null
 
   if (!targetOrderId) {
     showActionNotice(t('jobOrder.jobList.noSelection'))
@@ -748,14 +744,20 @@ function exportToCsv() {
 }
 
 async function confirmBatchDelete() {
-  const message = t('jobOrder.jobList.batchDeleteConfirm', { count: selectedOrderIds.value.length })
+  const idsToDelete = [...selectedOrderIds.value]
+  const total = idsToDelete.length
+  if (total === 0) return
+
+  const message = t('jobOrder.jobList.batchDeleteConfirm', { count: total })
   if (!window.confirm(message)) return
 
   deleting.value = true
+  let succeeded = 0
   let failed = 0
-  for (const id of selectedOrderIds.value) {
+  for (const id of idsToDelete) {
     try {
       await deleteJobOrder(id)
+      succeeded++
     } catch {
       failed++
     }
@@ -765,7 +767,7 @@ async function confirmBatchDelete() {
   selectedOrderIds.value = []
   await load()
   if (failed > 0) {
-    errorMessage.value = t('jobOrder.jobList.batchDeleteFailed')
+    errorMessage.value = t('jobOrder.jobList.batchDeleteResult', { succeeded, failed, total })
   }
 }
 

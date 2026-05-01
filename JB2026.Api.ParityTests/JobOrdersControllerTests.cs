@@ -91,6 +91,7 @@ public sealed class JobOrdersControllerTests
             repository,
             new StubCurrentUserProfileService(),
             Microsoft.Extensions.Options.Options.Create(new JobListOptions()),
+            Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions()),
             NullLogger<JobOrdersController>.Instance);
         controller.ControllerContext = new ControllerContext
         {
