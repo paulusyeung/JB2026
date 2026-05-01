@@ -16,6 +16,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
     private const float Col3LabelWidth = 130f;
     private const float ContentLabelWidth = 44f;
     private const float WorkInstLabelWidth = 60f;
+    private const float SectionLabelFontSize = 12f;
 
     public JobOrderQuestDocument(JobOrderPrintDocument model)
         : base(model)
@@ -179,27 +180,33 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private void ComposeWorkInstructionsSection(IContainer container)
     {
-        container.Row(row =>
+        container.Column(section =>
         {
-            row.ConstantItem(WorkInstLabelWidth)
-               .Text("工作指示：")
-               .Style(CjkTextStyle.SemiBold());
+            section.Item().Height(10);
+            section.Item().BorderTop(0.5f);
 
-            row.RelativeItem().BorderBottom(0.5f).MinHeight(48).Column(col =>
+            section.Item().PaddingTop(4).Row(row =>
             {
-                col.Spacing(3);
-                foreach (var wf in Model.Workflows)
+                row.ConstantItem(WorkInstLabelWidth)
+                   .Text("工作指示：")
+                   .Style(CjkTextStyle.FontSize(SectionLabelFontSize).SemiBold());
+
+                row.RelativeItem().MinHeight(48).Column(col =>
                 {
-                    if (!string.IsNullOrWhiteSpace(wf.WorkNotes))
+                    col.Spacing(3);
+                    foreach (var wf in Model.Workflows)
                     {
-                        var notes = NormalizePrintText(HtmlToPlainText(wf.WorkNotes));
-                        if (!string.IsNullOrWhiteSpace(notes))
+                        if (!string.IsNullOrWhiteSpace(wf.WorkNotes))
                         {
-                            col.Item().Text(notes)
-                               .Style(SelectTextStyle(UseCjkFallback(notes)).FontSize(9).LineHeight(1.12f));
+                            var notes = NormalizePrintText(HtmlToPlainText(wf.WorkNotes));
+                            if (!string.IsNullOrWhiteSpace(notes))
+                            {
+                                col.Item().Text(notes)
+                                   .Style(SelectTextStyle(UseCjkFallback(notes)).FontSize(9).LineHeight(1.12f));
+                            }
                         }
                     }
-                }
+                });
             });
         });
     }
@@ -208,20 +215,26 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private void ComposeRemarksSection(IContainer container)
     {
-        container.Row(row =>
+        container.Column(section =>
         {
-            row.ConstantItem(ContentLabelWidth)
-               .Text("備註：")
-               .Style(CjkTextStyle.SemiBold());
+            section.Item().Height(10);
+            section.Item().BorderTop(0.5f);
 
-            row.RelativeItem().BorderBottom(0.5f).MinHeight(36).Column(col =>
+            section.Item().PaddingTop(4).Row(row =>
             {
-                if (!string.IsNullOrWhiteSpace(Model.Remarks))
+                row.ConstantItem(ContentLabelWidth)
+                   .Text("備註：")
+                   .Style(CjkTextStyle.FontSize(SectionLabelFontSize).SemiBold());
+
+                row.RelativeItem().MinHeight(36).Column(col =>
                 {
-                    var remarks = NormalizePrintText(Model.Remarks);
-                    col.Item().Text(remarks)
-                       .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(9).LineHeight(1.12f));
-                }
+                    if (!string.IsNullOrWhiteSpace(Model.Remarks))
+                    {
+                        var remarks = NormalizePrintText(Model.Remarks);
+                        col.Item().Text(remarks)
+                           .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(9).LineHeight(1.12f));
+                    }
+                });
             });
         });
     }
