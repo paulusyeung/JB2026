@@ -417,8 +417,15 @@
         :job="jobFormJob"
         @saved="handleJobSaved"
         @cancel="jobFormOpen = false"
+        @product-details-edit="handleProductDetailsEdit"
       />
     </v-dialog>
+
+    <JobOrderActionDialogs
+      :job="jobFormJob"
+      v-model:product-details-open="productDetailsDialogOpen"
+      @updated="handleActionUpdated"
+    />
   </section>
 </template>
 
@@ -431,6 +438,7 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 
 const rows = ref<JobOrderRecord[]>([])
@@ -467,6 +475,7 @@ const deleting = ref(false)
 
 const jobFormOpen = ref(false)
 const jobFormJob = ref<JobDetail | null>(null)
+const productDetailsDialogOpen = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -702,6 +711,21 @@ async function handleJobSaved() {
   await load()
   jobFormOpen.value = false
   jobFormJob.value = null
+}
+
+function handleProductDetailsEdit(job: JobDetail) {
+  jobFormJob.value = job
+  productDetailsDialogOpen.value = true
+}
+
+async function handleActionUpdated() {
+  if (!jobFormJob.value) return
+  try {
+    const latest = await getJobOrder(jobFormJob.value.orderId!)
+    jobFormJob.value = latest as unknown as JobDetail
+  } catch {
+    // ignore
+  }
 }
 
 async function openEdit(record: JobOrderRecord) {
