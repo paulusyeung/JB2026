@@ -89,6 +89,22 @@
               {{ t('jobOrder.orderList.actions.checkbox') }}
             </v-btn>
 
+            <v-menu location="bottom">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                  {{ t('jobOrder.jobList.actions.views') }}
+                </v-btn>
+              </template>
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                  <v-list-item-title>{{ detailViewLabel }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                  <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
             <v-divider vertical class="mx-1" />
 
             <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
@@ -137,6 +153,12 @@
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                 <v-list-item-title>{{ t('jobOrder.orderList.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ detailViewLabel }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
+              </v-list-item>
               <v-list-item prepend-icon="mdi-printer" @click="printList">
                 <v-list-item-title>{{ t('jobOrder.orderList.actions.print') }}</v-list-item-title>
               </v-list-item>
@@ -153,7 +175,7 @@
           </v-menu>
         </div>
 
-        <div v-if="isPhoneLayout" class="order-mobile-list">
+        <div v-if="isCardView" class="order-mobile-list" :class="{ 'order-mobile-list--desktop': !isPhoneLayout }">
           <v-card
             v-for="master in masterRows"
             :key="master.orderId"
@@ -423,6 +445,7 @@
 
     <JobOrderActionDialogs
       :job="jobFormJob"
+      :attachment-open="false"
       v-model:product-details-open="productDetailsDialogOpen"
       @updated="handleActionUpdated"
     />
@@ -441,6 +464,8 @@ import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 
+type OrderListViewMode = 'detail' | 'card'
+
 const rows = ref<JobOrderRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
@@ -451,6 +476,7 @@ const selectedOrderIds = ref<string[]>([])
 const expandedMasterIds = ref<string[]>([])
 const sortDirection = ref<'asc' | 'desc'>('desc')
 const sortKey = ref('orderNumber')
+const viewMode = ref<OrderListViewMode>('detail')
 const visibleColumnKeys = ref<string[]>([
   'expander',
   'orderNumber',
@@ -484,6 +510,9 @@ const theme = useTheme()
 const display = useDisplay()
 const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
+const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
+const cardViewLabel = computed(() => t('jobOrder.jobList.actions.cardView'))
+const isCardView = computed(() => viewMode.value === 'card')
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.orderList.commonQueryItems.none') },
@@ -691,6 +720,10 @@ function toggleSelected(orderId: string) {
   }
 
   selectedOrderIds.value = [...selectedOrderIds.value, orderId]
+}
+
+function setViewMode(mode: OrderListViewMode) {
+  viewMode.value = mode
 }
 
 async function onDetailRowClick(_event: Event, payload: { item: JobOrderRecord }) {
@@ -910,6 +943,11 @@ function statusColor(status: number) {
 .order-mobile-list {
   display: grid;
   gap: 12px;
+}
+
+.order-mobile-list--desktop {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
 }
 
 .order-mobile-card {
