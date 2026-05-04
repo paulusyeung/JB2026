@@ -354,7 +354,7 @@
                   </template>
 
                   <template #[`item.orderNumber`]="{ item: detail }">
-                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEdit(detail)">
+                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openJobForm(detail)">
                       {{ detail.orderNumber }}-{{ detail.jobNumber }}
                     </v-btn>
                   </template>
@@ -410,6 +410,15 @@
         @cancel="formOpen = false"
       />
     </v-dialog>
+
+    <v-dialog v-model="jobFormOpen" max-width="min(100%, 1200px)" scrollable>
+      <JobOrderForm
+        v-if="jobFormOpen"
+        :job="jobFormJob"
+        @saved="handleJobSaved"
+        @cancel="jobFormOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
@@ -421,7 +430,8 @@ import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
-import type { JobOrderRecord } from '@/types/api'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import type { JobDetail, JobOrderRecord } from '@/types/api'
 
 const rows = ref<JobOrderRecord[]>([])
 const loading = ref(false)
@@ -454,6 +464,9 @@ const visibleColumnKeys = ref<string[]>([
 const formOpen = ref(false)
 const formJob = ref<JobOrderRecord | null>(null)
 const deleting = ref(false)
+
+const jobFormOpen = ref(false)
+const jobFormJob = ref<JobDetail | null>(null)
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -672,7 +685,23 @@ function toggleSelected(orderId: string) {
 }
 
 async function onDetailRowClick(_event: Event, payload: { item: JobOrderRecord }) {
-  await openEdit(payload.item)
+  await openJobForm(payload.item)
+}
+
+async function openJobForm(record: JobOrderRecord) {
+  try {
+    const latest = await getJobOrder(record.orderId)
+    jobFormJob.value = latest as unknown as JobDetail
+    jobFormOpen.value = true
+  } catch {
+    errorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function handleJobSaved() {
+  await load()
+  jobFormOpen.value = false
+  jobFormJob.value = null
 }
 
 async function openEdit(record: JobOrderRecord) {
