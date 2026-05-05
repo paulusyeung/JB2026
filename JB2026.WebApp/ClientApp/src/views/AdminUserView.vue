@@ -78,26 +78,26 @@
               {{ t('admin.user.actions.checkbox') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.user.actions.views')">
-              {{ t('admin.user.actions.views') }}
-            </v-btn>
-
-            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
-              {{ t('admin.user.actions.newUser') }}
-            </v-btn>
+            <v-menu location="bottom">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                  {{ t('admin.user.actions.views') }}
+                </v-btn>
+              </template>
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                  <v-list-item-title>{{ t('admin.user.actions.detailView') }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                  <v-list-item-title>{{ t('admin.user.actions.cardView') }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-              {{ t('admin.user.actions.refresh') }}
-            </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.user.actions.preference')">
-              {{ t('admin.user.actions.preference') }}
-            </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedUserId" @click="openPopup">
-              {{ t('admin.user.actions.popup') }}
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
+              {{ t('admin.user.actions.newUser') }}
             </v-btn>
           </template>
 
@@ -112,20 +112,14 @@
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                 <v-list-item-title>{{ t('admin.user.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.user.actions.views')">
-                <v-list-item-title>{{ t('admin.user.actions.views') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ t('admin.user.actions.detailView') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ t('admin.user.actions.cardView') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-account-plus" @click="openNewUser">
                 <v-list-item-title>{{ t('admin.user.actions.newUser') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
-                <v-list-item-title>{{ t('admin.user.actions.refresh') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-tune" @click="showUnavailable('admin.user.actions.preference')">
-                <v-list-item-title>{{ t('admin.user.actions.preference') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedUserId" @click="openPopup">
-                <v-list-item-title>{{ t('admin.user.actions.popup') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -145,6 +139,43 @@
           :on-select="handleMobileSelect"
           :on-card-click="(item) => onMobileCardClick(item as AdminUserDisplayItem)"
         />
+
+        <div v-else-if="isCardView" class="user-card-list">
+          <v-card
+            v-for="row in displayedRows"
+            :key="row.userId"
+            rounded="lg"
+            elevation="0"
+            class="user-card"
+            @click="openPopup(row.userId)"
+          >
+            <div class="user-card__header">
+              <div class="d-flex align-center ga-2">
+                <v-icon size="18" :color="row.primaryRec ? 'warning' : 'secondary'">
+                  {{ row.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
+                </v-icon>
+                <div>
+                  <div class="text-subtitle-2 font-weight-bold">{{ row.userAlias }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ row.username }}</div>
+                </div>
+              </div>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedUserIds.includes(row.userId)"
+                density="compact"
+                hide-details
+                @click.stop="handleCardCheckbox(row.userId)"
+              />
+            </div>
+            <div class="user-card__body">
+              <span class="text-caption">{{ t('admin.user.headers.userRole') }}: {{ row.role || '-' }}</span>
+            </div>
+            <div class="user-card__footer text-caption text-medium-emphasis">
+              <span>{{ t('admin.user.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
+              <span>{{ t('admin.user.headers.modifiedOn') }}: {{ formatDateCell(row.modifiedOn) }}</span>
+            </div>
+          </v-card>
+        </div>
 
         <v-data-table
           v-else
@@ -198,12 +229,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
 import { getAdminUsers } from '@/services/admin'
 import type { AdminUser, AdminUserRecord } from '@/types/api'
+
+type AdminUserViewMode = 'detail' | 'card'
 
 type AdminUserDisplayItem = AdminUser & {
   icon: string
@@ -214,31 +248,30 @@ const rows = ref<AdminUser[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
-const checkboxMode = ref(false)
+const viewSettings = useViewSettings('admin-user', {
+  visibleColumns: ['icon', 'username', 'ln', 'userAlias', 'userPassword', 'role', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+  sortKey: 'userAlias',
+  sortDirection: 'asc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
 const selectedUserIds = ref<string[]>([])
 const dialogOpen = ref(false)
 const editingUserId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
-const sortDirection = ref<'asc' | 'desc'>('asc')
-const sortKey = ref('userAlias')
-const visibleColumnKeys = ref<string[]>([
-  'icon',
-  'username',
-  'ln',
-  'userAlias',
-  'userPassword',
-  'role',
-  'createdOn',
-  'createdBy',
-  'modifiedOn',
-  'modifiedBy',
-])
 
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
+
+const isCardView = computed(() => viewMode.value === 'card')
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -388,6 +421,18 @@ function openNewUser() {
   errorMessage.value = ''
 }
 
+function setViewMode(mode: AdminUserViewMode) {
+  viewMode.value = mode
+}
+
+function handleCardCheckbox(userId: string) {
+  if (selectedUserIds.value.includes(userId)) {
+    selectedUserIds.value = selectedUserIds.value.filter((id) => id !== userId)
+    return
+  }
+  selectedUserIds.value = [...selectedUserIds.value, userId]
+}
+
 async function handleSaved(user: AdminUserRecord) {
   await load()
   selectedUserIds.value = [user.userId]
@@ -401,10 +446,6 @@ async function handleDeleted(id: string) {
   selectedUserIds.value = selectedUserIds.value.filter((userId) => userId !== id)
   successMessage.value = t('admin.user.messages.deleteSuccess')
   saveSuccess.value = true
-}
-
-function showUnavailable(actionKey: string) {
-  errorMessage.value = t('admin.user.messages.actionUnavailable', { action: t(actionKey) })
 }
 
 function formatDateCell(value: string): string {
@@ -478,5 +519,44 @@ function formatDateCell(value: string): string {
   .filter-bar {
     grid-template-columns: 1fr;
   }
+}
+
+.user-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .user-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+.user-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.user-card:active {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.user-card__header,
+.user-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.user-card__body {
+  display: grid;
+  gap: 0.45rem;
 }
 </style>

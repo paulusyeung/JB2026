@@ -28,6 +28,8 @@ export const adminMessages = {
           sorting: 'Sorting',
           checkbox: 'Checkbox',
           views: 'Views',
+          detailView: 'Detail View',
+          cardView: 'Card View',
           refresh: 'Refresh',
           preference: 'Preference',
           newUser: 'New User',
