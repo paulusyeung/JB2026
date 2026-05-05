@@ -254,7 +254,12 @@
           <template #[`item.urgencyLevel`]="{ item }">
             <div class="d-flex justify-center">
               <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
-              <span v-else>-</span>
+            </div>
+          </template>
+
+          <template #[`header.urgencyLevel`]>
+            <div class="d-flex justify-center">
+              <v-icon size="14" color="grey-darken-2">mdi-bell</v-icon>
             </div>
           </template>
 
@@ -559,23 +564,27 @@ function statusColor(status: number) {
 
 function workflowColor(status: number | null) {
   if (status == null) return 'grey-lighten-1'
-  if (status <= 0) return 'error'
-  if (status === 1) return 'error'
-  if (status === 2) return 'warning'
-  if (status === 3) return 'success'
-  if (status === 4) return 'info'
+  if (status === 0) return 'error'
+  if (status === 1) return 'warning'
+  if (status === 2) return 'success'
+  if (status === 3) return 'info'
   return 'grey'
 }
 
 function urgencyIcon(level: number) {
-  if (level === 4) return 'mdi-bell-alert'
-  if (level === 2) return 'mdi-bell'
+  // Be tolerant to payload shape; some responses can serialize numbers as strings/null.
+  const urgency = Number(level)
+  if (!Number.isFinite(urgency) || urgency === -1) return 'mdi-stop-circle-outline'
+  if (urgency === 4) return 'mdi-bell'
+  if (urgency === 2) return 'mdi-bell'
   return ''
 }
 
 function urgencyColor(level: number) {
-  if (level === 4) return 'error'
-  if (level === 2) return 'warning'
+  const urgency = Number(level)
+  if (urgency === 4) return 'error'
+  if (urgency === 2) return 'warning'
+  if (!Number.isFinite(urgency) || urgency === -1) return 'error'
   return 'grey'
 }
 

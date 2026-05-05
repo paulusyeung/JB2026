@@ -248,7 +248,9 @@ public sealed class JobSchedulesController : ControllerBase
             var result = baseRows.Select(item =>
             {
                 workflowMap.TryGetValue(item.OrderId, out var steps);
-                urgencyMap.TryGetValue(item.OrderId, out var urgency);
+                var urgency = urgencyMap.TryGetValue(item.OrderId, out var mappedUrgency)
+                    ? mappedUrgency
+                    : -1;
 
                 return new JobSchedulePendingItemResponse
                 {
