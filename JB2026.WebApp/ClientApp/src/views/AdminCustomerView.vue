@@ -25,9 +25,7 @@
             {{ t('common.search') }}
           </v-btn>
 
-          <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-            {{ t('common.refresh') }}
-          </v-btn>
+
         </div>
 
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
@@ -100,17 +98,7 @@
               {{ t('admin.customer.actions.newCustomer') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-              {{ t('admin.customer.actions.refresh') }}
-            </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.customer.actions.preference')">
-              {{ t('admin.customer.actions.preference') }}
-            </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedCustomerId" @click="openPopup">
-              {{ t('admin.customer.actions.popup') }}
-            </v-btn>
           </template>
 
           <v-menu v-else location="bottom end">
@@ -133,15 +121,7 @@
               <v-list-item prepend-icon="mdi-account-plus" @click="openNewCustomer">
                 <v-list-item-title>{{ t('admin.customer.actions.newCustomer') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
-                <v-list-item-title>{{ t('admin.customer.actions.refresh') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-tune" @click="showUnavailable('admin.customer.actions.preference')">
-                <v-list-item-title>{{ t('admin.customer.actions.preference') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedCustomerId" @click="openPopup">
-                <v-list-item-title>{{ t('admin.customer.actions.popup') }}</v-list-item-title>
-              </v-list-item>
+
             </v-list>
           </v-menu>
 
