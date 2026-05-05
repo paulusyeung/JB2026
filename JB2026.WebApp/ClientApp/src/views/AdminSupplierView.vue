@@ -24,10 +24,6 @@
           <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="applyLookup">
             {{ t('common.search') }}
           </v-btn>
-
-          <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-            {{ t('common.refresh') }}
-          </v-btn>
         </div>
 
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
@@ -99,18 +95,6 @@
             <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
               {{ t('admin.supplier.actions.newSupplier') }}
             </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
-              {{ t('admin.supplier.actions.refresh') }}
-            </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-tune" @click="showUnavailable('admin.supplier.actions.preference')">
-              {{ t('admin.supplier.actions.preference') }}
-            </v-btn>
-
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedSupplierId" @click="openPopup">
-              {{ t('admin.supplier.actions.popup') }}
-            </v-btn>
           </template>
 
           <v-menu v-else location="bottom end">
@@ -132,15 +116,6 @@
               </v-list-item>
               <v-list-item prepend-icon="mdi-account-plus" @click="openNewSupplier">
                 <v-list-item-title>{{ t('admin.supplier.actions.newSupplier') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-refresh" :disabled="loading" @click="refreshList">
-                <v-list-item-title>{{ t('admin.supplier.actions.refresh') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-tune" @click="showUnavailable('admin.supplier.actions.preference')">
-                <v-list-item-title>{{ t('admin.supplier.actions.preference') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedSupplierId" @click="openPopup">
-                <v-list-item-title>{{ t('admin.supplier.actions.popup') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
