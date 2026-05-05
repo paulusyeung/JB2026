@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section pending-list-page">
+  <section class="page-section pending-list-page" :class="{ 'pending-list-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card pending-list-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
@@ -88,9 +88,21 @@
             {{ t('jobOrder.pending.actions.checkbox') }}
           </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
-            {{ t('jobOrder.pending.actions.popup') }}
-          </v-btn>
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                {{ t('jobOrder.pending.actions.views') }}
+              </v-btn>
+            </template>
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ t('jobOrder.pending.actions.detailView') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ t('jobOrder.pending.actions.cardView') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <v-divider vertical class="mx-1" />
 
@@ -145,6 +157,46 @@
               <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-open-in-app" @click.stop="openEditor(item)">
                 {{ t('jobOrder.pending.actions.popup') }}
               </v-btn>
+            </div>
+          </v-card>
+        </div>
+
+        <div v-else-if="isCardView" class="pending-card-list mt-2">
+          <v-card
+            v-for="item in displayedRows"
+            :key="item.orderId"
+            rounded="lg"
+            elevation="0"
+            class="pending-card"
+            @click="openEditor(item)"
+          >
+            <div class="pending-card__header">
+              <div>
+                <div class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</div>
+                <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
+              </div>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedOrderIds.includes(item.orderId)"
+                density="compact"
+                hide-details
+                @click.stop="toggleSelectedOrder(item.orderId)"
+              />
+            </div>
+
+            <div class="text-body-2 mt-1">{{ item.orderTitle }}</div>
+
+            <div class="pending-card__chips mt-2">
+              <v-chip size="x-small" variant="tonal">{{ t('jobOrder.pending.headers.orderType') }}: {{ item.orderType }}</v-chip>
+              <v-chip size="x-small" variant="tonal" :color="statusColor(item.status)">{{ t('jobOrder.pending.headers.status') }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@1: {{ item.step1Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@2: {{ item.step2Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@3: {{ item.step3Status ?? '-' }}</v-chip>
+            </div>
+
+            <div class="pending-card__meta text-caption text-medium-emphasis mt-2">
+              <span>{{ t('jobOrder.pending.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
+              <span>{{ t('jobOrder.pending.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
             </div>
           </v-card>
         </div>
@@ -254,7 +306,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useDisplay } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
@@ -270,11 +323,8 @@ const errorMessage = ref('')
 const lookup = ref('')
 // commonQuery mapping: 0=None, 1=Ordered in last 30 days, 2=Ordered in last 90 days.
 const commonQuery = ref(0)
-const checkboxMode = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const activeOrderId = ref<string | null>(null)
-const sortDirection = ref<'asc' | 'desc'>('desc')
-const sortKey = ref('orderNumber')
 const formOpen = ref(false)
 const formJob = ref<JobDetail | null>(null)
 const actionNoticeOpen = ref(false)
@@ -283,26 +333,41 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
-const visibleColumnKeys = ref<string[]>([
-  'orderNumber',
-  'orderType',
-  'status',
-  'step1Status',
-  'step2Status',
-  'step3Status',
-  'urgencyLevel',
-  'customerName',
-  'orderTitle',
-  'orderedOn',
-  'requiredOn',
-])
+
+const viewSettings = useViewSettings('pending-schedule', {
+  visibleColumns: [
+    'orderNumber',
+    'orderType',
+    'status',
+    'step1Status',
+    'step2Status',
+    'step3Status',
+    'urgencyLevel',
+    'customerName',
+    'orderTitle',
+    'orderedOn',
+    'requiredOn',
+  ],
+  sortKey: 'orderNumber',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 const display = useDisplay()
+const theme = useTheme()
+const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
+const isCardView = computed(() => viewMode.value === 'card')
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.pending.commonQueryItems.none') },
@@ -420,6 +485,10 @@ function toggleColumn(columnKey: string) {
 
 function onRowClick(_event: Event, payload: { item: JobSchedulePendingItem }) {
   activeOrderId.value = payload.item.orderId
+}
+
+function setViewMode(mode: 'detail' | 'card') {
+  viewMode.value = mode
 }
 
 async function openPopup() {
@@ -562,6 +631,13 @@ async function handleActionUpdated() {
 <style scoped>
 .pending-list-page {
   min-height: 0;
+  --pending-list-header-bg: rgba(195, 216, 248, 0.92);
+  --pending-list-header-fg: inherit;
+}
+
+.pending-list-page--dark {
+  --pending-list-header-bg: rgba(52, 74, 104, 0.95);
+  --pending-list-header-fg: rgba(239, 246, 255, 0.98);
 }
 
 .pending-list-card {
@@ -588,9 +664,27 @@ async function handleActionUpdated() {
   overflow: auto;
 }
 
-.pending-list-table :deep(thead th) {
+.pending-list-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.pending-list-table :deep(.v-table__wrapper > table > thead > tr > th),
+.pending-list-table :deep(.v-data-table__th) {
   white-space: nowrap;
-  background: rgba(195, 216, 248, 0.72);
+  background-color: var(--pending-list-header-bg) !important;
+  color: var(--pending-list-header-fg) !important;
+}
+
+.pending-list-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.pending-list-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.pending-list-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.pending-list-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
 }
 
 .pending-list-table :deep(tbody td) {
@@ -600,6 +694,42 @@ async function handleActionUpdated() {
 .pending-mobile-list {
   display: grid;
   gap: 12px;
+}
+
+.pending-card-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .pending-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+.pending-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  padding: 12px;
+  cursor: pointer;
+}
+
+.pending-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pending-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pending-card__meta {
+  display: grid;
+  gap: 2px;
 }
 
 .pending-mobile-card {
