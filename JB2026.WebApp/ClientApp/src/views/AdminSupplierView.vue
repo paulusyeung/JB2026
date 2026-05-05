@@ -78,15 +78,27 @@
               {{ t('admin.supplier.actions.checkbox') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.supplier.actions.views')">
-              {{ t('admin.supplier.actions.views') }}
-            </v-btn>
+            <v-menu location="bottom">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                  {{ t('admin.supplier.actions.views') }}
+                </v-btn>
+              </template>
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                  <v-list-item-title>{{ t('admin.supplier.actions.detailView') }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                  <v-list-item-title>{{ t('admin.supplier.actions.cardView') }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
+            <v-divider vertical class="mx-1" />
 
             <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
               {{ t('admin.supplier.actions.newSupplier') }}
             </v-btn>
-
-            <v-divider vertical class="mx-1" />
 
             <v-btn variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
               {{ t('admin.supplier.actions.refresh') }}
@@ -112,8 +124,11 @@
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
                 <v-list-item-title>{{ t('admin.supplier.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-eye-outline" @click="showUnavailable('admin.supplier.actions.views')">
-                <v-list-item-title>{{ t('admin.supplier.actions.views') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ t('admin.supplier.actions.detailView') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ t('admin.supplier.actions.cardView') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-account-plus" @click="openNewSupplier">
                 <v-list-item-title>{{ t('admin.supplier.actions.newSupplier') }}</v-list-item-title>
@@ -145,6 +160,41 @@
           :on-select="handleMobileSelect"
           :on-card-click="(item) => onMobileCardClick(item as AdminSupplierDisplayItem)"
         />
+
+        <div v-else-if="isCardView" class="supplier-card-list">
+          <v-card
+            v-for="row in displayedRows"
+            :key="row.supplierId"
+            rounded="lg"
+            elevation="0"
+            class="supplier-card"
+            @click="openPopup(row.supplierId)"
+          >
+            <div class="supplier-card__header">
+              <div class="d-flex align-center ga-2">
+                <v-icon size="18" color="secondary">mdi-truck-delivery</v-icon>
+                <div>
+                  <div class="text-subtitle-2 font-weight-bold">{{ row.supplierName }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ row.supplierCode || '-' }}</div>
+                </div>
+              </div>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedSupplierIds.includes(row.supplierId)"
+                density="compact"
+                hide-details
+                @click.stop="handleCardCheckbox(row.supplierId)"
+              />
+            </div>
+            <div class="supplier-card__body">
+              <span class="text-caption">{{ t('admin.supplier.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
+            </div>
+            <div class="supplier-card__footer text-caption text-medium-emphasis">
+              <span>{{ t('admin.supplier.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
+              <span>{{ t('admin.supplier.headers.modifiedOn') }}: {{ formatDateCell(row.modifiedOn) }}</span>
+            </div>
+          </v-card>
+        </div>
 
         <v-data-table
           v-else
@@ -199,9 +249,12 @@ import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import AdminSupplierRecordDialog from '@/components/forms/AdminSupplierRecordDialog.vue'
 import { getAdminSuppliers } from '@/services/admin'
 import type { AdminSupplierListItem, AdminSupplierRecord } from '@/types/api'
+
+type AdminSupplierViewMode = 'detail' | 'card'
 
 type AdminSupplierDisplayItem = AdminSupplierListItem & {
   icon: string
@@ -212,27 +265,30 @@ const rows = ref<AdminSupplierListItem[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
-const checkboxMode = ref(false)
+const viewSettings = useViewSettings('admin-supplier', {
+  visibleColumns: ['icon', 'supplierName', 'ln', 'loginAccount', 'loginPassword', 'supplierCode'],
+  sortKey: 'supplierName',
+  sortDirection: 'asc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
 const selectedSupplierIds = ref<string[]>([])
 const dialogOpen = ref(false)
 const editingSupplierId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
-const sortDirection = ref<'asc' | 'desc'>('asc')
-const sortKey = ref('supplierName')
-const visibleColumnKeys = ref<string[]>([
-  'icon',
-  'supplierName',
-  'ln',
-  'loginAccount',
-  'loginPassword',
-  'supplierCode',
-])
 
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
+
+const isCardView = computed(() => viewMode.value === 'card')
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -401,6 +457,18 @@ function showUnavailable(actionKey: string) {
   errorMessage.value = t('admin.supplier.messages.actionUnavailable', { action: t(actionKey) })
 }
 
+function setViewMode(mode: AdminSupplierViewMode) {
+  viewMode.value = mode
+}
+
+function handleCardCheckbox(supplierId: string) {
+  if (selectedSupplierIds.value.includes(supplierId)) {
+    selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
+    return
+  }
+  selectedSupplierIds.value = [...selectedSupplierIds.value, supplierId]
+}
+
 function formatDateCell(value: string): string {
   if (!value) return '-'
   const normalized = value.replace('T', ' ')
@@ -472,5 +540,44 @@ function formatDateCell(value: string): string {
   .filter-bar {
     grid-template-columns: 1fr;
   }
+}
+
+.supplier-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .supplier-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+.supplier-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.supplier-card:active {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.supplier-card__header,
+.supplier-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.supplier-card__body {
+  display: grid;
+  gap: 0.45rem;
 }
 </style>
