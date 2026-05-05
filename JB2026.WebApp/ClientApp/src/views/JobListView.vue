@@ -626,18 +626,20 @@ function setViewMode(mode: JobListViewMode) {
 }
 
 async function onRowClick(event: Event, payload: unknown) {
-  if (checkboxMode.value) {
-    return
-  }
-
   const row = payload as { item?: JobOrderRecord | { raw?: JobOrderRecord } }
   const item = row?.item
-  const record: JobOrderRecord | undefined = item && 'raw' in item ? item.raw : item
+  const record = item && typeof item === 'object' && 'raw' in item ? item.raw : (item as JobOrderRecord | undefined)
   if (!record) {
     return
   }
 
   if ((event.target as HTMLElement | null)?.closest('a,button,[role="button"],input,label,.v-selection-control')) {
+    return
+  }
+
+  if (checkboxMode.value) {
+    activeOrderId.value = record.orderId
+    toggleSelected(record.orderId)
     return
   }
 
