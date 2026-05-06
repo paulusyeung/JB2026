@@ -179,17 +179,43 @@
       :job="formJob"
       @saved="handleSaved"
       @cancel="formOpen = false"
+      @attachment="handleAttachment"
+      @print-order="handlePrintOrder"
+      @workflow="handleWorkflow"
+      @product-details-edit="handleProductDetailsEdit"
     />
   </v-dialog>
+
+  <JobOrderActionDialogs
+    :job="formJob"
+    v-model:attachment-open="attachmentDialogOpen"
+    v-model:product-details-open="productDetailsDialogOpen"
+    @updated="handleActionUpdated"
+    @error="showActionNotice"
+  />
+
+  <JobOrderPrintManagerDialog
+    v-model="printManagerOpen"
+    :order-id="printManagerJob?.orderId ?? null"
+    :order-number="printManagerJob?.orderNumber ?? ''"
+    :style-titles="printManagerJob?.styleTitles"
+  />
+
+  <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
+    {{ actionNoticeMessage }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { getJobList } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
@@ -200,6 +226,12 @@ const loading = ref(false)
 const errorMessage = ref('')
 const formOpen = ref(false)
 const formJob = ref<JobDetail | null>(null)
+const actionNoticeOpen = ref(false)
+const actionNoticeMessage = ref('')
+const attachmentDialogOpen = ref(false)
+const productDetailsDialogOpen = ref(false)
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
 const selectedMonth = ref(toMonthString(new Date()))
 const selectedOrderIds = ref<string[]>([])
 
@@ -233,6 +265,7 @@ const {
   viewMode: 'detail',
 })
 const { t } = useI18n({ useScope: 'global' })
+const router = useRouter()
 const { format } = useGlobalDateFormatter()
 const { formatCurrency } = useLocaleFormatters()
 const theme = useTheme()
@@ -321,6 +354,41 @@ async function openEditor(record: JobOrderRecord) {
 async function handleSaved() {
   formOpen.value = false
   await load()
+}
+
+function showActionNotice(message: string) {
+  actionNoticeMessage.value = message
+  actionNoticeOpen.value = true
+}
+
+function handleAttachment(job: JobDetail) {
+  formJob.value = job
+  attachmentDialogOpen.value = true
+}
+
+function handleProductDetailsEdit(job: JobDetail) {
+  formJob.value = job
+  productDetailsDialogOpen.value = true
+}
+
+function handlePrintOrder(job: JobDetail) {
+  printManagerJob.value = job
+  printManagerOpen.value = true
+}
+
+function handleWorkflow(job: JobDetail) {
+  void router.push({ name: 'admin-workflow', query: { orderId: job.orderId } })
+}
+
+async function handleActionUpdated() {
+  if (!formJob.value) return
+
+  try {
+    formJob.value = await getJobDetail(formJob.value.orderId)
+    await load()
+  } catch {
+    showActionNotice(t('jobOrder.pending.loadFailed'))
+  }
 }
 
 function setViewMode(mode: 'detail' | 'card') {
