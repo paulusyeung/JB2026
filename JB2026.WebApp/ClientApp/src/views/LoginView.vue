@@ -20,10 +20,7 @@
           <v-alert v-if="session.errorKey" type="error" variant="tonal" class="mb-4">
             {{ t(session.errorKey) }}
           </v-alert>
-          <div class="d-flex flex-wrap ga-3">
-            <v-btn color="primary" type="submit" :loading="session.loading">{{ t('auth.signIn') }}</v-btn>
-            <v-btn type="button" variant="outlined" @click="handleDevelopmentSignIn">{{ t('auth.useDevDefaults') }}</v-btn>
-          </div>
+          <v-btn block color="primary" type="submit" :loading="session.loading">{{ t('auth.signIn') }}</v-btn>
         </v-form>
       </v-card-text>
     </v-card>
@@ -41,9 +38,8 @@ const route = useRoute()
 const session = useSessionStore()
 const { t } = useI18n({ useScope: 'global' })
 
-const username = ref(import.meta.env.VITE_DEV_USERNAME ?? 'admin')
-const password = ref(import.meta.env.VITE_DEV_PASSWORD ?? 'password123')
-
+const username = ref('')
+const password = ref('')
 async function handleSubmit() {
   await session.login(username.value, password.value)
   await router.replace(String(route.query.redirect ?? '/dashboard'))
