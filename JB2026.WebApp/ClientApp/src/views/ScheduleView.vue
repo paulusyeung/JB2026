@@ -102,7 +102,7 @@
           <div :class="['transfer-col', { 'transfer-col--phone': isPhoneLayout }, 'd-flex', 'flex-column', 'align-center', 'justify-center', 'ga-1']">
             <v-tooltip v-for="mc in [1,2,3,4,5]" :key="mc" :text="`→ M${mc}`" location="right">
               <template #activator="{ props }">
-                <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" color="primary"
+                <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" :color="machineColor(String(mc))"
                   @click="moveToScheduled(mc)">
                   <span class="text-caption font-weight-bold">{{ mc }}</span>
                 </v-btn>
@@ -711,11 +711,11 @@ function urgencyColor(level: number) {
 
 function machineColor(mc: string) {
   const colors: Record<string, string> = {
-    '1': 'primary',
-    '2': 'secondary',
-    '3': 'success',
+    '1': 'success',
+    '2': 'blue',
+    '3': 'error',
     '4': 'warning',
-    '5': 'error',
+    '5': 'grey',
   }
   return colors[mc] ?? 'grey'
 }
