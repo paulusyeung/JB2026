@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section packing-list-page">
+  <section class="page-section packing-list-page" :class="{ 'packing-list-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card packing-list-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
@@ -44,19 +44,67 @@
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
 
         <div class="toolbar-bar mb-2 mt-2">
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                {{ t('jobOrder.packing.actions.columns') }}
+              </v-btn>
+            </template>
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item v-for="column in columnOptions" :key="column.key" @click="toggleColumn(column.key)">
+                <template #prepend>
+                  <v-checkbox-btn :model-value="visibleColumnKeys.includes(column.key)" />
+                </template>
+                <v-list-item-title>{{ column.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                {{ t('jobOrder.packing.actions.sorting') }}
+              </v-btn>
+            </template>
+            <v-card min-width="280" class="pa-3">
+              <v-select
+                v-model="sortKey"
+                :items="sortableColumns"
+                item-title="title"
+                item-value="key"
+                density="compact"
+                variant="outlined"
+                :label="t('jobOrder.packing.actions.sortBy')"
+                hide-details
+              />
+              <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
+                <v-btn value="asc">{{ t('jobOrder.packing.actions.asc') }}</v-btn>
+                <v-btn value="desc">{{ t('jobOrder.packing.actions.desc') }}</v-btn>
+              </v-btn-toggle>
+            </v-card>
+          </v-menu>
+
           <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
             {{ t('jobOrder.packing.actions.checkbox') }}
           </v-btn>
 
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-app" :disabled="!activeRow" @click="openPopup">
-            {{ t('jobOrder.packing.actions.popup') }}
-          </v-btn>
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                {{ t('jobOrder.packing.actions.views') }}
+              </v-btn>
+            </template>
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
+                <v-list-item-title>{{ t('jobOrder.packing.actions.detailView') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                <v-list-item-title>{{ t('jobOrder.packing.actions.cardView') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <v-divider vertical class="mx-1" />
-
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
-            {{ t('jobOrder.packing.actions.print') }}
-          </v-btn>
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
             {{ t('jobOrder.packing.actions.export') }}
@@ -65,7 +113,7 @@
 
         <div v-if="isPhoneLayout" class="packing-mobile-list mt-2">
           <v-card
-            v-for="item in displayedRows"
+            v-for="(item, index) in displayedRows"
             :key="item.orderId"
             rounded="lg"
             elevation="0"
@@ -92,13 +140,54 @@
               <v-chip size="x-small" variant="tonal">@1: {{ item.step1Status ?? '-' }}</v-chip>
               <v-chip size="x-small" variant="tonal">@2: {{ item.step2Status ?? '-' }}</v-chip>
               <v-chip size="x-small" variant="tonal">@3: {{ item.step3Status ?? '-' }}</v-chip>
-              <v-chip size="x-small" variant="tonal">LN: {{ item.ln }}</v-chip>
+              <v-chip size="x-small" variant="tonal">LN: {{ index + 1 }}</v-chip>
             </div>
 
             <div class="packing-mobile-card__meta text-caption text-medium-emphasis mt-2">
               <span>{{ t('jobOrder.packing.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
               <span>{{ t('jobOrder.packing.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
               <span>{{ t('jobOrder.packing.headers.remarks') }}: {{ item.remarks || '-' }}</span>
+            </div>
+          </v-card>
+        </div>
+
+        <div v-else-if="isCardView" class="packing-card-list mt-2">
+          <v-card
+            v-for="(item, index) in displayedRows"
+            :key="item.orderId"
+            rounded="lg"
+            elevation="0"
+            class="packing-card"
+            @click="openEditor(item)"
+          >
+            <div class="packing-card__header">
+              <div>
+                <div class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</div>
+                <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
+              </div>
+            </div>
+
+            <v-checkbox-btn
+              v-if="checkboxMode"
+              class="packing-card-checkbox"
+              :model-value="selectedOrderIds.includes(item.orderId)"
+              density="compact"
+              hide-details
+              @click.stop="toggleSelectedOrder(item.orderId)"
+            />
+
+            <div class="text-body-2 mt-1">{{ item.orderTitle }}</div>
+
+            <div class="packing-card__chips mt-2">
+              <v-chip size="x-small" variant="tonal">@1: {{ item.step1Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@2: {{ item.step2Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">@3: {{ item.step3Status ?? '-' }}</v-chip>
+              <v-chip size="x-small" variant="tonal">LN: {{ index + 1 }}</v-chip>
+            </div>
+
+            <div class="packing-card__meta text-caption text-medium-emphasis mt-2">
+              <span>{{ t('jobOrder.packing.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
+              <span>{{ t('jobOrder.packing.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
             </div>
           </v-card>
         </div>
@@ -196,7 +285,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useDisplay } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
@@ -211,7 +301,6 @@ const loading = ref(false)
 const errorMessage = ref('')
 const lookup = ref('')
 const commonQuery = ref(0)
-const checkboxMode = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const activeOrderId = ref<string | null>(null)
 const formOpen = ref(false)
@@ -223,12 +312,40 @@ const productDetailsDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
 
+const viewSettings = useViewSettings('packing-schedule', {
+  visibleColumns: [
+    'orderNumber',
+    'orderType',
+    'step1Status',
+    'step2Status',
+    'step3Status',
+    'ln',
+    'customerName',
+    'orderTitle',
+    'orderedOn',
+    'requiredOn',
+    'remarks',
+  ],
+  sortKey: 'orderNumber',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
+
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 const display = useDisplay()
+const theme = useTheme()
+const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
+const isCardView = computed(() => viewMode.value === 'card')
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.packing.commonQueryItems.none') },
@@ -236,7 +353,7 @@ const commonQueryItems = computed(() => [
   { value: 2, label: t('jobOrder.packing.commonQueryItems.ordered90') },
 ])
 
-const headers = computed(() => [
+const allHeaders = computed(() => [
   { title: t('jobOrder.packing.headers.order'), key: 'orderNumber', width: '132px' },
   { title: t('jobOrder.packing.headers.orderType'), key: 'orderType', width: '58px', sortable: false },
   { title: '@1', key: 'step1Status', width: '52px', sortable: false },
@@ -250,8 +367,37 @@ const headers = computed(() => [
   { title: t('jobOrder.packing.headers.remarks'), key: 'remarks', minWidth: '260px' },
 ])
 
-const displayedRows = computed(() => rows.value)
-const activeRow = computed(() => rows.value.find((row) => row.orderId === activeOrderId.value) ?? null)
+const headers = computed(() => allHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
+const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title) })))
+const sortableColumns = computed(() =>
+  allHeaders.value
+    .filter((h) => h.sortable !== false)
+    .map((h) => ({ key: String(h.key), title: String(h.title) })),
+)
+
+const displayedRows = computed(() => {
+  const result = [...rows.value]
+  const key = sortKey.value as keyof JobSchedulePackingItem
+
+  result.sort((lhs, rhs) => {
+    const leftValue = lhs[key]
+    const rightValue = rhs[key]
+
+    if (leftValue == null && rightValue == null) return 0
+    if (leftValue == null) return sortDirection.value === 'asc' ? -1 : 1
+    if (rightValue == null) return sortDirection.value === 'asc' ? 1 : -1
+
+    if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+      return sortDirection.value === 'asc' ? leftValue - rightValue : rightValue - leftValue
+    }
+
+    const left = String(leftValue)
+    const right = String(rightValue)
+    return sortDirection.value === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+  })
+
+  return result
+})
 
 onMounted(async () => {
   await load()
@@ -302,16 +448,23 @@ function toggleSelectedOrder(orderId: string) {
   selectedOrderIds.value = [...selectedOrderIds.value, orderId]
 }
 
-function onRowClick(_event: Event, payload: { item: JobSchedulePackingItem }) {
-  activeOrderId.value = payload.item.orderId
-}
-
-async function openPopup() {
-  if (!activeRow.value) {
+function toggleColumn(columnKey: string) {
+  if (visibleColumnKeys.value.includes(columnKey)) {
+    if (visibleColumnKeys.value.length > 1) {
+      visibleColumnKeys.value = visibleColumnKeys.value.filter((k) => k !== columnKey)
+    }
     return
   }
 
-  await openEditor(activeRow.value)
+  visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
+}
+
+function setViewMode(mode: 'detail' | 'card') {
+  viewMode.value = mode
+}
+
+function onRowClick(_event: Event, payload: { item: JobSchedulePackingItem }) {
+  activeOrderId.value = payload.item.orderId
 }
 
 async function openEditor(record: JobSchedulePackingItem) {
@@ -327,10 +480,6 @@ async function openEditor(record: JobSchedulePackingItem) {
 async function handleSaved() {
   formOpen.value = false
   await load()
-}
-
-function printList() {
-  window.print()
 }
 
 function exportToCsv() {
@@ -428,6 +577,13 @@ async function handleActionUpdated() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  --packing-list-header-bg: rgba(195, 216, 248, 0.92);
+  --packing-list-header-fg: inherit;
+}
+
+.packing-list-page--dark {
+  --packing-list-header-bg: rgba(52, 74, 104, 0.95);
+  --packing-list-header-fg: rgba(239, 246, 255, 0.98);
 }
 
 .filter-bar {
@@ -442,6 +598,11 @@ async function handleActionUpdated() {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+}
+
+.toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
 }
 
 .packing-mobile-list {
@@ -467,6 +628,75 @@ async function handleActionUpdated() {
 }
 
 .packing-mobile-card__meta {
+  display: grid;
+  gap: 2px;
+}
+
+.packing-list-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.packing-list-table :deep(.v-table__wrapper > table > thead > tr > th),
+.packing-list-table :deep(.v-data-table__th) {
+  white-space: nowrap;
+  background-color: var(--packing-list-header-bg) !important;
+  color: var(--packing-list-header-fg) !important;
+}
+
+.packing-list-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.packing-list-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.packing-list-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.packing-list-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+}
+
+.packing-list-table :deep(tbody td) {
+  font-size: 12px;
+}
+
+.packing-card-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .packing-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+.packing-card {
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  padding: 12px;
+  position: relative;
+}
+
+.packing-card :deep(.packing-card-checkbox) {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.packing-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.packing-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.packing-card__meta {
   display: grid;
   gap: 2px;
 }
