@@ -17,6 +17,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
     private const float ContentLabelWidth = 44f;
     private const float WorkInstLabelWidth = 60f;
     private const float SectionLabelFontSize = 12f;
+    private const float ImageMaxHeight = 280f;
 
     public JobOrderQuestDocument(JobOrderPrintDocument model)
         : base(model)
@@ -170,7 +171,8 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                 if (!Model.NoPicture && Model.ImageBytes is not null)
                 {
                     inner.RelativeItem().PaddingLeft(8).AlignTop()
-                         .Image(Model.ImageBytes).FitWidth();
+                         .MaxHeight(ImageMaxHeight)
+                         .Image(Model.ImageBytes).FitArea();
                 }
             });
         });

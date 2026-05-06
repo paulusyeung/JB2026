@@ -57,6 +57,18 @@ export async function printJobOrder(id: string, options: JobOrderPrintRequest): 
   const response = await apiClient.post(`/api/v2/jobs/${id}/print`, options, {
     responseType: 'blob',
   })
+
+  // Check if the response is actually an error (backend returns JSON error as blob)
+  if (response.status !== 200) {
+    const text = await (response.data as Blob).text()
+    try {
+      const error = JSON.parse(text)
+      throw new Error(error.title || error.detail || 'Print failed')
+    } catch {
+      throw new Error('Unable to generate the order PDF')
+    }
+  }
+
   return response.data as Blob
 }
 

@@ -144,12 +144,6 @@
             <v-icon size="12">mdi-bell</v-icon>
           </v-btn>
 
-          <v-divider vertical class="mx-1" />
-
-          <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
-            {{ t('jobOrder.pending.actions.print') }}
-          </v-btn>
-
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
             {{ t('jobOrder.pending.actions.export') }}
           </v-btn>
@@ -555,10 +549,6 @@ async function openEditor(record: JobSchedulePendingItem) {
 async function handleSaved() {
   formOpen.value = false
   await load()
-}
-
-function printList() {
-  window.print()
 }
 
 function exportToCsv() {
