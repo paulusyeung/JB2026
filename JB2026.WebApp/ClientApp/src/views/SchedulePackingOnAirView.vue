@@ -36,7 +36,18 @@
               >
                 <div class="packing-mobile-card__header">
                   <div>
-                    <div class="text-subtitle-2 font-weight-bold text-primary">{{ index + 1 }}. {{ item.orderNumber }}</div>
+                    <div class="text-subtitle-2 font-weight-bold text-primary">
+                      {{ index + 1 }}.
+                      <v-btn
+                        variant="text"
+                        color="primary"
+                        density="compact"
+                        class="px-0 text-none packing-order-link"
+                        @click.stop="openOrderForm(item.orderId)"
+                      >
+                        {{ item.orderNumber }}
+                      </v-btn>
+                    </div>
                     <div class="text-caption text-medium-emphasis">{{ item.customerName }}</div>
                   </div>
                   <v-checkbox-btn
@@ -76,7 +87,17 @@
                   >
                     <td class="col-check"><v-checkbox-btn :model-value="checkedAvailable.includes(item.orderId)" density="compact" hide-details @click.stop="toggleAvailableCheck(item.orderId)" /></td>
                     <td class="col-num text-center">{{ index + 1 }}</td>
-                    <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
+                    <td class="col-order text-primary font-weight-medium">
+                      <v-btn
+                        variant="text"
+                        color="primary"
+                        density="compact"
+                        class="px-0 text-none packing-order-link"
+                        @click.stop="openOrderForm(item.orderId)"
+                      >
+                        {{ item.orderNumber }}
+                      </v-btn>
+                    </td>
                     <td class="col-customer">{{ item.customerName }}</td>
                     <td class="col-title">{{ item.orderTitle }}</td>
                   </tr>
@@ -240,6 +261,15 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="formOpen" max-width="760" scrollable>
+      <JobOrderForm
+        v-if="formJob"
+        :job="formJob"
+        @saved="handleFormSaved"
+        @cancel="formOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
@@ -247,13 +277,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import { getJobDetail } from '@/services/jobs'
 import {
   completePackingOnAir,
   getPackingOnAir,
   getPackingOnAirAvailable,
   savePackingOnAirBatch,
 } from '@/services/scheduler'
-import type { JobPackingOnAirAvailableItem, JobPackingOnAirItem } from '@/types/api'
+import type { JobDetail, JobPackingOnAirAvailableItem, JobPackingOnAirItem } from '@/types/api'
 
 type SelectedState = JobPackingOnAirItem
 
@@ -265,6 +297,8 @@ const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const saveDialog = ref(false)
+const formOpen = ref(false)
+const formJob = ref<JobDetail | null>(null)
 
 const availableItems = ref<JobPackingOnAirAvailableItem[]>([])
 const selectedItems = ref<SelectedState[]>([])
@@ -464,6 +498,20 @@ async function markCompleted() {
     loading.value = false
   }
 }
+
+async function openOrderForm(orderId: string) {
+  try {
+    formJob.value = await getJobDetail(orderId)
+    formOpen.value = true
+  } catch {
+    errorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function handleFormSaved() {
+  formOpen.value = false
+  await load()
+}
 </script>
 
 <style scoped>
@@ -573,6 +621,10 @@ async function markCompleted() {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+}
+
+.packing-order-link {
+  min-width: 0;
 }
 
 @media (max-width: 960px) {
