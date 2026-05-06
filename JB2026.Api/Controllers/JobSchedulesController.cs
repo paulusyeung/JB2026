@@ -1028,6 +1028,125 @@ public sealed class JobSchedulesController : ControllerBase
         return Ok(new { saved = request.ScheduledItems.Count, cancelled = request.CancelledOrderIds.Count });
     }
 
+    [HttpPatch("pending/{orderId:guid}/workflow")]
+    [ProducesResponseType(typeof(PendingWorkflowUpdateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PendingWorkflowUpdateResponse>> UpdatePendingWorkflow(
+        Guid orderId,
+        [FromBody] UpdatePendingWorkflowRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.StepIndex is < 0 or > 2)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.StepIndex)] = ["StepIndex must be 0, 1, or 2."]
+            }));
+        }
+
+        if (request.TargetStatus is < 0 or > 3)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.TargetStatus)] = ["TargetStatus must be 0 (red), 1 (yellow), 2 (green), or 3 (blue)."]
+            }));
+        }
+
+        var workflow = await _writeContext.JobWorkflows
+            .FirstOrDefaultAsync(
+                wf => wf.OrderId == orderId && wf.WorkIndex == request.StepIndex,
+                cancellationToken);
+
+        if (workflow is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Workflow step not found",
+                Detail = $"No workflow step {request.StepIndex} exists for order '{orderId}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        workflow.WorkStatus = request.TargetStatus;
+        workflow.ModifiedOn = DateTime.Now;
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        // Re-read all steps to return a normalized response
+        var allSteps = await _writeContext.JobWorkflows
+            .Where(wf => wf.OrderId == orderId && wf.WorkIndex >= 0 && wf.WorkIndex <= 2)
+            .ToListAsync(cancellationToken);
+
+        var stepMap = allSteps.ToDictionary(s => s.WorkIndex, s => s.WorkStatus);
+
+        return Ok(new PendingWorkflowUpdateResponse
+        {
+            OrderId = orderId,
+            Step1Status = stepMap.TryGetValue(0, out var s1) ? s1 : null,
+            Step2Status = stepMap.TryGetValue(1, out var s2) ? s2 : null,
+            Step3Status = stepMap.TryGetValue(2, out var s3) ? s3 : null,
+        });
+    }
+
+    [HttpPatch("pending/{orderId:guid}/urgency")]
+    [ProducesResponseType(typeof(PendingUrgencyUpdateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PendingUrgencyUpdateResponse>> UpdatePendingUrgency(
+        Guid orderId,
+        [FromBody] UpdatePendingUrgencyRequest request,
+        CancellationToken cancellationToken)
+    {
+        const int UrgencyNeutral = -1;
+        const int UrgencyYellow = 2;
+        const int UrgencyRed = 4;
+
+        int targetLevel;
+        if (string.Equals(request.TargetColor, "red", StringComparison.OrdinalIgnoreCase))
+        {
+            targetLevel = UrgencyRed;
+        }
+        else if (string.Equals(request.TargetColor, "yellow", StringComparison.OrdinalIgnoreCase))
+        {
+            targetLevel = UrgencyYellow;
+        }
+        else
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.TargetColor)] = ["TargetColor must be 'red' or 'yellow'."]
+            }));
+        }
+
+        var schedule = await _writeContext.JobSchedules
+            .Where(s => s.OrderId == orderId && s.Cancelled != true)
+            .OrderByDescending(s => s.ScheduledOn ?? DateTime.MinValue)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (schedule is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Schedule not found",
+                Detail = $"No active schedule exists for order '{orderId}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        // Toggle: if current urgency matches target, revert to neutral
+        var currentUrgency = schedule.UrgencyLevel;
+        var newUrgency = currentUrgency == targetLevel ? UrgencyNeutral : targetLevel;
+
+        schedule.UrgencyLevel = newUrgency;
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new PendingUrgencyUpdateResponse
+        {
+            OrderId = orderId,
+            UrgencyLevel = newUrgency,
+        });
+    }
+
     [HttpPost("completed/reschedule")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> RescheduleCompleted(

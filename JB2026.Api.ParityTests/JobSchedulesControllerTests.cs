@@ -19,7 +19,7 @@ public sealed class JobSchedulesControllerTests
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static JB5LegacyReadContext CreateContext(string dbName)
+    private static JB5LegacyReadContext CreateReadContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<JB5LegacyReadContext>()
             .UseInMemoryDatabase(dbName)
@@ -27,11 +27,38 @@ public sealed class JobSchedulesControllerTests
         return new JB5LegacyReadContext(options);
     }
 
+    private static JB5LegacyWriteContext CreateWriteContext(string dbName)
+    {
+        var options = new DbContextOptionsBuilder<JB5LegacyWriteContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+        return new JB5LegacyWriteContext(options);
+    }
+
+    private static JB5LegacyReadContext CreateContext(string dbName) => CreateReadContext(dbName);
+
     private static JobSchedulesController CreateController(
         JB5LegacyReadContext context,
         IJobScheduleStoredProcedureGateway gateway)
     {
-        var controller = new JobSchedulesController(context, gateway);
+        var writeOptions = new DbContextOptionsBuilder<JB5LegacyWriteContext>()
+            .UseInMemoryDatabase(context.Database.GetDbConnection().Database)
+            .Options;
+        var writeContext = new JB5LegacyWriteContext(writeOptions);
+        var controller = new JobSchedulesController(context, writeContext, gateway, new NoOpPackingGateway());
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        return controller;
+    }
+
+    private static JobSchedulesController CreateControllerWithWrite(
+        JB5LegacyReadContext readContext,
+        JB5LegacyWriteContext writeContext,
+        IJobScheduleStoredProcedureGateway? gateway = null)
+    {
+        var controller = new JobSchedulesController(readContext, writeContext, gateway ?? new NoOpGateway(), new NoOpPackingGateway());
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -337,6 +364,261 @@ public sealed class JobSchedulesControllerTests
     }
 
     // -----------------------------------------------------------------------
+    // PATCH /pending/{orderId}/workflow — workflow step update
+    // -----------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(3)]
+    [InlineData(99)]
+    public async Task UpdatePendingWorkflow_InvalidStepIndex_ReturnsBadRequest(int stepIndex)
+    {
+        var dbName = nameof(UpdatePendingWorkflow_InvalidStepIndex_ReturnsBadRequest) + stepIndex;
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingWorkflow(Guid.NewGuid(), new UpdatePendingWorkflowRequest
+        {
+            StepIndex = stepIndex,
+            TargetStatus = 1
+        }, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(4)]
+    public async Task UpdatePendingWorkflow_InvalidTargetStatus_ReturnsBadRequest(int targetStatus)
+    {
+        var dbName = nameof(UpdatePendingWorkflow_InvalidTargetStatus_ReturnsBadRequest) + targetStatus;
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingWorkflow(Guid.NewGuid(), new UpdatePendingWorkflowRequest
+        {
+            StepIndex = 0,
+            TargetStatus = targetStatus
+        }, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdatePendingWorkflow_UnknownOrder_ReturnsNotFound()
+    {
+        var dbName = nameof(UpdatePendingWorkflow_UnknownOrder_ReturnsNotFound);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingWorkflow(Guid.NewGuid(), new UpdatePendingWorkflowRequest
+        {
+            StepIndex = 0,
+            TargetStatus = 2
+        }, CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status404NotFound, notFound.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdatePendingWorkflow_ValidRequest_UpdatesStatusAndReturnsNormalizedSteps()
+    {
+        var dbName = nameof(UpdatePendingWorkflow_ValidRequest_UpdatesStatusAndReturnsNormalizedSteps);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+
+        var orderId = Guid.NewGuid();
+        writeContext.JobWorkflows.AddRange(
+            new JobWorkflow { JobWorkflowId = Guid.NewGuid(), OrderId = orderId, WorkIndex = 0, WorkStatus = 0 },
+            new JobWorkflow { JobWorkflowId = Guid.NewGuid(), OrderId = orderId, WorkIndex = 1, WorkStatus = 1 },
+            new JobWorkflow { JobWorkflowId = Guid.NewGuid(), OrderId = orderId, WorkIndex = 2, WorkStatus = 2 });
+        await writeContext.SaveChangesAsync();
+
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingWorkflow(orderId, new UpdatePendingWorkflowRequest
+        {
+            StepIndex = 0,
+            TargetStatus = 2
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PendingWorkflowUpdateResponse>(ok.Value);
+        Assert.Equal(orderId, response.OrderId);
+        Assert.Equal(2, response.Step1Status);
+        Assert.Equal(1, response.Step2Status);
+        Assert.Equal(2, response.Step3Status);
+    }
+
+    // -----------------------------------------------------------------------
+    // PATCH /pending/{orderId}/urgency — urgency bell update/toggle
+    // -----------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("blue")]
+    [InlineData("green")]
+    [InlineData("")]
+    [InlineData("invalid")]
+    public async Task UpdatePendingUrgency_InvalidColor_ReturnsBadRequest(string color)
+    {
+        var dbName = nameof(UpdatePendingUrgency_InvalidColor_ReturnsBadRequest) + color;
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingUrgency(Guid.NewGuid(), new UpdatePendingUrgencyRequest
+        {
+            TargetColor = color
+        }, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdatePendingUrgency_UnknownOrder_ReturnsNotFound()
+    {
+        var dbName = nameof(UpdatePendingUrgency_UnknownOrder_ReturnsNotFound);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingUrgency(Guid.NewGuid(), new UpdatePendingUrgencyRequest
+        {
+            TargetColor = "red"
+        }, CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status404NotFound, notFound.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdatePendingUrgency_SetRed_ReturnsUrgencyLevelFour()
+    {
+        var dbName = nameof(UpdatePendingUrgency_SetRed_ReturnsUrgencyLevelFour);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+
+        var orderId = Guid.NewGuid();
+        writeContext.JobSchedules.Add(new JobSchedule
+        {
+            ScheduleId = Guid.NewGuid(),
+            OrderId = orderId,
+            UrgencyLevel = -1,
+            Cancelled = false
+        });
+        await writeContext.SaveChangesAsync();
+
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingUrgency(orderId, new UpdatePendingUrgencyRequest
+        {
+            TargetColor = "red"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PendingUrgencyUpdateResponse>(ok.Value);
+        Assert.Equal(orderId, response.OrderId);
+        Assert.Equal(4, response.UrgencyLevel);
+    }
+
+    [Fact]
+    public async Task UpdatePendingUrgency_ToggleRedOff_ReturnsNeutral()
+    {
+        var dbName = nameof(UpdatePendingUrgency_ToggleRedOff_ReturnsNeutral);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+
+        var orderId = Guid.NewGuid();
+        writeContext.JobSchedules.Add(new JobSchedule
+        {
+            ScheduleId = Guid.NewGuid(),
+            OrderId = orderId,
+            UrgencyLevel = 4,
+            Cancelled = false
+        });
+        await writeContext.SaveChangesAsync();
+
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingUrgency(orderId, new UpdatePendingUrgencyRequest
+        {
+            TargetColor = "red"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PendingUrgencyUpdateResponse>(ok.Value);
+        Assert.Equal(orderId, response.OrderId);
+        Assert.Equal(-1, response.UrgencyLevel);
+    }
+
+    [Fact]
+    public async Task UpdatePendingUrgency_SetYellow_ReturnsUrgencyLevelTwo()
+    {
+        var dbName = nameof(UpdatePendingUrgency_SetYellow_ReturnsUrgencyLevelTwo);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+
+        var orderId = Guid.NewGuid();
+        writeContext.JobSchedules.Add(new JobSchedule
+        {
+            ScheduleId = Guid.NewGuid(),
+            OrderId = orderId,
+            UrgencyLevel = -1,
+            Cancelled = false
+        });
+        await writeContext.SaveChangesAsync();
+
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingUrgency(orderId, new UpdatePendingUrgencyRequest
+        {
+            TargetColor = "yellow"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PendingUrgencyUpdateResponse>(ok.Value);
+        Assert.Equal(orderId, response.OrderId);
+        Assert.Equal(2, response.UrgencyLevel);
+    }
+
+    [Fact]
+    public async Task UpdatePendingUrgency_ToggleYellowOff_ReturnsNeutral()
+    {
+        var dbName = nameof(UpdatePendingUrgency_ToggleYellowOff_ReturnsNeutral);
+        using var readContext = CreateReadContext(dbName);
+        using var writeContext = CreateWriteContext(dbName);
+
+        var orderId = Guid.NewGuid();
+        writeContext.JobSchedules.Add(new JobSchedule
+        {
+            ScheduleId = Guid.NewGuid(),
+            OrderId = orderId,
+            UrgencyLevel = 2,
+            Cancelled = false
+        });
+        await writeContext.SaveChangesAsync();
+
+        var controller = CreateControllerWithWrite(readContext, writeContext);
+
+        var result = await controller.UpdatePendingUrgency(orderId, new UpdatePendingUrgencyRequest
+        {
+            TargetColor = "yellow"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PendingUrgencyUpdateResponse>(ok.Value);
+        Assert.Equal(orderId, response.OrderId);
+        Assert.Equal(-1, response.UrgencyLevel);
+    }
+
+    // -----------------------------------------------------------------------
     // Test doubles
     // -----------------------------------------------------------------------
 
@@ -353,6 +635,21 @@ public sealed class JobSchedulesControllerTests
             => Task.FromResult(true);
 
         public Task<bool> DeleteAsync(Guid scheduleId, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+    }
+
+    private sealed class NoOpPackingGateway : IJobPackingOnAirStoredProcedureGateway
+    {
+        public Task<JobPackingOnAirStoredProcedureRecord?> SelectAsync(Guid onAirId, CancellationToken cancellationToken = default)
+            => Task.FromResult<JobPackingOnAirStoredProcedureRecord?>(null);
+
+        public Task<Guid> InsertAsync(CreateJobPackingOnAirStoredProcedureRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(Guid.Empty);
+
+        public Task<bool> UpdateAsync(UpdateJobPackingOnAirStoredProcedureRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        public Task<bool> DeleteAsync(Guid onAirId, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
     }
 

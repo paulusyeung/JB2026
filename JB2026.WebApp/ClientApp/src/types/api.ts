@@ -681,6 +681,27 @@ export interface JobSchedulePendingItem {
   step3Status: number | null
 }
 
+export interface UpdatePendingWorkflowRequest {
+  stepIndex: number
+  targetStatus: number
+}
+
+export interface UpdatePendingUrgencyRequest {
+  targetColor: 'red' | 'yellow'
+}
+
+export interface PendingWorkflowUpdateResponse {
+  orderId: string
+  step1Status: number | null
+  step2Status: number | null
+  step3Status: number | null
+}
+
+export interface PendingUrgencyUpdateResponse {
+  orderId: string
+  urgencyLevel: number
+}
+
 export interface JobSchedulePackingItem {
   orderId: string
   orderType: number

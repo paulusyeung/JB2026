@@ -9,10 +9,14 @@ import type {
   JobScheduleOnAirItem,
   JobSchedulePackingItem,
   JobSchedulePendingItem,
+  PendingUrgencyUpdateResponse,
+  PendingWorkflowUpdateResponse,
   RescheduleCompletedSchedulesRequest,
   SavePackingOnAirBatchRequest,
   SaveScheduleBatchRequest,
   UpdateJobScheduleTimeRequest,
+  UpdatePendingUrgencyRequest,
+  UpdatePendingWorkflowRequest,
 } from '@/types/api'
 
 export interface ScheduleRangeQuery {
@@ -125,4 +129,26 @@ export async function saveScheduleBatch(request: SaveScheduleBatchRequest): Prom
 
 export async function rescheduleCompletedOrders(request: RescheduleCompletedSchedulesRequest): Promise<void> {
   await apiClient.post('/api/v2/job-schedules/completed/reschedule', request)
+}
+
+export async function updatePendingWorkflow(
+  orderId: string,
+  request: UpdatePendingWorkflowRequest,
+): Promise<PendingWorkflowUpdateResponse> {
+  const response = await apiClient.patch<PendingWorkflowUpdateResponse>(
+    `/api/v2/job-schedules/pending/${orderId}/workflow`,
+    request,
+  )
+  return response.data
+}
+
+export async function updatePendingUrgency(
+  orderId: string,
+  request: UpdatePendingUrgencyRequest,
+): Promise<PendingUrgencyUpdateResponse> {
+  const response = await apiClient.patch<PendingUrgencyUpdateResponse>(
+    `/api/v2/job-schedules/pending/${orderId}/urgency`,
+    request,
+  )
+  return response.data
 }

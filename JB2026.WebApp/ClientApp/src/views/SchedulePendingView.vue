@@ -106,6 +106,46 @@
 
           <v-divider vertical class="mx-1" />
 
+          <!-- Workflow light actions (selection-gated, inline @1 / @2 circles + bells) -->
+          <span class="text-caption text-medium-emphasis">@1:</span>
+          <v-btn v-for="c in pendingLightColors" :key="`p1-${c.code}`"
+            icon size="x-small" density="compact" :color="c.color" variant="tonal"
+            :disabled="selectedOrderIds.length === 0 || workflowActionLoading"
+            :title="c.label"
+            @click="applyWorkflow(0, c.code)">
+            <v-icon size="12">mdi-circle</v-icon>
+          </v-btn>
+          <v-divider vertical class="mx-1" />
+          <span class="text-caption text-medium-emphasis">@2:</span>
+          <v-btn v-for="c in pendingLightColors" :key="`p2-${c.code}`"
+            icon size="x-small" density="compact" :color="c.color" variant="tonal"
+            :disabled="selectedOrderIds.length === 0 || workflowActionLoading"
+            :title="c.label"
+            @click="applyWorkflow(1, c.code)">
+            <v-icon size="12">mdi-circle</v-icon>
+          </v-btn>
+          <v-divider vertical class="mx-1" />
+
+          <!-- Urgency bells (selection-gated, toggles off if active) -->
+          <v-btn
+            icon size="x-small" density="compact" color="error" variant="tonal"
+            :disabled="selectedOrderIds.length === 0 || urgencyActionLoading"
+            :title="t('jobOrder.pending.actions.bellRed')"
+            @click="applyUrgency('red')"
+          >
+            <v-icon size="12">mdi-bell-alert</v-icon>
+          </v-btn>
+          <v-btn
+            icon size="x-small" density="compact" color="warning" variant="tonal"
+            :disabled="selectedOrderIds.length === 0 || urgencyActionLoading"
+            :title="t('jobOrder.pending.actions.bellYellow')"
+            @click="applyUrgency('yellow')"
+          >
+            <v-icon size="12">mdi-bell</v-icon>
+          </v-btn>
+
+          <v-divider vertical class="mx-1" />
+
           <v-btn variant="outlined" size="small" prepend-icon="mdi-printer" @click="printList">
             {{ t('jobOrder.pending.actions.print') }}
           </v-btn>
@@ -317,7 +357,7 @@ import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { getJobDetail } from '@/services/jobs'
-import { getPendingSchedule } from '@/services/scheduler'
+import { getPendingSchedule, updatePendingUrgency, updatePendingWorkflow } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
@@ -338,6 +378,8 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
+const workflowActionLoading = ref(false)
+const urgencyActionLoading = ref(false)
 
 const viewSettings = useViewSettings('pending-schedule', {
   visibleColumns: [
@@ -445,11 +487,7 @@ async function load() {
     })
 
     if (activeOrderId.value && !rows.value.some((row) => row.orderId === activeOrderId.value)) {
-      activeOrderId.value = rows.value[0]?.orderId ?? null
-    }
-
-    if (!activeOrderId.value && rows.value.length > 0) {
-      activeOrderId.value = rows.value[0]?.orderId ?? null
+      activeOrderId.value = null
     }
   } catch {
     errorMessage.value = t('jobOrder.pending.loadFailed')
@@ -569,6 +607,57 @@ function workflowColor(status: number | null) {
   if (status === 2) return 'success'
   if (status === 3) return 'info'
   return 'grey'
+}
+
+const pendingLightColors = computed(() => [
+  { code: 0, color: 'error',   label: t('jobOrder.pending.workflow.red') },
+  { code: 1, color: 'warning', label: t('jobOrder.pending.workflow.yellow') },
+  { code: 2, color: 'success', label: t('jobOrder.pending.workflow.green') },
+  { code: 3, color: 'info',    label: t('jobOrder.pending.workflow.blue') },
+])
+
+async function applyWorkflow(stepIndex: number, targetStatus: number) {
+  if (selectedOrderIds.value.length === 0) return
+  workflowActionLoading.value = true
+  try {
+    for (const orderId of selectedOrderIds.value) {
+      const result = await updatePendingWorkflow(orderId, { stepIndex, targetStatus })
+      const rowIndex = rows.value.findIndex((r) => r.orderId === orderId)
+      if (rowIndex !== -1) {
+        rows.value[rowIndex] = {
+          ...rows.value[rowIndex],
+          step1Status: result.step1Status ?? rows.value[rowIndex].step1Status,
+          step2Status: result.step2Status ?? rows.value[rowIndex].step2Status,
+          step3Status: result.step3Status ?? rows.value[rowIndex].step3Status,
+        }
+      }
+    }
+  } catch {
+    showActionNotice(t('jobOrder.pending.workflow.updateFailed'))
+  } finally {
+    workflowActionLoading.value = false
+  }
+}
+
+async function applyUrgency(targetColor: 'red' | 'yellow') {
+  if (selectedOrderIds.value.length === 0) return
+  urgencyActionLoading.value = true
+  try {
+    for (const orderId of selectedOrderIds.value) {
+      const result = await updatePendingUrgency(orderId, { targetColor })
+      const rowIndex = rows.value.findIndex((r) => r.orderId === orderId)
+      if (rowIndex !== -1) {
+        rows.value[rowIndex] = {
+          ...rows.value[rowIndex],
+          urgencyLevel: result.urgencyLevel,
+        }
+      }
+    }
+  } catch {
+    showActionNotice(t('jobOrder.pending.workflow.urgencyFailed'))
+  } finally {
+    urgencyActionLoading.value = false
+  }
 }
 
 function urgencyIcon(level: number) {
