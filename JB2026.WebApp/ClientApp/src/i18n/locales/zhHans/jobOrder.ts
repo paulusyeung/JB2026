@@ -263,6 +263,12 @@ export const jobOrderMessages = {
           print: '打印',
           export: '导出',
         },
+        workflow: {
+          red: '红灯',
+          yellow: '黄灯',
+          green: '绿灯',
+          updateFailed: '更新工序状态失败，请再试。',
+        },
         headers: {
           order: '订单编号',
           orderType: '类型',

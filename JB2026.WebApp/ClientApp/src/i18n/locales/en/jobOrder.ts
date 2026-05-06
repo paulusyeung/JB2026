@@ -263,6 +263,12 @@ export const jobOrderMessages = {
           print: 'Print',
           export: 'Export',
         },
+        workflow: {
+          red: 'Red',
+          yellow: 'Yellow',
+          green: 'Green',
+          updateFailed: 'Failed to update workflow step. Please try again.',
+        },
         headers: {
           order: 'Order #',
           orderType: 'Type',

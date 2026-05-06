@@ -106,6 +106,17 @@
 
           <v-divider vertical class="mx-1" />
 
+          <span class="text-caption text-medium-emphasis">@1:</span>
+          <v-btn v-for="c in packingLightColors" :key="`p1-${c.code}`"
+            icon size="x-small" density="compact" :color="c.color" variant="tonal"
+            :disabled="selectedOrderIds.length === 0 || workflowActionLoading"
+            :title="c.label"
+            @click="applyWorkflow(0, c.code)">
+            <v-icon size="12">mdi-circle</v-icon>
+          </v-btn>
+
+          <v-divider vertical class="mx-1" />
+
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
             {{ t('jobOrder.packing.actions.export') }}
           </v-btn>
@@ -291,7 +302,7 @@ import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { getJobDetail } from '@/services/jobs'
-import { getPackingSchedule } from '@/services/scheduler'
+import { getPackingSchedule, updatePendingWorkflow } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePackingItem } from '@/types/api'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
@@ -311,6 +322,7 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
+const workflowActionLoading = ref(false)
 
 const viewSettings = useViewSettings('packing-schedule', {
   visibleColumns: [
@@ -482,6 +494,30 @@ async function handleSaved() {
   await load()
 }
 
+async function applyWorkflow(stepIndex: number, targetStatus: number) {
+  if (selectedOrderIds.value.length === 0) return
+  workflowActionLoading.value = true
+  try {
+    for (const orderId of selectedOrderIds.value) {
+      const result = await updatePendingWorkflow(orderId, { stepIndex, targetStatus })
+      const rowIndex = rows.value.findIndex((r) => r.orderId === orderId)
+      if (rowIndex !== -1) {
+        const row = rows.value[rowIndex]!
+        rows.value[rowIndex] = {
+          ...row,
+          step1Status: result.step1Status ?? row.step1Status,
+          step2Status: result.step2Status ?? row.step2Status,
+          step3Status: result.step3Status ?? row.step3Status,
+        }
+      }
+    }
+  } catch {
+    showActionNotice(t('jobOrder.packing.workflow.updateFailed'))
+  } finally {
+    workflowActionLoading.value = false
+  }
+}
+
 function exportToCsv() {
   const exportCols = headers.value.filter((header) => !['orderType', 'step1Status', 'step2Status', 'step3Status', 'ln'].includes(String(header.key)))
   const headerRow = exportCols.map((header) => `"${String(header.title).replace(/"/g, '""')}"`).join(',')
@@ -513,6 +549,12 @@ function exportToCsv() {
 }
 
 
+
+const packingLightColors = computed(() => [
+  { code: 0, color: 'error',   label: t('jobOrder.packing.workflow.red') },
+  { code: 1, color: 'warning', label: t('jobOrder.packing.workflow.yellow') },
+  { code: 2, color: 'success', label: t('jobOrder.packing.workflow.green') },
+])
 
 function workflowColor(status: number | null) {
   if (status == null) return 'grey-lighten-1'

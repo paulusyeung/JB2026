@@ -263,6 +263,12 @@ export const jobOrderMessages = {
           print: '列印',
           export: '匯出',
         },
+        workflow: {
+          red: '紅燈',
+          yellow: '黃燈',
+          green: '綠燈',
+          updateFailed: '更新工序狀態失敗，請再試。',
+        },
         headers: {
           order: '訂單編號',
           orderType: '類型',
