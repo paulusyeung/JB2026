@@ -367,12 +367,11 @@ function exportToCsv() {
 
 function workflowColor(status: number | null) {
   if (status == null) return 'grey-lighten-1'
-  if (status <= 0) return 'error'
-  if (status === 1) return 'error'
-  if (status === 2) return 'warning'
-  if (status === 3) return 'success'
-  if (status === 4) return 'info'
-  return 'grey'
+  if (status === 0) return 'error'
+  if (status === 1) return 'warning'
+  if (status === 2) return 'success'
+  if (status === 3) return 'blue'
+  return 'grey-lighten-1'
 }
 
 function orderTypeMeta(orderType: number) {

@@ -392,15 +392,15 @@ interface ScheduledItemState extends JobScheduleOnAirItem {
 
 // ─── toolbar options ──────────────────────────────────────────────────────────
 const lightColors1 = [
-  { value: 1, color: 'error' },
-  { value: 2, color: 'warning' },
-  { value: 4, color: 'info' },
-  { value: 3, color: 'success' },
+  { value: 0, color: 'error' },
+  { value: 1, color: 'warning' },
+  { value: 3, color: 'info' },
+  { value: 2, color: 'success' },
 ]
 const lightColors2 = [
-  { value: 1, color: 'error' },
-  { value: 2, color: 'warning' },
-  { value: 3, color: 'success' },
+  { value: 0, color: 'error' },
+  { value: 1, color: 'warning' },
+  { value: 2, color: 'success' },
 ]
 
 // ─── computed ─────────────────────────────────────────────────────────────────
@@ -689,12 +689,11 @@ async function executeSave() {
 // ─── display helpers ──────────────────────────────────────────────────────────
 function workflowColor(status: number | null) {
   if (status == null) return 'grey-lighten-2'
-  if (status <= 0) return 'grey-lighten-2'
-  if (status === 1) return 'error'
-  if (status === 2) return 'warning'
-  if (status === 3) return 'success'
-  if (status === 4) return 'info'
-  return 'grey'
+  if (status === 0) return 'error'
+  if (status === 1) return 'warning'
+  if (status === 2) return 'success'
+  if (status === 3) return 'blue'
+  return 'grey-lighten-2'
 }
 
 function urgencyIcon(level: number) {
