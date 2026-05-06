@@ -168,6 +168,8 @@ const router = createRouter({
           ? () => import('@/views/SmlRtfStatsView.vue')
         : route.path === '/job-order/sml/invoice-stats'
           ? () => import('@/views/SmlInvoiceStatsView.vue')
+        : route.path === '/job-order/reports/exceptional'
+          ? () => import('@/views/ExceptionalReportView.vue')
         : route.path === '/stock/product'
           ? () => import('@/views/StockView.vue')
         : route.path === '/admin/workflow'

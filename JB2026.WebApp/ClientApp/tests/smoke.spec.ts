@@ -50,8 +50,33 @@ async function mockApiRoutes(page: Page) {
     route.fulfill({ json: { rows: [], total: 0 } }),
   )
 
-  // Job orders endpoint
-  await page.route('**/api/v2/job-orders', (route) =>
+  // Job order detail endpoint
+  await page.route(/\/api\/v2\/job-orders\/.+$/, (route) =>
+    route.fulfill({
+      json: {
+        orderId: '11111111-1111-1111-1111-111111111111',
+        orderNumber: 'JB260331',
+        jobNumber: '01',
+        customerName: 'Acme Corp',
+        customerRef: 'REF-100',
+        orderTitle: 'Modern Job Order',
+        orderedBy: 'smoke',
+        orderedOn: '2026-03-31T00:00:00Z',
+        requiredOn: '2026-04-05T00:00:00Z',
+        qty: 250,
+        paymentTerms: 'Net 30',
+        remarks: 'Test order',
+        status: 0,
+        createdBy: 'smoke',
+        createdOn: '2026-03-31T00:00:00Z',
+        modifiedBy: 'smoke',
+        modifiedOn: '2026-03-31T00:00:00Z',
+      },
+    }),
+  )
+
+  // Job orders list endpoint (supports query params)
+  await page.route(/\/api\/v2\/job-orders(\?.*)?$/, (route) =>
     route.fulfill({
       json: [
         {
@@ -74,30 +99,6 @@ async function mockApiRoutes(page: Page) {
           modifiedOn: '2026-03-31T00:00:00Z',
         },
       ],
-    }),
-  )
-
-  await page.route('**/api/v2/job-orders/**', (route) =>
-    route.fulfill({
-      json: {
-        orderId: '11111111-1111-1111-1111-111111111111',
-        orderNumber: 'JB260331',
-        jobNumber: '01',
-        customerName: 'Acme Corp',
-        customerRef: 'REF-100',
-        orderTitle: 'Modern Job Order',
-        orderedBy: 'smoke',
-        orderedOn: '2026-03-31T00:00:00Z',
-        requiredOn: '2026-04-05T00:00:00Z',
-        qty: 250,
-        paymentTerms: 'Net 30',
-        remarks: 'Test order',
-        status: 0,
-        createdBy: 'smoke',
-        createdOn: '2026-03-31T00:00:00Z',
-        modifiedBy: 'smoke',
-        modifiedOn: '2026-03-31T00:00:00Z',
-      },
     }),
   )
 
@@ -487,6 +488,17 @@ test.describe('Slice A — read-only lists and dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Reports runner' })).toBeVisible()
     await expect(page.getByText('Exceptional report sample')).toBeVisible()
     await expect(page.getByText('1001-1')).toBeVisible()
+  })
+
+  test('exceptional report route renders legacy-style job list', async ({ page }) => {
+    await injectFakeSession(page)
+    await mockApiRoutes(page)
+    await page.goto('/app/job-order/reports/exceptional')
+
+    await expect(page.getByRole('heading', { name: 'Exceptional Report' })).toBeVisible()
+    await page.getByLabel('Month').fill('2026-03')
+    await expect(page.getByText('JB260331-01')).toBeVisible()
+    await expect(page.getByText('Modern Job Order')).toBeVisible()
   })
 
   test('admin view renders user directory and current profile', async ({ page }) => {

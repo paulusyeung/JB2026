@@ -5,6 +5,13 @@ export const reportsMessages = {
       runReport: '运行报表',
       rows: '行数: {count}',
       totalA: '总额 A: {amount}',
+      exceptional: {
+        title: '异常报表',
+        subtitle: '按月份显示工单异常清单（旧版样式）。',
+        month: '月份',
+        rows: '共 {count} 条',
+        loadFailed: '无法加载异常报表，请检查 API 可用性。',
+      },
       headers: {
         quote: '报价',
         customer: '客户',

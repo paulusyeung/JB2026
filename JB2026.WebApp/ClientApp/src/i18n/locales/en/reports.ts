@@ -5,6 +5,13 @@ export const reportsMessages = {
       runReport: 'Run report',
       rows: 'Rows: {count}',
       totalA: 'Total A: {amount}',
+      exceptional: {
+        title: 'Exceptional Report',
+        subtitle: 'Legacy-style monthly exceptional list for job orders.',
+        month: 'Month',
+        rows: '{count} records',
+        loadFailed: 'Unable to load exceptional report. Please verify API availability.',
+      },
       headers: {
         quote: 'Quote',
         customer: 'Customer',
