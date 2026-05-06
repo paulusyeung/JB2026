@@ -25,16 +25,16 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: 'localhost',
+      host: '0.0.0.0',
       port: 5173,
       proxy: {
-        '/api': {
-          target: env.VITE_API_BASE_URL ?? 'https://localhost:7165',
+                '/api': {
+          target: env.VITE_API_BASE_URL || 'http://localhost:5225',
           changeOrigin: true,
           secure: false,
         },
         '/ui': {
-          target: env.VITE_WEBAPP_BASE_URL ?? 'https://localhost:7163',
+          target: env.VITE_WEBAPP_BASE_URL || 'http://localhost:5113',
           changeOrigin: true,
           secure: false,
         },
