@@ -1,9 +1,14 @@
 <template>
   <v-app :theme="vuetifyThemeName">
     <v-layout class="app-shell">
+      <template v-if="!isAuthLayout">
       <AppSidebar v-model="mobileNavOpen" :is-mobile="isMobile" :is-collapsed="desktopSidebarCollapsed" />
+      </template>
       <v-main>
-        <div class="app-frame">
+        <div v-if="isAuthLayout" class="auth-frame">
+          <router-view />
+        </div>
+        <div v-else class="app-frame">
           <AppTopbar
             :is-mobile="isMobile"
             :is-sidebar-collapsed="desktopSidebarCollapsed"
@@ -18,6 +23,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppTopbar from '@/components/layout/AppTopbar.vue'
@@ -32,12 +38,14 @@ const sessionStore = useSessionStore()
 const dateFormatStore = useDateFormatStore()
 const theme = useTheme()
 const display = useDisplay()
+const route = useRoute()
 const mobileNavOpen = ref(false)
 const desktopSidebarCollapsed = ref(false)
 const syncingDateFormat = ref(false)
 
 const vuetifyThemeName = computed(() => themeStore.vuetifyTheme)
 const isMobile = computed(() => display.mdAndDown.value)
+const isAuthLayout = computed(() => route.meta.requiresAuth !== true)
 const knownDateFormats = new Set<DateFormatType>(Object.values(DATE_FORMATS))
 
 watch(isMobile, (mobile) => {

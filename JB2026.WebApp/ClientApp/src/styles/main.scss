@@ -76,6 +76,10 @@ body {
   padding: 1.5rem 1.5rem 2rem;
 }
 
+.auth-frame {
+  min-height: 100vh;
+}
+
 .app-sidebar {
   border-right: 1px solid var(--shell-border);
   background: rgba(var(--shell-sidebar-rgb), 0.9);
@@ -253,7 +257,7 @@ body {
 }
 
 .auth-page {
-  min-height: calc(100vh - 160px);
+  min-height: 100vh;
   place-items: center;
 }
 
