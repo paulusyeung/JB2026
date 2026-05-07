@@ -41,14 +41,6 @@
       <v-list-subheader class="mt-2">{{ t('sidebar.legacyCoreModules') }}</v-list-subheader>
       <MenuItemRenderer :items="legacyMenuItems" :show-tooltips="showCollapsedTooltips" />
     </v-list>
-
-    <template #append>
-      <div class="sidebar-card">
-        <p class="eyebrow mb-2">{{ t('sidebar.coexistence') }}</p>
-        <p class="mb-2">{{ t('sidebar.coexistenceBody') }}</p>
-        <v-btn block variant="tonal" color="primary" href="/">{{ t('sidebar.controlPlane') }}</v-btn>
-      </div>
-    </template>
   </v-navigation-drawer>
 </template>
 

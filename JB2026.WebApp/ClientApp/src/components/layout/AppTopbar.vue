@@ -53,10 +53,16 @@
           <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
           <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
         </div>
-        <v-btn v-if="session.isAuthenticated" variant="outlined" color="primary" @click="handleLogout">
-          {{ t('topbar.signOut') }}
+        <v-btn
+          v-if="session.isAuthenticated"
+          icon
+          variant="outlined"
+          color="primary"
+          :aria-label="t('topbar.signOut')"
+          @click="handleLogout"
+        >
+          <v-icon icon="mdi-logout" />
         </v-btn>
-        <v-chip color="secondary" variant="flat">{{ t('topbar.spaHost') }}</v-chip>
       </template>
 
       <v-menu v-else location="bottom end">
@@ -91,11 +97,17 @@
             <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
           </div>
 
-          <v-btn v-if="session.isAuthenticated" block variant="outlined" color="primary" class="mb-3" @click="handleLogout">
+          <v-btn
+            v-if="session.isAuthenticated"
+            block
+            variant="outlined"
+            color="primary"
+            class="mb-3"
+            @click="handleLogout"
+          >
+            <v-icon class="mr-2" icon="mdi-logout" />
             {{ t('topbar.signOut') }}
           </v-btn>
-
-          <v-chip color="secondary" variant="flat">{{ t('topbar.spaHost') }}</v-chip>
         </v-card>
       </v-menu>
     </div>
