@@ -4,6 +4,7 @@ export const authMessages = {
       description: 'Web 應用使用 ASP.NET Core API 的 JWT Bearer 權杖，並保存以供後續切片導覽。',
       username: '使用者名稱',
       password: '密碼',
+      keepMeSignedIn: '在此裝置上保持登入狀態',
       signIn: '登入',
       useDevDefaults: '使用開發預設值',
       errors: {

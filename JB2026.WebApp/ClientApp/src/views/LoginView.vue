@@ -14,8 +14,17 @@
             v-model="password"
             :label="t('auth.password')"
             variant="outlined"
-            type="password"
+            :type="showPassword ? 'text' : 'password'"
+            :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+            @click:append-inner="showPassword = !showPassword"
             autocomplete="current-password"
+          />
+          <v-checkbox
+            v-model="keepMeSignedIn"
+            :label="t('auth.keepMeSignedIn')"
+            density="comfortable"
+            hide-details
+            class="mb-4"
           />
           <v-alert v-if="session.errorKey" type="error" variant="tonal" class="mb-4">
             {{ t(session.errorKey) }}
@@ -40,13 +49,10 @@ const { t } = useI18n({ useScope: 'global' })
 
 const username = ref('')
 const password = ref('')
+const showPassword = ref(false)
+const keepMeSignedIn = ref(false)
 async function handleSubmit() {
   await session.login(username.value, password.value)
-  await router.replace(String(route.query.redirect ?? '/dashboard'))
-}
-
-async function handleDevelopmentSignIn() {
-  await session.loginWithDevelopmentDefaults()
   await router.replace(String(route.query.redirect ?? '/dashboard'))
 }
 </script>
