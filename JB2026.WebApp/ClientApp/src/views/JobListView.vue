@@ -361,12 +361,6 @@
             <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
-
-            <template v-slot:[`footer.prepend`]>
-              <span class="job-list-table__count text-medium-emphasis">
-                {{ t('jobOrder.jobList.rows', { count: formatNumber(displayedRows.length) }) }}
-              </span>
-            </template>
           </v-data-table>
         </div>
       </v-card-text>

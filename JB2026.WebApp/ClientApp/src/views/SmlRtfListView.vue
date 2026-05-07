@@ -1,10 +1,10 @@
 <template>
-  <section class="page-section sml-rtf-list-page">
+  <section class="page-section sml-invoice-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3">
         <div>
-          <h3 class="text-h6 mb-1">{{ t('sml.rtfList.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('sml.rtfList.subtitle') }}</p>
+          <h3 class="text-h6 mb-1">{{ t('sml.invoiceList.title') }}</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('sml.invoiceList.subtitle') }}</p>
         </div>
         <v-spacer />
         <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="load">
@@ -17,7 +17,7 @@
           <v-text-field
             v-model="lookup"
             density="comfortable"
-            :label="t('sml.rtfList.lookup')"
+            :label="t('sml.invoiceList.lookup')"
             prepend-inner-icon="mdi-magnify"
             variant="solo-filled"
             hide-details
@@ -30,7 +30,7 @@
             :items="commonQueryItems"
             item-title="label"
             item-value="value"
-            :label="t('sml.rtfList.commonQuery')"
+            :label="t('sml.invoiceList.commonQuery')"
             variant="solo-filled"
             density="comfortable"
             hide-details
@@ -42,20 +42,17 @@
         </div>
 
         <div class="toolbar-bar mb-3">
+          <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-plus" disabled>
+            {{ t('sml.invoiceList.actions.newSupplier') }}
+          </v-btn>
           <v-btn size="small" variant="outlined" prepend-icon="mdi-paperclip" disabled>
-            {{ t('sml.rtfList.actions.attachment') }}
+            {{ t('sml.invoiceList.actions.attachment') }}
           </v-btn>
-          <v-btn size="small" variant="outlined" prepend-icon="mdi-printer" disabled>
-            {{ t('sml.rtfList.actions.printInvoice') }}
-          </v-btn>
-          <v-btn size="small" variant="outlined" prepend-icon="mdi-tag-text-outline" disabled>
-            {{ t('sml.rtfList.actions.printLabels') }}
-          </v-btn>
-          <v-btn size="small" variant="outlined" prepend-icon="mdi-file-document-outline" disabled>
-            {{ t('sml.rtfList.actions.printPo') }}
+          <v-btn size="small" variant="outlined" prepend-icon="mdi-file-excel" disabled>
+            {{ t('sml.invoiceList.actions.export') }}
           </v-btn>
           <v-btn size="small" variant="outlined" color="error" prepend-icon="mdi-delete" disabled>
-            {{ t('sml.rtfList.actions.delete') }}
+            {{ t('sml.invoiceList.actions.delete') }}
           </v-btn>
         </div>
 
@@ -68,63 +65,21 @@
           density="compact"
           fixed-header
           item-value="headerId"
-          v-model:expanded="expanded"
           height="62vh"
-          class="rtf-list-table"
-          @click:row="onRowClick"
+          class="invoice-list-table"
         >
-          <template #[`item.expander`]="{ item }">
-            <v-btn
-              v-if="item.items.length > 0"
-              variant="text"
-              density="comfortable"
-              size="x-small"
-              icon
-              @click.stop="toggleExpandRow(item)"
-            >
-              <v-icon size="16">{{ isRowExpanded(item) ? 'mdi-minus-box-outline' : 'mdi-plus-box-outline' }}</v-icon>
-            </v-btn>
+          <template #[`item.invoiceNumber`]="{ item }">
+            <span class="font-weight-medium">{{ item.invoiceNumber }}</span>
           </template>
 
-          <template #[`item.fileType`]="{ item }">
-            <v-icon size="16" :color="item.rtfFileName.toLowerCase().endsWith('.xls') ? 'success' : 'primary'">
-              {{ item.rtfFileName.toLowerCase().endsWith('.xls') ? 'mdi-file-excel' : 'mdi-file-document-outline' }}
-            </v-icon>
-          </template>
-
-          <template #[`item.purchaseOrder`]="{ item }">
-            <span class="font-weight-medium">{{ item.purchaseOrder }}</span>
-          </template>
-
-          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #[`item.invoiceDate`]="{ item }">{{ format(item.invoiceDate) }}</template>
+          <template #[`item.invoiceAmount`]="{ item }">{{ formatAmount(item.invoiceAmount) }}</template>
           <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
-
-          <template #[`item.isLabelPrinted`]="{ item }">
-            <div class="d-flex justify-center">
-              <v-icon size="14" :color="item.isLabelPrinted ? 'success' : 'error'">
-                {{ item.isLabelPrinted ? 'mdi-circle' : 'mdi-circle-outline' }}
-              </v-icon>
-            </div>
-          </template>
-
-          <template #expanded-row="{ item }">
-            <tr>
-              <td :colspan="headers.length" class="pa-0">
-                <v-data-table
-                  :headers="detailHeaders"
-                  :items="detailRowsFor(item)"
-                  density="compact"
-                  hide-default-footer
-                  class="detail-grid"
-                />
-              </td>
-            </tr>
-          </template>
         </v-data-table>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('sml.rtfList.rows', { count: rows.length }) }}
-        </div>
+
+
+
       </v-card-text>
     </v-card>
   </section>
@@ -135,8 +90,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import { getSmlRtfList } from '@/services/sml'
-import type { SmlRtfListHeader } from '@/types/api'
+import { getSmlInvoiceList } from '@/services/sml'
+import type { SmlInvoiceListRow } from '@/types/api'
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -146,40 +101,24 @@ const lookup = ref('')
 const commonQuery = ref(1)
 const loading = ref(false)
 const errorMessage = ref('')
-const rows = ref<SmlRtfListHeader[]>([])
-const expanded = ref<string[]>([])
+const rows = ref<SmlInvoiceListRow[]>([])
 
 const commonQueryItems = computed(() => [
-  { value: 1, label: t('sml.rtfList.commonQueryItems.thirty') },
-  { value: 2, label: t('sml.rtfList.commonQueryItems.sixty') },
-  { value: 3, label: t('sml.rtfList.commonQueryItems.ninety') },
-  { value: 0, label: t('sml.rtfList.commonQueryItems.all') },
+  { value: 1, label: t('sml.invoiceList.commonQueryItems.thirty') },
+  { value: 2, label: t('sml.invoiceList.commonQueryItems.sixty') },
+  { value: 3, label: t('sml.invoiceList.commonQueryItems.ninety') },
+  { value: 0, label: t('sml.invoiceList.commonQueryItems.all') },
 ])
 
 const headers = computed(() => [
-  { title: '', key: 'expander', sortable: false, width: '42px' },
-  { title: '', key: 'fileType', sortable: false, width: '34px' },
-  { title: t('sml.rtfList.headers.purchaseOrder'), key: 'purchaseOrder', width: '170px' },
-  { title: t('sml.rtfList.headers.rowNumber'), key: 'rowNumber', width: '48px' },
-  { title: t('sml.rtfList.headers.customerPO'), key: 'customerPO', width: '160px' },
-  { title: t('sml.rtfList.headers.orderedBy'), key: 'orderedBy', width: '140px' },
-  { title: t('sml.rtfList.headers.orderedOn'), key: 'orderedOn', width: '120px' },
-  { title: t('sml.rtfList.headers.originalPO'), key: 'originalPO', width: '160px' },
-  { title: t('sml.rtfList.headers.salesOrder'), key: 'salesOrder', width: '160px' },
-  { title: t('sml.rtfList.headers.originalSO'), key: 'originalSO', width: '160px' },
-  { title: '', key: 'isLabelPrinted', sortable: false, width: '48px' },
-  { title: t('sml.rtfList.headers.invoiceNumber'), key: 'invoiceNumber', width: '120px' },
-  { title: t('sml.rtfList.headers.createdOn'), key: 'createdOn', width: '160px' },
-  { title: t('sml.rtfList.headers.createdBy'), key: 'createdBy', width: '120px' },
-])
-
-const detailHeaders = computed(() => [
-  { title: t('sml.rtfList.headers.lineNumber'), key: 'lineNumber', width: '70px' },
-  { title: t('sml.rtfList.headers.productCode'), key: 'productCode', width: '180px' },
-  { title: t('sml.rtfList.headers.productDescription'), key: 'productDescription', minWidth: '300px' },
-  { title: t('sml.rtfList.headers.price'), key: 'price', width: '130px', align: 'end' as const },
-  { title: t('sml.rtfList.headers.qty'), key: 'qty', width: '120px', align: 'end' as const },
-  { title: t('sml.rtfList.headers.amount'), key: 'amount', width: '130px', align: 'end' as const },
+  { title: t('sml.invoiceList.headers.invoiceNumber'), key: 'invoiceNumber', width: '140px' },
+  { title: t('sml.invoiceList.headers.rowNumber'), key: 'rowNumber', width: '52px' },
+  { title: t('sml.invoiceList.headers.customerName'), key: 'customerName', minWidth: '240px' },
+  { title: t('sml.invoiceList.headers.invoiceDate'), key: 'invoiceDate', width: '130px' },
+  { title: t('sml.invoiceList.headers.invoiceAmount'), key: 'invoiceAmount', width: '140px', align: 'end' as const },
+  { title: t('sml.invoiceList.headers.icNumber'), key: 'icNumber', width: '120px' },
+  { title: t('sml.invoiceList.headers.createdOn'), key: 'createdOn', width: '160px' },
+  { title: t('sml.invoiceList.headers.createdBy'), key: 'createdBy', width: '120px' },
 ])
 
 onMounted(async () => {
@@ -187,7 +126,7 @@ onMounted(async () => {
 })
 
 watch(commonQuery, async (value) => {
-  if (!lookup.value.trim() && value > 0) {
+  if (!lookup.value.trim() && value >= 0) {
     await load()
   }
 })
@@ -197,86 +136,48 @@ async function load() {
   errorMessage.value = ''
 
   try {
-    const response = await getSmlRtfList({
+    const response = await getSmlInvoiceList({
       lookup: lookup.value.trim() || undefined,
       commonQuery: lookup.value.trim() ? undefined : commonQuery.value,
       take: 500,
     })
 
-    rows.value = response.headers
-    expanded.value = []
+    rows.value = response.rows
   } catch {
-    errorMessage.value = t('sml.rtfList.loadFailed')
+    errorMessage.value = t('sml.invoiceList.loadFailed')
   } finally {
     loading.value = false
   }
 }
 
 async function applyLookup() {
-  if (!lookup.value.trim()) {
-    await load()
-    return
-  }
-
   await load()
 }
 
-function detailRowsFor(row: SmlRtfListHeader) {
-  return row.items
+
+
+function formatAmount(value: number) {
+  return new Intl.NumberFormat(activeLocale.value, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
-
-function isRowExpanded(row: SmlRtfListHeader) {
-  return expanded.value.includes(row.headerId)
-}
-
-function toggleExpandRow(row: SmlRtfListHeader) {
-  if (isRowExpanded(row)) {
-    expanded.value = []
-    return
-  }
-
-  expanded.value = [row.headerId]
-}
-
-function onRowClick(_event: Event, payload: { item: SmlRtfListHeader }) {
-  if (payload.item.items.length === 0) {
-    expanded.value = []
-    return
-  }
-
-  toggleExpandRow(payload.item)
-}
-
-
 </script>
 
 <style scoped>
-.sml-rtf-list-page .filter-bar,
-.sml-rtf-list-page .toolbar-bar {
+.sml-invoice-list-page .filter-bar,
+.sml-invoice-list-page .toolbar-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.sml-rtf-list-page .filter-bar > * {
+.sml-invoice-list-page .filter-bar > * {
   flex: 1 1 220px;
 }
 
-.rtf-list-table,
-.detail-grid {
+.invoice-list-table {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 8px;
-}
-
-.detail-grid :deep(tbody tr) {
-  height: 32px;
-}
-
-.detail-grid :deep(tbody tr:nth-child(odd)) {
-  background: rgba(var(--v-theme-surface-variant), 0.25);
-}
-
-.detail-grid :deep(tbody td) {
-  vertical-align: top;
 }
 </style>

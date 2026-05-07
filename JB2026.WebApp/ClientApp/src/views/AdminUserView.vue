@@ -202,9 +202,6 @@
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('admin.user.rows', { count: displayedRows.length }) }}
-        </div>
       </v-card-text>
     </v-card>
 

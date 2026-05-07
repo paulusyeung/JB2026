@@ -1,10 +1,10 @@
 <template>
-  <section class="page-section admin-customer-page" :class="{ 'admin-customer-page--dark': isDark }">
-    <v-card rounded="xl" elevation="0" class="panel-card admin-customer-card">
+  <section class="page-section admin-supplier-page" :class="{ 'admin-supplier-page--dark': isDark }">
+    <v-card rounded="xl" elevation="0" class="panel-card admin-supplier-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3 pb-2">
         <div>
-          <h3 class="text-h6 mb-1">{{ t('admin.customer.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.customer.subtitle') }}</p>
+          <h3 class="text-h6 mb-1">{{ t('admin.supplier.title') }}</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.supplier.subtitle') }}</p>
         </div>
       </v-card-title>
 
@@ -13,7 +13,7 @@
           <v-text-field
             v-model="lookup"
             density="comfortable"
-            :label="t('admin.customer.lookup')"
+            :label="t('admin.supplier.lookup')"
             prepend-inner-icon="mdi-magnify"
             variant="solo-filled"
             hide-details
@@ -24,8 +24,6 @@
           <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="applyLookup">
             {{ t('common.search') }}
           </v-btn>
-
-
         </div>
 
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
@@ -34,7 +32,7 @@
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
-                {{ t('admin.customer.actions.columns') }}
+                {{ t('admin.supplier.actions.columns') }}
               </v-btn>
             </template>
             <v-list density="compact" class="toolbar-menu-list">
@@ -50,7 +48,7 @@
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
-                {{ t('admin.customer.actions.sorting') }}
+                {{ t('admin.supplier.actions.sorting') }}
               </v-btn>
             </template>
             <v-card min-width="280" class="pa-3">
@@ -61,72 +59,69 @@
                 item-value="key"
                 density="compact"
                 variant="outlined"
-                :label="t('admin.customer.actions.sortBy')"
+                :label="t('admin.supplier.actions.sortBy')"
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('admin.customer.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('admin.customer.actions.desc') }}</v-btn>
+                <v-btn value="asc">{{ t('admin.supplier.actions.asc') }}</v-btn>
+                <v-btn value="desc">{{ t('admin.supplier.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
 
           <template v-if="!isPhoneLayout">
             <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-              {{ t('admin.customer.actions.checkbox') }}
+              {{ t('admin.supplier.actions.checkbox') }}
             </v-btn>
 
             <v-menu location="bottom">
               <template #activator="{ props }">
                 <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
-                  {{ t('admin.customer.actions.views') }}
+                  {{ t('admin.supplier.actions.views') }}
                 </v-btn>
               </template>
               <v-list density="compact" class="toolbar-menu-list">
                 <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
-                  <v-list-item-title>{{ t('admin.customer.actions.detailView') }}</v-list-item-title>
+                  <v-list-item-title>{{ t('admin.supplier.actions.detailView') }}</v-list-item-title>
                 </v-list-item>
                 <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
-                  <v-list-item-title>{{ t('admin.customer.actions.cardView') }}</v-list-item-title>
+                  <v-list-item-title>{{ t('admin.supplier.actions.cardView') }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewCustomer">
-              {{ t('admin.customer.actions.newCustomer') }}
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
+              {{ t('admin.supplier.actions.newSupplier') }}
             </v-btn>
-
-
           </template>
 
           <v-menu v-else location="bottom end">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
-                {{ t('admin.customer.actions.views') }}
+                {{ t('admin.supplier.actions.views') }}
               </v-btn>
             </template>
 
             <v-list density="compact" class="toolbar-menu-list">
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-                <v-list-item-title>{{ t('admin.customer.actions.checkbox') }}</v-list-item-title>
+                <v-list-item-title>{{ t('admin.supplier.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
-                <v-list-item-title>{{ t('admin.customer.actions.detailView') }}</v-list-item-title>
+                <v-list-item-title>{{ t('admin.supplier.actions.detailView') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
-                <v-list-item-title>{{ t('admin.customer.actions.cardView') }}</v-list-item-title>
+                <v-list-item-title>{{ t('admin.supplier.actions.cardView') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-account-plus" @click="openNewCustomer">
-                <v-list-item-title>{{ t('admin.customer.actions.newCustomer') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-account-plus" @click="openNewSupplier">
+                <v-list-item-title>{{ t('admin.supplier.actions.newSupplier') }}</v-list-item-title>
               </v-list-item>
-
             </v-list>
           </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
-            {{ t('admin.customer.actions.selected', { count: selectedCustomerIds.length }) }}
+            {{ t('admin.supplier.actions.selected', { count: selectedSupplierIds.length }) }}
           </span>
         </div>
 
@@ -134,44 +129,44 @@
           v-if="isPhoneLayout"
           :items="displayedRows"
           :columns="mobileColumns"
-          item-key="customerId"
+          item-key="supplierId"
           :checkbox-mode="checkboxMode"
-          :selected-ids="selectedCustomerIds"
+          :selected-ids="selectedSupplierIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as AdminCustomerDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item as AdminSupplierDisplayItem)"
         />
 
-        <div v-else-if="isCardView" class="customer-card-list">
+        <div v-else-if="isCardView" class="supplier-card-list">
           <v-card
             v-for="row in displayedRows"
-            :key="row.customerId"
+            :key="row.supplierId"
             rounded="lg"
             elevation="0"
-            class="customer-card"
-            @click="openPopup(row.customerId)"
+            class="supplier-card"
+            @click="openPopup(row.supplierId)"
           >
-            <div class="customer-card__header">
+            <div class="supplier-card__header">
               <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="secondary">mdi-account-group</v-icon>
+                <v-icon size="18" color="secondary">mdi-truck-delivery</v-icon>
                 <div>
-                  <div class="text-subtitle-2 font-weight-bold">{{ row.customerName }}</div>
-                  <div class="text-caption text-medium-emphasis">{{ row.customerCode || '-' }}</div>
+                  <div class="text-subtitle-2 font-weight-bold">{{ row.supplierName }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ row.supplierCode || '-' }}</div>
                 </div>
               </div>
               <v-checkbox-btn
                 v-if="checkboxMode"
-                :model-value="selectedCustomerIds.includes(row.customerId)"
+                :model-value="selectedSupplierIds.includes(row.supplierId)"
                 density="compact"
                 hide-details
-                @click.stop="handleCardCheckbox(row.customerId)"
+                @click.stop="handleCardCheckbox(row.supplierId)"
               />
             </div>
-            <div class="customer-card__body">
-              <span class="text-caption">{{ t('admin.customer.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
+            <div class="supplier-card__body">
+              <span class="text-caption">{{ t('admin.supplier.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
             </div>
-            <div class="customer-card__footer text-caption text-medium-emphasis">
-              <span>{{ t('admin.customer.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
-              <span>{{ t('admin.customer.headers.modifiedOn') }}: {{ formatDateCell(row.modifiedOn) }}</span>
+            <div class="supplier-card__footer text-caption text-medium-emphasis">
+              <span>{{ t('admin.supplier.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
+              <span>{{ t('admin.supplier.headers.modifiedOn') }}: {{ formatDateCell(row.modifiedOn) }}</span>
             </div>
           </v-card>
         </div>
@@ -181,33 +176,30 @@
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
-          item-value="customerId"
-          v-model="selectedCustomerIds"
+          item-value="supplierId"
+          v-model="selectedSupplierIds"
           :show-select="checkboxMode"
           density="compact"
           fixed-header
           height="62vh"
-          class="admin-customer-table"
+          class="admin-supplier-table"
           @click:row="onRowClick"
           @dblclick="openPopup"
         >
           <template #[`item.icon`]>
-            <v-icon size="14" color="secondary">mdi-account-group</v-icon>
+            <v-icon size="14" color="secondary">mdi-truck-delivery</v-icon>
           </template>
 
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('admin.customer.rows', { count: displayedRows.length }) }}
-        </div>
       </v-card-text>
     </v-card>
 
     <v-dialog v-model="dialogOpen" max-width="min(100%, 920px)" scrollable>
-      <AdminCustomerRecordDialog
-        :customer-id="editingCustomerId"
+      <AdminSupplierRecordDialog
+        :supplier-id="editingSupplierId"
         @saved="handleSaved"
         @deleted="handleDeleted"
         @cancel="dialogOpen = false"
@@ -230,24 +222,24 @@ import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import AdminCustomerRecordDialog from '@/components/forms/AdminCustomerRecordDialog.vue'
-import { getAdminCustomers } from '@/services/admin'
-import type { AdminCustomerListItem, AdminCustomerRecord } from '@/types/api'
+import AdminSupplierRecordDialog from '@/components/forms/AdminSupplierRecordDialog.vue'
+import { getAdminSuppliers } from '@/services/admin'
+import type { AdminSupplierListItem, AdminSupplierRecord } from '@/types/api'
 
-type AdminCustomerViewMode = 'detail' | 'card'
+type AdminSupplierViewMode = 'detail' | 'card'
 
-type AdminCustomerDisplayItem = AdminCustomerListItem & {
+type AdminSupplierDisplayItem = AdminSupplierListItem & {
   icon: string
   ln: number
 }
 
-const rows = ref<AdminCustomerListItem[]>([])
+const rows = ref<AdminSupplierListItem[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
-const viewSettings = useViewSettings('admin-customer', {
-  visibleColumns: ['icon', 'customerName', 'ln', 'loginAccount', 'loginPassword', 'customerCode', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
-  sortKey: 'customerName',
+const viewSettings = useViewSettings('admin-supplier', {
+  visibleColumns: ['icon', 'supplierName', 'ln', 'loginAccount', 'loginPassword', 'supplierCode'],
+  sortKey: 'supplierName',
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
@@ -257,9 +249,9 @@ const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
-const selectedCustomerIds = ref<string[]>([])
+const selectedSupplierIds = ref<string[]>([])
 const dialogOpen = ref(false)
-const editingCustomerId = ref<string | null>(null)
+const editingSupplierId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
 
@@ -272,15 +264,15 @@ const isCardView = computed(() => viewMode.value === 'card')
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
-  { title: t('admin.customer.headers.customerName'), key: 'customerName', minWidth: '220px' },
+  { title: t('admin.supplier.headers.supplierName'), key: 'supplierName', minWidth: '220px' },
   { title: '#', key: 'ln', width: '54px', sortable: false },
-  { title: t('admin.customer.headers.loginAccount'), key: 'loginAccount', minWidth: '130px' },
-  { title: t('admin.customer.headers.loginPassword'), key: 'loginPassword', minWidth: '120px' },
-  { title: t('admin.customer.headers.customerCode'), key: 'customerCode', minWidth: '130px' },
-  { title: t('admin.customer.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
-  { title: t('admin.customer.headers.createdBy'), key: 'createdBy', minWidth: '100px' },
-  { title: t('admin.customer.headers.modifiedOn'), key: 'modifiedOn', minWidth: '135px' },
-  { title: t('admin.customer.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
+  { title: t('admin.supplier.headers.loginAccount'), key: 'loginAccount', minWidth: '130px' },
+  { title: t('admin.supplier.headers.loginPassword'), key: 'loginPassword', minWidth: '120px' },
+  { title: t('admin.supplier.headers.supplierCode'), key: 'supplierCode', minWidth: '130px' },
+  { title: t('admin.supplier.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
+  { title: t('admin.supplier.headers.createdBy'), key: 'createdBy', minWidth: '100px' },
+  { title: t('admin.supplier.headers.modifiedOn'), key: 'modifiedOn', minWidth: '135px' },
+  { title: t('admin.supplier.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
 const headers = computed(() =>
@@ -293,14 +285,14 @@ const headers = computed(() =>
   ),
 )
 
-const mobileColumns = computed<ListMobileCardColumn<AdminCustomerDisplayItem>[]>(() => [
-  { key: 'customerName', label: t('admin.customer.headers.customerName'), section: 'header', emphasis: true },
-  { key: 'customerCode', label: t('admin.customer.headers.customerCode'), section: 'header' },
-  { key: 'loginAccount', label: t('admin.customer.headers.loginAccount'), section: 'body' },
-  { key: 'createdBy', label: t('admin.customer.headers.createdBy'), section: 'footer' },
+const mobileColumns = computed<ListMobileCardColumn<AdminSupplierDisplayItem>[]>(() => [
+  { key: 'supplierName', label: t('admin.supplier.headers.supplierName'), section: 'header', emphasis: true },
+  { key: 'supplierCode', label: t('admin.supplier.headers.supplierCode'), section: 'header' },
+  { key: 'loginAccount', label: t('admin.supplier.headers.loginAccount'), section: 'body' },
+  { key: 'createdBy', label: t('admin.supplier.headers.createdBy'), section: 'footer' },
   {
     key: 'modifiedOn',
-    label: t('admin.customer.headers.modifiedOn'),
+    label: t('admin.supplier.headers.modifiedOn'),
     section: 'footer',
     formatter: (item) => formatDateCell(item.modifiedOn),
   },
@@ -314,8 +306,8 @@ const sortableColumns = computed(() =>
 
 const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
-const displayedRows = computed<AdminCustomerDisplayItem[]>(() => {
-  const key = sortKey.value as keyof AdminCustomerListItem
+const displayedRows = computed<AdminSupplierDisplayItem[]>(() => {
+  const key = sortKey.value as keyof AdminSupplierListItem
   const result = [...rows.value]
 
   result.sort((lhs, rhs) => {
@@ -326,12 +318,12 @@ const displayedRows = computed<AdminCustomerDisplayItem[]>(() => {
 
   return result.map((item, index) => ({
     ...item,
-    icon: 'mdi-account-group',
+    icon: 'mdi-truck-delivery',
     ln: index + 1,
   }))
 })
 
-const selectedCustomerId = computed(() => selectedCustomerIds.value[0] ?? null)
+const selectedSupplierId = computed(() => selectedSupplierIds.value[0] ?? null)
 
 onMounted(async () => {
   await load()
@@ -342,12 +334,12 @@ async function load() {
   errorMessage.value = ''
 
   try {
-    rows.value = await getAdminCustomers({
+    rows.value = await getAdminSuppliers({
       lookup: lookup.value.trim(),
       take: 500,
     })
   } catch {
-    errorMessage.value = t('admin.customer.messages.loadFailed')
+    errorMessage.value = t('admin.supplier.messages.loadFailed')
   } finally {
     loading.value = false
   }
@@ -373,80 +365,80 @@ function toggleColumn(columnKey: string) {
   visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
 }
 
-function onRowClick(_event: Event, payload: { item: AdminCustomerListItem }) {
+function onRowClick(_event: Event, payload: { item: AdminSupplierListItem }) {
   if (checkboxMode.value) return
-  selectedCustomerIds.value = [payload.item.customerId]
-  openPopup(payload.item.customerId)
+  selectedSupplierIds.value = [payload.item.supplierId]
+  openPopup(payload.item.supplierId)
 }
 
-function onMobileCardClick(item: AdminCustomerDisplayItem) {
+function onMobileCardClick(item: AdminSupplierDisplayItem) {
   if (checkboxMode.value) {
-    selectedCustomerIds.value = [item.customerId]
+    selectedSupplierIds.value = [item.supplierId]
     return
   }
 
-  selectedCustomerIds.value = [item.customerId]
-  openPopup(item.customerId)
+  selectedSupplierIds.value = [item.supplierId]
+  openPopup(item.supplierId)
 }
 
 function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
-  const customerId = String(item.customerId ?? '')
-  if (!customerId) return
+  const supplierId = String(item.supplierId ?? '')
+  if (!supplierId) return
 
   if (selected) {
-    selectedCustomerIds.value = [...new Set([...selectedCustomerIds.value, customerId])]
+    selectedSupplierIds.value = [...new Set([...selectedSupplierIds.value, supplierId])]
     return
   }
 
-  selectedCustomerIds.value = selectedCustomerIds.value.filter((id) => id !== customerId)
+  selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
 }
 
-function openPopup(customerId = selectedCustomerId.value ?? editingCustomerId.value) {
-  if (!customerId) {
-    errorMessage.value = t('admin.customer.messages.selectRecordFirst')
+function openPopup(supplierId = selectedSupplierId.value ?? editingSupplierId.value) {
+  if (!supplierId) {
+    errorMessage.value = t('admin.supplier.messages.selectRecordFirst')
     return
   }
 
-  editingCustomerId.value = customerId
+  editingSupplierId.value = supplierId
   dialogOpen.value = true
   errorMessage.value = ''
 }
 
-function openNewCustomer() {
-  editingCustomerId.value = null
+function openNewSupplier() {
+  editingSupplierId.value = null
   dialogOpen.value = true
   errorMessage.value = ''
 }
 
-async function handleSaved(customer: AdminCustomerRecord) {
+async function handleSaved(supplier: AdminSupplierRecord) {
   await load()
-  selectedCustomerIds.value = [customer.customerId]
-  editingCustomerId.value = customer.customerId
-  successMessage.value = t('admin.customer.messages.saveSuccess')
+  selectedSupplierIds.value = [supplier.supplierId]
+  editingSupplierId.value = supplier.supplierId
+  successMessage.value = t('admin.supplier.messages.saveSuccess')
   saveSuccess.value = true
 }
 
 async function handleDeleted(id: string) {
   await load()
-  selectedCustomerIds.value = selectedCustomerIds.value.filter((customerId) => customerId !== id)
-  successMessage.value = t('admin.customer.messages.deleteSuccess')
+  selectedSupplierIds.value = selectedSupplierIds.value.filter((supplierId) => supplierId !== id)
+  successMessage.value = t('admin.supplier.messages.deleteSuccess')
   saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {
-  errorMessage.value = t('admin.customer.messages.actionUnavailable', { action: t(actionKey) })
+  errorMessage.value = t('admin.supplier.messages.actionUnavailable', { action: t(actionKey) })
 }
 
-function setViewMode(mode: AdminCustomerViewMode) {
+function setViewMode(mode: AdminSupplierViewMode) {
   viewMode.value = mode
 }
 
-function handleCardCheckbox(customerId: string) {
-  if (selectedCustomerIds.value.includes(customerId)) {
-    selectedCustomerIds.value = selectedCustomerIds.value.filter((id) => id !== customerId)
+function handleCardCheckbox(supplierId: string) {
+  if (selectedSupplierIds.value.includes(supplierId)) {
+    selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
     return
   }
-  selectedCustomerIds.value = [...selectedCustomerIds.value, customerId]
+  selectedSupplierIds.value = [...selectedSupplierIds.value, supplierId]
 }
 
 function formatDateCell(value: string): string {
@@ -457,18 +449,18 @@ function formatDateCell(value: string): string {
 </script>
 
 <style scoped>
-.admin-customer-page {
+.admin-supplier-page {
   min-height: 0;
-  --admin-customer-header-bg: rgba(195, 216, 248, 0.92);
-  --admin-customer-header-fg: inherit;
+  --admin-supplier-header-bg: rgba(195, 216, 248, 0.92);
+  --admin-supplier-header-fg: inherit;
 }
 
-.admin-customer-page--dark {
-  --admin-customer-header-bg: rgba(52, 74, 104, 0.95);
-  --admin-customer-header-fg: rgba(239, 246, 255, 0.98);
+.admin-supplier-page--dark {
+  --admin-supplier-header-bg: rgba(52, 74, 104, 0.95);
+  --admin-supplier-header-fg: rgba(239, 246, 255, 0.98);
 }
 
-.admin-customer-card {
+.admin-supplier-card {
   border: 1px solid rgba(var(--v-theme-primary), 0.15);
   background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));
 }
@@ -493,26 +485,26 @@ function formatDateCell(value: string): string {
   overflow: auto;
 }
 
-.admin-customer-table {
+.admin-supplier-table {
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   overflow: hidden;
 }
 
-.admin-customer-table :deep(.v-table__wrapper > table > thead > tr > th),
-.admin-customer-table :deep(.v-data-table__th) {
+.admin-supplier-table :deep(.v-table__wrapper > table > thead > tr > th),
+.admin-supplier-table :deep(.v-data-table__th) {
   white-space: nowrap;
-  background-color: var(--admin-customer-header-bg) !important;
-  color: var(--admin-customer-header-fg) !important;
+  background-color: var(--admin-supplier-header-bg) !important;
+  color: var(--admin-supplier-header-fg) !important;
 }
 
-.admin-customer-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
-.admin-customer-table :deep(.v-data-table__th:first-child) {
+.admin-supplier-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.admin-supplier-table :deep(.v-data-table__th:first-child) {
   border-top-left-radius: 8px;
 }
 
-.admin-customer-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
-.admin-customer-table :deep(.v-data-table__th:last-child) {
+.admin-supplier-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.admin-supplier-table :deep(.v-data-table__th:last-child) {
   border-top-right-radius: 8px;
 }
 
@@ -522,20 +514,20 @@ function formatDateCell(value: string): string {
   }
 }
 
-.customer-card-list {
+.supplier-card-list {
   display: grid;
   gap: 0.9rem;
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 960px) {
-  .customer-card-list {
+  .supplier-card-list {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     align-items: start;
   }
 }
 
-.customer-card {
+.supplier-card {
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
@@ -544,19 +536,19 @@ function formatDateCell(value: string): string {
   cursor: pointer;
 }
 
-.customer-card:active {
+.supplier-card:active {
   background: rgba(255, 255, 255, 0.92);
 }
 
-.customer-card__header,
-.customer-card__footer {
+.supplier-card__header,
+.supplier-card__footer {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem;
 }
 
-.customer-card__body {
+.supplier-card__body {
   display: grid;
   gap: 0.45rem;
 }

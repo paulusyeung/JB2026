@@ -277,13 +277,10 @@
           </v-data-table>
         </div>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('stock.rows', { count: displayedRows.length }) }}
-        </div>
-      </v-card-text>
-    </v-card>
+        </v-card-text>
+            </v-card>
 
-    <product-record-dialog
+            <product-record-dialog
       v-model="dialogOpen"
       :mode="dialogMode"
       :product-id="activeProductId"

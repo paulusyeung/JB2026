@@ -163,11 +163,7 @@
             {{ item.invoiceAmount === 0 ? '' : formatCurrency(item.invoiceAmount) }}
           </template>
 
-          <template #footer.prepend>
-            <div class="exceptional-list-table__footer text-caption text-medium-emphasis flex-grow-1">
-              {{ t('reports.exceptional.rows', { count: sortedRows.length }) }}
-            </div>
-          </template>
+          
         </v-data-table>
       </v-card-text>
     </v-card>

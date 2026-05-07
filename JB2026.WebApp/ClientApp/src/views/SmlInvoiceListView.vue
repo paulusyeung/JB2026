@@ -77,9 +77,6 @@
           <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
         </v-data-table>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('sml.invoiceList.rows', { count: rows.length }) }}
-        </div>
       </v-card-text>
     </v-card>
   </section>

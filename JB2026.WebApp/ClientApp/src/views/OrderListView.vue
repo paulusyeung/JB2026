@@ -414,10 +414,6 @@
             </tr>
           </template>
         </v-data-table>
-
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('jobOrder.orderList.rows', { count: formatNumber(masterRows.length) }) }}
-        </div>
       </v-card-text>
     </v-card>
 
