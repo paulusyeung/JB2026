@@ -18,7 +18,12 @@
       </div>
     </div>
 
-    <v-list nav density="comfortable" prepend-gap="8">
+    <v-list
+      nav
+      density="comfortable"
+      prepend-gap="8"
+      v-model:opened="openedGroups"
+    >
       <v-tooltip
         v-for="item in items"
         :key="item.to"
@@ -45,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import MenuItemRenderer from './MenuItemRenderer.vue'
@@ -74,6 +79,9 @@ const items = computed(() => [
 const legacyMenuItems = computed(() => {
   return buildLegacyMenuItems(t, sessionStore.profile?.role)
 })
+
+// Track which menu groups are opened - default to first group expanded
+const openedGroups = ref<string[]>(['group-0'])
 
 function handleDrawerModelUpdate(nextValue: boolean) {
   if (!props.isMobile) {

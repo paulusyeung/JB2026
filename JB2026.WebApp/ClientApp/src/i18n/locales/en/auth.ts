@@ -1,6 +1,6 @@
 export const authMessages = {
       eyebrow: 'Slice B foundation',
-      title: 'API-authenticated sign in',
+      title: 'JB2026 Sign In',
       description: 'The web app uses JWT bearer tokens from the ASP.NET Core API and persists them for subsequent slice navigation.',
       username: 'Username',
       password: 'Password',

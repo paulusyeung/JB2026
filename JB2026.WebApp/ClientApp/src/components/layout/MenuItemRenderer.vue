@@ -1,10 +1,74 @@
 <template>
+  <v-list
+    v-if="props.depth === 0"
+    nav
+    v-model:opened="localOpenedGroups"
+  >
+    <template
+      v-for="(item, index) in items"
+      :key="item.to ?? item.title"
+    >
+      <v-list-group
+        v-if="hasChildren(item)"
+        :value="groupValue(item, index)"
+              :aria-label="item.title"
+        :class="{ 'menu-group--collapsed': props.showTooltips }"
+      >
+        <template #activator="{ props: activatorProps }">
+          <v-tooltip :disabled="!props.showTooltips" location="right">
+      <template #activator="{ props: tooltipProps }">
+        <v-list-item
+                v-bind="mergeActivatorProps(activatorProps, tooltipProps)"
+          :class="{ 'menu-item--collapsed': props.showTooltips }"
+          :prepend-icon="item.icon"
+          :title="item.title"
+          :aria-label="item.title"
+          rounded="xl"
+        />
+      </template>
+
+      <span>{{ item.title }}</span>
+    </v-tooltip>
+  </template>
+
+        <div
+          class="menu-children"
+          :class="{ 'menu-children--collapsed': props.showTooltips }"
+        >
+          <MenuItemRenderer
+            :items="item.children ?? []"
+            :depth="props.depth + 1"
+            :show-tooltips="props.showTooltips"
+          />
+        </div>
+      </v-list-group>
+
+      <v-tooltip v-else :disabled="!props.showTooltips" location="right">
+        <template #activator="{ props: tooltipProps }">
+          <v-list-item
+            v-bind="tooltipProps"
+            :class="{ 'menu-item--collapsed': props.showTooltips }"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            :to="item.to"
+            :aria-label="item.title"
+            rounded="xl"
+          />
+</template>
+
+        <span>{{ item.title }}</span>
+      </v-tooltip>
+    </template>
+  </v-list>
+
   <template
-    v-for="item in items"
+    v-else
+    v-for="(item, index) in items"
     :key="item.to ?? item.title"
   >
     <v-list-group
       v-if="hasChildren(item)"
+      :value="groupValue(item, index)"
       :aria-label="item.title"
       :class="{ 'menu-group--collapsed': props.showTooltips }"
     >
@@ -28,7 +92,6 @@
       <div
         class="menu-children"
         :class="{ 'menu-children--collapsed': props.showTooltips }"
-        :style="{ marginInlineStart: `${props.depth === 0 ? 0 : 0}px` }"
       >
         <MenuItemRenderer
           :items="item.children ?? []"
@@ -57,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { hasChildren, type MenuItem } from './menuHelper'
 
 defineOptions({
@@ -71,6 +135,13 @@ const props = withDefaults(defineProps<{
   depth: 0,
   showTooltips: false,
 })
+
+function groupValue(item: MenuItem, index: number): string {
+  return `group-${index}`
+}
+
+// Expand the first top-level menu group by default
+const localOpenedGroups = ref<string[]>(['group-0'])
 
 function mergeActivatorProps(
   activatorProps: Record<string, unknown>,
@@ -104,3 +175,4 @@ function mergeActivatorProps(
   width: 24px;
 }
 </style>
+

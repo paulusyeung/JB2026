@@ -1,6 +1,6 @@
 export const authMessages = {
       eyebrow: '切片 B 基礎',
-      title: '以 API 驗證登入',
+      title: 'JB2026 驗證登入',
       description: 'Web 應用使用 ASP.NET Core API 的 JWT Bearer 權杖，並保存以供後續切片導覽。',
       username: '使用者名稱',
       password: '密碼',
