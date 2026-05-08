@@ -13,8 +13,8 @@
       </v-btn>
 
       <div>
-        <p class="eyebrow mb-1">{{ t('topbar.phase') }}</p>
-        <h2 class="text-h5 mb-0">{{ t('topbar.workspace') }}</h2>
+        <p class="eyebrow mb-1">{{ t('common.appName') }}</p>
+        <h2 class="text-h5 mb-0">{{ pageTitle }}</h2>
       </div>
     </div>
 
@@ -116,7 +116,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { localeOptions, type AppLocale } from '@/i18n/messages'
@@ -134,9 +134,15 @@ defineEmits<{
 }>()
 
 const router = useRouter()
+const route = useRoute()
 const session = useSessionStore()
 const themeStore = useThemeStore()
 const { t, locale } = useI18n({ useScope: 'global' })
+
+const pageTitle = computed(() => {
+  const titleKey = typeof route.meta.titleKey === 'string' ? route.meta.titleKey : undefined
+  return titleKey ? t(titleKey) : t('common.appName')
+})
 
 const selectedLocale = computed(() => locale.value as AppLocale)
 const sidebarToggleLabel = computed(() =>

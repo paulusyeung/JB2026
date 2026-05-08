@@ -1,12 +1,7 @@
 <template>
   <section class="page-section packing-list-page" :class="{ 'packing-list-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card packing-list-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('jobOrder.packing.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('jobOrder.packing.subtitle') }}</p>
-        </div>
-      </v-card-title>
+
 
       <v-card-text>
         <div class="filter-bar">
@@ -252,9 +247,7 @@
           <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
         </v-data-table>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('jobOrder.packing.rows', { count: formatNumber(displayedRows.length) }) }}
-        </div>
+        
       </v-card-text>
     </v-card>
 

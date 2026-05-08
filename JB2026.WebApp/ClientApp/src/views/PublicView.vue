@@ -2,11 +2,6 @@
   <section class="page-section">
     <v-card rounded="xl" elevation="0" class="panel-card">
       <v-card-title class="public-toolbar d-flex flex-wrap align-center ga-3">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('publicContent.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('publicContent.subtitle') }}</p>
-        </div>
-        <v-spacer />
         <v-btn color="primary" :loading="loading" class="public-toolbar__refresh" @click="load">{{ t('common.refresh') }}</v-btn>
       </v-card-title>
       <v-card-text>

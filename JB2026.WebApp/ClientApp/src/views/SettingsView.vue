@@ -1,12 +1,7 @@
 <template>
   <section class="page-section settings-page">
     <v-card rounded="xl" elevation="0" class="panel-card settings-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('settings.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('settings.subtitle') }}</p>
-        </div>
-      </v-card-title>
+
       <v-card-text>
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
         <v-alert v-if="savedMessage" type="success" variant="tonal" class="mb-3">{{ savedMessage }}</v-alert>

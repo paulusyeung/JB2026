@@ -1,12 +1,7 @@
 <template>
   <section class="page-section workflow-forms-page" :class="{ 'workflow-forms-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card workflow-forms-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3 pb-2">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('admin.workflowForms.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.workflowForms.subtitle') }}</p>
-        </div>
-      </v-card-title>
+
 
       <v-card-text>
         <div class="filter-bar">

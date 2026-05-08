@@ -1,12 +1,7 @@
 <template>
   <section class="page-section sml-rtf-stats-page">
     <v-card rounded="xl" elevation="0" class="panel-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('sml.rtfStats.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('sml.rtfStats.subtitle') }}</p>
-        </div>
-      </v-card-title>
+
 
       <v-card-text>
         <div class="filter-bar">

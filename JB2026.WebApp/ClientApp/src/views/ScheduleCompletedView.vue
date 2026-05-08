@@ -1,12 +1,7 @@
 <template>
   <section class="page-section completed-list-page" :class="{ 'completed-list-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card completed-list-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('jobOrder.completed.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('jobOrder.completed.subtitle') }}</p>
-        </div>
-      </v-card-title>
+
 
       <v-card-text>
         <div class="filter-bar">
@@ -251,9 +246,7 @@
           <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
         </v-data-table>
 
-        <div class="text-caption text-medium-emphasis mt-2">
-          {{ t('jobOrder.completed.rows', { count: formatNumber(displayedRows.length) }) }}
-        </div>
+        
       </v-card-text>
     </v-card>
 

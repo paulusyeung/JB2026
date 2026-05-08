@@ -1,12 +1,7 @@
 <template>
   <section class="page-section admin-user-page" :class="{ 'admin-user-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card admin-user-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3 pb-2">
-        <div>
-          <h3 class="text-h6 mb-1">{{ t('admin.user.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.user.subtitle') }}</p>
-        </div>
-      </v-card-title>
+
 
       <v-card-text>
         <div class="filter-bar">
