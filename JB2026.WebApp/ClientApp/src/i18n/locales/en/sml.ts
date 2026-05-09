@@ -21,6 +21,10 @@ export const smlMessages = {
         commonQuery: 'Common query',
         rows: 'Rows: {count}',
         pendingAction: 'Attachment, print, and delete actions will be enabled after their dedicated migration endpoints are available.',
+        expandRow: 'Expand row',
+        collapseRow: 'Collapse row',
+        empty: 'No RTF headers found.',
+        noLineItems: 'No line items',
         commonQueryItems: {
           thirty: 'Last 30 days',
           sixty: 'Last 60 days',

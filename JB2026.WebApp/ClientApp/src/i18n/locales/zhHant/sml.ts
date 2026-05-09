@@ -21,6 +21,10 @@ export const smlMessages = {
         commonQuery: '常用查詢',
         rows: '筆數: {count}',
         pendingAction: '附件、列印與刪除功能將在對應遷移端點完成後啟用。',
+        expandRow: '展開列',
+        collapseRow: '摺疊列',
+        empty: '找不到 RTF 表頭。',
+        noLineItems: '沒有明細列',
         commonQueryItems: {
           thirty: '最近 30 天',
           sixty: '最近 60 天',

@@ -21,6 +21,10 @@ export const smlMessages = {
         commonQuery: '常用查询',
         rows: '行数: {count}',
         pendingAction: '附件、打印和删除功能将在对应迁移端点完成后启用。',
+        expandRow: '展开行',
+        collapseRow: '折叠行',
+        empty: '未找到 RTF 表头。',
+        noLineItems: '没有明细行',
         commonQueryItems: {
           thirty: '最近 30 天',
           sixty: '最近 60 天',
