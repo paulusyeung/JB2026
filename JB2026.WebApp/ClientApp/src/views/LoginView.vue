@@ -51,8 +51,9 @@ const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const keepMeSignedIn = ref(false)
+
 async function handleSubmit() {
-  await session.login(username.value, password.value)
+  await session.login(username.value, password.value, keepMeSignedIn.value)
   await router.replace(String(route.query.redirect ?? '/dashboard'))
 }
 </script>

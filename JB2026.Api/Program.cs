@@ -61,6 +61,7 @@ builder.Services.AddSingleton<InMemorySettingsService>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();
 builder.Services.AddSingleton<IHelpContentService, InMemoryHelpContentService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<ICurrentUserProfileService, HttpContextCurrentUserProfileService>();
 
 var primaryConnectionString = builder.Configuration.GetConnectionString("Primary");

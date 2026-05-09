@@ -15,7 +15,7 @@ public sealed class JwtTokenService : IJwtTokenService
         _configuration = configuration;
     }
 
-    public (string Token, DateTime ExpiresAtUtc) CreateToken(LegacyIdentityUser user)
+    public (string Token, DateTime ExpiresAtUtc) CreateToken(LegacyIdentityUser user, bool keepMeSignedIn = false)
     {
         var issuer = _configuration["Jwt:Issuer"] ?? "jb2026-api";
         var audience = _configuration["Jwt:Audience"] ?? "jb2026-clients";

@@ -313,6 +313,7 @@ export interface TokenResponse {
   expiresAtUtc: string
   tokenType: string
   user: UserProfile
+  refreshToken?: string
 }
 
 export interface JobListItem {
