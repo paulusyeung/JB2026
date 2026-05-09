@@ -449,6 +449,7 @@ import { useI18n } from 'vue-i18n'
 import { useDisplay, useTheme } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
@@ -462,30 +463,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const lookup = ref('')
 const commonQuery = ref(0)
-const checkboxMode = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const expandedMasterIds = ref<string[]>([])
-const sortDirection = ref<'asc' | 'desc'>('desc')
-const sortKey = ref('orderNumber')
-const viewMode = ref<OrderListViewMode>('detail')
-const visibleColumnKeys = ref<string[]>([
-  'expander',
-  'orderNumber',
-  'status',
-  'orderedOn',
-  'customerName',
-  'orderTitle',
-  'attachProduct',
-  'customerRef',
-  'attachCustomer',
-  'orderedBy',
-  'invoiceAmount',
-  'invoiceRef',
-  'modifiedBy',
-  'modifiedOn',
-  'requiredOn',
-  'completedOn',
-])
 const formOpen = ref(false)
 const formJob = ref<JobOrderRecord | null>(null)
 const deleting = ref(false)
@@ -493,6 +472,37 @@ const deleting = ref(false)
 const jobFormOpen = ref(false)
 const jobFormJob = ref<JobDetail | null>(null)
 const productDetailsDialogOpen = ref(false)
+
+const {
+  visibleColumns: visibleColumnKeys,
+  sortKey,
+  sortDirection,
+  checkboxMode,
+  viewMode,
+} = useViewSettings('orderlist', {
+  visibleColumns: [
+    'expander',
+    'orderNumber',
+    'status',
+    'orderedOn',
+    'customerName',
+    'orderTitle',
+    'attachProduct',
+    'customerRef',
+    'attachCustomer',
+    'orderedBy',
+    'invoiceAmount',
+    'invoiceRef',
+    'modifiedBy',
+    'modifiedOn',
+    'requiredOn',
+    'completedOn',
+  ],
+  sortKey: 'orderNumber',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
