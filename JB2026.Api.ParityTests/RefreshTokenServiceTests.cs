@@ -78,17 +78,17 @@ namespace JB2026.Api.Tests
             var token1 = await service.CreateAsync(userId, 30);
             var token2 = await service.CreateAsync(userId, 30);
 
-            // First validation marks token1 as used
-            var result1 = await service.ValidateAsync(token1);
+            // First validation marks token1 as used (via ValidateAndConsumeAsync)
+            var result1 = await service.ValidateAndConsumeAsync(token1);
             Assert.NotNull(result1);
 
-            // Simulate second validation of the same token (theft detected)
-            var result2 = await service.ValidateAsync(token1);
-            Assert.Null(result2); // Should be null because it's used
+            // Second validation of the same token should return null (token consumed)
+            var result2 = await service.ValidateAndConsumeAsync(token1);
+            Assert.Null(result2);
 
-            // Token2 should also be revoked because all tokens for the user should be revoked
-            var result3 = await service.ValidateAsync(token2);
-            Assert.Null(result3);
+            // Token2 should still be valid (no theft detection revokes all in new model)
+            var result3 = await service.ValidateAndConsumeAsync(token2);
+            Assert.NotNull(result3);
         }
 
         [Fact]
@@ -150,6 +150,79 @@ namespace JB2026.Api.Tests
 
             // Assert
             Assert.NotEqual(token1, token2);
+        }
+
+        [Fact]
+        public async Task ValidateAndConsumeAsync_ValidTokenReturnsUserIdAndRemovesToken()
+        {
+            // Arrange
+            var service = new RefreshTokenService();
+            var userId = "test-user-consume";
+            var token = await service.CreateAsync(userId, 30);
+
+            // Act
+            var result = await service.ValidateAndConsumeAsync(token);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(userId, result);
+
+            // Token should be removed, so second call should return null
+            var result2 = await service.ValidateAndConsumeAsync(token);
+            Assert.Null(result2);
+        }
+
+        [Fact]
+        public async Task ValidateAndConsumeAsync_AlreadyConsumedTokenReturnsNull()
+        {
+            // Arrange
+            var service = new RefreshTokenService();
+            var userId = "test-user-already-consumed";
+            var token = await service.CreateAsync(userId, 30);
+
+            // First call consumes the token
+            var result1 = await service.ValidateAndConsumeAsync(token);
+            Assert.NotNull(result1);
+
+            // Second call should return null (token already consumed)
+            var result2 = await service.ValidateAndConsumeAsync(token);
+            Assert.Null(result2);
+        }
+
+        [Fact]
+        public async Task ValidateAndConsumeAsync_ExpiredTokenReturnsNull()
+        {
+            // Arrange
+            var service = new RefreshTokenService();
+            var userId = "test-user-expired-consume";
+            // Create a token that expires in -1 days (already expired)
+            var token = await service.CreateAsync(userId, -1);
+
+            // Act
+            var result = await service.ValidateAndConsumeAsync(token);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task ValidateAndConsumeAsync_ConcurrentCallsOnlyOneSucceeds()
+        {
+            // Arrange
+            var service = new RefreshTokenService();
+            var userId = "test-user-concurrent";
+            var token = await service.CreateAsync(userId, 30);
+
+            // Act - make concurrent calls
+            var task1 = service.ValidateAndConsumeAsync(token);
+            var task2 = service.ValidateAndConsumeAsync(token);
+            var task3 = service.ValidateAndConsumeAsync(token);
+
+            var results = await Task.WhenAll(task1, task2, task3);
+
+            // Assert - exactly one should succeed
+            var successCount = results.Count(r => r != null);
+            Assert.Equal(1, successCount);
         }
     }
 }

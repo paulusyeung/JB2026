@@ -60,6 +60,33 @@ namespace JB2026.Api.Services
         }
 
         /// <summary>
+        /// Atomically validates and consumes a refresh token.
+        /// Uses TryRemove for atomic validation and consumption.
+        /// </summary>
+        public async Task<string?> ValidateAndConsumeAsync(string refreshToken)
+        {
+            // Atomically remove the token from the store
+            if (!_tokenStore.TryRemove(refreshToken, out var record))
+            {
+                return null; // Token not found (already consumed or never existed)
+            }
+
+            // Check expiration after successful remove
+            if (record.ExpiresAtUtc < DateTime.UtcNow)
+            {
+                return null; // Token expired
+            }
+
+            // Check if already marked as used
+            if (record.IsUsed)
+            {
+                return null; // Token was already used
+            }
+
+            return await Task.FromResult(record.UserId);
+        }
+
+        /// <summary>
         /// Revokes (invalidates) a specific refresh token.
         /// </summary>
         public async Task RevokeAsync(string refreshToken)

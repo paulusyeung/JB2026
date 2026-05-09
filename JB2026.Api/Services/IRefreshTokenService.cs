@@ -23,6 +23,15 @@ namespace JB2026.Api.Services
         Task<string?> ValidateAsync(string refreshToken);
 
         /// <summary>
+        /// Atomically validates and consumes a refresh token in a single operation.
+        /// Removes the token from the store if valid, preventing race conditions.
+        /// Returns the associated user ID if valid, or null if invalid/expired/already consumed.
+        /// </summary>
+        /// <param name="refreshToken">The refresh token to validate and consume.</param>
+        /// <returns>A task that returns the user ID if valid, or null if invalid/expired/already consumed.</returns>
+        Task<string?> ValidateAndConsumeAsync(string refreshToken);
+
+        /// <summary>
         /// Revokes (invalidates) a specific refresh token.
         /// Does nothing if the token is unknown (idempotent).
         /// </summary>

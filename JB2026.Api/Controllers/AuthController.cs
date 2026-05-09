@@ -149,9 +149,9 @@ public sealed class AuthController : ControllerBase
         return (username, password, keepMeSignedIn);
     }
 
-    /// <summary>
+        /// <summary>
     /// Exchanges a refresh token for a new access token and refresh token.
-    /// Implements token rotation: the old refresh token is invalidated.
+    /// Implements token rotation: the old refresh token is atomically validated and consumed.
     /// </summary>
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenResponse>> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
@@ -164,8 +164,8 @@ public sealed class AuthController : ControllerBase
             }));
         }
 
-        // Validate the refresh token
-        var userId = await _refreshTokenService.ValidateAsync(request.RefreshToken);
+        // Atomically validate and consume the refresh token
+        var userId = await _refreshTokenService.ValidateAndConsumeAsync(request.RefreshToken);
         if (userId is null)
         {
             _logger.LogWarning("Refresh token validation failed for token starting with {TokenPrefix}", 
@@ -178,9 +178,6 @@ public sealed class AuthController : ControllerBase
                 Extensions = new Dictionary<string, object?> { { "error", "invalid_refresh_token" } }
             });
         }
-
-        // Revoke the old refresh token (it was already marked as used by ValidateAsync)
-        await _refreshTokenService.RevokeAsync(request.RefreshToken);
 
         // Look up the user details
         if (!Guid.TryParse(userId, out var userIdGuid))
