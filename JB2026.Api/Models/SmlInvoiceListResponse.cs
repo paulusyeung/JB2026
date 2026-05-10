@@ -28,4 +28,21 @@ public sealed class SmlInvoiceListRowResponse
     public required DateTime CreatedOn { get; init; }
 
     public required string CreatedBy { get; init; }
+
+    public required IReadOnlyList<SmlInvoiceListItemResponse> Items { get; init; }
+}
+
+public sealed class SmlInvoiceListItemResponse
+{
+    public required int LineNumber { get; init; }
+
+    public required string Description { get; init; }
+
+    public required decimal Quantity { get; init; }
+
+    public required string Unit { get; init; }
+
+    public required decimal Price { get; init; }
+
+    public required decimal Amount { get; init; }
 }

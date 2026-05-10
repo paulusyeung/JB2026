@@ -577,6 +577,15 @@ export interface SmlRtfStatsResponse {
   rows: SmlRtfStatsRow[]
 }
 
+export interface SmlInvoiceListItem {
+  lineNumber: number
+  description: string
+  quantity: number
+  unit: string
+  price: number
+  amount: number
+}
+
 export interface SmlInvoiceListRow {
   headerId: string
   invoiceNumber: string
@@ -587,6 +596,7 @@ export interface SmlInvoiceListRow {
   icNumber: string
   createdOn: string
   createdBy: string
+  items: SmlInvoiceListItem[]
 }
 
 export interface SmlInvoiceListResponse {

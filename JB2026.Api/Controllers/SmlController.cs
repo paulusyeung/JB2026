@@ -865,6 +865,56 @@ FROM [dbo].[vwInvoiceList]")
                 .Take(take)
                 .ToArray();
 
+            // Get HeaderIds for line item query
+            var headerIds = filtered.Select(row => row.HeaderId).ToList();
+
+            // Query line items from InvoiceItem and InvoiceSubItem tables
+            var lineItemsLookup = new Dictionary<Guid, IReadOnlyList<SmlInvoiceListItemResponse>>();
+            
+            try
+            {
+                var lineItemsByHeaderId = await _readContext.InvoiceItems
+                    .AsNoTracking()
+                    .Where(item => headerIds.Contains(item.HeaderId))
+                    .Include(item => item.InvoiceSubItems)
+                    .SelectMany(item => item.InvoiceSubItems.Select(subItem => new
+                    {
+                        HeaderId = item.HeaderId,
+                        LineNumber = item.LineNumber,
+                        SubLineNumber = subItem.SubLineNumber,
+                        Description = subItem.Description ?? string.Empty,
+                        Quantity = subItem.Quantity ?? 0m,
+                        Unit = subItem.UoM ?? string.Empty,
+                        Price = subItem.Price ?? 0m,
+                        Amount = subItem.Amount ?? 0m
+                    }))
+                    .OrderBy(x => x.HeaderId)
+                    .ThenBy(x => x.LineNumber)
+                    .ThenBy(x => x.SubLineNumber)
+                    .ToListAsync(cancellationToken);
+
+                // Group line items by HeaderId
+                lineItemsLookup = lineItemsByHeaderId
+                    .GroupBy(x => x.HeaderId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(x => new SmlInvoiceListItemResponse
+                        {
+                            LineNumber = x.LineNumber,
+                            Description = x.Description,
+                            Quantity = x.Quantity,
+                            Unit = x.Unit,
+                            Price = x.Price,
+                            Amount = x.Amount
+                        })
+                        .ToList() as IReadOnlyList<SmlInvoiceListItemResponse>);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load line items for invoice list");
+                // Continue without items if query fails
+            }
+
             var payloadRows = filtered
                 .Select((row, index) => new SmlInvoiceListRowResponse
                 {
@@ -877,6 +927,9 @@ FROM [dbo].[vwInvoiceList]")
                     ICNumber = row.ICNumber ?? string.Empty,
                     CreatedOn = row.ModifiedOn,
                     CreatedBy = row.ModifiedBy ?? row.CreatedBy ?? string.Empty,
+                    Items = lineItemsLookup.TryGetValue(row.HeaderId, out var items)
+                        ? items
+                        : new List<SmlInvoiceListItemResponse>()
                 })
                 .ToArray();
 

@@ -45,7 +45,7 @@ function applyDocumentTitle(titleKey?: string) {
 }
 
 const router = createRouter({
-  history: createWebHistory('/app/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
@@ -197,6 +197,10 @@ const router = createRouter({
         roles: route.path.startsWith('/admin') || route.path.startsWith('/settings') ? ['Admin'] : undefined
       },
     })),
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/dashboard',
+    },
   ],
 })
 
