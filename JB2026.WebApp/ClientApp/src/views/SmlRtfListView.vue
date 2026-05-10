@@ -106,13 +106,7 @@
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
 
         <div v-if="isCardView" class="rtf-mobile-list">
-          <v-card
-            v-for="header in displayedRows"
-            :key="header.headerId"
-            rounded="lg"
-            elevation="0"
-            class="rtf-mobile-card"
-          >
+          <v-card v-for="header in displayedRows" :key="header.headerId" rounded="lg" elevation="0" class="rtf-mobile-card">
             <div class="rtf-mobile-card__header">
               <div>
                 <div class="text-subtitle-2 font-weight-bold">{{ header.purchaseOrder }}</div>
@@ -127,13 +121,7 @@
                   hide-details
                   @click.stop="toggleSelected(header.headerId)"
                 />
-                <v-btn
-                  v-if="getLineItems(header).length > 0"
-                  icon
-                  variant="text"
-                  size="small"
-                  @click.stop="toggleExpandedRow(header.headerId)"
-                >
+                <v-btn v-if="getLineItems(header).length > 0" icon variant="text" size="small" @click.stop="toggleExpandedRow(header.headerId)">
                   <v-icon size="18">{{ isExpanded(header.headerId) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
                 </v-btn>
               </div>
@@ -164,12 +152,12 @@
                     hide-default-footer
                     class="rtf-detail-table"
                   >
-                    <template #[`item.lineNumber`]="{ item: lineItem }">{{ formatNumber(lineItem.lineNumber) }}</template>
-                    <template #[`item.productCode`]="{ item: lineItem }">{{ lineItem.productCode || '-' }}</template>
-                    <template #[`item.productDescription`]="{ item: lineItem }">{{ lineItem.productDescription || '-' }}</template>
-                    <template #[`item.price`]="{ item: lineItem }">{{ formatLineAmount(lineItem.price, 2) }}</template>
-                    <template #[`item.qty`]="{ item: lineItem }">{{ formatLineAmount(lineItem.qty, 4) }}</template>
-                    <template #[`item.amount`]="{ item: lineItem }">{{ formatLineAmount(lineItem.amount, 2) }}</template>
+                    <template #item.lineNumber="{ item: lineItem }">{{ formatNumber(lineItem.lineNumber) }}</template>
+                    <template #item.productCode="{ item: lineItem }">{{ lineItem.productCode || '-' }}</template>
+                    <template #item.productDescription="{ item: lineItem }">{{ lineItem.productDescription || '-' }}</template>
+                    <template #item.price="{ item: lineItem }">{{ formatLineAmount(lineItem.price, 4) }}</template>
+                    <template #item.qty="{ item: lineItem }">{{ formatLineAmount(lineItem.qty, 0) }}</template>
+                    <template #item.amount="{ item: lineItem }">{{ formatLineAmount(lineItem.amount, 2) }}</template>
                   </v-data-table>
                 </div>
               </div>
@@ -193,7 +181,7 @@
           class="invoice-list-table sml-rtf-list-table"
           @update:expanded="onExpandedChange"
         >
-          <template #[`item.expander`]="{ item }">
+          <template #item.expander="{ item }">
             <v-btn
               variant="text"
               density="comfortable"
@@ -206,18 +194,18 @@
             </v-btn>
           </template>
 
-          <template #[`item.rowNumber`]="{ item }">{{ formatNumber(item.rowNumber) }}</template>
-          <template #[`item.purchaseOrder`]="{ item }"><span class="font-weight-medium">{{ item.purchaseOrder || '-' }}</span></template>
-          <template #[`item.customerPO`]="{ item }">{{ item.customerPO || '-' }}</template>
-          <template #[`item.orderedBy`]="{ item }">{{ item.orderedBy || '-' }}</template>
-          <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
-          <template #[`item.originalPO`]="{ item }">{{ item.originalPO || '-' }}</template>
-          <template #[`item.salesOrder`]="{ item }">{{ item.salesOrder || '-' }}</template>
-          <template #[`item.originalSO`]="{ item }">{{ item.originalSO || '-' }}</template>
-          <template #[`item.dnCount`]="{ item }">{{ formatNumber(item.dnCount) }}</template>
-          <template #[`item.invoiceNumber`]="{ item }"><span class="font-weight-medium">{{ item.invoiceNumber || '-' }}</span></template>
-          <template #[`item.createdOn`]="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
-          <template #[`item.createdBy`]="{ item }">{{ item.createdBy || '-' }}</template>
+          <template #item.rowNumber="{ item }">{{ formatNumber(item.rowNumber) }}</template>
+          <template #item.purchaseOrder="{ item }"><span class="font-weight-medium">{{ item.purchaseOrder || '-' }}</span></template>
+          <template #item.customerPO="{ item }">{{ item.customerPO || '-' }}</template>
+          <template #item.orderedBy="{ item }">{{ item.orderedBy || '-' }}</template>
+          <template #item.orderedOn="{ item }">{{ format(item.orderedOn) }}</template>
+          <template #item.originalPO="{ item }">{{ item.originalPO || '-' }}</template>
+          <template #item.salesOrder="{ item }">{{ item.salesOrder || '-' }}</template>
+          <template #item.originalSO="{ item }">{{ item.originalSO || '-' }}</template>
+          <template #item.dnCount="{ item }">{{ formatNumber(item.dnCount) }}</template>
+          <template #item.invoiceNumber="{ item }"><span class="font-weight-medium">{{ item.invoiceNumber || '-' }}</span></template>
+          <template #item.createdOn="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
+          <template #item.createdBy="{ item }">{{ item.createdBy || '-' }}</template>
 
           <template #expanded-row="{ item }">
             <tr>
@@ -231,12 +219,12 @@
                     hide-default-footer
                     class="rtf-detail-table"
                   >
-                    <template #[`item.lineNumber`]="{ item: lineItem }">{{ formatNumber(lineItem.lineNumber) }}</template>
-                    <template #[`item.productCode`]="{ item: lineItem }">{{ lineItem.productCode || '-' }}</template>
-                    <template #[`item.productDescription`]="{ item: lineItem }">{{ lineItem.productDescription || '-' }}</template>
-                    <template #[`item.price`]="{ item: lineItem }">{{ formatLineAmount(lineItem.price, 2) }}</template>
-                    <template #[`item.qty`]="{ item: lineItem }">{{ formatLineAmount(lineItem.qty, 4) }}</template>
-                    <template #[`item.amount`]="{ item: lineItem }">{{ formatLineAmount(lineItem.amount, 2) }}</template>
+                    <template #item.lineNumber="{ item: lineItem }">{{ formatNumber(lineItem.lineNumber) }}</template>
+                    <template #item.productCode="{ item: lineItem }">{{ lineItem.productCode || '-' }}</template>
+                    <template #item.productDescription="{ item: lineItem }">{{ lineItem.productDescription || '-' }}</template>
+                    <template #item.price="{ item: lineItem }">{{ formatLineAmount(lineItem.price, 4) }}</template>
+                    <template #item.qty="{ item: lineItem }">{{ formatLineAmount(lineItem.qty, 0) }}</template>
+                    <template #item.amount="{ item: lineItem }">{{ formatLineAmount(lineItem.amount, 2) }}</template>
                   </v-data-table>
                 </div>
               </td>
@@ -267,6 +255,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const rows = ref<SmlRtfListHeader[]>([])
 const expandedHeaderIds = ref<string[]>([])
+const selectedHeaderIds = ref<string[]>([])
 
 const {
   visibleColumns: visibleColumnKeys,
@@ -295,8 +284,6 @@ const {
   checkboxMode: false,
   viewMode: 'detail',
 })
-
-const selectedHeaderIds = ref<string[]>([])
 
 const commonQueryItems = computed(() => [
   { value: 1, label: t('sml.rtfList.commonQueryItems.thirty') },
@@ -466,17 +453,60 @@ function parseNumber(value: string | number | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function formatLineAmount(value: string | number | null | undefined, fractionDigits: number): string {
-  const parsed = parseNumber(value)
+function splitNumericSuffix(value: string | number | null | undefined): { numericValue: string; suffix: string } | null {
+  if (value === null || value === undefined) {
+    return null
+  }
 
-  if (parsed === null) {
+  const text = String(value).trim()
+  if (!text) {
+    return null
+  }
+
+  const match = text.match(/^(-?[\d,]+(?:\.\d+)?)(.*)$/)
+  if (!match) {
+    return null
+  }
+
+  const numericValue = match[1]
+  const suffix = match[2]
+
+  if (numericValue === undefined || suffix === undefined) {
+    return null
+  }
+
+  return {
+    numericValue,
+    suffix,
+  }
+}
+
+function formatLineAmount(value: string | number | null | undefined, fractionDigits: number): string {
+  const split = splitNumericSuffix(value)
+
+  if (!split) {
+    const parsed = parseNumber(value)
+    if (parsed === null) {
+      return String(value ?? '-').trim() || '-'
+    }
+
+    return formatNumber(parsed, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })
+  }
+
+  const parsed = Number(split.numericValue.replace(/,/g, ''))
+  if (!Number.isFinite(parsed)) {
     return String(value ?? '-').trim() || '-'
   }
 
-  return formatNumber(parsed, {
+  const formatted = formatNumber(parsed, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   })
+
+  return `${formatted}${split.suffix}`
 }
 </script>
 
@@ -552,6 +582,7 @@ function formatLineAmount(value: string | number | null | undefined, fractionDig
 :deep(.invoice-list-table .v-data-table__th) {
   vertical-align: middle;
 }
+
 :deep(.invoice-list-table .v-data-table__td) {
   vertical-align: top;
 }
