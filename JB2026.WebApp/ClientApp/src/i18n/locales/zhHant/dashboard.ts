@@ -53,6 +53,10 @@ export const dashboardMessages = {
         title: '最近活動',
         empty: '目前沒有最近活動',
         items: {
+          jobPrefix: '作業 #',
+          jobCreatedVerb: '已建立',
+          jobUpdatedVerb: '已更新',
+          jobCreated: '作業 #{jobNumber} 已建立',
           jobUpdated: '作業 #{jobNumber} 已更新',
           newQuotationDrafted: '已建立新報價草稿',
           invoicePaid: '發票 #{invoiceNumber} 已付款',

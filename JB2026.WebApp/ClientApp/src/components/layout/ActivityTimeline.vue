@@ -7,8 +7,23 @@
     <v-divider />
     <v-card-text class="pa-0">
       <v-list v-if="items.length > 0" lines="two" class="bg-transparent">
-        <v-list-item v-for="(item, index) in items" :key="index" :prepend-icon="getIcon(item.type)"
-          :title="item.title" :subtitle="item.timestamp">
+        <v-list-item v-for="(item, index) in items" :key="index" :prepend-icon="getIcon(item.type)" :subtitle="item.timestamp">
+          <template #title>
+            <template v-if="item.jobOrderId && item.jobNumberDisplay">
+              <span>{{ item.titlePrefix }}</span>
+              <v-btn
+                variant="text"
+                density="compact"
+                color="primary"
+                class="activity-job-link px-1 text-none"
+                @click.stop="emit('open-job', item.jobOrderId)"
+              >
+                {{ item.jobNumberDisplay }}
+              </v-btn>
+              <span>{{ item.titleSuffix }}</span>
+            </template>
+            <span v-else>{{ item.title }}</span>
+          </template>
           <template v-slot:append>
             <v-chip size="x-small" :color="getStatusColor(item)" variant="tonal">
               {{ item.status }}
@@ -30,6 +45,10 @@ import { useI18n } from 'vue-i18n'
 export interface ActivityItem {
   type: 'job' | 'quote' | 'invoice' | 'system'
   title: string
+  titlePrefix?: string
+  titleSuffix?: string
+  jobOrderId?: string
+  jobNumberDisplay?: string
   status: string
   statusTone?: 'success' | 'warning' | 'error' | 'primary'
   timestamp: string
@@ -37,6 +56,10 @@ export interface ActivityItem {
 
 defineProps<{
   items: ActivityItem[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'open-job', orderId: string): void
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
@@ -66,5 +89,10 @@ const getStatusColor = (item: ActivityItem) => {
 .activity-timeline {
   max-height: 600px;
   overflow-y: auto;
+}
+
+.activity-job-link {
+  min-width: 0;
+  letter-spacing: normal;
 }
 </style>

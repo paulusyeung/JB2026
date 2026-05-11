@@ -61,15 +61,48 @@
         </v-card>
       </v-col>
       <v-col cols="12" lg="4">
-        <ActivityTimeline :items="mockActivities" />
+        <ActivityTimeline :items="recentActivities" @open-job="openJobFromActivity" />
       </v-col>
     </v-row>
+
+    <v-dialog v-model="formOpen" max-width="min(100%, 760px)" scrollable>
+      <JobOrderForm
+        v-if="formOpen"
+        :job="formJob"
+        @saved="handleFormSaved"
+        @cancel="formOpen = false"
+        @attachment="handleAttachment"
+        @print-order="handlePrintOrder"
+        @workflow="handleWorkflow"
+        @product-details-edit="handleProductDetailsEdit"
+      />
+    </v-dialog>
+
+    <JobOrderActionDialogs
+      :job="formJob"
+      v-model:attachment-open="attachmentDialogOpen"
+      v-model:product-details-open="productDetailsDialogOpen"
+      @updated="handleActionUpdated"
+      @error="showActionNotice"
+    />
+
+    <JobOrderPrintManagerDialog
+      v-model="printManagerOpen"
+      :order-id="printManagerJob?.orderId ?? null"
+      :order-number="printManagerJob?.orderNumber ?? ''"
+      :style-titles="printManagerJob?.styleTitles"
+    />
+
+    <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
+      {{ actionNoticeMessage }}
+    </v-snackbar>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { Bar, Line, Pie } from 'vue-chartjs'
 import {
   ArcElement,
@@ -83,20 +116,25 @@ import {
   Tooltip,
 } from 'chart.js'
 import { getJobList } from '@/services/jobOrders'
+import { getJobDetail } from '@/services/jobs'
 import KpiCard from '@/components/cards/KpiCard.vue'
 import ActivityTimeline from '@/components/layout/ActivityTimeline.vue'
 import DashboardFilters from '@/components/layout/DashboardFilters.vue'
+import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { useOrdersStore } from '@/stores/orders'
 import { useQuotationsStore } from '@/stores/quotations'
 import { useThemeStore } from '@/stores/theme'
 import type { ActivityItem } from '@/components/layout/ActivityTimeline.vue'
-import type { JobOrderRecord } from '@/types/api'
+import type { JobDetail, JobOrderRecord } from '@/types/api'
 
 type DateRangeKey = 'today' | 'last7Days' | 'last30Days' | 'last90Days' | 'thisYear' | 'allTime'
 
 const quotations = useQuotationsStore()
 const orders = useOrdersStore()
 const themeStore = useThemeStore()
+const router = useRouter()
 
 ChartJS.register(
   CategoryScale,
@@ -114,6 +152,14 @@ const { t } = useI18n({ useScope: 'global' })
 const loading = ref(false)
 const error = ref<string | null>(null)
 const jobListRows = ref<JobOrderRecord[]>([])
+const formOpen = ref(false)
+const formJob = ref<JobDetail | null>(null)
+const actionNoticeOpen = ref(false)
+const actionNoticeMessage = ref('')
+const attachmentDialogOpen = ref(false)
+const productDetailsDialogOpen = ref(false)
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
 
 const chartType = ref<'bar' | 'line' | 'pie'>('bar')
 const dashboardFilters = ref({
@@ -121,43 +167,133 @@ const dashboardFilters = ref({
   search: '',
 })
 
-const mockActivities = computed<ActivityItem[]>(() => [
-  {
-    type: 'job',
-    title: t('dashboard.activity.items.jobUpdated', { jobNumber: '9842' }),
-    status: t('dashboard.activity.statuses.inProgress'),
-    statusTone: 'warning',
-    timestamp: t('dashboard.activity.timestamps.twoMinutesAgo'),
-  },
-  {
-    type: 'quote',
-    title: t('dashboard.activity.items.newQuotationDrafted'),
-    status: t('dashboard.activity.statuses.draft'),
-    statusTone: 'primary',
-    timestamp: t('dashboard.activity.timestamps.fifteenMinutesAgo'),
-  },
-  {
-    type: 'invoice',
-    title: t('dashboard.activity.items.invoicePaid', { invoiceNumber: '2024-05' }),
-    status: t('dashboard.activity.statuses.paid'),
-    statusTone: 'success',
-    timestamp: t('dashboard.activity.timestamps.oneHourAgo'),
-  },
-  {
-    type: 'job',
-    title: t('dashboard.activity.items.jobCompleted', { jobNumber: '9840' }),
-    status: t('dashboard.activity.statuses.completed'),
-    statusTone: 'success',
-    timestamp: t('dashboard.activity.timestamps.threeHoursAgo'),
-  },
-  {
-    type: 'system',
-    title: t('dashboard.activity.items.systemMaintenance'),
-    status: t('dashboard.activity.statuses.scheduled'),
-    statusTone: 'primary',
-    timestamp: t('dashboard.activity.timestamps.today'),
-  },
-])
+const recentActivities = computed<ActivityItem[]>(() =>
+  [...jobListRows.value]
+    .sort((a, b) => {
+      const aModified = resolveModifiedTimestamp(a)
+      const bModified = resolveModifiedTimestamp(b)
+      if (bModified !== aModified) return bModified - aModified
+
+      const aCreated = resolveCreatedTimestamp(a)
+      const bCreated = resolveCreatedTimestamp(b)
+      return bCreated - aCreated
+    })
+    .slice(0, 5)
+    .map((row) => {
+      const modifiedTimestamp = resolveModifiedTimestamp(row)
+      const createdTimestamp = resolveCreatedTimestamp(row)
+      const displayTimestamp = modifiedTimestamp > 0 ? modifiedTimestamp : createdTimestamp
+
+      return {
+        type: 'job',
+        title: '',
+        titlePrefix: t('dashboard.activity.items.jobPrefix'),
+        titleSuffix: isJobUpdated(row)
+          ? t('dashboard.activity.items.jobUpdatedVerb')
+          : t('dashboard.activity.items.jobCreatedVerb'),
+        jobOrderId: row.orderId,
+        jobNumberDisplay: compositeOrderNumber(row),
+        status: getJobStatusLabel(row.status),
+        statusTone: getJobStatusTone(row.status),
+        timestamp: displayTimestamp <= 0
+          ? '-'
+          : new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }).format(new Date(displayTimestamp)),
+      }
+    }),
+)
+
+function resolveModifiedTimestamp(row: JobOrderRecord) {
+  return parseTimestamp(row.modifiedOn) ?? 0
+}
+
+function resolveCreatedTimestamp(row: JobOrderRecord) {
+  return parseTimestamp(row.createdOn) ?? parseTimestamp(row.orderedOn) ?? 0
+}
+
+function isJobUpdated(row: JobOrderRecord) {
+  const created = resolveCreatedTimestamp(row)
+  const modified = resolveModifiedTimestamp(row)
+
+  if (created <= 0 || modified <= 0) return false
+  return modified > created
+}
+
+function parseTimestamp(value: string | null | undefined) {
+  if (!value) return null
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function compositeOrderNumber(row: JobOrderRecord) {
+  if (row.orderNumber && row.jobNumber) return `${row.orderNumber}-${row.jobNumber}`
+  return row.orderNumber || row.jobNumber || row.orderId
+}
+
+function getJobStatusLabel(status: number) {
+  if (status <= 0) return t('dashboard.activity.statuses.draft')
+  if (status === 1) return t('dashboard.activity.statuses.inProgress')
+  if (status === 2) return t('dashboard.activity.statuses.completed')
+  return t('dashboard.activity.statuses.scheduled')
+}
+
+function getJobStatusTone(status: number): ActivityItem['statusTone'] {
+  if (status <= 0) return 'primary'
+  if (status === 1) return 'warning'
+  if (status === 2) return 'success'
+  return 'error'
+}
+
+async function openJobFromActivity(orderId: string) {
+  try {
+    formJob.value = await getJobDetail(orderId)
+    formOpen.value = true
+  } catch {
+    error.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function handleFormSaved() {
+  formOpen.value = false
+  await reload()
+}
+
+function showActionNotice(message: string) {
+  actionNoticeMessage.value = message
+  actionNoticeOpen.value = true
+}
+
+function handleAttachment(job: JobDetail) {
+  formJob.value = job
+  attachmentDialogOpen.value = true
+}
+
+function handleProductDetailsEdit(job: JobDetail) {
+  formJob.value = job
+  productDetailsDialogOpen.value = true
+}
+
+async function handlePrintOrder(job: JobDetail) {
+  printManagerJob.value = job
+  printManagerOpen.value = true
+}
+
+function handleWorkflow(job: JobDetail) {
+  void router.push({ name: 'admin-workflow', query: { orderId: job.orderId } })
+}
+
+async function handleActionUpdated() {
+  if (!formJob.value) return
+
+  try {
+    formJob.value = await getJobDetail(formJob.value.orderId)
+    await reload()
+  } catch {
+    showActionNotice(t('jobOrder.reloadAfterSaveFailed'))
+  }
+}
 
 watch(
   dashboardFilters,

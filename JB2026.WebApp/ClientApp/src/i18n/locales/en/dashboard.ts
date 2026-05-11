@@ -53,6 +53,10 @@ export const dashboardMessages = {
         title: 'Recent activity',
         empty: 'No recent activity',
         items: {
+          jobPrefix: 'Job #',
+          jobCreatedVerb: 'created',
+          jobUpdatedVerb: 'updated',
+          jobCreated: 'Job #{jobNumber} created',
           jobUpdated: 'Job #{jobNumber} updated',
           newQuotationDrafted: 'New quotation drafted',
           invoicePaid: 'Invoice #{invoiceNumber} paid',
