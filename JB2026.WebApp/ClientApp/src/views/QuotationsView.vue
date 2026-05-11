@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section quotations-page">
+  <section class="page-section quotations-page" :class="{ 'quotations-page--dark': isDark }">
     <v-card rounded="xl" elevation="0" class="panel-card quotations-card">
 
 
@@ -26,6 +26,8 @@
 
           <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('quotations.new') }}</v-btn>
         </div>
+
+        <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
 
         <div class="toolbar-bar mb-2 mt-3">
           <v-menu location="bottom">
@@ -72,6 +74,22 @@
             <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
               {{ t('quotations.actions.checkbox') }}
             </v-btn>
+
+            <v-menu location="bottom">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                  {{ viewLabel }}
+                </v-btn>
+              </template>
+              <v-list density="compact" class="toolbar-menu-list">
+                <v-list-item prepend-icon="mdi-table" :active="viewMode === 'table'" @click="setViewMode('table')">
+                  <v-list-item-title>{{ tableViewLabel }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
+                  <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
 
             <v-divider vertical class="mx-1" />
 
@@ -149,6 +167,39 @@
           </template>
         </ListMobileCard>
 
+        <div v-else-if="isCardView" class="quotations-card-list">
+          <v-card
+            v-for="row in store.rows"
+            :key="row.headerId"
+            rounded="lg"
+            elevation="0"
+            class="quotations-item-card"
+            @click="openQuotation(row)"
+          >
+            <div class="card-header">
+              <span class="font-weight-bold card-quote-number">{{ row.quoteNumber }}</span>
+              <v-checkbox-btn
+                v-if="checkboxMode"
+                :model-value="selectedHeaderIds.includes(row.headerId)"
+                @click.stop="toggleSelectedQuotation(row.headerId)"
+                class="card-checkbox"
+              />
+            </div>
+
+            <div class="card-body">
+              <div class="d-flex align-center ga-2 mb-2">
+                <span class="text-caption text-medium-emphasis">{{ row.customerName }}</span>
+              </div>
+              <div class="card-title">{{ row.printTitle }}</div>
+            </div>
+
+            <div class="card-footer text-caption text-medium-emphasis">
+              <span>{{ t('quotations.headers.createdOn') }}: {{ format(row.createdOn) }}</span>
+              <span>{{ t('quotations.headers.modifiedOn') }}: {{ format(row.modifiedOn) }}</span>
+            </div>
+          </v-card>
+        </div>
+
         <v-data-table-server
           v-else
           v-model:page="store.page"
@@ -197,8 +248,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import QuotationFormDialog from '@/components/forms/QuotationFormDialog.vue'
@@ -211,13 +264,15 @@ const store = useQuotationsStore()
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
+const theme = useTheme()
+const isDark = computed(() => theme.global.current.value.dark)
 
 const formOpen = ref(false)
 const formQuotation = ref<QuotationListItem | null>(null)
 const saveSuccess = ref(false)
-const checkboxMode = ref(false)
+const errorMessage = ref('')
 const selectedHeaderIds = ref<Array<string | number>>([])
-const visibleColumnKeys = ref<string[]>([
+const defaultColumnKeys = [
   'quoteNumber',
   'rowNumber',
   'customerName',
@@ -226,9 +281,19 @@ const visibleColumnKeys = ref<string[]>([
   'createdBy',
   'modifiedOn',
   'modifiedBy',
-])
-const sortDirection = ref<'asc' | 'desc'>('desc')
-const sortKey = ref('modifiedOn')
+]
+const viewSettings = useViewSettings('quotations', {
+  visibleColumns: defaultColumnKeys,
+  sortKey: 'modifiedOn',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'table' as 'table' | 'card',
+})
+const visibleColumnKeys = viewSettings.visibleColumns
+const sortKey = viewSettings.sortKey
+const sortDirection = viewSettings.sortDirection
+const checkboxMode = viewSettings.checkboxMode
+const viewMode = viewSettings.viewMode
 const { isPhoneLayout } = useResponsiveList()
 
 const allHeaders = computed(() => [
@@ -252,6 +317,10 @@ const sortableColumns = computed(() =>
 
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
 const selectedHeaderIdsAsString = computed(() => selectedHeaderIds.value.map((id) => String(id)))
+const isCardView = computed(() => viewMode.value === 'card')
+const viewLabel = computed(() => t('quotations.actions.view'))
+const tableViewLabel = computed(() => t('quotations.actions.tableView'))
+const cardViewLabel = computed(() => t('quotations.actions.cardView'))
 
 const mobileColumns = computed<ListMobileCardColumn<QuotationListItem>[]>(() => [
   { key: 'quoteNumberIndexPair', label: t('quotations.headers.quoteNumber'), section: 'header', emphasis: true },
@@ -272,7 +341,7 @@ const mobileColumns = computed<ListMobileCardColumn<QuotationListItem>[]>(() => 
 ])
 
 watch([sortKey, sortDirection], () => {
-  store.sortBy = [{ key: sortKey.value, order: sortDirection.value }] as SortItem[]
+  store.sortBy = [{ key: sortKey.value as string, order: sortDirection.value as 'asc' | 'desc' }] as SortItem[]
 })
 
 onMounted(async () => {
@@ -283,17 +352,31 @@ onMounted(async () => {
   }
 
   if (store.rows.length === 0) {
-    await store.load()
+    try {
+      await store.load()
+    } catch {
+      errorMessage.value = t('quotations.loadFailed')
+    }
   }
 })
 
 async function applySearch() {
-  await store.search()
+  try {
+    await store.search()
+    errorMessage.value = ''
+  } catch {
+    errorMessage.value = t('quotations.searchFailed')
+  }
 }
 
 async function refreshList() {
   store.keyword = ''
-  await store.load()
+  try {
+    await store.load()
+    errorMessage.value = ''
+  } catch {
+    errorMessage.value = t('quotations.loadFailed')
+  }
 }
 
 function toggleColumn(columnKey: string) {
@@ -305,6 +388,19 @@ function toggleColumn(columnKey: string) {
   }
 
   visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
+}
+
+function setViewMode(mode: 'table' | 'card') {
+  viewMode.value = mode
+}
+
+function toggleSelectedQuotation(headerId: string | number) {
+  if (selectedHeaderIds.value.includes(headerId)) {
+    selectedHeaderIds.value = selectedHeaderIds.value.filter((id) => id !== headerId)
+    return
+  }
+
+  selectedHeaderIds.value = [...selectedHeaderIds.value, headerId]
 }
 
 function openCreate() {
@@ -399,6 +495,13 @@ function rowNumber(index: number) {
 <style scoped>
 .quotations-page {
   min-height: 0;
+  --quotations-header-bg: rgba(195, 216, 248, 0.92);
+  --quotations-header-fg: inherit;
+}
+
+.quotations-page--dark {
+  --quotations-header-bg: rgba(52, 74, 104, 0.95);
+  --quotations-header-fg: rgba(239, 246, 255, 0.98);
 }
 
 .quotations-card {
@@ -425,9 +528,11 @@ function rowNumber(index: number) {
   overflow: auto;
 }
 
-.quotations-table :deep(thead th) {
+.quotations-table :deep(.v-table__wrapper > table > thead > tr > th),
+.quotations-table :deep(.v-data-table__th) {
   white-space: nowrap;
-  background: rgba(195, 216, 248, 0.7);
+  background-color: var(--quotations-header-bg) !important;
+  color: var(--quotations-header-fg) !important;
 }
 
 .quotations-table {
@@ -435,11 +540,13 @@ function rowNumber(index: number) {
   overflow: hidden;
 }
 
-.quotations-table :deep(thead th:first-child) {
+.quotations-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.quotations-table :deep(.v-data-table__th:first-child) {
   border-top-left-radius: 8px;
 }
 
-.quotations-table :deep(thead th:last-child) {
+.quotations-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.quotations-table :deep(.v-data-table__th:last-child) {
   border-top-right-radius: 8px;
 }
 
@@ -447,9 +554,79 @@ function rowNumber(index: number) {
   font-size: 12px;
 }
 
+.quotations-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .quotations-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
+  }
+}
+
+.quotations-item-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  position: relative;
+}
+
+.quotations-item-card:active {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.card-header,
+.card-footer {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.card-header {
+  position: relative;
+  justify-content: flex-start;
+}
+
+.card-footer {
+  justify-content: space-between;
+}
+
+.card-body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.card-title {
+  font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.card-quote-number {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-checkbox {
+  flex-shrink: 0;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
 @media (max-width: 960px) {
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .card-footer {
+    flex-direction: column;
   }
 }
 </style>
