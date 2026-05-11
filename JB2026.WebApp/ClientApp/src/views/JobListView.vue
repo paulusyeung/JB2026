@@ -472,6 +472,10 @@ const printManagerJob = ref<JobDetail | null>(null)
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatCurrency: formatCurrencyByLocale, formatNumber } = useLocaleFormatters()
+
+function formatCurrency(value: number) {
+  return value === 0 ? '' : formatCurrencyByLocale(value)
+}
 const theme = useTheme()
 const display = useDisplay()
 const router = useRouter()
@@ -777,13 +781,6 @@ function valueForSort(row: JobOrderRecord, key: keyof JobOrderRecord) {
 
 function compositeOrderNumber(row: JobOrderRecord) {
   return row.jobNumber ? `${row.orderNumber}-${row.jobNumber}` : row.orderNumber
-}
-
-
-
-
-function formatCurrency(value: number) {
-  return formatCurrencyByLocale(value)
 }
 
 function statusColor(status: number) {
