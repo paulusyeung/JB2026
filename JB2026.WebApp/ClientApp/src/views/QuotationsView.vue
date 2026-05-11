@@ -218,6 +218,11 @@
           <template #[`item.rowNumber`]="{ index }">
             {{ rowNumber(index) }}
           </template>
+          <template #[`item.quoteNumber`]="{ item }">
+            <a href="#" class="quotation-link" @click.stop.prevent="openQuotationFromLink(item as QuotationListItem)">
+              {{ item.quoteNumber }}
+            </a>
+          </template>
           <template #[`item.createdOn`]="{ item }">
             {{ format(item.createdOn) }}
           </template>
@@ -437,6 +442,14 @@ function onRowClick(_event: Event, payload: { item: { raw: QuotationListItem } }
   openQuotation(payload.item.raw)
 }
 
+function openQuotationFromLink(quotation: QuotationListItem) {
+  if (checkboxMode.value) {
+    return
+  }
+
+  openQuotation(quotation)
+}
+
 function handleSave(quotation: QuotationListItem) {
   const index = store.rows.findIndex((row) => row.headerId === quotation.headerId)
 
@@ -618,6 +631,16 @@ function rowNumber(index: number) {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
+}
+
+.quotation-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.quotation-link:hover {
+  text-decoration-thickness: 2px;
 }
 
 @media (max-width: 960px) {
