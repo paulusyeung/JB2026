@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section quotation-item-page" :class="{ 'quotation-item-page--dark': isDark }">
+  <section class="page-section quotation-item-page">
     <v-card rounded="xl" elevation="0" class="panel-card quotation-item-card">
 
 
@@ -516,13 +516,8 @@ function formatUnitCost(value: number) {
 <style scoped>
 .quotation-item-page {
   min-height: 0;
-  --quotation-item-header-bg: rgba(195, 216, 248, 0.92);
-  --quotation-item-header-fg: inherit;
-}
-
-.quotation-item-page--dark {
-  --quotation-item-header-bg: rgba(52, 74, 104, 0.95);
-  --quotation-item-header-fg: rgba(239, 246, 255, 0.98);
+  --quotation-item-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --quotation-item-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .quotation-item-card {

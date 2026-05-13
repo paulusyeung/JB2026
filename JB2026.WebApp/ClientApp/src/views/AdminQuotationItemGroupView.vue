@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section quotation-item-group-page" :class="{ 'quotation-item-group-page--dark': isDark }">
+  <section class="page-section quotation-item-group-page">
     <v-card rounded="xl" elevation="0" class="panel-card quotation-item-group-card">
 
 
@@ -457,13 +457,8 @@ function formatDateTime(value: string) {
 <style scoped>
 .quotation-item-group-page {
   min-height: 0;
-  --quotation-item-group-header-bg: rgba(195, 216, 248, 0.92);
-  --quotation-item-group-header-fg: inherit;
-}
-
-.quotation-item-group-page--dark {
-  --quotation-item-group-header-bg: rgba(52, 74, 104, 0.95);
-  --quotation-item-group-header-fg: rgba(239, 246, 255, 0.98);
+  --quotation-item-group-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --quotation-item-group-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .quotation-item-group-card {

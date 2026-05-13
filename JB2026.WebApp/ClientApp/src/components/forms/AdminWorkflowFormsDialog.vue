@@ -290,34 +290,34 @@ function controlStyle(control: PreviewControl) {
 
 <style scoped>
 .legacy-dialog {
-  background: rgb(var(--v-theme-surface, 245, 245, 245));
+  background: rgb(var(--v-theme-surface));
 }
 
 .legacy-titlebar {
-  background: linear-gradient(180deg, rgba(var(--v-theme-primary, 25, 118, 210), 0.12), rgba(var(--v-theme-primary, 25, 118, 210), 0.22));
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.12), rgba(var(--v-theme-primary), 0.22));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.2);
 }
 
 .legacy-content {
-  background: rgb(var(--v-theme-surface, 245, 245, 245));
+  background: rgb(var(--v-theme-surface));
 }
 
 .legacy-toolbar {
-  border: 1px solid rgba(var(--v-theme-on-surface, 0, 0, 0), 0.2);
-  background: linear-gradient(180deg, rgba(var(--v-theme-primary, 25, 118, 210), 0.06), rgba(var(--v-theme-primary, 25, 118, 210), 0.14));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.06), rgba(var(--v-theme-primary), 0.14));
   padding: 6px;
 }
 
 .legacy-group-title {
   margin-bottom: 6px;
-  color: rgb(var(--v-theme-primary, 25, 118, 210));
+  color: rgb(var(--v-theme-primary));
   font-size: 13px;
 }
 
 .legacy-label {
   padding-top: 8px;
   font-size: 13px;
-  color: rgba(var(--v-theme-on-surface, 0, 0, 0), 0.82);
+  color: rgba(var(--v-theme-on-surface), 0.82);
 }
 
 .legacy-btn {

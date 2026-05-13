@@ -366,13 +366,8 @@ function formatAmount(value: number) {
 }
 
 .sml-invoice-list-page {
-  --sml-invoice-header-bg: rgba(195, 216, 248, 0.92);
-  --sml-invoice-header-fg: inherit;
-}
-
-:global(.v-theme--dark) .sml-invoice-list-page {
-  --sml-invoice-header-bg: rgba(52, 74, 104, 0.95);
-  --sml-invoice-header-fg: rgba(239, 246, 255, 0.98);
+  --sml-invoice-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --sml-invoice-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .toolbar-separator {

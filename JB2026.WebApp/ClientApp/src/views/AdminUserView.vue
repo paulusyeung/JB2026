@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section admin-user-page" :class="{ 'admin-user-page--dark': isDark }">
+  <section class="page-section admin-user-page">
     <v-card rounded="xl" elevation="0" class="panel-card admin-user-card">
 
 
@@ -450,13 +450,8 @@ function formatDateCell(value: string): string {
 <style scoped>
 .admin-user-page {
   min-height: 0;
-  --admin-user-header-bg: rgba(195, 216, 248, 0.92);
-  --admin-user-header-fg: inherit;
-}
-
-.admin-user-page--dark {
-  --admin-user-header-bg: rgba(52, 74, 104, 0.95);
-  --admin-user-header-fg: rgba(239, 246, 255, 0.98);
+  --admin-user-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --admin-user-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .admin-user-card {

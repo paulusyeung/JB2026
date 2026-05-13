@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section exceptional-list-page" :class="{ 'exceptional-list-page--dark': isDark }">
+  <section class="page-section exceptional-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card exceptional-list-card">
       <v-card-title class="reports-toolbar d-flex flex-wrap align-center ga-3">
         <v-text-field
@@ -468,13 +468,8 @@ function toMonthString(value: Date) {
 <style scoped>
 .exceptional-list-page {
   min-height: 0;
-  --exceptional-list-header-bg: rgba(195, 216, 248, 0.92);
-  --exceptional-list-header-fg: inherit;
-}
-
-.exceptional-list-page--dark {
-  --exceptional-list-header-bg: rgba(52, 74, 104, 0.95);
-  --exceptional-list-header-fg: rgba(239, 246, 255, 0.98);
+  --exceptional-list-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --exceptional-list-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .exceptional-list-card {

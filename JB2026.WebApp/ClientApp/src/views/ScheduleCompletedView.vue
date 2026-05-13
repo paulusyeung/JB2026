@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section completed-list-page" :class="{ 'completed-list-page--dark': isDark }">
+  <section class="page-section completed-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card completed-list-card">
 
 
@@ -597,18 +597,12 @@ async function handleActionUpdated() {
 <style scoped>
 .completed-list-page {
   min-height: 0;
-  --completed-list-header-bg: rgba(195, 216, 248, 0.92);
-  --completed-list-header-fg: inherit;
+  --completed-list-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --completed-list-header-fg: rgb(var(--v-theme-on-surface-variant));
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
-
-.completed-list-page--dark {
-  --completed-list-header-bg: rgba(52, 74, 104, 0.95);
-  --completed-list-header-fg: rgba(239, 246, 255, 0.98);
-}
-
 .filter-bar {
   display: grid;
   grid-template-columns: minmax(220px, 1.4fr) minmax(200px, 1fr) auto auto auto;

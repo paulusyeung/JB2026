@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section workflow-page" :class="{ 'workflow-page--dark': isDark }">
+  <section class="page-section workflow-page">
     <v-card rounded="xl" elevation="0" class="panel-card workflow-card">
 
 
@@ -368,13 +368,8 @@ function showUnavailable(actionKey: string) {
 <style scoped>
 .workflow-page {
   min-height: 0;
-  --workflow-header-bg: rgba(195, 216, 248, 0.92);
-  --workflow-header-fg: inherit;
-}
-
-.workflow-page--dark {
-  --workflow-header-bg: rgba(52, 74, 104, 0.95);
-  --workflow-header-fg: rgba(239, 246, 255, 0.98);
+  --workflow-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --workflow-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .workflow-card {

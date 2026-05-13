@@ -328,7 +328,7 @@ const chartPalette = computed(() =>
     ? {
         bars: ['#e29a60', '#8cb9d4', '#d8ab58'],
         axis: '#d7ddd3',
-        grid: 'rgba(215, 221, 211, 0.16)',
+        grid: 'rgba(237, 241, 235, 0.12)',
         tooltipBackground: '#1e241f',
       }
     : {

@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section pending-list-page" :class="{ 'pending-list-page--dark': isDark }">
+  <section class="page-section pending-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card pending-list-card">
 
 
@@ -712,15 +712,9 @@ async function handleActionUpdated() {
 <style scoped>
 .pending-list-page {
   min-height: 0;
-  --pending-list-header-bg: rgba(195, 216, 248, 0.92);
-  --pending-list-header-fg: inherit;
+  --pending-list-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --pending-list-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
-
-.pending-list-page--dark {
-  --pending-list-header-bg: rgba(52, 74, 104, 0.95);
-  --pending-list-header-fg: rgba(239, 246, 255, 0.98);
-}
-
 .pending-list-card {
   border: 1px solid rgba(var(--v-theme-primary), 0.15);
   background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));

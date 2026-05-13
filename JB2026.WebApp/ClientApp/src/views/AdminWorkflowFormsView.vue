@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section workflow-forms-page" :class="{ 'workflow-forms-page--dark': isDark }">
+  <section class="page-section workflow-forms-page">
     <v-card rounded="xl" elevation="0" class="panel-card workflow-forms-card">
 
 
@@ -369,13 +369,8 @@ function handleDuplicated(item: AdminWorkflowFormListItem) {
 <style scoped>
 .workflow-forms-page {
   min-height: 0;
-  --wf-header-bg: rgba(195, 216, 248, 0.92);
-  --wf-header-fg: inherit;
-}
-
-.workflow-forms-page--dark {
-  --wf-header-bg: rgba(52, 74, 104, 0.95);
-  --wf-header-fg: rgba(239, 246, 255, 0.98);
+  --wf-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --wf-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .workflow-forms-card {

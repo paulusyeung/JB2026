@@ -231,7 +231,7 @@ async function save() {
 
 .settings-card {
   border: 1px solid rgba(var(--v-theme-primary), 0.15);
-  background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));
+  background: linear-gradient(180deg, color-mix(in srgb, rgb(var(--v-theme-surface)) 92%, rgb(var(--v-theme-primary)) 8%), color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%));
 }
 
 .settings-form {

@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section packing-list-page" :class="{ 'packing-list-page--dark': isDark }">
+  <section class="page-section packing-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card packing-list-card">
 
 
@@ -612,13 +612,8 @@ async function handleActionUpdated() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  --packing-list-header-bg: rgba(195, 216, 248, 0.92);
-  --packing-list-header-fg: inherit;
-}
-
-.packing-list-page--dark {
-  --packing-list-header-bg: rgba(52, 74, 104, 0.95);
-  --packing-list-header-fg: rgba(239, 246, 255, 0.98);
+  --packing-list-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --packing-list-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .filter-bar {

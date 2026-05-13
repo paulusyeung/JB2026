@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section stock-page" :class="{ 'stock-page--dark': isDark }">
+  <section class="page-section stock-page">
     <v-card rounded="xl" elevation="0" class="panel-card stock-card">
 
 
@@ -685,13 +685,8 @@ function exportToCsv() {
 <style scoped>
 .stock-page {
   min-height: 0;
-  --stock-header-bg: rgba(195, 216, 248, 0.92);
-  --stock-header-fg: inherit;
-}
-
-.stock-page--dark {
-  --stock-header-bg: rgba(52, 74, 104, 0.95);
-  --stock-header-fg: rgba(239, 246, 255, 0.98);
+  --stock-header-bg: rgb(var(--v-theme-surface-variant));
+  --stock-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .stock-card {

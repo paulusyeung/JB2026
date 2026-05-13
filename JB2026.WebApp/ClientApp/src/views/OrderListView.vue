@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section order-list-page" :class="{ 'order-list-page--dark': isDark }">
+  <section class="page-section order-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card order-list-card">
 
 
@@ -863,13 +863,8 @@ function statusColor(status: number) {
 <style scoped>
 .order-list-page {
   min-height: 0;
-  --order-list-header-bg: rgba(195, 216, 248, 0.92);
-  --order-list-header-fg: inherit;
-}
-
-.order-list-page--dark {
-  --order-list-header-bg: rgba(52, 74, 104, 0.95);
-  --order-list-header-fg: rgba(239, 246, 255, 0.98);
+  --order-list-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --order-list-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .toolbar-new-order-btn {

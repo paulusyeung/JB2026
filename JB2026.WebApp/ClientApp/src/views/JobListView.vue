@@ -1,5 +1,5 @@
 <template>
-  <section class="page-section job-list-page" :class="{ 'job-list-page--dark': isDark }">
+  <section class="page-section job-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card job-list-card">
 
 
@@ -847,13 +847,8 @@ async function handleActionUpdated() {
 <style scoped>
 .job-list-page {
   min-height: 0;
-  --job-list-header-bg: rgba(195, 216, 248, 0.92);
-  --job-list-header-fg: inherit;
-}
-
-.job-list-page--dark {
-  --job-list-header-bg: rgba(52, 74, 104, 0.95);
-  --job-list-header-fg: rgba(239, 246, 255, 0.98);
+  --job-list-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --job-list-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .job-list-card {
@@ -941,12 +936,12 @@ async function handleActionUpdated() {
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--v-theme-surface));
   cursor: pointer;
 }
 
 .job-mobile-card:active {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--v-theme-surface), 0.8);
 }
 
 .job-mobile-card__header,

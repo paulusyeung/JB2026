@@ -517,7 +517,7 @@ async function handleSave(closeAfter = false) {
 .designer-toolbox {
   width: 148px;
   flex-shrink: 0;
-  border: 1px solid rgba(128, 128, 128, 0.3);
+  border: 1px solid rgba(var(--v-theme-outline), 0.3);
   border-radius: 6px;
   padding: 8px;
   overflow-y: auto;
@@ -525,7 +525,7 @@ async function handleSave(closeAfter = false) {
 
 .designer-canvas {
   flex: 1;
-  border: 1px solid rgba(128, 128, 128, 0.3);
+  border: 1px solid rgba(var(--v-theme-outline), 0.3);
   border-radius: 6px;
   position: relative;
   min-height: 480px;
@@ -533,15 +533,15 @@ async function handleSave(closeAfter = false) {
     0deg,
     transparent,
     transparent 19px,
-    rgba(128, 128, 128, 0.08) 19px,
-    rgba(128, 128, 128, 0.08) 20px
+    rgba(var(--v-theme-outline), 0.08) 19px,
+    rgba(var(--v-theme-outline), 0.08) 20px
   ),
   repeating-linear-gradient(
     90deg,
     transparent,
     transparent 19px,
-    rgba(128, 128, 128, 0.08) 19px,
-    rgba(128, 128, 128, 0.08) 20px
+    rgba(var(--v-theme-outline), 0.08) 19px,
+    rgba(var(--v-theme-outline), 0.08) 20px
   );
   overflow: hidden;
 }
@@ -549,7 +549,7 @@ async function handleSave(closeAfter = false) {
 .designer-properties {
   width: 200px;
   flex-shrink: 0;
-  border: 1px solid rgba(128, 128, 128, 0.3);
+  border: 1px solid rgba(var(--v-theme-outline), 0.3);
   border-radius: 6px;
   padding: 8px;
   overflow-y: auto;
@@ -557,14 +557,14 @@ async function handleSave(closeAfter = false) {
 
 .canvas-control {
   position: absolute;
-  border: 1px dashed rgba(100, 100, 200, 0.5);
+  border: 1px dashed rgba(var(--v-theme-primary), 0.5);
   cursor: move;
   user-select: none;
   display: flex;
   align-items: center;
   padding: 2px 4px;
   font-size: 11px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(var(--v-theme-surface), 0.5);
   border-radius: 2px;
   box-sizing: border-box;
   overflow: hidden;
@@ -577,8 +577,8 @@ async function handleSave(closeAfter = false) {
 }
 
 .canvas-control--label {
-  border-color: rgba(200, 80, 80, 0.6);
-  background: rgba(255, 230, 230, 0.5);
+  border-color: rgba(var(--v-theme-error), 0.6);
+  background: rgba(var(--v-theme-error), 0.12);
 }
 
 .canvas-control__text {

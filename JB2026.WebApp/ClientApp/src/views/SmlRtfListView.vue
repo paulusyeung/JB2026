@@ -523,13 +523,8 @@ function formatLineAmount(value: string | number | null | undefined, fractionDig
 }
 
 .sml-rtf-list-page {
-  --sml-rtf-header-bg: rgba(195, 216, 248, 0.92);
-  --sml-rtf-header-fg: inherit;
-}
-
-:global(.v-theme--dark) .sml-rtf-list-page {
-  --sml-rtf-header-bg: rgba(52, 74, 104, 0.95);
-  --sml-rtf-header-fg: rgba(239, 246, 255, 0.98);
+  --sml-rtf-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --sml-rtf-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
 .sml-rtf-list-page .filter-bar > * {
