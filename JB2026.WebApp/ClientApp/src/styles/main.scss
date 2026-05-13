@@ -99,9 +99,13 @@ body {
   border-radius: 1rem;
   display: grid;
   place-items: center;
-  color: white;
+  color: rgb(var(--v-theme-on-primary));
   font-weight: 700;
-  background: linear-gradient(135deg, var(--shell-accent), var(--shell-accent-strong));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--v-theme-primary)),
+    rgb(var(--v-theme-secondary))
+  );
 }
 
 .brand-name {
