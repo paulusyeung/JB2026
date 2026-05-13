@@ -84,9 +84,14 @@ const currentSchemes = computed(() => {
   transition: all 0.2s ease-in-out;
   border: 2px solid transparent !important;
   
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
   &.active-scheme {
     border-color: rgb(var(--v-theme-primary)) !important;
-    background-color: rgb(var(--v-theme-primary), 0.05);
+    background-color: rgba(var(--v-theme-primary), 0.05);
   }
 }
 
@@ -106,3 +111,4 @@ const currentSchemes = computed(() => {
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 </style>
+

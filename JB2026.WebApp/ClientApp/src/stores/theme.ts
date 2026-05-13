@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { themeRegistry } from '@/themes/registry'
 
 const THEME_STORAGE_KEY = 'jb2026.theme.v2'
 const LEGACY_THEME_STORAGE_KEY = 'jb2026.theme'
@@ -7,9 +8,14 @@ const LEGACY_THEME_STORAGE_KEY = 'jb2026.theme'
 export const appModes = ['light', 'dark'] as const
 export type AppMode = (typeof appModes)[number]
 
+// Derived from registry: all light schemes and all dark schemes
 export const appSchemes = {
-  light: ['nature', 'indigo', 'rose', 'slate'],
-  dark: ['forest', 'midnight', 'amethyst', 'obsidian'],
+  light: themeRegistry
+    .filter(pair => pair.light.dark === false)
+    .map(pair => pair.id) as readonly string[],
+  dark: themeRegistry
+    .filter(pair => pair.dark.dark === true)
+    .map(pair => pair.id) as readonly string[],
 } as const
 
 export type AppScheme = string
