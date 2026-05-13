@@ -10,7 +10,7 @@
     >
       <v-list-group
         v-if="hasChildren(item)"
-        :value="groupValue(item, index)"
+        :value="groupValue(index)"
               :aria-label="item.title"
         :class="{ 'menu-group--collapsed': props.showTooltips }"
       >
@@ -39,6 +39,7 @@
             :items="item.children ?? []"
             :depth="props.depth + 1"
             :show-tooltips="props.showTooltips"
+            :group-path="groupValue(index)"
           />
         </div>
       </v-list-group>
@@ -68,7 +69,7 @@
   >
     <v-list-group
       v-if="hasChildren(item)"
-      :value="groupValue(item, index)"
+      :value="groupValue(index)"
       :aria-label="item.title"
       :class="{ 'menu-group--collapsed': props.showTooltips }"
     >
@@ -97,6 +98,7 @@
           :items="item.children ?? []"
           :depth="props.depth + 1"
           :show-tooltips="props.showTooltips"
+          :group-path="groupValue(index)"
         />
       </div>
     </v-list-group>
@@ -120,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, getCurrentInstance, ref } from 'vue'
 import { hasChildren, type MenuItem } from './menuHelper'
 
 defineOptions({
@@ -131,17 +133,22 @@ const props = withDefaults(defineProps<{
   items: MenuItem[]
   depth?: number
   showTooltips?: boolean
+  groupPath?: string
 }>(), {
   depth: 0,
   showTooltips: false,
+  groupPath: undefined,
 })
 
-function groupValue(item: MenuItem, index: number): string {
-  return `group-${index}`
+const instanceUid = getCurrentInstance()?.uid ?? 0
+const resolvedGroupPath = computed(() => props.groupPath ?? `menu-${instanceUid}`)
+
+function groupValue(index: number): string {
+  return `${resolvedGroupPath.value}-${index}`
 }
 
 // Expand the first top-level menu group by default
-const localOpenedGroups = ref<string[]>(['group-0'])
+const localOpenedGroups = ref<string[]>([groupValue(0)])
 
 function mergeActivatorProps(
   activatorProps: Record<string, unknown>,
