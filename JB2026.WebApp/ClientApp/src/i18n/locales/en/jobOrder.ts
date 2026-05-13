@@ -108,6 +108,7 @@ export const jobOrderMessages = {
           export: 'Export',
           newOrder: 'New Job',
           deleteSelected: 'Delete Selected',
+          more: 'More',
         },
         batchDeleteConfirm: 'Delete {count} selected job(s)? This action cannot be undone.',
         batchDeleteFailed: 'One or more jobs could not be deleted.',
