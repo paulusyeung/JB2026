@@ -30,6 +30,24 @@
         <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="load">
           {{ t('common.refresh') }}
         </v-btn>
+
+        <v-btn 
+          v-if="isPhoneLayout" 
+          color="primary" 
+          prepend-icon="mdi-plus" 
+          @click="availableSheet = true"
+        >
+          {{ t('scheduler.schedule.available.title') }}
+        </v-btn>
+
+        <v-btn 
+          v-if="isPhoneLayout && checkedScheduled.length > 0" 
+          color="secondary" 
+          prepend-icon="mdi-palette-swatch" 
+          @click="statusSheet = true"
+        >
+          {{ t('common.updateStatus') || 'Update Status' }}
+        </v-btn>
       </v-card-title>
 
       <v-divider />
@@ -48,53 +66,72 @@
 
         <div :class="['schedule-layout', { 'schedule-layout--phone': isPhoneLayout }]">
           <!-- Available panel -->
-          <div class="schedule-panel">
+          <div v-if="!isPhoneLayout" class="schedule-panel">
             <div class="panel-header text-caption font-weight-bold text-medium-emphasis mb-1">
               {{ t('scheduler.schedule.available.title') }} ({{ availableDisplay.length }})
             </div>
             <div class="list-container">
-              <table class="schedule-table">
-                <colgroup>
-                  <col class="col-check" />
-                  <col class="col-num" />
-                  <col class="col-order" />
-                  <col :style="{ width: `${availableColumnWidths.customer}px` }" />
-                  <col :style="{ width: `${availableColumnWidths.title}px` }" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th class="col-check"><v-checkbox-btn v-model="allAvailableChecked" density="compact" hide-details @click="toggleAllAvailable" /></th>
-                    <th class="col-num">#</th>
-                    <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
-                    <th class="col-customer resizable-header" :style="{ width: `${availableColumnWidths.customer}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.customer') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'available', 'customer')" />
-                      </div>
-                    </th>
-                    <th class="col-title resizable-header" :style="{ width: `${availableColumnWidths.title}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.title') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'available', 'title')" />
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(item, index) in availableDisplay"
+              <template v-if="!isPhoneLayout">
+                <table class="schedule-table">
+                  <colgroup>
+                    <col class="col-check" />
+                    <col class="col-num" />
+                    <col class="col-order" />
+                    <col :style="{ width: `${availableColumnWidths.customer}px` }" />
+                    <col :style="{ width: `${availableColumnWidths.title}px` }" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th class="col-check"><v-checkbox-btn v-model="allAvailableChecked" density="compact" hide-details @click="toggleAllAvailable" /></th>
+                      <th class="col-num">#</th>
+                      <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
+                      <th class="col-customer resizable-header" :style="{ width: `${availableColumnWidths.customer}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.customer') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'available', 'customer')" />
+                        </div>
+                      </th>
+                      <th class="col-title resizable-header" :style="{ width: `${availableColumnWidths.title}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.title') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'available', 'title')" />
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(item, index) in availableDisplay"
+                      :key="item.orderId"
+                      :class="{ 'row-selected': checkedAvailable.includes(item.orderId) }"
+                      @click="toggleAvailableCheck(item.orderId)"
+                    >
+                      <td class="col-check"><v-checkbox-btn :model-value="checkedAvailable.includes(item.orderId)" density="compact" hide-details @click.stop="toggleAvailableCheck(item.orderId)" /></td>
+                      <td class="col-num text-center">{{ index + 1 }}</td>
+                      <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
+                      <td class="col-customer">{{ item.customerName }}</td>
+                      <td class="col-title">{{ item.orderTitle }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </template>
+              <template v-else>
+                <div class="pa-2">
+                  <AdaptiveRow
+                    v-for="item in availableDisplay"
                     :key="item.orderId"
-                    :class="{ 'row-selected': checkedAvailable.includes(item.orderId) }"
+                    :is-mobile="true"
+                    :selected="checkedAvailable.includes(item.orderId)"
+                    :fields="getAvailableFields(item)"
                     @click="toggleAvailableCheck(item.orderId)"
+                    @toggle-check="toggleAvailableCheck(item.orderId)"
                   >
-                    <td class="col-check"><v-checkbox-btn :model-value="checkedAvailable.includes(item.orderId)" density="compact" hide-details @click.stop="toggleAvailableCheck(item.orderId)" /></td>
-                    <td class="col-num text-center">{{ index + 1 }}</td>
-                    <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
-                    <td class="col-customer">{{ item.customerName }}</td>
-                    <td class="col-title">{{ item.orderTitle }}</td>
-                  </tr>
-                </tbody>
-              </table>
+                    <template #mobile-header>
+                      <span class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</span>
+                    </template>
+                  </AdaptiveRow>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -181,95 +218,114 @@
               {{ t('scheduler.schedule.scheduled.title') }} ({{ scheduledDisplay.length }})
             </div>
             <div class="list-container">
-              <table class="schedule-table">
-                <colgroup>
-                  <col class="col-check" />
-                  <col class="col-num" />
-                  <col class="col-order" />
-                  <col :style="{ width: `${scheduledColumnWidths.customer}px` }" />
-                  <col :style="{ width: `${scheduledColumnWidths.title}px` }" />
-                  <col class="col-machine" />
-                  <col class="col-light" />
-                  <col class="col-light" />
-                  <col class="col-light" />
-                  <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printQty}px` }" />
-                  <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printColor}px` }" />
-                  <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printSize}px` }" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th class="col-check"><v-checkbox-btn v-model="allScheduledChecked" density="compact" hide-details @click="toggleAllScheduled" /></th>
-                    <th class="col-num">#</th>
-                    <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
-                    <th class="col-customer resizable-header" :style="{ width: `${scheduledColumnWidths.customer}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.customer') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'customer')" />
-                      </div>
-                    </th>
-                    <th class="col-title resizable-header" :style="{ width: `${scheduledColumnWidths.title}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.title') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'title')" />
-                      </div>
-                    </th>
-                    <th class="col-machine">M</th>
-                    <th class="col-light">@1</th>
-                    <th class="col-light">@2</th>
-                    <th class="col-light">
-                      <v-icon size="14">mdi-bell</v-icon>
-                    </th>
-                    <th v-if="!isPhoneLayout" class="col-print-qty resizable-header" :style="{ width: `${scheduledColumnWidths.printQty}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.printQty') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printQty')" />
-                      </div>
-                    </th>
-                    <th v-if="!isPhoneLayout" class="col-print-color resizable-header" :style="{ width: `${scheduledColumnWidths.printColor}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.printColor') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printColor')" />
-                      </div>
-                    </th>
-                    <th v-if="!isPhoneLayout" class="col-print-size resizable-header" :style="{ width: `${scheduledColumnWidths.printSize}px` }">
-                      <div class="header-content">
-                        {{ t('scheduler.schedule.columns.printSize') }}
-                        <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printSize')" />
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(item, index) in scheduledDisplay"
+              <template v-if="!isPhoneLayout">
+                <table class="schedule-table">
+                  <colgroup>
+                    <col class="col-check" />
+                    <col class="col-num" />
+                    <col class="col-order" />
+                    <col :style="{ width: `${scheduledColumnWidths.customer}px` }" />
+                    <col :style="{ width: `${scheduledColumnWidths.title}px` }" />
+                    <col class="col-machine" />
+                    <col class="col-light" />
+                    <col class="col-light" />
+                    <col class="col-light" />
+                    <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printQty}px` }" />
+                    <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printColor}px` }" />
+                    <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printSize}px` }" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th class="col-check"><v-checkbox-btn v-model="allScheduledChecked" density="compact" hide-details @click="toggleAllScheduled" /></th>
+                      <th class="col-num">#</th>
+                      <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
+                      <th class="col-customer resizable-header" :style="{ width: `${scheduledColumnWidths.customer}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.customer') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'customer')" />
+                        </div>
+                      </th>
+                      <th class="col-title resizable-header" :style="{ width: `${scheduledColumnWidths.title}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.title') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'title')" />
+                        </div>
+                      </th>
+                      <th class="col-machine">M</th>
+                      <th class="col-light">@1</th>
+                      <th class="col-light">@2</th>
+                      <th class="col-light">
+                        <v-icon size="14">mdi-bell</v-icon>
+                      </th>
+                      <th v-if="!isPhoneLayout" class="col-print-qty resizable-header" :style="{ width: `${scheduledColumnWidths.printQty}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.printQty') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printQty')" />
+                        </div>
+                      </th>
+                      <th v-if="!isPhoneLayout" class="col-print-color resizable-header" :style="{ width: `${scheduledColumnWidths.printColor}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.printColor') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printColor')" />
+                        </div>
+                      </th>
+                      <th v-if="!isPhoneLayout" class="col-print-size resizable-header" :style="{ width: `${scheduledColumnWidths.printSize}px` }">
+                        <div class="header-content">
+                          {{ t('scheduler.schedule.columns.printSize') }}
+                          <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'printSize')" />
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(item, index) in scheduledDisplay"
+                      :key="item.orderId"
+                      :class="{ 'row-selected': checkedScheduled.includes(item.orderId) }"
+                      @click="toggleScheduledCheck(item.orderId)"
+                    >
+                      <td class="col-check"><v-checkbox-btn :model-value="checkedScheduled.includes(item.orderId)" density="compact" hide-details @click.stop="toggleScheduledCheck(item.orderId)" /></td>
+                      <td class="col-num text-center">{{ index + 1 }}</td>
+                      <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
+                      <td class="col-customer">{{ item.customerName }}</td>
+                      <td class="col-title">{{ item.orderTitle }}</td>
+                      <td class="col-machine text-center">
+                        <v-chip size="x-small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
+                      </td>
+                      <td class="col-light text-center">
+                        <v-icon size="14" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
+                      </td>
+                      <td class="col-light text-center">
+                        <v-icon size="14" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
+                      </td>
+                      <td class="col-light text-center">
+                        <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
+                        <span v-else>-</span>
+                      </td>
+                      <td v-if="!isPhoneLayout" class="col-print-qty">{{ item.printQty }}</td>
+                      <td v-if="!isPhoneLayout" class="col-print-color">{{ item.printColor }}</td>
+                      <td v-if="!isPhoneLayout" class="col-print-size">{{ item.printSize }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </template>
+              <template v-else>
+                <div class="pa-2">
+                  <AdaptiveRow
+                    v-for="item in scheduledDisplay"
                     :key="item.orderId"
-                    :class="{ 'row-selected': checkedScheduled.includes(item.orderId) }"
+                    :is-mobile="true"
+                    :selected="checkedScheduled.includes(item.orderId)"
+                    :fields="getScheduledFields(item)"
                     @click="toggleScheduledCheck(item.orderId)"
+                    @toggle-check="toggleScheduledCheck(item.orderId)"
                   >
-                    <td class="col-check"><v-checkbox-btn :model-value="checkedScheduled.includes(item.orderId)" density="compact" hide-details @click.stop="toggleScheduledCheck(item.orderId)" /></td>
-                    <td class="col-num text-center">{{ index + 1 }}</td>
-                    <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
-                    <td class="col-customer">{{ item.customerName }}</td>
-                    <td class="col-title">{{ item.orderTitle }}</td>
-                    <td class="col-machine text-center">
-                      <v-chip size="x-small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
-                    </td>
-                    <td class="col-light text-center">
-                      <v-icon size="14" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
-                    </td>
-                    <td class="col-light text-center">
-                      <v-icon size="14" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
-                    </td>
-                    <td class="col-light text-center">
-                      <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
-                      <span v-else>-</span>
-                    </td>
-                    <td v-if="!isPhoneLayout" class="col-print-qty">{{ item.printQty }}</td>
-                    <td v-if="!isPhoneLayout" class="col-print-color">{{ item.printColor }}</td>
-                    <td v-if="!isPhoneLayout" class="col-print-size">{{ item.printSize }}</td>
-                  </tr>
-                </tbody>
-              </table>
+                    <template #mobile-header>
+                      <span class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</span>
+                    </template>
+                  </AdaptiveRow>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -327,6 +383,45 @@
       </v-card-text>
     </v-card>
 
+    <!-- Mobile Bottom Sheet for Available Jobs -->
+    <v-bottom-sheet v-model="availableSheet" max-width="600">
+      <v-card title="Available Jobs" class="pa-4">
+        <v-card-text>
+          <div class="d-flex align-center justify-space-between mb-4">
+            <span class="text-subtitle-1 font-weight-bold">
+              {{ t('scheduler.schedule.available.title') }} ({{ availableDisplay.length }})
+            </span>
+            <v-btn icon="mdi-close" variant="text" @click="availableSheet = false" />
+          </div>
+          
+          <div class="list-container" style="border: none; height: 60vh; overflow-y: auto;">
+            <div class="pa-2">
+              <AdaptiveRow
+                v-for="item in availableDisplay"
+                :key="item.orderId"
+                :is-mobile="true"
+                :selected="checkedAvailable.includes(item.orderId)"
+                :fields="getAvailableFields(item)"
+                @click="toggleAvailableCheck(item.orderId)"
+                @toggle-check="toggleAvailableCheck(item.orderId)"
+              >
+                <template #mobile-header>
+                  <span class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</span>
+                </template>
+              </AdaptiveRow>
+            </div>
+          </div>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" block @click="availableSheet = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" variant="elevated" block @click="moveAllToScheduled">
+            {{ t('scheduler.schedule.actions.selectAll') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-bottom-sheet>
+
     <!-- Save confirmation dialog -->
     <v-dialog v-model="saveDialog" max-width="360">
       <v-card>
@@ -339,6 +434,56 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Mobile Bottom Sheet for Status Updates -->
+    <v-bottom-sheet v-model="statusSheet" max-width="500">
+      <v-card class="pa-4">
+        <v-card-title class="d-flex align-center justify-space-between">
+          <span class="text-h6">Update Status ({{ checkedScheduled.length }} jobs)</span>
+          <v-btn icon="mdi-close" variant="text" @click="statusSheet = false" />
+        </v-card-title>
+        <v-card-text>
+          <WorkflowStatusPicker
+            :groups="[
+              {
+                id: 'step1',
+                label: '@1 Status',
+                options: [
+                  { value: 0, text: 'Error', color: 'error' },
+                  { value: 1, text: 'Warning', color: 'warning' },
+                  { value: 3, text: 'Info', color: 'info' },
+                  { value: 2, text: 'Success', color: 'success' },
+                ]
+              },
+              {
+                id: 'step2',
+                label: '@2 Status',
+                options: [
+                  { value: 0, text: 'Error', color: 'error' },
+                  { value: 1, text: 'Warning', color: 'warning' },
+                  { value: 2, text: 'Success', color: 'success' },
+                ]
+              },
+              {
+                id: 'urgency',
+                label: 'Urgency',
+                options: [
+                  { value: 4, text: 'Critical', color: 'error' },
+                  { value: 2, text: 'High', color: 'warning' },
+                  { value: 0, text: 'Normal', color: 'grey' },
+                ]
+              }
+            ]"
+            @select="handleStatusChange"
+          />
+        </v-card-text>
+        <v-divider />
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" block @click="statusSheet = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-bottom-sheet>
+
   </section>
 </template>
 
@@ -348,6 +493,10 @@ import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { getAvailableSchedule, getOnAirSchedule, saveScheduleBatch } from '@/services/scheduler'
 import type { JobScheduleAvailableItem, JobScheduleOnAirItem } from '@/types/api'
+import AdaptiveRow from '@/components/ui/AdaptiveRow.vue'
+import JobActionMenu from '@/components/ui/JobActionMenu.vue'
+import WorkflowStatusPicker from '@/components/ui/WorkflowStatusPicker.vue'
+import { useTouch } from '@/composables/useTouch'
 
 const { t } = useI18n({ useScope: 'global' })
 const display = useDisplay()
@@ -359,6 +508,8 @@ const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const saveDialog = ref(false)
+const availableSheet = ref(false)
+const statusSheet = ref(false)
 const machineFilter = ref('0')
 
 const allAvailableItems = ref<JobScheduleAvailableItem[]>([])
@@ -422,6 +573,27 @@ const allAvailableChecked = computed(
 const allScheduledChecked = computed(
   () => scheduledDisplay.value.length > 0 && checkedScheduled.value.length === scheduledDisplay.value.length,
 )
+
+// ─── field mappers for adaptive rows ──────────────────────────────────────────
+function getAvailableFields(item: JobScheduleAvailableItem) {
+  return [
+    { key: 'order', label: t('scheduler.schedule.columns.order'), value: item.orderNumber },
+    { key: 'customer', label: t('scheduler.schedule.columns.customer'), value: item.customerName },
+    { key: 'title', label: t('scheduler.schedule.columns.title'), value: item.orderTitle },
+  ]
+}
+
+function getScheduledFields(item: ScheduledItemState) {
+  return [
+    { key: 'order', label: t('scheduler.schedule.columns.order'), value: item.orderNumber },
+    { key: 'customer', label: t('scheduler.schedule.columns.customer'), value: item.customerName },
+    { key: 'title', label: t('scheduler.schedule.columns.title'), value: item.orderTitle },
+    { key: 'machine', label: 'Machine', value: `M${item.machineNumber}` },
+    { key: 'qty', label: t('scheduler.schedule.columns.printQty'), value: item.printQty },
+    { key: 'color', label: t('scheduler.schedule.columns.printColor'), value: item.printColor },
+    { key: 'size', label: t('scheduler.schedule.columns.printSize'), value: item.printSize },
+  ]
+}
 
 // ─── lifecycle ────────────────────────────────────────────────────────────────
 onMounted(() => load())
@@ -663,6 +835,13 @@ async function executeSave() {
   saving.value = true
   errorMessage.value = ''
 
+  // Snapshot for rollback
+  const snapshot = {
+    scheduled: JSON.parse(JSON.stringify(scheduledItems.value)),
+    available: JSON.parse(JSON.stringify(allAvailableItems.value)),
+    cancelled: new Set(cancelledOrderIds.value)
+  }
+
   try {
     await saveScheduleBatch({
       orderType: 0,
@@ -676,11 +855,17 @@ async function executeSave() {
       cancelledOrderIds: [...cancelledOrderIds.value],
     })
 
+    // Success: Clear cancelled IDs and close dialog without full reload
     cancelledOrderIds.value = new Set()
     saveDialog.value = false
-    await load()
-  } catch {
+  } catch (err) {
+    // Rollback to snapshot on failure
+    scheduledItems.value = snapshot.scheduled
+    allAvailableItems.value = snapshot.available
+    cancelledOrderIds.value = snapshot.cancelled
+    
     errorMessage.value = t('scheduler.schedule.saveFailed')
+    saveDialog.value = false
   } finally {
     saving.value = false
   }

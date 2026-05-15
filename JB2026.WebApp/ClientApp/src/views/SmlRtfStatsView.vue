@@ -68,33 +68,64 @@
           {{ t('sml.rtfStats.rows', { count: formatNumber(rows.length) }) }}
         </div>
 
-        <v-card v-if="isPhoneLayout" rounded="lg" variant="tonal" class="pivot-summary-card mb-3">
-          <v-card-text>
-            <div class="text-overline text-medium-emphasis mb-2">{{ t('sml.rtfStats.summary.title') }}</div>
-            <div class="pivot-summary-grid">
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.purchaseOrders') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(uniquePurchaseOrderCount) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.rows') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(rows.length) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.groups') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(groups.length) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.amount') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(grandTotal) }}</div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
+        <v-row v-if="isPhoneLayout" dense class="mb-3">
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.purchaseOrders') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(uniquePurchaseOrderCount) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.groups') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(groups.length) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.amount') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatSummaryCurrency(grandTotal) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.rtfStats.summary.rows') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(rows.length) }}</div>
+            </v-card>
+          </v-col>
+        </v-row>
 
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
-        <div v-if="pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
+        <v-expansion-panels v-if="isPhoneLayout && !loading" variant="accordion" class="mb-4">
+          <v-expansion-panel v-for="group in groups" :key="group.key">
+            <v-expansion-panel-title>
+              <div class="d-flex justify-space-between align-center w-100">
+                <div class="d-flex flex-column">
+                  <span class="font-weight-bold">{{ group.purchaseOrder }}</span>
+                  <span class="text-caption text-medium-emphasis">{{ group.productCode }}</span>
+                </div>
+                <span class="text-primary font-weight-medium">
+                  {{ formatAmountCurrency(group.total) }}
+                </span>
+              </div>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-list density="compact">
+                <v-list-item v-for="colKey in columnKeys" :key="colKey">
+                  <v-list-item-title class="text-caption">
+                    {{ formatColumnLabel(colKey) }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle class="text-caption text-right">
+                    {{ formatAmountCurrency(group.byColumn[colKey] ?? 0) }}
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+
+        <div v-if="!isPhoneLayout && pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
           <div class="pivot-shell__scroller">
             <web-pivot-table ref="pivotRef" class="pivot-element" />
           </div>

@@ -68,37 +68,62 @@
           {{ t('sml.invoiceStats.rows', { count: formatNumber(rows.length) }) }}
         </div>
 
-        <v-card v-if="isPhoneLayout" rounded="lg" variant="tonal" class="pivot-summary-card mb-3">
-          <v-card-text>
-            <div class="text-overline text-medium-emphasis mb-2">{{ t('sml.invoiceStats.summary.title') }}</div>
-            <div class="pivot-summary-grid">
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.invoices') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(uniqueInvoiceCount) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.rows') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(rows.length) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.invoiceAmount') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(totalInvoiceAmount) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.pivotAmount') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(totalPivotAmount) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.qty') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}</div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
+        <v-row v-if="isPhoneLayout" dense class="mb-3">
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.invoices') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(uniqueInvoiceCount) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.invoiceAmount') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatSummaryCurrency(totalInvoiceAmount) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.pivotAmount') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatSummaryCurrency(totalPivotAmount) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('sml.invoiceStats.summary.qty') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}</div>
+            </v-card>
+          </v-col>
+        </v-row>
 
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
-        <div v-if="pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
+        <v-expansion-panels v-if="isPhoneLayout && !loading" variant="accordion" class="mb-4">
+          <v-expansion-panel v-for="group in groupedInvoices" :key="group.invoice">
+            <v-expansion-panel-title>
+              <div class="d-flex justify-space-between align-center w-100">
+                <div class="d-flex flex-column">
+                  <span class="font-weight-bold">{{ group.customer }}</span>
+                  <span class="text-caption text-medium-emphasis">Inv: {{ group.invoice }}</span>
+                </div>
+                <span class="text-primary font-weight-medium">
+                  {{ formatAmountCurrency(group.total) }}
+                </span>
+              </div>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-list density="compact">
+                <v-list-item v-for="item in group.items" :key="item.productCode">
+                  <v-list-item-title class="text-caption">{{ item.productCode }} ({{ item.qty }} {{ item.unit }})</v-list-item-title>
+                  <v-list-item-subtitle class="text-caption">
+                    {{ formatAmountCurrency(Number(item.amount ?? 0)) }}
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+
+        <div v-if="!isPhoneLayout && pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
           <div class="pivot-shell__scroller">
             <web-pivot-table ref="pivotRef" class="pivot-element" />
           </div>
@@ -244,6 +269,26 @@ const uniqueInvoiceCount = computed(() => {
     }
   }
   return set.size
+})
+
+const groupedInvoices = computed(() => {
+  const groups: Record<string, { customer: string; invoice: string; total: number; items: SmlInvoiceStatsRow[] }> = {}
+  
+  rows.value.forEach(row => {
+    const key = `${row.customerName}_${row.invoiceNumber}`
+    if (!groups[key]) {
+      groups[key] = {
+        customer: row.customerName || 'Unknown',
+        invoice: row.invoiceNumber || 'Unknown',
+        total: 0,
+        items: []
+      }
+    }
+    groups[key].total += Number(row.amount ?? 0)
+    groups[key].items.push(row)
+  })
+  
+  return Object.values(groups).sort((a, b) => b.total - a.total)
 })
 
 watch(() => themeStore.current, async () => {

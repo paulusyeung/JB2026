@@ -101,33 +101,65 @@
           {{ t('jobOrder.jobStats.rows', { count: formatNumber(filteredRows.length) }) }}
         </div>
 
-        <v-card v-if="isPhoneLayout" rounded="lg" variant="tonal" class="pivot-summary-card mb-3">
-          <v-card-text>
-            <div class="text-overline text-medium-emphasis mb-2">{{ t('jobOrder.jobStats.summary.title') }}</div>
-            <div class="pivot-summary-grid">
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.rows') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(filteredRows.length) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.invoiceAmount') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(totalInvoiceAmount) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.cost') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatSummaryCurrency(totalCost) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.grossProfit') }}</div>
-                <div class="text-body-2 font-weight-medium">{{ formatNumber(grossProfitRatioSummary, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
+        <v-row v-if="isPhoneLayout" dense class="mb-3">
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.rows') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(filteredRows.length) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.invoiceAmount') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatSummaryCurrency(totalInvoiceAmount) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.cost') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatSummaryCurrency(totalCost) }}</div>
+            </v-card>
+          </v-col>
+          <v-col cols="6">
+            <v-card rounded="lg" variant="flat" class="pa-3 border">
+              <div class="text-caption text-medium-emphasis">{{ t('jobOrder.jobStats.summary.grossProfit') }}</div>
+              <div class="text-h6 font-weight-bold">{{ formatNumber(grossProfitRatioSummary, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
+            </v-card>
+          </v-col>
+        </v-row>
 
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
-        <div v-if="pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
+        <v-expansion-panels v-if="isPhoneLayout && !loading" variant="accordion" class="mb-4">
+          <v-expansion-panel v-for="group in groupedStats" :key="group.name">
+            <v-expansion-panel-title>
+              <div class="d-flex justify-space-between align-center w-100">
+                <span class="font-weight-bold">{{ group.name }}</span>
+                <span class="text-primary font-weight-medium">
+                  {{ measure === 'grossProfit' 
+                      ? formatNumber(group.total, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                      : formatSummaryCurrency(group.total) 
+                  }}
+                </span>
+              </div>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-list density="compact">
+                <v-list-item v-for="job in group.jobs" :key="job.jobNumber">
+                  <v-list-item-title class="text-caption">{{ job.jobNumber }} - {{ job.customerName }}</v-list-item-title>
+                  <v-list-item-subtitle class="text-caption">
+                    {{ measure === 'grossProfit' 
+                        ? formatNumber(grossProfitRatio(job), { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                        : formatSummaryCurrency(Number(job[measure] ?? 0)) 
+                    }}
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+
+        <div v-if="!isPhoneLayout && pivotMounted" :class="['pivot-shell', { 'pivot-shell--mobile': isPhoneLayout }]">
           <div class="pivot-shell__scroller">
             <web-pivot-table ref="pivotRef" class="pivot-element" />
           </div>
@@ -338,6 +370,31 @@ const grossProfitRatioSummary = computed(() => {
     return 0
   }
   return (totalInvoiceAmount.value - totalCost.value) / totalInvoiceAmount.value
+})
+
+const groupedStats = computed(() => {
+  const groups: Record<string, { total: number; jobs: JobStatsRecord[] }> = {}
+  
+  filteredRows.value.forEach(row => {
+    const groupName = normalizeText(row[rowField.value])
+    if (!groups[groupName]) {
+      groups[groupName] = { total: 0, jobs: [] }
+    }
+    
+    let value = 0
+    if (measure.value === 'invoiceAmount') value = Number(row.invoiceAmount ?? 0)
+    else if (measure.value === 'cost') value = Number(row.cost ?? 0)
+    else if (measure.value === 'grossProfit') value = grossProfitRatio(row)
+    
+    groups[groupName].total += value
+    groups[groupName].jobs.push(row)
+  })
+  
+  return Object.entries(groups).map(([name, data]) => ({
+    name,
+    total: data.total,
+    jobs: data.jobs
+  })).sort((a, b) => b.total - a.total)
 })
 
 watch([lookup, month, rowField, measure], async () => {
