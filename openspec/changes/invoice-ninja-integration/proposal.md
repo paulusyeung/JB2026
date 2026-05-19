@@ -11,6 +11,7 @@ The application currently exposes invoice references and amounts in several lega
 - **Backend Proxy**: Introduce secure API endpoints in `JB2026.Api` to handle Invoice Ninja authentication and prevent API key exposure on the frontend.
 - **AdminCustomerView Fix**: `AdminCustomerView.vue` currently renders supplier data due to a copy-paste error (imports `AdminSupplierRecordDialog`, calls `getAdminSuppliers`). This view must be corrected to use the already-built `AdminCustomerRecordDialog` and customer service before any billing affordances can be layered onto it.
 - **Enhanced Job List Billing UX**: Transition `invoiceRef`/`invoiceAmount` columns in `JobListView` to Invoice Ninja-backed values expressed as a color-coded status chip (Draft / Sent / Viewed / Paid / Overdue) with an inline "Generate Invoice" action for uninvoiced orders, keeping the user on the job list throughout the billing preparation workflow.
+- **Invoice Ninja Custom Fields**: Map configured IN custom fields from JB2026 data — client Bill To / Ship To; invoice Job No.; line P.O.No. (from job `PONumber`). Fax, client-contact Full Name, and line Unit are documented gaps until customer/job metadata is extended (see design mapping table).
 
 ## Capabilities
 
@@ -30,7 +31,8 @@ The application currently exposes invoice references and amounts in several lega
 - **Frontend**: New billing views and services in `JB2026.WebApp/ClientApp/src/`, plus updates to existing Customer and Job Order screens.
 - **Backend**: New proxy/controllers/services in `JB2026.Api` to act as the Invoice Ninja integration layer.
 - **Infrastructure**: Requirement for a hosted Invoice Ninja instance, API configuration, and connectivity validation.
-- **Data Model**: Customer and job/order metadata will need persistent external identifiers and sync state to avoid duplicate Invoice Ninja records. The current `AdminCustomerRecord` model is also missing fields that are standard in an Invoice Ninja client profile (email, currency, payment terms); the first delivery should document which fields are being mapped with their available values and flag the gaps for a follow-up task.
+- **Data Model**: Customer and job/order metadata will need persistent external identifiers and sync state to avoid duplicate Invoice Ninja records. The current `AdminCustomerRecord` model is also missing fields that are standard in an Invoice Ninja client profile (email, currency, payment terms, fax, primary contact name); the first delivery implements the mapping contract in `design.md` (Bill To, Ship To, Job No., P.O.No.) and flags Fax, Full Name, and Unit for follow-up.
+- **Configuration**: Backend env keys map logical custom fields to Invoice Ninja `custom_valueN` (or equivalent) slots per deployment.
 - **Security**: Introduction of new API keys and secure storage for billing credentials.
 
 ## Transition Notes

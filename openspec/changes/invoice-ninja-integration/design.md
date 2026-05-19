@@ -60,6 +60,32 @@ The `ClientApp` is a Vue.js frontend supported by a .NET backend. It already exp
 - **Decision**: Before committing an invoice to Invoice Ninja, display a confirmation dialog showing the resolved customer, line items derived from the Job Order, and the calculated total. The user must explicitly confirm before the invoice is created.
 - **Rationale**: Invoice Ninja invoices created and then voided produce audit trail noise. The line-item mapping from a Job Order is deterministic but not always obvious to the user; a preview step builds trust and catches mapping errors before they become billing errors. This is especially important during rollout while users are learning the new flow.
 - **Alternatives**: Direct creation with a post-creation void option (Rejected: audit trail pollution), editable preview with full line-item editing (Deferred: increases scope; the confirmation dialog may expose a link to the invoice in Invoice Ninja for detailed editing after creation).
+- **Preview payload**: The confirmation dialog must show resolved Invoice Ninja custom-field values (Bill To, Ship To, Job No., P.O.No., Unit when available) in addition to customer name, line descriptions, qty, and total.
+
+### 9. Invoice Ninja Custom Field Configuration
+- **Decision**: Map JB2026 business fields to Invoice Ninja custom fields via backend configuration (environment variables or secure settings), not hardcoded `custom_valueN` indices in code.
+- **Rationale**: Invoice Ninja assigns custom field slots per company (`custom_value1`–`custom_value4` or field IDs). Labels like "Bill To" are display names only; the integration must target stable configured keys so deployments do not break when IN admin reorders fields.
+- **Configuration keys** (logical name → IN slot key per entity):
+  - Client: `IN_CF_CLIENT_BILL_TO`, `IN_CF_CLIENT_SHIP_TO`, `IN_CF_CLIENT_FAX`
+  - Client contact: `IN_CF_CONTACT_FULL_NAME`
+  - Product / line item: `IN_CF_PRODUCT_UNIT`, `IN_CF_PRODUCT_PO_NO`
+  - Invoice: `IN_CF_INVOICE_JOB_NO`
+- **Alternatives**: Hardcode slot numbers in mapper code (Rejected: environment-specific), skip custom fields and use only native IN fields (Rejected: does not match configured IN PDF templates).
+
+### 10. Ship To Representation (v1)
+- **Decision**: For client sync, serialize Ship To as a single newline-delimited block built from all `shipToAddresses` entries: `"<name>\n<address>"` per entry, entries separated by a blank line. Use the first entry alone when only one exists.
+- **Rationale**: JB2026 stores multiple named ship-tos; Invoice Ninja client custom fields are typically single text. v1 does not add per-job ship-to selection on the Job Order form.
+- **Deferred**: Per-job ship-to picker on invoice generation (follow-up when operators need different ship-tos per order).
+
+### 11. Line Item Strategy (v1)
+- **Decision**: Create invoices with ad-hoc line items (description, qty, unit cost derived from job data). Do not sync a full Invoice Ninja product catalog in v1. Set product-level custom fields (`Unit`, `P.O.No.`) on each line item payload where the Invoice Ninja API allows line-level custom values; otherwise set them on the line `notes`/`custom` payload per IN API capability discovered during implementation.
+- **Rationale**: Job Orders already carry `PONumber`, `productCode`, `productDetails`, and `qty`. Catalog sync adds scope without blocking invoice generation.
+- **Alternatives**: Full product catalog sync before every invoice (Rejected for v1: high complexity).
+
+### 12. Client Contacts (v1)
+- **Decision**: Do not implement full client-contact CRUD in v1. When `IN_CF_CONTACT_FULL_NAME` is configured and a primary contact name becomes available in JB2026 customer metadata, upsert a single primary IN contact on customer sync. Until then, omit contact sync.
+- **Rationale**: JB2026 has no customer contact entity today. `orderedBy` on a Job Order is job-scoped, not a reliable primary client contact.
+- **Deferred**: Add `primaryContactName` (and optionally email/phone) to customer metadata + admin form, then wire contact upsert on sync.
 
 ## Data Contract Direction
 
@@ -67,6 +93,32 @@ The `ClientApp` is a Vue.js frontend supported by a .NET backend. It already exp
 - `customerCode` can be used as a secondary reconciliation key when external mapping is missing.
 - Job Orders should persist an external invoice identifier and last-known invoice summary needed by the UI.
 - The first version should define one deterministic line-item mapping path from Job Orders to Invoice Ninja invoices, rather than mixing multiple generation strategies.
+
+### Invoice Ninja custom field mapping (v1)
+
+| Logical field | IN entity | JB2026 source | v1 required | Notes |
+|---------------|-----------|---------------|-------------|-------|
+| Bill To | Client | `AdminCustomerRecord.billTo` | Yes | Free-text billing block; map to configured client custom field |
+| Ship To | Client | `shipToAddresses[]` formatted per §10 | Yes | Multi-address serialized to one text block |
+| Fax | Client | *(none today)* | No | Omit until customer metadata gains `fax`; do not send placeholder values |
+| Full Name | Client contact | *(none today)* | No | Deferred until customer metadata has primary contact name |
+| Job No. | Invoice | `JobOrder.JobNumber` (stringified) | Yes | Prefer over `OrderTitle` for invoice reference |
+| P.O.No. | Line item / product CF | `JobOrder.PONumber` | Yes | Same PO applied to all lines for a job in v1 |
+| Unit | Line item / product CF | *(none on JobOrder)* | No | Omit or default empty; follow-up when unit source is identified (workflow/product) |
+
+### Native field mapping (non-custom)
+
+| JB2026 | Invoice Ninja | Notes |
+|--------|---------------|-------|
+| `customerName` | `name` / `client_name` | Primary display name |
+| `customerCode` | `id_number` or custom reconciliation | Secondary match key |
+| `loginAccount` | — | Not synced in v1 (not an IN client field) |
+| `orderTitle` + `productDetails` | Line `notes` / description | Combined for line description |
+| `qty` | Line `quantity` | |
+| `productCode` | Line `product_key` or embedded in description | Ad-hoc line, not catalog sync |
+| `invoiceAmount` (legacy) | — | Replaced by IN-backed read model after generation |
+
+**Identifier policy**: Use `customerCode` + persisted `invoiceNinjaClientId` for client reconciliation. Do not use email as a link key (field not present on `AdminCustomerRecord`).
 
 ## Delivery Shape
 
@@ -85,4 +137,6 @@ Recommended first delivery:
 - **[Risk] Transition Inconsistency**: Existing job/order/report screens may continue showing stale legacy invoice values. $\rightarrow$ **Mitigation**: Add an explicit transition task to move those screens onto the new billing read model.
 - **[Risk] Data Divergence**: A customer might be edited in Invoice Ninja directly, leading to a mismatch with `ClientApp`. $\rightarrow$ **Mitigation**: Implement a manual refresh/reconcile action in the Customer view.
 - **[Risk] Dependency on External Service**: If Invoice Ninja is down, billing functions fail. $\rightarrow$ **Mitigation**: Implement graceful error handling, connectivity checks, and "Service Unavailable" UI states in the frontend.
-- **[Risk] Customer Model Field Gaps**: `AdminCustomerRecord` does not carry email, currency, or payment terms — fields that Invoice Ninja client profiles typically require. First-delivery sync will map available fields (`customerName`, `customerCode`, `billTo`) and leave gaps with IN defaults. $\rightarrow$ **Mitigation**: Document the mapping contract explicitly in task 2.1 and create a follow-up task to assess which missing fields should be added to the customer data model for a richer IN client profile.
+- **[Risk] Customer Model Field Gaps**: `AdminCustomerRecord` does not carry email, currency, payment terms, fax, or primary contact name — fields useful for richer IN profiles and for custom fields Fax / Full Name. First-delivery sync maps available fields (`customerName`, `customerCode`, `billTo`, formatted ship-tos) and configured custom fields only when JB2026 has data. $\rightarrow$ **Mitigation**: Mapping table above + tasks 2.1, 2.6, 3.2; follow-up task 2.6 for metadata extensions.
+- **[Risk] Custom Field Misconfiguration**: Wrong env keys map JB2026 data to incorrect IN slots. $\rightarrow$ **Mitigation**: Document keys in `BillingSettingsView` / ops runbook; connectivity check validates required keys are set; preview dialog shows resolved values before create.
+- **[Risk] Multi Ship-To Semantics**: Client-level Ship To may not match a specific job's delivery address. $\rightarrow$ **Mitigation**: v1 uses serialized all-addresses block; defer per-job ship-to selection.
