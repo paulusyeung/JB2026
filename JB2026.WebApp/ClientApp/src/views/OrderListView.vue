@@ -216,7 +216,10 @@
               <div class="order-mobile-card__metrics">
                 <span class="text-caption">{{ t('jobOrder.record.fields.brand') }}: {{ master.orderTitle || '-' }}</span>
                 <span class="text-caption">{{ t('jobOrder.record.fields.requiredOn') }}: {{ format(master.requiredOn) }}</span>
-                <span class="text-caption font-weight-medium">{{ t('jobOrder.record.fields.invoiceAmount') }}: {{ formatQty(master.invoiceAmount) || '-' }}</span>
+                <span class="text-caption font-weight-medium">{{ t('jobOrder.record.fields.invoiceAmount') }}: {{ formatQty(invoiceAmountForRow(master)) || '-' }}</span>
+                <v-chip size="x-small" :color="billingStatusColor(master)" variant="tonal">
+                  {{ billingStatusLabel(master) }}
+                </v-chip>
               </div>
             </div>
 
@@ -345,7 +348,12 @@
           <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
           <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
-          <template #[`item.invoiceAmount`]="{ item }">{{ item.invoiceAmount === 0 ? '' : formatQty(item.invoiceAmount) }}</template>
+          <template #[`item.invoiceAmount`]="{ item }">{{ invoiceAmountForRow(item) === 0 ? '' : formatQty(invoiceAmountForRow(item)) }}</template>
+          <template #[`item.invoiceStatus`]="{ item }">
+            <v-chip size="x-small" :color="billingStatusColor(item)" variant="tonal">
+              {{ billingStatusLabel(item) }}
+            </v-chip>
+          </template>
 
           <template #expanded-row="{ item }">
             <tr>
@@ -403,7 +411,12 @@
                   <template #[`item.completedOn`]="{ item: detail }">{{ format(detail.completedOn) }}</template>
                   <template #[`item.modifiedOn`]="{ item: detail }">{{ format(detail.modifiedOn) }}</template>
                   <template #[`item.modifiedBy`]="{ item: detail }">{{ detail.modifiedBy || '-' }}</template>
-                  <template #[`item.invoiceAmount`]="{ item: detail }">{{ detail.invoiceAmount === 0 ? '' : formatQty(detail.invoiceAmount) }}</template>
+                  <template #[`item.invoiceAmount`]="{ item: detail }">{{ invoiceAmountForRow(detail) === 0 ? '' : formatQty(invoiceAmountForRow(detail)) }}</template>
+                  <template #[`item.invoiceStatus`]="{ item: detail }">
+                    <v-chip size="x-small" :color="billingStatusColor(detail)" variant="tonal">
+                      {{ billingStatusLabel(detail) }}
+                    </v-chip>
+                  </template>
                 </v-data-table>
               </td>
             </tr>
@@ -451,6 +464,7 @@ import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
+import { getInvoiceSummary, type InvoiceBillingSummary } from '@/services/billing'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
@@ -472,6 +486,7 @@ const deleting = ref(false)
 const jobFormOpen = ref(false)
 const jobFormJob = ref<JobDetail | null>(null)
 const productDetailsDialogOpen = ref(false)
+const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const {
   visibleColumns: visibleColumnKeys,
@@ -492,7 +507,7 @@ const {
     'attachCustomer',
     'orderedBy',
     'invoiceAmount',
-    'invoiceRef',
+    'invoiceStatus',
     'modifiedBy',
     'modifiedOn',
     'requiredOn',
@@ -547,7 +562,7 @@ const allHeaders = computed(() => [
   { title: '', key: 'attachCustomer', width: '72px', sortable: false, icon: 'mdi-paperclip' },
   { title: t('jobOrder.orderList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.orderList.headers.invoiceAmount'), key: 'invoiceAmount', align: 'end' as const, width: '120px' },
-  { title: t('jobOrder.orderList.headers.invoiceRef'), key: 'invoiceRef', width: '120px' },
+  { title: t('jobOrder.jobList.headers.invoiceStatus'), key: 'invoiceStatus', width: '160px', sortable: false },
   { title: t('jobOrder.orderList.headers.modifiedBy'), key: 'modifiedBy', width: '100px' },
   { title: t('jobOrder.orderList.headers.modifiedOn'), key: 'modifiedOn', width: '120px' },
   { title: t('jobOrder.orderList.headers.requiredOn'), key: 'requiredOn', width: '120px' },
@@ -650,6 +665,7 @@ async function load() {
       commonQuery: commonQuery.value,
       take: 500,
     })
+    await hydrateInvoiceSummaries(rows.value)
   } catch {
     errorMessage.value = t('jobOrder.orderList.loadFailed')
   } finally {
@@ -665,6 +681,22 @@ async function refreshList() {
   lookup.value = ''
   commonQuery.value = 0
   await load()
+}
+
+async function hydrateInvoiceSummaries(orderRows: JobOrderRecord[]) {
+  const withInvoiceRefs = orderRows.filter((row) => !!row.invoiceRef)
+  await Promise.all(
+    withInvoiceRefs.map(async (row) => {
+      try {
+        const summary = await getInvoiceSummary(row.invoiceRef)
+        if (summary) {
+          invoiceSummaryByOrderId.value[row.orderId] = summary
+        }
+      } catch {
+        // Keep legacy values if summary fetch fails.
+      }
+    }),
+  )
 }
 
 async function onRowClick(_event: Event, payload: { item: JobOrderRecord }) {
@@ -850,6 +882,26 @@ async function confirmBatchDelete() {
 function formatQty(value: number) {
   if (value === 0) return ''
   return '$' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function invoiceAmountForRow(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  return summary?.amount ?? row.invoiceAmount
+}
+
+function billingStatusLabel(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  if (summary?.status) return summary.status
+  return row.invoiceRef ? t('jobOrder.jobList.actions.legacyInvoiced') : t('jobOrder.jobList.actions.notInvoiced')
+}
+
+function billingStatusColor(row: JobOrderRecord) {
+  const status = billingStatusLabel(row).toLowerCase()
+  if (status.includes('paid')) return 'success'
+  if (status.includes('overdue')) return 'error'
+  if (status.includes('sent') || status.includes('view')) return 'info'
+  if (status.includes('not invoiced')) return 'grey'
+  return 'warning'
 }
 
 function statusColor(status: number) {

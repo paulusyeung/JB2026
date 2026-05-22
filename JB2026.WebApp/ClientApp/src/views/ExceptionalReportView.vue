@@ -155,7 +155,12 @@
           <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
           <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
           <template #[`item.invoiceAmount`]="{ item }">
-            {{ item.invoiceAmount === 0 ? '' : formatCurrency(item.invoiceAmount) }}
+            {{ invoiceAmountForRow(item) === 0 ? '' : formatCurrency(invoiceAmountForRow(item)) }}
+          </template>
+          <template #[`item.invoiceStatus`]="{ item }">
+            <v-chip size="x-small" :color="billingStatusColor(item)" variant="tonal">
+              {{ billingStatusLabel(item) }}
+            </v-chip>
           </template>
 
           
@@ -208,6 +213,7 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { getJobList } from '@/services/jobOrders'
+import { getInvoiceSummary, type InvoiceBillingSummary } from '@/services/billing'
 import { getJobDetail } from '@/services/jobs'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
@@ -225,6 +231,7 @@ const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
 const selectedMonth = ref(toMonthString(new Date()))
 const selectedOrderIds = ref<string[]>([])
+const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const {
   visibleColumns: visibleColumnKeys,
@@ -244,7 +251,7 @@ const {
     'attachCustomer',
     'orderedBy',
     'invoiceAmount',
-    'invoiceRef',
+    'invoiceStatus',
     'requiredOn',
     'modifiedOn',
     'modifiedBy',
@@ -274,7 +281,7 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.attachCustomer'), key: 'attachCustomer', width: '64px', sortable: false, align: 'center' as const },
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '110px' },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '130px', align: 'end' as const },
-  { title: t('jobOrder.jobList.headers.invoiceRef'), key: 'invoiceRef', width: '130px' },
+  { title: t('jobOrder.jobList.headers.invoiceStatus'), key: 'invoiceStatus', width: '150px', sortable: false },
   { title: t('jobOrder.jobList.headers.requiredOn'), key: 'requiredOn', width: '120px' },
   { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '120px' },
   { title: t('jobOrder.jobList.headers.modifiedBy'), key: 'modifiedBy', width: '120px' },
@@ -331,6 +338,22 @@ onMounted(async () => {
 
 async function refreshList() {
   await load()
+}
+
+async function hydrateInvoiceSummaries(jobRows: JobOrderRecord[]) {
+  const withInvoiceRefs = jobRows.filter((row) => !!row.invoiceRef)
+  await Promise.all(
+    withInvoiceRefs.map(async (row) => {
+      try {
+        const summary = await getInvoiceSummary(row.invoiceRef)
+        if (summary) {
+          invoiceSummaryByOrderId.value[row.orderId] = summary
+        }
+      } catch {
+        // Keep legacy values if summary lookup fails.
+      }
+    }),
+  )
 }
 
 async function openEditor(record: JobOrderRecord) {
@@ -444,6 +467,7 @@ async function load() {
       endOn: bounds.endOn,
       take: 500,
     })
+    await hydrateInvoiceSummaries(rows.value)
   } catch {
     errorMessage.value = t('reports.exceptional.loadFailed')
   } finally {
@@ -462,6 +486,26 @@ function toMonthString(value: Date) {
   const y = value.getFullYear()
   const m = `${value.getMonth() + 1}`.padStart(2, '0')
   return `${y}-${m}`
+}
+
+function invoiceAmountForRow(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  return summary?.amount ?? row.invoiceAmount
+}
+
+function billingStatusLabel(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  if (summary?.status) return summary.status
+  return row.invoiceRef ? t('jobOrder.jobList.actions.legacyInvoiced') : t('jobOrder.jobList.actions.notInvoiced')
+}
+
+function billingStatusColor(row: JobOrderRecord) {
+  const status = billingStatusLabel(row).toLowerCase()
+  if (status.includes('paid')) return 'success'
+  if (status.includes('overdue')) return 'error'
+  if (status.includes('sent') || status.includes('view')) return 'info'
+  if (status.includes('not invoiced')) return 'grey'
+  return 'warning'
 }
 </script>
 

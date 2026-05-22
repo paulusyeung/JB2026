@@ -682,6 +682,8 @@ public sealed class AdminController : ControllerBase
             CreatedBy = row.CreatedBy ?? string.Empty,
             ModifiedOn = row.ModifiedOn,
             ModifiedBy = row.ModifiedBy ?? string.Empty,
+            InvoiceNinjaClientId = TryExtractMetadataCode(row.MetadataXml, "invoiceNinjaClientId"),
+            BillingSyncStatus = TryExtractMetadataCode(row.MetadataXml, "invoiceNinjaClientSyncStatus"),
         }).ToArray();
 
         return Ok(result);

@@ -122,6 +122,8 @@ export interface AdminCustomerListItem {
   loginAccount: string
   loginPassword: string
   customerCode: string
+  invoiceNinjaClientId: string
+  billingSyncStatus: string
   createdOn: string
   createdBy: string
   modifiedOn: string

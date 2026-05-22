@@ -96,6 +96,7 @@ export const adminMessages = {
           refresh: 'Refresh',
           preference: 'Preference',
           newCustomer: 'New Customer',
+          syncBilling: 'Sync with Billing',
           popup: 'Popup',
           sortBy: 'Sort By',
           asc: 'Asc',
@@ -112,6 +113,10 @@ export const adminMessages = {
           saveFailed: 'Failed to save customer. Please try again.',
           deleteFailed: 'Failed to delete customer. Please try again.',
           deleteConfirm: 'Delete this customer?',
+          billingSynced: 'Synced with Invoice Ninja',
+          billingError: 'Billing sync failed',
+          billingSyncSuccess: 'Customer synced with Invoice Ninja successfully.',
+          billingSyncFailed: 'Failed to sync customer with Invoice Ninja: {error}',
         },
         form: {
           newTitle: 'New Customer',

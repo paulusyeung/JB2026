@@ -1,0 +1,570 @@
+namespace JB2026.Api.Controllers;
+
+using JB2026.Api.Models.Billing;
+using JB2026.Api.Services.Billing;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+/// <summary>
+/// API controller for billing operations with Invoice Ninja.
+/// Provides endpoints for connectivity checks, customer synchronization, invoice generation, and status retrieval.
+/// </summary>
+[ApiController]
+[Route("api/v2/[controller]")]
+[Authorize]
+public class BillingController : ControllerBase
+{
+    private readonly IBillingService _billingService;
+    private readonly ILogger<BillingController> _logger;
+
+    public BillingController(IBillingService billingService, ILogger<BillingController> logger)
+    {
+        _billingService = billingService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Checks connectivity to Invoice Ninja and validates configuration.
+    /// </summary>
+    /// <returns>Connectivity status and message.</returns>
+    /// <response code="200">Connectivity check completed successfully.</response>
+    /// <response code="401">Unauthorized.</response>
+    [HttpGet("connectivity")]
+    [ProducesResponseType(typeof(BillingConnectivityResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<BillingConnectivityResponse>> CheckConnectivity()
+    {
+        _logger.LogInformation("Checking Invoice Ninja connectivity");
+
+        try
+        {
+            var (isConnected, message) = await _billingService.CheckConnectivityAsync();
+
+            var response = new BillingConnectivityResponse
+            {
+                IsConnected = isConnected,
+                StatusMessage = message
+            };
+
+            _logger.LogInformation("Connectivity check completed: {IsConnected}", isConnected);
+            return Ok(response);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Billing service failed: {ErrorCode} - {ErrorMessage}", ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Connectivity check failed: {ErrorMessage}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "CONNECTIVITY_CHECK_FAILED",
+                Message = "Failed to check Invoice Ninja connectivity.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Synchronizes a JB2026 customer to Invoice Ninja.
+    /// If the customer was previously synced (invoiceNinjaClientId provided), it will be updated.
+    /// Otherwise, a new Invoice Ninja client will be created.
+    /// </summary>
+    /// <param name="request">Customer sync request with mapping data.</param>
+    /// <returns>Invoice Ninja client ID to persist in customer metadata.</returns>
+    /// <response code="200">Customer synced successfully.</response>
+    /// <response code="400">Invalid request (missing required fields).</response>
+    /// <response code="401">Unauthorized.</response>
+    /// <response code="500">Sync operation failed.</response>
+    [HttpPost("customers/sync")]
+    [ProducesResponseType(typeof(SyncCustomerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<SyncCustomerResponse>> SyncCustomer([FromBody] SyncCustomerRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.CustomerId))
+        {
+            return BadRequest(new BillingErrorResponse
+            {
+                ErrorCode = "INVALID_REQUEST",
+                Message = "CustomerId is required."
+            });
+        }
+
+        SyncCustomerRequest effectiveRequest = request;
+
+        try
+        {
+            var hasMissingCoreFields = string.IsNullOrWhiteSpace(request.CustomerCode)
+                || string.IsNullOrWhiteSpace(request.CustomerName)
+                || string.IsNullOrWhiteSpace(request.BillTo);
+
+            if (hasMissingCoreFields)
+            {
+                effectiveRequest = await _billingService.BuildSyncCustomerRequestFromCustomerIdAsync(request.CustomerId);
+            }
+
+            _logger.LogInformation("Syncing customer {CustomerCode}", effectiveRequest.CustomerCode);
+
+            var invoiceNinjaClientId = await _billingService.SyncCustomerAsync(
+                effectiveRequest.CustomerId,
+                effectiveRequest.CustomerCode,
+                effectiveRequest.CustomerName,
+                effectiveRequest.BillTo,
+                effectiveRequest.ShipToAddresses ?? new List<string>(),
+                effectiveRequest.ExistingInvoiceNinjaClientId);
+
+            var billingMetadata = CustomerBillingMetadataHelper.MarkSyncSuccessful(
+                null, // Caller should provide existing metadata if updating
+                invoiceNinjaClientId);
+
+            var response = new SyncCustomerResponse
+            {
+                InvoiceNinjaClientId = invoiceNinjaClientId,
+                SyncedAt = DateTime.UtcNow,
+                MetadataToMerge = CustomerBillingMetadataHelper.MergeBillingMetadata(null, billingMetadata)
+            };
+
+            _logger.LogInformation("Customer {CustomerCode} synced successfully", effectiveRequest.CustomerCode);
+            return Ok(response);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to sync customer {CustomerCode}: {ErrorCode} - {ErrorMessage}", effectiveRequest.CustomerCode, ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to sync customer {CustomerId}: {ErrorMessage}", request.CustomerId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "SYNC_FAILED",
+                Message = $"Failed to sync customer {request.CustomerId} to Invoice Ninja.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Generates an invoice in Invoice Ninja from a Job Order.
+    /// Pre-condition: The associated customer must already be synced to Invoice Ninja.
+    /// </summary>
+    /// <param name="request">Invoice generation request with job and line item data.</param>
+    /// <returns>Billing summary with external invoice ID to persist in job metadata.</returns>
+    /// <response code="200">Invoice generated successfully.</response>
+    /// <response code="400">Invalid request (missing required fields or customer not synced).</response>
+    /// <response code="401">Unauthorized.</response>
+    /// <response code="500">Invoice generation failed.</response>
+    [HttpPost("invoices/generate")]
+    [ProducesResponseType(typeof(GenerateInvoiceResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<GenerateInvoiceResponse>> GenerateInvoice([FromBody] GenerateInvoiceRequest request)
+    {
+        _logger.LogInformation("Generating invoice for job {JobNumber}", request.JobNumber);
+
+        if (string.IsNullOrWhiteSpace(request.InvoiceNinjaClientId) ||
+            string.IsNullOrWhiteSpace(request.JobNumber) ||
+            request.LineItems == null || request.LineItems.Count == 0)
+        {
+            _logger.LogWarning("Generate invoice request missing required fields or line items");
+            return BadRequest(new BillingErrorResponse
+            {
+                ErrorCode = "INVALID_REQUEST",
+                Message = "InvoiceNinjaClientId, JobNumber, and at least one LineItem are required."
+            });
+        }
+
+        try
+        {
+            var lineItems = request.LineItems.Select(item => new GenerateInvoiceLineItem
+            {
+                Description = item.Description,
+                Quantity = item.Quantity,
+                UnitCost = item.UnitCost
+            }).ToList();
+
+            var billingSummary = await _billingService.GenerateInvoiceAsync(
+                request.InvoiceNinjaClientId,
+                request.JobNumber,
+                request.PoNumber ?? string.Empty,
+                lineItems);
+
+            var response = new GenerateInvoiceResponse
+            {
+                BillingSummary = billingSummary,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            if (request.OrderId.HasValue)
+            {
+                var persisted = await _billingService.PersistJobOrderBillingSummaryAsync(request.OrderId.Value, billingSummary);
+                if (!persisted)
+                {
+                    _logger.LogWarning("Invoice generated for job {JobNumber} but billing summary could not be persisted to order {OrderId}",
+                        request.JobNumber,
+                        request.OrderId.Value);
+                }
+            }
+
+            _logger.LogInformation("Invoice generated successfully for job {JobNumber}", request.JobNumber);
+            return Ok(response);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to generate invoice for job {JobNumber}: {ErrorCode} - {ErrorMessage}", request.JobNumber, ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate invoice for job {JobNumber}: {ErrorMessage}", request.JobNumber, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "INVOICE_GENERATION_FAILED",
+                Message = $"Failed to generate invoice for job {request.JobNumber}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Generates an invoice directly from a JB2026 job order using synchronized customer billing metadata.
+    /// </summary>
+    /// <param name="orderId">Job order ID.</param>
+    /// <returns>Billing summary with persisted invoice linkage fields.</returns>
+    [HttpPost("invoices/generate-from-job/{orderId:guid}")]
+    [ProducesResponseType(typeof(GenerateInvoiceResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<GenerateInvoiceResponse>> GenerateInvoiceFromJobOrder(Guid orderId)
+    {
+        _logger.LogInformation("Generating invoice from job order {OrderId}", orderId);
+
+        try
+        {
+            var mappedRequest = await _billingService.BuildGenerateInvoiceRequestFromJobOrderAsync(orderId);
+
+            var lineItems = mappedRequest.LineItems.Select(item => new GenerateInvoiceLineItem
+            {
+                Description = item.Description,
+                Quantity = item.Quantity,
+                UnitCost = item.UnitCost
+            }).ToList();
+
+            var billingSummary = await _billingService.GenerateInvoiceAsync(
+                mappedRequest.InvoiceNinjaClientId,
+                mappedRequest.JobNumber,
+                mappedRequest.PoNumber ?? string.Empty,
+                lineItems);
+
+            await _billingService.PersistJobOrderBillingSummaryAsync(orderId, billingSummary);
+
+            return Ok(new GenerateInvoiceResponse
+            {
+                BillingSummary = billingSummary,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to generate invoice from job order {OrderId}: {ErrorCode} - {ErrorMessage}", orderId, ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate invoice from job order {OrderId}: {ErrorMessage}", orderId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "INVOICE_GENERATION_FAILED",
+                Message = $"Failed to generate invoice from job order {orderId}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Previews an invoice before creation and returns resolved custom field values.
+    /// </summary>
+    /// <param name="request">Preview payload for invoice generation confirmation.</param>
+    /// <returns>Preview response with resolved custom fields and totals.</returns>
+    [HttpPost("invoices/preview")]
+    [ProducesResponseType(typeof(PreviewInvoiceResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PreviewInvoiceResponse>> PreviewInvoice([FromBody] PreviewInvoiceRequest request)
+    {
+        if (request.LineItems == null || request.LineItems.Count == 0 || string.IsNullOrWhiteSpace(request.JobNumber))
+        {
+            return BadRequest(new BillingErrorResponse
+            {
+                ErrorCode = "INVALID_REQUEST",
+                Message = "JobNumber and at least one LineItem are required."
+            });
+        }
+
+        try
+        {
+            var preview = await _billingService.PreviewInvoiceAsync(request);
+            return Ok(preview);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to preview invoice for job {JobNumber}: {ErrorMessage}", request.JobNumber, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "INVOICE_PREVIEW_FAILED",
+                Message = "Failed to preview invoice.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Retrieves the billing summary for an Invoice Ninja invoice by its external ID.
+    /// Used for displaying invoice status in billing and job/order screens.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>Billing summary if found; 404 if not found.</returns>
+    /// <response code="200">Invoice summary retrieved successfully.</response>
+    /// <response code="404">Invoice not found.</response>
+    /// <response code="401">Unauthorized.</response>
+    /// <response code="500">Summary retrieval failed.</response>
+    [HttpGet("invoices/{externalInvoiceId}/summary")]
+    [ProducesResponseType(typeof(GetInvoiceSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<GetInvoiceSummaryResponse>> GetInvoiceSummary(string externalInvoiceId)
+    {
+        _logger.LogInformation("Retrieving invoice summary for {ExternalInvoiceId}", externalInvoiceId);
+
+        try
+        {
+            var summary = await _billingService.GetInvoiceSummaryAsync(externalInvoiceId);
+
+            if (summary == null)
+            {
+                _logger.LogWarning("Invoice {ExternalInvoiceId} not found", externalInvoiceId);
+                return NotFound(new BillingErrorResponse
+                {
+                    ErrorCode = "INVOICE_NOT_FOUND",
+                    Message = $"Invoice {externalInvoiceId} not found in Invoice Ninja."
+                });
+            }
+
+            var response = new GetInvoiceSummaryResponse
+            {
+                BillingSummary = summary
+            };
+
+            _logger.LogInformation("Invoice summary retrieved for {ExternalInvoiceId}", externalInvoiceId);
+            return Ok(response);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve invoice summary for {ExternalInvoiceId}: {ErrorCode} - {ErrorMessage}", externalInvoiceId, ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve invoice summary for {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "SUMMARY_RETRIEVAL_FAILED",
+                Message = $"Failed to retrieve invoice summary for {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the status of an Invoice Ninja invoice by fetching the latest data.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>Updated billing summary if found; 404 if not found.</returns>
+    /// <response code="200">Invoice status refreshed successfully.</response>
+    /// <response code="404">Invoice not found.</response>
+    /// <response code="401">Unauthorized.</response>
+    /// <response code="500">Refresh operation failed.</response>
+    [HttpPost("invoices/{externalInvoiceId}/refresh")]
+    [ProducesResponseType(typeof(RefreshInvoiceStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<RefreshInvoiceStatusResponse>> RefreshInvoiceStatus(string externalInvoiceId)
+    {
+        _logger.LogInformation("Refreshing invoice status for {ExternalInvoiceId}", externalInvoiceId);
+
+        try
+        {
+            var summary = await _billingService.RefreshInvoiceStatusAsync(externalInvoiceId);
+
+            if (summary == null)
+            {
+                _logger.LogWarning("Invoice {ExternalInvoiceId} not found during refresh", externalInvoiceId);
+                return NotFound(new BillingErrorResponse
+                {
+                    ErrorCode = "INVOICE_NOT_FOUND",
+                    Message = $"Invoice {externalInvoiceId} not found in Invoice Ninja."
+                });
+            }
+
+            var response = new RefreshInvoiceStatusResponse
+            {
+                BillingSummary = summary,
+                RefreshedAt = DateTime.UtcNow
+            };
+
+            _logger.LogInformation("Invoice status refreshed for {ExternalInvoiceId}", externalInvoiceId);
+            return Ok(response);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to refresh invoice status for {ExternalInvoiceId}: {ErrorCode} - {ErrorMessage}", externalInvoiceId, ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh invoice status for {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "REFRESH_FAILED",
+                Message = $"Failed to refresh invoice status for {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Lists invoices for the billing list screens.
+    /// </summary>
+    /// <returns>Invoice summary list.</returns>
+    [HttpGet("invoices")]
+    [ProducesResponseType(typeof(ListInvoicesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ListInvoicesResponse>> ListInvoices()
+    {
+        try
+        {
+            var invoices = await _billingService.ListInvoicesAsync();
+            return Ok(new ListInvoicesResponse
+            {
+                Invoices = invoices.ToList()
+            });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to list invoices: {ErrorCode} - {ErrorMessage}", ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list invoices: {ErrorMessage}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "INVOICE_LIST_FAILED",
+                Message = "Failed to list invoices.",
+                Details = null
+            });
+        }
+    }
+}

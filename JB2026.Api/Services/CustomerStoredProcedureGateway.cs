@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using System.Data.SqlTypes;
 using JB2026.EfCore.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +38,7 @@ public sealed class CustomerStoredProcedureGateway : ICustomerStoredProcedureGat
             CustomerName: GetNullableString(reader, "CustomerName"),
             LoginAccount: GetNullableString(reader, "LoginAccount"),
             LoginPassword: GetNullableString(reader, "LoginPassword"),
-            MetadataXml: GetNullableString(reader, "MetadataXml"),
+            MetadataXml: GetNullableXmlString(reader, "MetadataXml"),
             CreatedOn: reader.GetDateTime(reader.GetOrdinal("CreatedOn")),
             CreatedBy: reader.GetGuid(reader.GetOrdinal("CreatedBy")),
             ModifiedOn: reader.GetDateTime(reader.GetOrdinal("ModifiedOn")),
@@ -170,5 +171,21 @@ public sealed class CustomerStoredProcedureGateway : ICustomerStoredProcedureGat
     {
         var ordinal = reader.GetOrdinal(column);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+    }
+
+    private static string? GetNullableXmlString(DbDataReader reader, string column)
+    {
+        var ordinal = reader.GetOrdinal(column);
+        if (reader.IsDBNull(ordinal))
+        {
+            return null;
+        }
+
+        return reader.GetFieldValue<object>(ordinal) switch
+        {
+            string value => value,
+            SqlXml sqlXml => sqlXml.IsNull ? null : sqlXml.Value,
+            _ => reader.GetValue(ordinal)?.ToString(),
+        };
     }
 }

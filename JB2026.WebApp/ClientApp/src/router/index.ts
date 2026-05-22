@@ -28,6 +28,9 @@ const legacyLeafRoutes = [
   { path: '/admin/quotation/item', name: 'admin-quotation-item', titleKey: 'routes.adminQuotationItem' },
   { path: '/admin/fcm-console', name: 'admin-fcm-console', titleKey: 'routes.adminFcmConsole' },
   { path: '/settings/system-parameters', name: 'settings-system-parameters', titleKey: 'routes.settingsSystemParameters' },
+  { path: '/billing/invoices', name: 'billing-invoices', titleKey: 'routes.billingInvoices' },
+  { path: '/billing/invoices/:externalInvoiceId', name: 'billing-invoice-detail', titleKey: 'routes.billingInvoiceDetail' },
+  { path: '/billing/settings', name: 'billing-settings', titleKey: 'routes.billingSettings' },
 ] as const
 
 function resolveTitle(titleKey?: string): string {
@@ -190,11 +193,17 @@ const router = createRouter({
           ? () => import('@/views/AdminQuotationItemView.vue')
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
+        : route.path === '/billing/invoices'
+          ? () => import('@/views/BillingInvoicesView.vue')
+        : route.path === '/billing/invoices/:externalInvoiceId'
+          ? () => import('@/views/BillingInvoiceDetailView.vue')
+        : route.path === '/billing/settings'
+          ? () => import('@/views/BillingSettingsView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { 
         requiresAuth: true, 
         titleKey: route.titleKey,
-        roles: route.path.startsWith('/admin') || route.path.startsWith('/settings') ? ['Admin'] : undefined
+        roles: route.path.startsWith('/admin') || route.path.startsWith('/settings') || route.path.startsWith('/billing') ? ['Admin'] : undefined
       },
     })),
     {

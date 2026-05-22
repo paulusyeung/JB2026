@@ -1,0 +1,304 @@
+namespace JB2026.Api.Models.Billing;
+
+using System.Text.Json.Serialization;
+
+/// <summary>
+/// Invoice Ninja client (customer) representation.
+/// </summary>
+public class InvoiceNinjaClientResponse
+{
+    /// <summary>
+    /// Unique client ID in Invoice Ninja.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Client display name.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional client identifier/number.
+    /// </summary>
+    [JsonPropertyName("id_number")]
+    public string IdNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Client email address.
+    /// </summary>
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Currency code.
+    /// </summary>
+    [JsonPropertyName("currency_id")]
+    public string CurrencyId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Custom field values keyed by field key.
+    /// </summary>
+    [JsonPropertyName("custom_values")]
+    public Dictionary<string, string?> CustomValues { get; set; } = new();
+
+    /// <summary>
+    /// Timestamp of last update.
+    /// </summary>
+    [JsonPropertyName("updated_at")]
+    public long? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Client display name as rendered by Invoice Ninja.
+    /// </summary>
+    [JsonPropertyName("display_name")]
+    public string DisplayName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request to create or update an Invoice Ninja client.
+/// </summary>
+public class CreateInvoiceNinjaClientRequest
+{
+    /// <summary>
+    /// Client display name.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional client identifier/number (e.g., customerCode).
+    /// </summary>
+    [JsonPropertyName("id_number")]
+    public string IdNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Client email address (optional).
+    /// </summary>
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Currency code (optional, uses company default if omitted).
+    /// </summary>
+    [JsonPropertyName("currency_id")]
+    public string CurrencyId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Custom field values keyed by field key.
+    /// </summary>
+    [JsonPropertyName("custom_values")]
+    public Dictionary<string, string?> CustomValues { get; set; } = new();
+}
+
+/// <summary>
+/// Invoice Ninja invoice representation.
+/// </summary>
+public class InvoiceNinjaInvoiceResponse
+{
+    /// <summary>
+    /// Unique invoice ID in Invoice Ninja.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice number (display value).
+    /// </summary>
+    public string Number { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Client ID this invoice belongs to.
+    /// </summary>
+    [JsonPropertyName("client_id")]
+    public string ClientId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice amount (total).
+    /// </summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Invoice date as returned by Invoice Ninja.
+    /// </summary>
+    [JsonPropertyName("date")]
+    public string InvoiceDate { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice status (draft, sent, viewed, partial, paid, etc.).
+    /// </summary>
+    public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Due date as returned by Invoice Ninja.
+    /// </summary>
+    [JsonPropertyName("due_date")]
+    public string DueDate { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice status identifier used by Invoice Ninja list responses.
+    /// </summary>
+    [JsonPropertyName("status_id")]
+    public string StatusId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Custom field values keyed by field key.
+    /// </summary>
+    [JsonPropertyName("custom_values")]
+    public Dictionary<string, string?> CustomValues { get; set; } = new();
+
+    /// <summary>
+    /// Invoice line items.
+    /// </summary>
+    [JsonPropertyName("line_items")]
+    public List<InvoiceLineItemResponse> LineItems { get; set; } = new();
+
+    /// <summary>
+    /// Included client details when requested from Invoice Ninja.
+    /// </summary>
+    [JsonPropertyName("client")]
+    public InvoiceNinjaClientResponse? Client { get; set; }
+
+    /// <summary>
+    /// Timestamp of last update.
+    /// </summary>
+    [JsonPropertyName("updated_at")]
+    public long? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Invoice line item representation.
+/// </summary>
+public class InvoiceLineItemResponse
+{
+    /// <summary>
+    /// Line item description.
+    /// </summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Quantity.
+    /// </summary>
+    public decimal Quantity { get; set; }
+
+    /// <summary>
+    /// Unit cost.
+    /// </summary>
+    public decimal Cost { get; set; }
+
+    /// <summary>
+    /// Custom field values keyed by field key (if supported by IN API).
+    /// </summary>
+    [JsonPropertyName("custom_values")]
+    public Dictionary<string, string?> CustomValues { get; set; } = new();
+}
+
+/// <summary>
+/// Request to create an Invoice Ninja invoice.
+/// </summary>
+public class CreateInvoiceNinjaInvoiceRequest
+{
+    /// <summary>
+    /// Client ID (Invoice Ninja ID, not JB2026 customer code).
+    /// </summary>
+    [JsonPropertyName("client_id")]
+    public string ClientId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice due date (optional).
+    /// </summary>
+    [JsonPropertyName("due_date")]
+    public long? DueDate { get; set; }
+
+    /// <summary>
+    /// Custom field values keyed by field key.
+    /// </summary>
+    [JsonPropertyName("custom_values")]
+    public Dictionary<string, string?> CustomValues { get; set; } = new();
+
+    /// <summary>
+    /// Line items for the invoice.
+    /// </summary>
+    [JsonPropertyName("line_items")]
+    public List<CreateInvoiceLineItemRequest> LineItems { get; set; } = new();
+}
+
+/// <summary>
+/// Request to create an invoice line item.
+/// </summary>
+public class CreateInvoiceLineItemRequest
+{
+    /// <summary>
+    /// Line item description.
+    /// </summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Quantity.
+    /// </summary>
+    public decimal Quantity { get; set; }
+
+    /// <summary>
+    /// Unit cost.
+    /// </summary>
+    public decimal Cost { get; set; }
+
+    /// <summary>
+    /// Custom field values keyed by field key (if supported by IN API).
+    /// </summary>
+    [JsonPropertyName("custom_values")]
+    public Dictionary<string, string?> CustomValues { get; set; } = new();
+}
+
+/// <summary>
+/// Summary of an invoice suitable for display in billing screens and job/order views.
+/// </summary>
+public class InvoiceBillingSummary
+{
+    /// <summary>
+    /// External Invoice Ninja invoice ID.
+    /// </summary>
+    public string ExternalInvoiceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice number as displayed in Invoice Ninja.
+    /// </summary>
+    public string InvoiceNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Client name associated with the invoice.
+    /// </summary>
+    public string ClientName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Invoice date.
+    /// </summary>
+    public DateTime? InvoiceDate { get; set; }
+
+    /// <summary>
+    /// Invoice total amount.
+    /// </summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Invoice status (draft, sent, viewed, partial, paid, overdue, etc.).
+    /// </summary>
+    public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Due date (if available).
+    /// </summary>
+    public DateTime? DueDate { get; set; }
+
+    /// <summary>
+    /// Last sync timestamp with Invoice Ninja.
+    /// </summary>
+    public DateTime? LastSyncedAt { get; set; }
+}
+
+/// <summary>
+/// Response envelope for Invoice Ninja API responses.
+/// </summary>
+/// <typeparam name="T">The data type wrapped by the response.</typeparam>
+public class InvoiceNinjaApiResponse<T>
+{
+    /// <summary>
+    /// The wrapped data object.
+    /// </summary>
+    public T Data { get; set; } = default!;
+}

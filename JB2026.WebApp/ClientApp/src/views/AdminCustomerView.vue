@@ -1,10 +1,10 @@
 <template>
-  <section class="page-section admin-supplier-page">
-    <v-card rounded="xl" elevation="0" class="panel-card admin-supplier-card">
+  <section class="page-section admin-customer-page">
+    <v-card rounded="xl" elevation="0" class="panel-card admin-customer-card">
       <v-card-title class="d-flex flex-wrap align-center ga-3 pb-2">
         <div>
-          <h3 class="text-h6 mb-1">{{ t('admin.supplier.title') }}</h3>
-          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.supplier.subtitle') }}</p>
+          <h3 class="text-h6 mb-1">{{ t('admin.customer.title') }}</h3>
+          <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.customer.subtitle') }}</p>
         </div>
       </v-card-title>
 
@@ -13,7 +13,7 @@
           <v-text-field
             v-model="lookup"
             density="comfortable"
-            :label="t('admin.supplier.lookup')"
+            :label="t('admin.customer.lookup')"
             prepend-inner-icon="mdi-magnify"
             variant="solo-filled"
             hide-details
@@ -32,7 +32,7 @@
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
-                {{ t('admin.supplier.actions.columns') }}
+                {{ t('admin.customer.actions.columns') }}
               </v-btn>
             </template>
             <v-list density="compact" class="toolbar-menu-list">
@@ -48,7 +48,7 @@
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
-                {{ t('admin.supplier.actions.sorting') }}
+                {{ t('admin.customer.actions.sorting') }}
               </v-btn>
             </template>
             <v-card min-width="280" class="pa-3">
@@ -59,114 +59,150 @@
                 item-value="key"
                 density="compact"
                 variant="outlined"
-                :label="t('admin.supplier.actions.sortBy')"
+                :label="t('admin.customer.actions.sortBy')"
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('admin.supplier.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('admin.supplier.actions.desc') }}</v-btn>
+                <v-btn value="asc">{{ t('admin.customer.actions.asc') }}</v-btn>
+                <v-btn value="desc">{{ t('admin.customer.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
 
           <template v-if="!isPhoneLayout">
             <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-              {{ t('admin.supplier.actions.checkbox') }}
+              {{ t('admin.customer.actions.checkbox') }}
             </v-btn>
 
             <v-menu location="bottom">
               <template #activator="{ props }">
                 <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
-                  {{ t('admin.supplier.actions.views') }}
+                  {{ t('admin.customer.actions.views') }}
                 </v-btn>
               </template>
               <v-list density="compact" class="toolbar-menu-list">
                 <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
-                  <v-list-item-title>{{ t('admin.supplier.actions.detailView') }}</v-list-item-title>
+                  <v-list-item-title>{{ t('admin.customer.actions.detailView') }}</v-list-item-title>
                 </v-list-item>
                 <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
-                  <v-list-item-title>{{ t('admin.supplier.actions.cardView') }}</v-list-item-title>
+                  <v-list-item-title>{{ t('admin.customer.actions.cardView') }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewSupplier">
-              {{ t('admin.supplier.actions.newSupplier') }}
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewCustomer">
+              {{ t('admin.customer.actions.newCustomer') }}
+            </v-btn>
+
+            <v-btn
+              :disabled="!selectedCustomerId || !canSyncSelectedCustomer"
+              :loading="!!selectedCustomerId && syncingCustomerId === selectedCustomerId"
+              variant="outlined"
+              size="small"
+              color="primary"
+              prepend-icon="mdi-cloud-upload-outline"
+              class="sync-billing-btn"
+              @click="syncSelectedCustomer"
+            >
+              {{ t('admin.customer.actions.syncBilling') }}
+              <v-tooltip activator="parent" location="top">
+                {{ !selectedCustomerId ? t('admin.customer.messages.selectRecordFirst') : (!canSyncSelectedCustomer ? t('admin.customer.messages.syncRequiresCode') : '') }}
+              </v-tooltip>
             </v-btn>
           </template>
 
           <v-menu v-else location="bottom end">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
-                {{ t('admin.supplier.actions.views') }}
+                {{ t('admin.customer.actions.views') }}
               </v-btn>
             </template>
 
             <v-list density="compact" class="toolbar-menu-list">
               <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-                <v-list-item-title>{{ t('admin.supplier.actions.checkbox') }}</v-list-item-title>
+                <v-list-item-title>{{ t('admin.customer.actions.checkbox') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
-                <v-list-item-title>{{ t('admin.supplier.actions.detailView') }}</v-list-item-title>
+                <v-list-item-title>{{ t('admin.customer.actions.detailView') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
-                <v-list-item-title>{{ t('admin.supplier.actions.cardView') }}</v-list-item-title>
+                <v-list-item-title>{{ t('admin.customer.actions.cardView') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-account-plus" @click="openNewSupplier">
-                <v-list-item-title>{{ t('admin.supplier.actions.newSupplier') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-account-plus" @click="openNewCustomer">
+                <v-list-item-title>{{ t('admin.customer.actions.newCustomer') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                :disabled="!selectedCustomerId || !canSyncSelectedCustomer"
+                prepend-icon="mdi-cloud-upload-outline"
+                @click="syncSelectedCustomer"
+              >
+                <v-list-item-title>{{ t('admin.customer.actions.syncBilling') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
-            {{ t('admin.supplier.actions.selected', { count: selectedSupplierIds.length }) }}
+            {{ t('admin.customer.actions.selected', { count: selectedCustomerIds.length }) }}
           </span>
+
+          <v-spacer />
+
+          <div v-if="selectedCustomerBillingStatus" class="d-flex align-center ga-2">
+            <v-icon v-if="selectedCustomerBillingStatus.synced" color="success" size="16">mdi-check-circle</v-icon>
+            <v-icon v-else-if="selectedCustomerBillingStatus.error" color="error" size="16">mdi-alert-circle</v-icon>
+            <span class="text-caption text-medium-emphasis">
+              {{ selectedCustomerBillingStatus.error ? t('admin.customer.messages.billingError') : t('admin.customer.messages.billingSynced') }}
+            </span>
+          </div>
         </div>
 
         <ListMobileCard
           v-if="isPhoneLayout"
-          :items="displayedRows"
-          :columns="mobileColumns"
-          item-key="supplierId"
+          :items="displayedRows as unknown as Record<string, unknown>[]"
+          :columns="mobileColumns as unknown as ListMobileCardColumn<Record<string, unknown>>[]"
+          item-key="customerId"
           :checkbox-mode="checkboxMode"
-          :selected-ids="selectedSupplierIds"
+          :selected-ids="selectedCustomerIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as AdminSupplierDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item as unknown as AdminCustomerDisplayItem)"
         />
 
-        <div v-else-if="isCardView" class="supplier-card-list">
+        <div v-else-if="isCardView" class="customer-card-list">
           <v-card
             v-for="row in displayedRows"
-            :key="row.supplierId"
+            :key="row.customerId"
             rounded="lg"
             elevation="0"
-            class="supplier-card"
-            @click="openPopup(row.supplierId)"
+            class="customer-card"
+            @click="openPopup(row.customerId)"
           >
-            <div class="supplier-card__header">
+            <div class="customer-card__header">
               <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="secondary">mdi-truck-delivery</v-icon>
+                <v-icon
+                  size="18"
+                  :style="{ color: isBackendBillingSynced(row) ? 'rgb(var(--v-theme-primary))' : 'rgb(var(--v-theme-on-surface-variant))' }"
+                >mdi-account</v-icon>
                 <div>
-                  <div class="text-subtitle-2 font-weight-bold">{{ row.supplierName }}</div>
-                  <div class="text-caption text-medium-emphasis">{{ row.supplierCode || '-' }}</div>
+                  <div class="text-subtitle-2 font-weight-bold">{{ row.customerName }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ row.customerCode || '-' }}</div>
                 </div>
               </div>
               <v-checkbox-btn
                 v-if="checkboxMode"
-                :model-value="selectedSupplierIds.includes(row.supplierId)"
+                :model-value="selectedCustomerIds.includes(row.customerId)"
                 density="compact"
                 hide-details
-                @click.stop="handleCardCheckbox(row.supplierId)"
+                @click.stop="handleCardCheckbox(row.customerId)"
               />
             </div>
-            <div class="supplier-card__body">
-              <span class="text-caption">{{ t('admin.supplier.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
+            <div class="customer-card__body">
+              <span class="text-caption">{{ t('admin.customer.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
             </div>
-            <div class="supplier-card__footer text-caption text-medium-emphasis">
-              <span>{{ t('admin.supplier.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
-              <span>{{ t('admin.supplier.headers.modifiedOn') }}: {{ formatDateCell(row.modifiedOn) }}</span>
+            <div class="customer-card__footer text-caption text-medium-emphasis">
+              <span>{{ t('admin.customer.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
+              <span>{{ t('admin.customer.headers.modifiedOn') }}: {{ formatDateCell(row.modifiedOn) }}</span>
             </div>
           </v-card>
         </div>
@@ -176,18 +212,20 @@
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
-          item-value="supplierId"
-          v-model="selectedSupplierIds"
+          item-value="customerId"
+          v-model="selectedCustomerIds"
           :show-select="checkboxMode"
           density="compact"
           fixed-header
           height="62vh"
-          class="admin-supplier-table"
+          class="admin-customer-table"
           @click:row="onRowClick"
-          @dblclick="openPopup"
         >
-          <template #[`item.icon`]>
-            <v-icon size="14" color="secondary">mdi-truck-delivery</v-icon>
+          <template #[`item.icon`]='{ item }'>
+            <v-icon
+              size="14"
+              :style="{ color: isBackendBillingSynced(item) ? 'rgb(var(--v-theme-primary))' : 'rgb(var(--v-theme-on-surface-variant))' }"
+            >mdi-connection</v-icon>
           </template>
 
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
@@ -198,8 +236,8 @@
     </v-card>
 
     <v-dialog v-model="dialogOpen" max-width="min(100%, 920px)" scrollable>
-      <AdminSupplierRecordDialog
-        :supplier-id="editingSupplierId"
+      <AdminCustomerRecordDialog
+        :customer-id="editingCustomerId"
         @saved="handleSaved"
         @deleted="handleDeleted"
         @cancel="dialogOpen = false"
@@ -222,24 +260,31 @@ import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import AdminSupplierRecordDialog from '@/components/forms/AdminSupplierRecordDialog.vue'
-import { getAdminSuppliers } from '@/services/admin'
-import type { AdminSupplierListItem, AdminSupplierRecord } from '@/types/api'
+import AdminCustomerRecordDialog from '@/components/forms/AdminCustomerRecordDialog.vue'
+import { getAdminCustomers } from '@/services/admin'
+import { syncCustomerToBilling } from '@/services/billing'
+import type { AdminCustomerListItem, AdminCustomerRecord } from '@/types/api'
 
-type AdminSupplierViewMode = 'detail' | 'card'
+type AdminCustomerViewMode = 'detail' | 'card'
 
-type AdminSupplierDisplayItem = AdminSupplierListItem & {
+type AdminCustomerDisplayItem = AdminCustomerListItem & {
   icon: string
   ln: number
 }
 
-const rows = ref<AdminSupplierListItem[]>([])
+type CustomerBillingSyncStatus = {
+  synced: boolean
+  syncedAt?: string
+  error?: string
+}
+
+const rows = ref<AdminCustomerListItem[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
-const viewSettings = useViewSettings('admin-supplier', {
-  visibleColumns: ['icon', 'supplierName', 'ln', 'loginAccount', 'loginPassword', 'supplierCode'],
-  sortKey: 'supplierName',
+const viewSettings = useViewSettings('admin-customer', {
+  visibleColumns: ['icon', 'customerName', 'ln', 'loginAccount', 'loginPassword', 'customerCode'],
+  sortKey: 'customerName',
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
@@ -249,11 +294,13 @@ const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
-const selectedSupplierIds = ref<string[]>([])
+const selectedCustomerIds = ref<string[]>([])
 const dialogOpen = ref(false)
-const editingSupplierId = ref<string | null>(null)
+const editingCustomerId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
+const syncingCustomerId = ref<string | null>(null)
+const billingStatus = ref<{ [customerId: string]: CustomerBillingSyncStatus }>({})
 
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
@@ -262,17 +309,23 @@ const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const isCardView = computed(() => viewMode.value === 'card')
 
+const selectedCustomerBillingStatus = computed(() => {
+  const customerId = selectedCustomerId.value
+  if (!customerId) return null
+  return billingStatus.value[customerId] ?? null
+})
+
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
-  { title: t('admin.supplier.headers.supplierName'), key: 'supplierName', minWidth: '220px' },
+  { title: t('admin.customer.headers.customerName'), key: 'customerName', minWidth: '220px' },
   { title: '#', key: 'ln', width: '54px', sortable: false },
-  { title: t('admin.supplier.headers.loginAccount'), key: 'loginAccount', minWidth: '130px' },
-  { title: t('admin.supplier.headers.loginPassword'), key: 'loginPassword', minWidth: '120px' },
-  { title: t('admin.supplier.headers.supplierCode'), key: 'supplierCode', minWidth: '130px' },
-  { title: t('admin.supplier.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
-  { title: t('admin.supplier.headers.createdBy'), key: 'createdBy', minWidth: '100px' },
-  { title: t('admin.supplier.headers.modifiedOn'), key: 'modifiedOn', minWidth: '135px' },
-  { title: t('admin.supplier.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
+  { title: t('admin.customer.headers.loginAccount'), key: 'loginAccount', minWidth: '130px' },
+  { title: t('admin.customer.headers.loginPassword'), key: 'loginPassword', minWidth: '120px' },
+  { title: t('admin.customer.headers.customerCode'), key: 'customerCode', minWidth: '130px' },
+  { title: t('admin.customer.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
+  { title: t('admin.customer.headers.createdBy'), key: 'createdBy', minWidth: '100px' },
+  { title: t('admin.customer.headers.modifiedOn'), key: 'modifiedOn', minWidth: '135px' },
+  { title: t('admin.customer.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
 const headers = computed(() =>
@@ -285,14 +338,14 @@ const headers = computed(() =>
   ),
 )
 
-const mobileColumns = computed<ListMobileCardColumn<AdminSupplierDisplayItem>[]>(() => [
-  { key: 'supplierName', label: t('admin.supplier.headers.supplierName'), section: 'header', emphasis: true },
-  { key: 'supplierCode', label: t('admin.supplier.headers.supplierCode'), section: 'header' },
-  { key: 'loginAccount', label: t('admin.supplier.headers.loginAccount'), section: 'body' },
-  { key: 'createdBy', label: t('admin.supplier.headers.createdBy'), section: 'footer' },
+const mobileColumns = computed<ListMobileCardColumn<AdminCustomerDisplayItem>[]>(() => [
+  { key: 'customerName', label: t('admin.customer.headers.customerName'), section: 'header', emphasis: true },
+  { key: 'customerCode', label: t('admin.customer.headers.customerCode'), section: 'header' },
+  { key: 'loginAccount', label: t('admin.customer.headers.loginAccount'), section: 'body' },
+  { key: 'createdBy', label: t('admin.customer.headers.createdBy'), section: 'footer' },
   {
     key: 'modifiedOn',
-    label: t('admin.supplier.headers.modifiedOn'),
+    label: t('admin.customer.headers.modifiedOn'),
     section: 'footer',
     formatter: (item) => formatDateCell(item.modifiedOn),
   },
@@ -306,8 +359,8 @@ const sortableColumns = computed(() =>
 
 const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
-const displayedRows = computed<AdminSupplierDisplayItem[]>(() => {
-  const key = sortKey.value as keyof AdminSupplierListItem
+const displayedRows = computed<AdminCustomerDisplayItem[]>(() => {
+  const key = sortKey.value as keyof AdminCustomerListItem
   const result = [...rows.value]
 
   result.sort((lhs, rhs) => {
@@ -318,12 +371,19 @@ const displayedRows = computed<AdminSupplierDisplayItem[]>(() => {
 
   return result.map((item, index) => ({
     ...item,
-    icon: 'mdi-truck-delivery',
+    icon: 'mdi-account',
     ln: index + 1,
   }))
 })
 
-const selectedSupplierId = computed(() => selectedSupplierIds.value[0] ?? null)
+const selectedCustomerId = computed(() => selectedCustomerIds.value[0] ?? null)
+
+const canSyncSelectedCustomer = computed(() => {
+  const customerId = selectedCustomerId.value
+  if (!customerId) return false
+  const customer = rows.value.find(r => r.customerId === customerId)
+  return !!(customer && customer.customerCode)
+})
 
 onMounted(async () => {
   await load()
@@ -334,12 +394,12 @@ async function load() {
   errorMessage.value = ''
 
   try {
-    rows.value = await getAdminSuppliers({
+    rows.value = await getAdminCustomers({
       lookup: lookup.value.trim(),
       take: 500,
     })
   } catch {
-    errorMessage.value = t('admin.supplier.messages.loadFailed')
+    errorMessage.value = t('admin.customer.messages.loadFailed')
   } finally {
     loading.value = false
   }
@@ -365,80 +425,79 @@ function toggleColumn(columnKey: string) {
   visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
 }
 
-function onRowClick(_event: Event, payload: { item: AdminSupplierListItem }) {
-  if (checkboxMode.value) return
-  selectedSupplierIds.value = [payload.item.supplierId]
-  openPopup(payload.item.supplierId)
+function onRowClick(_event: Event, payload: { item: AdminCustomerListItem }) {
+  selectedCustomerIds.value = [payload.item.customerId]
+  openPopup(payload.item.customerId)
 }
 
-function onMobileCardClick(item: AdminSupplierDisplayItem) {
+function onMobileCardClick(item: AdminCustomerDisplayItem) {
   if (checkboxMode.value) {
-    selectedSupplierIds.value = [item.supplierId]
+    selectedCustomerIds.value = [item.customerId]
     return
   }
 
-  selectedSupplierIds.value = [item.supplierId]
-  openPopup(item.supplierId)
+  selectedCustomerIds.value = [item.customerId]
+  openPopup(item.customerId)
 }
 
 function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
-  const supplierId = String(item.supplierId ?? '')
-  if (!supplierId) return
+  const customerId = String(item.customerId ?? '')
+  if (!customerId) return
 
   if (selected) {
-    selectedSupplierIds.value = [...new Set([...selectedSupplierIds.value, supplierId])]
+    selectedCustomerIds.value = [...new Set([...selectedCustomerIds.value, customerId])]
     return
   }
 
-  selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
+  selectedCustomerIds.value = selectedCustomerIds.value.filter((id) => id !== customerId)
 }
 
-function openPopup(supplierId = selectedSupplierId.value ?? editingSupplierId.value) {
-  if (!supplierId) {
-    errorMessage.value = t('admin.supplier.messages.selectRecordFirst')
+function openPopup(customerId = selectedCustomerId.value ?? editingCustomerId.value) {
+  if (!customerId) {
+    errorMessage.value = t('admin.customer.messages.selectRecordFirst')
     return
   }
 
-  editingSupplierId.value = supplierId
+  editingCustomerId.value = customerId
   dialogOpen.value = true
   errorMessage.value = ''
 }
 
-function openNewSupplier() {
-  editingSupplierId.value = null
+function openNewCustomer() {
+  editingCustomerId.value = null
   dialogOpen.value = true
   errorMessage.value = ''
 }
 
-async function handleSaved(supplier: AdminSupplierRecord) {
+async function handleSaved(customer: AdminCustomerRecord) {
   await load()
-  selectedSupplierIds.value = [supplier.supplierId]
-  editingSupplierId.value = supplier.supplierId
-  successMessage.value = t('admin.supplier.messages.saveSuccess')
+  selectedCustomerIds.value = [customer.customerId]
+  editingCustomerId.value = customer.customerId
+  successMessage.value = t('admin.customer.messages.saveSuccess')
   saveSuccess.value = true
 }
 
 async function handleDeleted(id: string) {
   await load()
-  selectedSupplierIds.value = selectedSupplierIds.value.filter((supplierId) => supplierId !== id)
-  successMessage.value = t('admin.supplier.messages.deleteSuccess')
+  selectedCustomerIds.value = selectedCustomerIds.value.filter((customerId) => customerId !== id)
+  successMessage.value = t('admin.customer.messages.deleteSuccess')
   saveSuccess.value = true
 }
 
 function showUnavailable(actionKey: string) {
-  errorMessage.value = t('admin.supplier.messages.actionUnavailable', { action: t(actionKey) })
+  errorMessage.value = t('admin.customer.messages.actionUnavailable', { action: t(actionKey) })
 }
 
-function setViewMode(mode: AdminSupplierViewMode) {
+function setViewMode(mode: AdminCustomerViewMode) {
   viewMode.value = mode
 }
 
-function handleCardCheckbox(supplierId: string) {
-  if (selectedSupplierIds.value.includes(supplierId)) {
-    selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
+function handleCardCheckbox(customerId: string) {
+  if (selectedCustomerIds.value.includes(customerId)) {
+    selectedCustomerIds.value = selectedCustomerIds.value.filter((id) => id !== customerId)
     return
   }
-  selectedSupplierIds.value = [...selectedSupplierIds.value, supplierId]
+  selectedCustomerIds.value = [...selectedCustomerIds.value, customerId]
 }
 
 function formatDateCell(value: string): string {
@@ -446,16 +505,47 @@ function formatDateCell(value: string): string {
   const normalized = value.replace('T', ' ')
   return normalized.length >= 16 ? normalized.slice(0, 16) : normalized
 }
+
+function isBackendBillingSynced(item: AdminCustomerListItem): boolean {
+  return item.billingSyncStatus === 'success' && !!item.invoiceNinjaClientId
+}
+
+async function syncSelectedCustomer() {
+  const customerId = selectedCustomerId.value
+  if (!customerId) return
+
+  syncingCustomerId.value = customerId
+  errorMessage.value = ''
+
+  try {
+    await syncCustomerToBilling({ customerId })
+    billingStatus.value[customerId] = {
+      synced: true,
+      syncedAt: new Date().toISOString(),
+    }
+    successMessage.value = t('admin.customer.messages.billingSyncSuccess')
+    saveSuccess.value = true
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+    billingStatus.value[customerId] = {
+      synced: false,
+      error: errorMsg,
+    }
+    errorMessage.value = t('admin.customer.messages.billingSyncFailed', { error: errorMsg })
+  } finally {
+    syncingCustomerId.value = null
+  }
+}
 </script>
 
 <style scoped>
-.admin-supplier-page {
+.admin-customer-page {
   min-height: 0;
-  --admin-supplier-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
-  --admin-supplier-header-fg: rgb(var(--v-theme-on-surface-variant));
+  --admin-customer-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
+  --admin-customer-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
-.admin-supplier-card {
+.admin-customer-card {
   border: 1px solid rgba(var(--v-theme-primary), 0.15);
   background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));
 }
@@ -480,26 +570,30 @@ function formatDateCell(value: string): string {
   overflow: auto;
 }
 
-.admin-supplier-table {
+.sync-billing-btn.v-btn--disabled :is(.v-btn__loader, .v-progress-circular) {
+  display: none !important;
+}
+
+.admin-customer-table {
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   overflow: hidden;
 }
 
-.admin-supplier-table :deep(.v-table__wrapper > table > thead > tr > th),
-.admin-supplier-table :deep(.v-data-table__th) {
+.admin-customer-table :deep(.v-table__wrapper > table > thead > tr > th),
+.admin-customer-table :deep(.v-data-table__th) {
   white-space: nowrap;
-  background-color: var(--admin-supplier-header-bg) !important;
-  color: var(--admin-supplier-header-fg) !important;
+  background-color: var(--admin-customer-header-bg) !important;
+  color: var(--admin-customer-header-fg) !important;
 }
 
-.admin-supplier-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
-.admin-supplier-table :deep(.v-data-table__th:first-child) {
+.admin-customer-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.admin-customer-table :deep(.v-data-table__th:first-child) {
   border-top-left-radius: 8px;
 }
 
-.admin-supplier-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
-.admin-supplier-table :deep(.v-data-table__th:last-child) {
+.admin-customer-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.admin-customer-table :deep(.v-data-table__th:last-child) {
   border-top-right-radius: 8px;
 }
 
@@ -509,20 +603,20 @@ function formatDateCell(value: string): string {
   }
 }
 
-.supplier-card-list {
+.customer-card-list {
   display: grid;
   gap: 0.9rem;
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 960px) {
-  .supplier-card-list {
+  .customer-card-list {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     align-items: start;
   }
 }
 
-.supplier-card {
+.customer-card {
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
@@ -531,20 +625,22 @@ function formatDateCell(value: string): string {
   cursor: pointer;
 }
 
-.supplier-card:active {
+.customer-card:active {
   background: rgba(255, 255, 255, 0.92);
 }
 
-.supplier-card__header,
-.supplier-card__footer {
+.customer-card__header,
+.customer-card__body,
+.customer-card__footer {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem;
 }
 
-.supplier-card__body {
+.customer-card__body {
   display: grid;
   gap: 0.45rem;
 }
+
 </style>

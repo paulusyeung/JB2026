@@ -11,4 +11,6 @@ public sealed class AdminCustomerListItemResponse
     public string CreatedBy { get; init; } = string.Empty;
     public DateTime ModifiedOn { get; init; }
     public string ModifiedBy { get; init; } = string.Empty;
+    public string InvoiceNinjaClientId { get; init; } = string.Empty;
+    public string BillingSyncStatus { get; init; } = string.Empty;
 }

@@ -56,6 +56,15 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       ],
     },
     {
+      title: t('routes.billing'),
+      icon: 'mdi-cash-multiple',
+      roles: ['Admin'],
+      children: [
+        { title: t('routes.billingInvoices'), to: '/billing/invoices', icon: 'mdi-receipt-text-check-outline' },
+        { title: t('routes.billingSettings'), to: '/billing/settings', icon: 'mdi-cog-outline' },
+      ],
+    },
+    {
       title: t('routes.admin'),
       icon: 'mdi-shield-account-outline',
       roles: ['Admin'],

@@ -1,0 +1,221 @@
+import { apiClient } from './api'
+
+/**
+ * Response from connectivity check endpoint.
+ */
+export interface BillingConnectivityResponse {
+  isConnected: boolean
+  statusMessage: string
+}
+
+/**
+ * Request to sync a customer to Invoice Ninja.
+ */
+export interface SyncCustomerRequest {
+  customerId: string
+  customerCode?: string
+  customerName?: string
+  billTo?: string
+  shipToAddresses?: string[]
+  existingInvoiceNinjaClientId?: string
+}
+
+/**
+ * Response from customer sync operation.
+ */
+export interface SyncCustomerResponse {
+  invoiceNinjaClientId: string
+  syncedAt: string
+  metadataToMerge: string
+}
+
+/**
+ * Line item data for invoice generation.
+ */
+export interface InvoiceLineItemData {
+  description: string
+  quantity: number
+  unitCost: number
+}
+
+/**
+ * Request to generate an invoice from a Job Order.
+ */
+export interface GenerateInvoiceRequest {
+  orderId?: string
+  invoiceNinjaClientId: string
+  jobNumber: string
+  poNumber?: string
+  lineItems: InvoiceLineItemData[]
+}
+
+/**
+ * Request to preview invoice payload before creation.
+ */
+export interface PreviewInvoiceRequest {
+  customerName: string
+  billTo: string
+  shipTo: string
+  jobNumber: string
+  poNumber?: string
+  lineItems: InvoiceLineItemData[]
+}
+
+/**
+ * Resolved fields for invoice preview.
+ */
+export interface InvoicePreviewResolvedFields {
+  billToCustomField?: string
+  shipToCustomField?: string
+  jobNoCustomField?: string
+  poNoCustomField?: string
+  allCustomFieldsConfigured: boolean
+}
+
+/**
+ * Response from invoice preview endpoint.
+ */
+export interface PreviewInvoiceResponse {
+  customerName: string
+  totalAmount: number
+  lineItems: InvoiceLineItemData[]
+  resolvedCustomFields: InvoicePreviewResolvedFields
+  warnings: string[]
+}
+
+/**
+ * Invoice billing summary.
+ */
+export interface InvoiceBillingSummary {
+  externalInvoiceId: string
+  invoiceNumber: string
+  clientName: string
+  invoiceDate?: string
+  amount: number
+  status: string
+  dueDate?: string
+  lastSyncedAt?: string
+}
+
+/**
+ * Response from invoice generation operation.
+ */
+export interface GenerateInvoiceResponse {
+  billingSummary: InvoiceBillingSummary
+  createdAt: string
+}
+
+/**
+ * Response for invoice summary retrieval.
+ */
+export interface GetInvoiceSummaryResponse {
+  billingSummary: InvoiceBillingSummary | null
+}
+
+/**
+ * Response for invoice status refresh.
+ */
+export interface RefreshInvoiceStatusResponse {
+  billingSummary: InvoiceBillingSummary | null
+  refreshedAt: string
+}
+
+/**
+ * Response for invoice list retrieval.
+ */
+export interface ListInvoicesResponse {
+  invoices: InvoiceBillingSummary[]
+}
+
+/**
+ * Error response for failed billing operations.
+ */
+export interface BillingErrorResponse {
+  errorCode: string
+  message: string
+  details?: any
+}
+
+/**
+ * Checks connectivity to Invoice Ninja and validates configuration.
+ */
+export async function checkBillingConnectivity(): Promise<BillingConnectivityResponse> {
+  const response = await apiClient.get<BillingConnectivityResponse>('/api/v2/billing/connectivity')
+  return response.data
+}
+
+/**
+ * Synchronizes a JB2026 customer to Invoice Ninja.
+ * If the customer was previously synced, it will be updated.
+ * Otherwise, a new Invoice Ninja client will be created.
+ *
+ * @param request Customer sync request with mapping data.
+ * @returns Invoice Ninja client ID and metadata to persist in customer record.
+ */
+export async function syncCustomerToBilling(request: SyncCustomerRequest): Promise<SyncCustomerResponse> {
+  const response = await apiClient.post<SyncCustomerResponse>('/api/v2/billing/customers/sync', request)
+  return response.data
+}
+
+/**
+ * Generates an invoice in Invoice Ninja from a Job Order.
+ * Pre-condition: The associated customer must already be synced to Invoice Ninja.
+ *
+ * @param request Invoice generation request with job and line item data.
+ * @returns Billing summary with external invoice ID to persist in job metadata.
+ */
+export async function generateInvoice(request: GenerateInvoiceRequest): Promise<GenerateInvoiceResponse> {
+  const response = await apiClient.post<GenerateInvoiceResponse>('/api/v2/billing/invoices/generate', request)
+  return response.data
+}
+
+/**
+ * Generates an invoice directly from a JB2026 Job Order using synchronized billing metadata.
+ */
+export async function generateInvoiceFromJobOrder(orderId: string): Promise<GenerateInvoiceResponse> {
+  const response = await apiClient.post<GenerateInvoiceResponse>(`/api/v2/billing/invoices/generate-from-job/${orderId}`)
+  return response.data
+}
+
+/**
+ * Previews invoice payload and resolved custom fields before creation.
+ */
+export async function previewInvoice(request: PreviewInvoiceRequest): Promise<PreviewInvoiceResponse> {
+  const response = await apiClient.post<PreviewInvoiceResponse>('/api/v2/billing/invoices/preview', request)
+  return response.data
+}
+
+/**
+ * Lists invoice summaries for billing list screens.
+ */
+export async function listInvoices(): Promise<InvoiceBillingSummary[]> {
+  const response = await apiClient.get<ListInvoicesResponse>('/api/v2/billing/invoices')
+  return response.data.invoices
+}
+
+/**
+ * Retrieves the billing summary for an Invoice Ninja invoice by its external ID.
+ * Used for displaying invoice status in billing and job/order screens.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @returns Billing summary if found; null if not found.
+ */
+export async function getInvoiceSummary(externalInvoiceId: string): Promise<InvoiceBillingSummary | null> {
+  const response = await apiClient.get<GetInvoiceSummaryResponse>(
+    `/api/v2/billing/invoices/${externalInvoiceId}/summary`
+  )
+  return response.data.billingSummary
+}
+
+/**
+ * Refreshes the status of an Invoice Ninja invoice by fetching the latest data.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @returns Updated billing summary if found; null if not found.
+ */
+export async function refreshInvoiceStatus(externalInvoiceId: string): Promise<InvoiceBillingSummary | null> {
+  const response = await apiClient.post<RefreshInvoiceStatusResponse>(
+    `/api/v2/billing/invoices/${externalInvoiceId}/refresh`
+  )
+  return response.data.billingSummary
+}

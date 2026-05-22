@@ -94,6 +94,7 @@ export const adminMessages = {
           refresh: '刷新',
           preference: '偏好设置',
           newCustomer: '新建客户',
+          syncBilling: '同步账单系统',
           popup: '弹出窗口',
           sortBy: '排序字段',
           asc: '升序',
@@ -110,6 +111,10 @@ export const adminMessages = {
           saveFailed: '保存客户失败，请重试。',
           deleteFailed: '删除客户失败，请重试。',
           deleteConfirm: '确定删除该客户？',
+          billingSynced: '已同步到 Invoice Ninja',
+          billingError: '账单同步失败',
+          billingSyncSuccess: '客户已成功同步到 Invoice Ninja。',
+          billingSyncFailed: '同步客户到 Invoice Ninja 失败: {error}',
         },
         form: {
           newTitle: '新增客户',

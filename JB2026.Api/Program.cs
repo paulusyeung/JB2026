@@ -1,5 +1,6 @@
 using JB2026.Api.Options;
 using JB2026.Api.Services;
+using JB2026.Api.Services.Billing;
 using JB2026.EfCore.Data;
 using JB2026.Infrastructure.Extensions;
 using JB2026.Reporting;
@@ -56,6 +57,10 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSection(LegacyIdentityOptions.SectionName));
 builder.Services.Configure<JobListOptions>(builder.Configuration.GetSection(JobListOptions.SectionName));
 builder.Services.Configure<LegacyFilesOptions>(builder.Configuration.GetSection(LegacyFilesOptions.SectionName));
+builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection(BillingOptions.SectionName));
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IInvoiceNinjaHttpClient, InvoiceNinjaHttpClient>();
+builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
 builder.Services.AddSingleton<InMemorySettingsService>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();

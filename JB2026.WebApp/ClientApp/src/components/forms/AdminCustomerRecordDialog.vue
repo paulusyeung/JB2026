@@ -234,7 +234,7 @@ async function loadRecord(customerId: string | null) {
     draft.loginAccount = customer.loginAccount
     draft.loginPassword = customer.loginPassword
     draft.billTo = customer.billTo
-    draft.shipToAddresses = customer.shipToAddresses.map((entry) => ({ ...entry }))
+    draft.shipToAddresses = (customer.shipToAddresses ?? []).map((entry) => ({ ...entry }))
 
     if (draft.shipToAddresses.length > 0) {
       selectedShipToName.value = draft.shipToAddresses[0].name

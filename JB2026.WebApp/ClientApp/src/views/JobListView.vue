@@ -234,7 +234,21 @@
 
               <div class="job-mobile-card__metrics">
                 <span class="text-caption">{{ t('jobOrder.jobList.headers.quotation') }}: {{ row.productStyle || '-' }}</span>
-                <span class="text-caption font-weight-medium">{{ t('jobOrder.jobList.headers.invoiceAmount') }}: {{ formatCurrency(row.invoiceAmount) }}</span>
+                <span class="text-caption font-weight-medium">{{ t('jobOrder.jobList.headers.invoiceAmount') }}: {{ formatCurrency(invoiceAmountForRow(row)) }}</span>
+                <div class="d-flex align-center ga-2">
+                  <v-chip size="x-small" :color="billingStatusColor(row)" variant="tonal">
+                    {{ billingStatusLabel(row) }}
+                  </v-chip>
+                  <v-btn
+                    v-if="canGenerateInvoice(row)"
+                    size="x-small"
+                    color="primary"
+                    variant="text"
+                    @click.stop="openInvoicePreview(row)"
+                  >
+                    {{ t('jobOrder.jobList.actions.generateInvoice') }}
+                  </v-btn>
+                </div>
               </div>
             </div>
 
@@ -353,13 +367,87 @@
             <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
             <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
             <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
-            <template #[`item.invoiceRef`]="{ item }">{{ item.invoiceRef || '-' }}</template>
-            <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(item.invoiceAmount) }}</template>
+            <template #[`item.invoiceStatus`]="{ item }">
+              <div class="d-flex align-center ga-2">
+                <v-chip size="x-small" :color="billingStatusColor(item)" variant="tonal">
+                  {{ billingStatusLabel(item) }}
+                </v-chip>
+                <v-btn
+                  v-if="canGenerateInvoice(item)"
+                  size="x-small"
+                  color="primary"
+                  variant="text"
+                  @click.stop="openInvoicePreview(item)"
+                >
+                  {{ t('jobOrder.jobList.actions.generateInvoice') }}
+                </v-btn>
+              </div>
+            </template>
+            <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(invoiceAmountForRow(item)) }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
           </v-data-table>
         </div>
       </v-card-text>
     </v-card>
+
+    <v-dialog v-model="invoicePreviewOpen" max-width="720">
+      <v-card>
+        <v-card-title>{{ t('jobOrder.jobList.actions.generateInvoice') }}</v-card-title>
+        <v-card-text>
+          <div v-if="invoiceTargetRow" class="d-grid ga-3">
+            <v-text-field
+              v-model="invoicePreviewForm.invoiceNinjaClientId"
+              :label="t('jobOrder.jobList.actions.billingClientId')"
+              variant="outlined"
+              density="comfortable"
+              hide-details="auto"
+            />
+            <v-text-field
+              v-model="invoicePreviewForm.poNumber"
+              :label="t('jobOrder.jobList.actions.poNumber')"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            />
+
+            <v-alert v-if="invoicePreviewError" type="warning" variant="tonal">{{ invoicePreviewError }}</v-alert>
+
+            <v-card variant="outlined" class="pa-3">
+              <div class="text-body-2"><strong>{{ t('jobOrder.jobList.headers.customer') }}:</strong> {{ invoiceTargetRow.customerName || '-' }}</div>
+              <div class="text-body-2"><strong>{{ t('jobOrder.jobList.headers.order') }}:</strong> {{ compositeOrderNumber(invoiceTargetRow) }}</div>
+              <div class="text-body-2"><strong>{{ t('jobOrder.jobList.actions.previewTotal') }}:</strong> {{ formatCurrency(invoicePreviewTotal) }}</div>
+            </v-card>
+
+            <v-card v-if="invoicePreviewResponse" variant="outlined" class="pa-3">
+              <div class="text-subtitle-2 mb-2">{{ t('jobOrder.jobList.actions.previewResolvedFields') }}</div>
+              <div class="text-body-2"><strong>Bill To:</strong> {{ invoicePreviewResponse.resolvedCustomFields.billToCustomField || '-' }}</div>
+              <div class="text-body-2"><strong>Ship To:</strong> {{ invoicePreviewResponse.resolvedCustomFields.shipToCustomField || '-' }}</div>
+              <div class="text-body-2"><strong>Job No.:</strong> {{ invoicePreviewResponse.resolvedCustomFields.jobNoCustomField || '-' }}</div>
+              <div class="text-body-2"><strong>P.O.No.:</strong> {{ invoicePreviewResponse.resolvedCustomFields.poNoCustomField || '-' }}</div>
+              <v-alert
+                v-for="warning in invoicePreviewResponse.warnings"
+                :key="warning"
+                type="info"
+                variant="tonal"
+                class="mt-2"
+              >
+                {{ warning }}
+              </v-alert>
+            </v-card>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="closeInvoicePreview">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" variant="outlined" :loading="invoicePreviewLoading" @click="requestInvoicePreview">
+            {{ t('jobOrder.jobList.actions.previewInvoice') }}
+          </v-btn>
+          <v-btn color="primary" :loading="invoiceGenerateLoading" :disabled="!invoicePreviewResponse" @click="confirmGenerateInvoice">
+            {{ t('jobOrder.jobList.actions.confirmGenerate') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog v-model="formOpen" max-width="min(100%, 760px)" scrollable>
       <JobOrderForm
@@ -415,6 +503,13 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getJobDetail } from '@/services/jobs'
 import { deleteJobOrder, getJobList } from '@/services/jobOrders'
+import {
+  generateInvoice,
+  getInvoiceSummary,
+  previewInvoice,
+  type InvoiceBillingSummary,
+  type PreviewInvoiceResponse,
+} from '@/services/billing'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 
 type JobListViewMode = 'detail' | 'card'
@@ -441,7 +536,7 @@ const defaultColumnKeys = [
   'orderedBy',
   'productStyle',
   'invoiceAmount',
-  'invoiceRef',
+  'invoiceStatus',
   'requiredOn',
   'modifiedOn',
   'modifiedBy',
@@ -468,6 +563,17 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
+const invoicePreviewOpen = ref(false)
+const invoicePreviewLoading = ref(false)
+const invoiceGenerateLoading = ref(false)
+const invoicePreviewError = ref('')
+const invoiceTargetRow = ref<JobOrderRecord | null>(null)
+const invoicePreviewResponse = ref<PreviewInvoiceResponse | null>(null)
+const invoicePreviewForm = ref({
+  invoiceNinjaClientId: '',
+  poNumber: '',
+})
+const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -505,7 +611,7 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.jobList.headers.quotation'), key: 'productStyle', width: '120px' },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '132px', align: 'end' as const },
-  { title: t('jobOrder.jobList.headers.invoiceRef'), key: 'invoiceRef', width: '110px' },
+  { title: t('jobOrder.jobList.headers.invoiceStatus'), key: 'invoiceStatus', width: '220px', sortable: false },
   { title: t('jobOrder.jobList.headers.requiredOn'), key: 'requiredOn', width: '122px' },
   { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '122px' },
   { title: t('jobOrder.jobList.headers.modifiedBy'), key: 'modifiedBy', width: '100px' },
@@ -569,6 +675,7 @@ async function load() {
       lookup: lookup.value.trim() || undefined,
       commonQuery: commonQuery.value,
     })
+    await hydrateInvoiceSummaries(rows.value)
 
     if (activeOrderId.value && !rows.value.some((row) => row.orderId === activeOrderId.value)) {
       activeOrderId.value = rows.value[0]?.orderId ?? null
@@ -582,6 +689,22 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+async function hydrateInvoiceSummaries(jobRows: JobOrderRecord[]) {
+  const withInvoiceRefs = jobRows.filter((row) => !!row.invoiceRef)
+  await Promise.all(
+    withInvoiceRefs.map(async (row) => {
+      try {
+        const summary = await getInvoiceSummary(row.invoiceRef)
+        if (summary) {
+          invoiceSummaryByOrderId.value[row.orderId] = summary
+        }
+      } catch {
+        // Keep legacy invoice values if summary lookup fails.
+      }
+    }),
+  )
 }
 
 async function applyLookup() {
@@ -777,6 +900,129 @@ function valueForSort(row: JobOrderRecord, key: keyof JobOrderRecord) {
   }
 
   return row[key]
+}
+
+function billingStatusLabel(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  if (summary?.status) return summary.status
+  if (row.invoiceRef) return t('jobOrder.jobList.actions.legacyInvoiced')
+  return t('jobOrder.jobList.actions.notInvoiced')
+}
+
+function billingStatusColor(row: JobOrderRecord) {
+  const status = billingStatusLabel(row).toLowerCase()
+  if (status.includes('paid')) return 'success'
+  if (status.includes('overdue')) return 'error'
+  if (status.includes('sent') || status.includes('view')) return 'info'
+  if (status.includes('not invoiced')) return 'grey'
+  return 'warning'
+}
+
+function invoiceAmountForRow(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  return summary?.amount ?? row.invoiceAmount
+}
+
+function canGenerateInvoice(row: JobOrderRecord) {
+  return !row.invoiceRef
+}
+
+const invoicePreviewTotal = computed(() => {
+  const row = invoiceTargetRow.value
+  if (!row) return 0
+  return row.invoiceAmount > 0 ? row.invoiceAmount : 0
+})
+
+function openInvoicePreview(row: JobOrderRecord) {
+  invoiceTargetRow.value = row
+  invoicePreviewForm.value = {
+    invoiceNinjaClientId: '',
+    poNumber: '',
+  }
+  invoicePreviewResponse.value = null
+  invoicePreviewError.value = ''
+  invoicePreviewOpen.value = true
+}
+
+function closeInvoicePreview() {
+  invoicePreviewOpen.value = false
+  invoicePreviewResponse.value = null
+  invoicePreviewError.value = ''
+  invoiceTargetRow.value = null
+}
+
+function buildInvoiceLineItem(row: JobOrderRecord) {
+  const quantity = row.qty > 0 ? row.qty : 1
+  const unitCost = row.invoiceAmount > 0 ? row.invoiceAmount / quantity : 0
+  return {
+    description: row.orderTitle || t('jobOrder.jobList.actions.defaultLineDescription'),
+    quantity,
+    unitCost,
+  }
+}
+
+async function requestInvoicePreview() {
+  const row = invoiceTargetRow.value
+  if (!row) return
+  if (!invoicePreviewForm.value.invoiceNinjaClientId.trim()) {
+    invoicePreviewError.value = t('jobOrder.jobList.actions.billingClientIdRequired')
+    return
+  }
+
+  invoicePreviewLoading.value = true
+  invoicePreviewError.value = ''
+  try {
+    invoicePreviewResponse.value = await previewInvoice({
+      customerName: row.customerName,
+      billTo: '',
+      shipTo: '',
+      jobNumber: row.jobNumber,
+      poNumber: invoicePreviewForm.value.poNumber,
+      lineItems: [buildInvoiceLineItem(row)],
+    })
+  } catch {
+    invoicePreviewError.value = t('jobOrder.jobList.actions.previewFailed')
+  } finally {
+    invoicePreviewLoading.value = false
+  }
+}
+
+async function confirmGenerateInvoice() {
+  const row = invoiceTargetRow.value
+  if (!row) return
+  if (!invoicePreviewForm.value.invoiceNinjaClientId.trim()) {
+    invoicePreviewError.value = t('jobOrder.jobList.actions.billingClientIdRequired')
+    return
+  }
+
+  invoiceGenerateLoading.value = true
+  invoicePreviewError.value = ''
+  try {
+    const created = await generateInvoice({
+      orderId: row.orderId,
+      invoiceNinjaClientId: invoicePreviewForm.value.invoiceNinjaClientId.trim(),
+      jobNumber: row.jobNumber,
+      poNumber: invoicePreviewForm.value.poNumber,
+      lineItems: [buildInvoiceLineItem(row)],
+    })
+
+    invoiceSummaryByOrderId.value[row.orderId] = created.billingSummary
+    rows.value = rows.value.map((item) =>
+      item.orderId === row.orderId
+        ? {
+            ...item,
+            invoiceRef: created.billingSummary.externalInvoiceId,
+            invoiceAmount: created.billingSummary.amount,
+          }
+        : item,
+    )
+    showActionNotice(t('jobOrder.jobList.actions.invoiceGenerated'))
+    closeInvoicePreview()
+  } catch {
+    invoicePreviewError.value = t('jobOrder.jobList.actions.generateFailed')
+  } finally {
+    invoiceGenerateLoading.value = false
+  }
 }
 
 function compositeOrderNumber(row: JobOrderRecord) {
