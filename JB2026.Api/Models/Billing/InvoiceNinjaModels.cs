@@ -136,11 +136,26 @@ public class InvoiceNinjaInvoiceResponse
     [JsonPropertyName("status_id")]
     public string StatusId { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Custom field values keyed by field key.
-    /// </summary>
-    [JsonPropertyName("custom_values")]
-    public Dictionary<string, string?> CustomValues { get; set; } = new();
+    [JsonPropertyName("custom_value1")]
+    public string CustomValue1 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value2")]
+    public string CustomValue2 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value3")]
+    public string CustomValue3 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value4")]
+    public string CustomValue4 { get; set; } = string.Empty;
+
+    public string GetCustomValue(string key) => key switch
+    {
+        "custom_value1" => CustomValue1,
+        "custom_value2" => CustomValue2,
+        "custom_value3" => CustomValue3,
+        "custom_value4" => CustomValue4,
+        _ => string.Empty
+    };
 
     /// <summary>
     /// Invoice line items.
@@ -192,8 +207,9 @@ public class InvoiceNinjaInvitation
 public class InvoiceLineItemResponse
 {
     /// <summary>
-    /// Line item description.
+    /// Line item description (Invoice Ninja stores this as 'notes').
     /// </summary>
+    [JsonPropertyName("notes")]
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
@@ -206,11 +222,26 @@ public class InvoiceLineItemResponse
     /// </summary>
     public decimal Cost { get; set; }
 
-    /// <summary>
-    /// Custom field values keyed by field key (if supported by IN API).
-    /// </summary>
-    [JsonPropertyName("custom_values")]
-    public Dictionary<string, string?> CustomValues { get; set; } = new();
+    [JsonPropertyName("custom_value1")]
+    public string CustomValue1 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value2")]
+    public string CustomValue2 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value3")]
+    public string CustomValue3 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value4")]
+    public string CustomValue4 { get; set; } = string.Empty;
+
+    public string GetCustomValue(string key) => key switch
+    {
+        "custom_value1" => CustomValue1,
+        "custom_value2" => CustomValue2,
+        "custom_value3" => CustomValue3,
+        "custom_value4" => CustomValue4,
+        _ => string.Empty
+    };
 }
 
 /// <summary>
@@ -225,16 +256,39 @@ public class CreateInvoiceNinjaInvoiceRequest
     public string ClientId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Invoice date (ISO date string, e.g. "2026-05-23").
+    /// </summary>
+    [JsonPropertyName("date")]
+    public string? Date { get; set; }
+
+    /// <summary>
     /// Invoice due date (optional).
     /// </summary>
     [JsonPropertyName("due_date")]
     public long? DueDate { get; set; }
 
-    /// <summary>
-    /// Custom field values keyed by field key.
-    /// </summary>
-    [JsonPropertyName("custom_values")]
-    public Dictionary<string, string?> CustomValues { get; set; } = new();
+    [JsonPropertyName("custom_value1")]
+    public string CustomValue1 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value2")]
+    public string CustomValue2 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value3")]
+    public string CustomValue3 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value4")]
+    public string CustomValue4 { get; set; } = string.Empty;
+
+    public void SetCustomValue(string key, string? value)
+    {
+        switch (key)
+        {
+            case "custom_value1": CustomValue1 = value ?? string.Empty; break;
+            case "custom_value2": CustomValue2 = value ?? string.Empty; break;
+            case "custom_value3": CustomValue3 = value ?? string.Empty; break;
+            case "custom_value4": CustomValue4 = value ?? string.Empty; break;
+        }
+    }
 
     /// <summary>
     /// Line items for the invoice.
@@ -249,25 +303,45 @@ public class CreateInvoiceNinjaInvoiceRequest
 public class CreateInvoiceLineItemRequest
 {
     /// <summary>
-    /// Line item description.
+    /// Line item description (Invoice Ninja stores this as 'notes').
     /// </summary>
+    [JsonPropertyName("notes")]
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// Quantity.
     /// </summary>
+    [JsonPropertyName("quantity")]
     public decimal Quantity { get; set; }
 
     /// <summary>
     /// Unit cost.
     /// </summary>
+    [JsonPropertyName("cost")]
     public decimal Cost { get; set; }
 
-    /// <summary>
-    /// Custom field values keyed by field key (if supported by IN API).
-    /// </summary>
-    [JsonPropertyName("custom_values")]
-    public Dictionary<string, string?> CustomValues { get; set; } = new();
+    [JsonPropertyName("custom_value1")]
+    public string CustomValue1 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value2")]
+    public string CustomValue2 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value3")]
+    public string CustomValue3 { get; set; } = string.Empty;
+
+    [JsonPropertyName("custom_value4")]
+    public string CustomValue4 { get; set; } = string.Empty;
+
+    public void SetCustomValue(string key, string? value)
+    {
+        switch (key)
+        {
+            case "custom_value1": CustomValue1 = value ?? string.Empty; break;
+            case "custom_value2": CustomValue2 = value ?? string.Empty; break;
+            case "custom_value3": CustomValue3 = value ?? string.Empty; break;
+            case "custom_value4": CustomValue4 = value ?? string.Empty; break;
+        }
+    }
 }
 
 /// <summary>

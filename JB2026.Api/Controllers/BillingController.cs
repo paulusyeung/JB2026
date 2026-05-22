@@ -753,4 +753,182 @@ public class BillingController : ControllerBase
             });
         }
     }
+
+    // ── Invoice Editor Endpoints ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Lists Invoice Ninja clients for the editor client picker, with optional search query.
+    /// </summary>
+    [HttpGet("clients")]
+    [ProducesResponseType(typeof(ListBillingClientsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBillingClients([FromQuery] string? query = null)
+    {
+        try
+        {
+            var clients = await _billingService.GetBillingClientsAsync(query);
+            return Ok(new ListBillingClientsResponse { Clients = clients.ToList() });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to list billing clients: {ErrorCode}", ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error listing billing clients: {ErrorMessage}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "LIST_CLIENTS_FAILED",
+                Message = "Failed to list billing clients.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Returns a normalized invoice editor DTO for viewing or editing an existing invoice.
+    /// </summary>
+    [HttpGet("invoices/{externalInvoiceId}")]
+    [ProducesResponseType(typeof(GetInvoiceEditorDetailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetInvoiceEditorDetail(string externalInvoiceId)
+    {
+        try
+        {
+            var dto = await _billingService.GetInvoiceEditorDetailAsync(externalInvoiceId);
+            return Ok(new GetInvoiceEditorDetailResponse { Invoice = dto });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to get invoice editor detail {ExternalInvoiceId}: {ErrorCode}", externalInvoiceId, ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                404 => StatusCodes.Status404NotFound,
+                401 => StatusCodes.Status401Unauthorized,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get invoice editor detail {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "GET_INVOICE_DETAIL_FAILED",
+                Message = $"Failed to retrieve invoice {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Creates a new invoice in Invoice Ninja from the editor form.
+    /// </summary>
+    [HttpPost("invoices")]
+    [ProducesResponseType(typeof(SaveInvoiceEditorResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceEditorRequest request)
+    {
+        try
+        {
+            var summary = await _billingService.CreateInvoiceFromEditorAsync(request);
+            return StatusCode(StatusCodes.Status201Created, new SaveInvoiceEditorResponse { BillingSummary = summary });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to create invoice from editor: {ErrorCode}", ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error creating invoice from editor: {ErrorMessage}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "CREATE_INVOICE_FAILED",
+                Message = "Failed to create invoice.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Updates a draft invoice in Invoice Ninja from the editor form.
+    /// Returns 400 when the invoice is no longer in Draft status.
+    /// </summary>
+    [HttpPut("invoices/{externalInvoiceId}")]
+    [ProducesResponseType(typeof(SaveInvoiceEditorResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateInvoice(string externalInvoiceId, [FromBody] UpdateInvoiceEditorRequest request)
+    {
+        try
+        {
+            var summary = await _billingService.UpdateInvoiceFromEditorAsync(externalInvoiceId, request);
+            return Ok(new SaveInvoiceEditorResponse { BillingSummary = summary });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to update invoice {ExternalInvoiceId}: {ErrorCode}", externalInvoiceId, ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                404 => StatusCodes.Status404NotFound,
+                401 => StatusCodes.Status401Unauthorized,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error updating invoice {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "UPDATE_INVOICE_FAILED",
+                Message = $"Failed to update invoice {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
 }
+

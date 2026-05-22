@@ -271,3 +271,142 @@ export async function downloadDeliveryNote(externalInvoiceId: string): Promise<B
   )
   return response.data
 }
+
+// ── Invoice Editor Types & Functions ─────────────────────────────────────────
+
+/**
+ * A selectable Invoice Ninja client for the invoice editor client picker.
+ */
+export interface BillingClientOption {
+  externalClientId: string
+  displayName: string
+}
+
+/**
+ * Response for the billing client list endpoint.
+ */
+export interface ListBillingClientsResponse {
+  clients: BillingClientOption[]
+}
+
+/**
+ * A single line item as returned by the invoice editor detail endpoint.
+ */
+export interface InvoiceEditorLineItem {
+  id?: string
+  poNumber: string
+  description: string
+  qty: number
+  unit: string
+  unitCost: number
+  lineTotal: number
+}
+
+/**
+ * Normalized invoice DTO returned by the editor detail endpoint.
+ */
+export interface InvoiceEditorDto {
+  externalInvoiceId?: string
+  status?: string
+  client?: BillingClientOption
+  invoiceDate?: string
+  jobNumber: string
+  lineItems: InvoiceEditorLineItem[]
+  totalAmount: number
+}
+
+/**
+ * Response for GET /api/v2/billing/invoices/{externalInvoiceId}.
+ */
+export interface GetInvoiceEditorDetailResponse {
+  invoice: InvoiceEditorDto
+}
+
+/**
+ * A single line item in a create or update invoice editor request.
+ */
+export interface InvoiceEditorLineItemRequest {
+  poNumber: string
+  description: string
+  qty: number
+  unit: string
+  unitCost: number
+}
+
+/**
+ * Request body for creating a new invoice via the editor.
+ */
+export interface CreateInvoiceRequest {
+  externalClientId: string
+  invoiceDate?: string
+  jobNumber: string
+  lineItems: InvoiceEditorLineItemRequest[]
+}
+
+/**
+ * Request body for updating a draft invoice via the editor.
+ */
+export interface UpdateInvoiceRequest {
+  externalClientId: string
+  invoiceDate?: string
+  jobNumber: string
+  lineItems: InvoiceEditorLineItemRequest[]
+}
+
+/**
+ * Response from create or update invoice editor operations.
+ */
+export interface SaveInvoiceResponse {
+  billingSummary: InvoiceBillingSummary
+}
+
+/**
+ * Lists Invoice Ninja clients for the editor client picker.
+ *
+ * @param query Optional search term; returns up to 100 clients when omitted.
+ */
+export async function listBillingClients(query?: string): Promise<BillingClientOption[]> {
+  const params = query ? { query } : {}
+  const response = await apiClient.get<ListBillingClientsResponse>('/api/v2/billing/clients', { params })
+  return response.data.clients
+}
+
+/**
+ * Retrieves a normalized invoice editor DTO for editing or read-only view.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ */
+export async function getInvoiceEditorDetail(externalInvoiceId: string): Promise<InvoiceEditorDto> {
+  const response = await apiClient.get<GetInvoiceEditorDetailResponse>(
+    `/api/v2/billing/invoices/${externalInvoiceId}`,
+  )
+  return response.data.invoice
+}
+
+/**
+ * Creates a new invoice in Invoice Ninja from the editor form.
+ *
+ * @param request Editor form payload.
+ */
+export async function createInvoice(request: CreateInvoiceRequest): Promise<InvoiceBillingSummary> {
+  const response = await apiClient.post<SaveInvoiceResponse>('/api/v2/billing/invoices', request)
+  return response.data.billingSummary
+}
+
+/**
+ * Updates a draft invoice in Invoice Ninja from the editor form.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @param request Editor form payload.
+ */
+export async function updateInvoice(
+  externalInvoiceId: string,
+  request: UpdateInvoiceRequest,
+): Promise<InvoiceBillingSummary> {
+  const response = await apiClient.put<SaveInvoiceResponse>(
+    `/api/v2/billing/invoices/${externalInvoiceId}`,
+    request,
+  )
+  return response.data.billingSummary
+}
+

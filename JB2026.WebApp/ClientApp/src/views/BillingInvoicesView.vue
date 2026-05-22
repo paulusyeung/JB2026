@@ -206,6 +206,14 @@
       </v-card-text>
     </v-card>
 
+    <!-- Invoice Editor Dialog -->
+    <BillingInvoiceEditorDialog
+      v-model="showEditorDialog"
+      :mode="editorMode"
+      :external-invoice-id="editorInvoiceId"
+      @saved="handleInvoiceSaved"
+    />
+
     <!-- Confirmation Dialog for Mark Sent -->
     <v-dialog v-model="showMarkSentConfirmation" max-width="400">
       <v-card>
@@ -234,6 +242,7 @@ import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
+import BillingInvoiceEditorDialog from '@/components/billing/BillingInvoiceEditorDialog.vue'
 
 type BillingInvoicesViewMode = 'detail' | 'card'
 
@@ -248,6 +257,11 @@ const invoices = ref<InvoiceBillingSummary[]>([])
 const selectedInvoiceIds = ref<string[]>([])
 const isSendingInvoice = ref(false)
 const showMarkSentConfirmation = ref(false)
+
+// Invoice editor dialog state
+const showEditorDialog = ref(false)
+const editorMode = ref<'create' | 'edit' | 'view'>('create')
+const editorInvoiceId = ref<string | undefined>(undefined)
 const viewSettings = useViewSettings('billing-invoices', {
   visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate', 'lastSyncedAt'],
   sortKey: 'invoiceDate',
@@ -347,14 +361,24 @@ async function loadInvoices() {
 }
 
 function openInvoice(invoice: InvoiceBillingSummary) {
-  void router.push({
-    name: 'billing-invoice-detail',
-    params: { externalInvoiceId: invoice.externalInvoiceId },
-  })
+  editorMode.value = invoice.status === 'Draft' ? 'edit' : 'view'
+  editorInvoiceId.value = invoice.externalInvoiceId
+  showEditorDialog.value = true
 }
 
 function openNewInvoice() {
-  void router.push({ name: 'job-order-job-list' })
+  editorMode.value = 'create'
+  editorInvoiceId.value = undefined
+  showEditorDialog.value = true
+}
+
+function handleInvoiceSaved(summary: InvoiceBillingSummary) {
+  const idx = invoices.value.findIndex((inv) => inv.externalInvoiceId === summary.externalInvoiceId)
+  if (idx !== -1) {
+    invoices.value.splice(idx, 1, summary)
+  } else {
+    invoices.value.unshift(summary)
+  }
 }
 
 /**

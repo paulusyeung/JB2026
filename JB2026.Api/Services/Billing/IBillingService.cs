@@ -127,6 +127,36 @@ public interface IBillingService
     /// <param name="summary">Billing summary returned by Invoice Ninja generation.</param>
     /// <returns>True when update was applied; false when order was not found.</returns>
     Task<bool> PersistJobOrderBillingSummaryAsync(Guid orderId, InvoiceBillingSummary summary);
+
+    /// <summary>
+    /// Lists Invoice Ninja clients matching an optional search query for the editor client picker.
+    /// </summary>
+    /// <param name="query">Optional search term; returns up to 100 clients when null/empty.</param>
+    /// <returns>Matching client options.</returns>
+    Task<IReadOnlyList<BillingClientOption>> GetBillingClientsAsync(string? query);
+
+    /// <summary>
+    /// Returns a normalized editor DTO for an existing invoice (for edit or read-only view).
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>Editor DTO with client, date, job number, and line items.</returns>
+    Task<InvoiceEditorDto> GetInvoiceEditorDetailAsync(string externalInvoiceId);
+
+    /// <summary>
+    /// Creates a new invoice in Invoice Ninja from the editor form.
+    /// </summary>
+    /// <param name="request">Editor form payload.</param>
+    /// <returns>Billing summary for the newly created invoice.</returns>
+    Task<InvoiceBillingSummary> CreateInvoiceFromEditorAsync(CreateInvoiceEditorRequest request);
+
+    /// <summary>
+    /// Updates a draft invoice in Invoice Ninja from the editor form.
+    /// Throws BillingException when the invoice is no longer in Draft status.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID to update.</param>
+    /// <param name="request">Editor form payload.</param>
+    /// <returns>Updated billing summary.</returns>
+    Task<InvoiceBillingSummary> UpdateInvoiceFromEditorAsync(string externalInvoiceId, UpdateInvoiceEditorRequest request);
 }
 
 /// <summary>
@@ -316,34 +346,32 @@ public class BillingService : IBillingService
             var options = _billingOptions.Value.InvoiceNinja;
             var customFields = options.CustomFields;
 
-            // Build invoice custom fields (Job No.)
-            var invoiceCustomValues = new Dictionary<string, string?>
-            {
-                { customFields.InvoiceJobNo, jobNumber }
-            };
-
             // Build line items with custom fields
-            var inlineItems = lineItems.Select(item => new CreateInvoiceLineItemRequest
+            var inlineItems = lineItems.Select(item =>
             {
-                Description = item.Description,
-                Quantity = item.Quantity,
-                Cost = item.UnitCost,
-                CustomValues = new Dictionary<string, string?>
+                var li = new CreateInvoiceLineItemRequest
                 {
-                    { customFields.ProductPoNo, poNumber }
-                }
+                    Description = item.Description,
+                    Quantity = item.Quantity,
+                    Cost = item.UnitCost,
+                };
+                if (!string.IsNullOrWhiteSpace(customFields.ProductPoNo))
+                    li.SetCustomValue(customFields.ProductPoNo, poNumber);
+                return li;
             }).ToList();
 
+            // Build invoice with custom fields (Job No.)
             var createRequest = new CreateInvoiceNinjaInvoiceRequest
             {
                 ClientId = invoiceNinjaClientId,
-                CustomValues = invoiceCustomValues,
                 LineItems = inlineItems
             };
+            if (!string.IsNullOrWhiteSpace(customFields.InvoiceJobNo))
+                createRequest.SetCustomValue(customFields.InvoiceJobNo, jobNumber);
 
             var created = await _invoiceNinjaClient.PostAsync<InvoiceNinjaInvoiceResponse>(
                 "/invoices",
-                new { invoice = createRequest });
+                createRequest);
 
             _logger.LogInformation("Invoice {InvoiceNumber} created in Invoice Ninja for job {JobNumber}", created.Number, jobNumber);
 
@@ -556,6 +584,188 @@ public class BillingService : IBillingService
 
         await _writeContext.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<IReadOnlyList<BillingClientOption>> GetBillingClientsAsync(string? query)
+    {
+        var endpoint = string.IsNullOrWhiteSpace(query)
+            ? "/clients?per_page=100"
+            : $"/clients?filter={Uri.EscapeDataString(query)}&per_page=20";
+
+        var clients = await _invoiceNinjaClient.GetAsync<List<InvoiceNinjaClientResponse>>(endpoint);
+        if (clients == null) return Array.Empty<BillingClientOption>();
+
+        return clients
+            .Select(c => new BillingClientOption
+            {
+                ExternalClientId = c.Id,
+                DisplayName = !string.IsNullOrWhiteSpace(c.DisplayName) ? c.DisplayName : c.Name
+            })
+            .ToList();
+    }
+
+    public async Task<InvoiceEditorDto> GetInvoiceEditorDetailAsync(string externalInvoiceId)
+    {
+        var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>(
+            $"/invoices/{externalInvoiceId}?include=client");
+        if (invoice == null)
+            throw BillingException.NotFound($"Invoice {externalInvoiceId}");
+
+        var customFields = _billingOptions.Value.InvoiceNinja.CustomFields;
+
+        BillingClientOption? clientOption = null;
+        if (invoice.Client != null)
+        {
+            clientOption = new BillingClientOption
+            {
+                ExternalClientId = invoice.Client.Id,
+                DisplayName = !string.IsNullOrWhiteSpace(invoice.Client.DisplayName)
+                    ? invoice.Client.DisplayName
+                    : invoice.Client.Name
+            };
+        }
+        else if (!string.IsNullOrWhiteSpace(invoice.ClientId))
+        {
+            clientOption = new BillingClientOption
+            {
+                ExternalClientId = invoice.ClientId,
+                DisplayName = invoice.ClientId
+            };
+        }
+
+        var jobNumber = !string.IsNullOrWhiteSpace(customFields.InvoiceJobNo)
+            ? invoice.GetCustomValue(customFields.InvoiceJobNo)
+            : string.Empty;
+
+        var lineItems = invoice.LineItems.Select((li, i) => new InvoiceEditorLineItemDto
+        {
+            Id = $"line-{i}",
+            PoNumber = !string.IsNullOrWhiteSpace(customFields.ProductPoNo) ? li.GetCustomValue(customFields.ProductPoNo) : string.Empty,
+            Description = li.Description,
+            Qty = li.Quantity,
+            Unit = !string.IsNullOrWhiteSpace(customFields.ProductUnit) ? li.GetCustomValue(customFields.ProductUnit) : string.Empty,
+            UnitCost = li.Cost,
+            LineTotal = Math.Round(li.Quantity * li.Cost, 2)
+        }).ToList();
+
+        return new InvoiceEditorDto
+        {
+            ExternalInvoiceId = invoice.Id,
+            Status = ResolveInvoiceStatus(invoice),
+            Client = clientOption,
+            InvoiceDate = string.IsNullOrWhiteSpace(invoice.InvoiceDate) ? null : invoice.InvoiceDate,
+            JobNumber = jobNumber,
+            LineItems = lineItems,
+            TotalAmount = lineItems.Sum(l => l.LineTotal)
+        };
+    }
+
+    public async Task<InvoiceBillingSummary> CreateInvoiceFromEditorAsync(CreateInvoiceEditorRequest request)
+    {
+        ValidateEditorRequest(request.ExternalClientId, request.InvoiceDate, request.LineItems);
+
+        var customFields = _billingOptions.Value.InvoiceNinja.CustomFields;
+
+        var lineItems = request.LineItems.Select(item =>
+        {
+            var li = new CreateInvoiceLineItemRequest
+            {
+                Description = item.Description,
+                Quantity = item.Qty,
+                Cost = item.UnitCost,
+            };
+            if (!string.IsNullOrWhiteSpace(customFields.ProductPoNo))
+                li.SetCustomValue(customFields.ProductPoNo, item.PoNumber);
+            if (!string.IsNullOrWhiteSpace(customFields.ProductUnit))
+                li.SetCustomValue(customFields.ProductUnit, item.Unit);
+            return li;
+        }).ToList();
+
+        var createRequest = new CreateInvoiceNinjaInvoiceRequest
+        {
+            ClientId = request.ExternalClientId,
+            Date = request.InvoiceDate,
+            LineItems = lineItems
+        };
+        if (!string.IsNullOrWhiteSpace(customFields.InvoiceJobNo))
+            createRequest.SetCustomValue(customFields.InvoiceJobNo, request.JobNumber);
+
+        var created = await _invoiceNinjaClient.PostAsync<InvoiceNinjaInvoiceResponse>(
+            "/invoices",
+            createRequest);
+
+        _logger.LogInformation("Invoice {InvoiceNumber} created via editor", created.Number);
+        return MapToInvoiceBillingSummary(created);
+    }
+
+    public async Task<InvoiceBillingSummary> UpdateInvoiceFromEditorAsync(
+        string externalInvoiceId,
+        UpdateInvoiceEditorRequest request)
+    {
+        ValidateEditorRequest(request.ExternalClientId, request.InvoiceDate, request.LineItems);
+
+        var existing = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}");
+        if (existing == null)
+            throw BillingException.NotFound($"Invoice {externalInvoiceId}");
+
+        var currentStatus = ResolveInvoiceStatus(existing);
+        if (!string.Equals(currentStatus, "Draft", StringComparison.OrdinalIgnoreCase))
+            throw BillingException.InvalidRequest(
+                $"Invoice {externalInvoiceId} is in status '{currentStatus}' and cannot be edited. Only Draft invoices can be updated.",
+                400);
+
+        var customFields = _billingOptions.Value.InvoiceNinja.CustomFields;
+
+        var lineItems = request.LineItems.Select(item =>
+        {
+            var li = new CreateInvoiceLineItemRequest
+            {
+                Description = item.Description,
+                Quantity = item.Qty,
+                Cost = item.UnitCost,
+            };
+            if (!string.IsNullOrWhiteSpace(customFields.ProductPoNo))
+                li.SetCustomValue(customFields.ProductPoNo, item.PoNumber);
+            if (!string.IsNullOrWhiteSpace(customFields.ProductUnit))
+                li.SetCustomValue(customFields.ProductUnit, item.Unit);
+            return li;
+        }).ToList();
+
+        var updateRequest = new CreateInvoiceNinjaInvoiceRequest
+        {
+            ClientId = request.ExternalClientId,
+            Date = request.InvoiceDate,
+            LineItems = lineItems
+        };
+        if (!string.IsNullOrWhiteSpace(customFields.InvoiceJobNo))
+            updateRequest.SetCustomValue(customFields.InvoiceJobNo, request.JobNumber);
+
+        var updated = await _invoiceNinjaClient.PutAsync<InvoiceNinjaInvoiceResponse>(
+            $"/invoices/{externalInvoiceId}",
+            updateRequest);
+
+        _logger.LogInformation("Invoice {ExternalInvoiceId} updated via editor", externalInvoiceId);
+        return MapToInvoiceBillingSummary(updated);
+    }
+
+    private static void ValidateEditorRequest(
+        string externalClientId,
+        string? invoiceDate,
+        List<InvoiceEditorLineItemRequest> lineItems)
+    {
+        if (string.IsNullOrWhiteSpace(externalClientId))
+            throw BillingException.InvalidRequest("Client selection is required.", 400);
+        if (string.IsNullOrWhiteSpace(invoiceDate))
+            throw BillingException.InvalidRequest("Invoice date is required.", 400);
+        if (lineItems == null || lineItems.Count == 0)
+            throw BillingException.InvalidRequest("At least one line item is required.", 400);
+        foreach (var item in lineItems)
+        {
+            if (item.Qty < 0)
+                throw BillingException.InvalidRequest("Line item quantity cannot be negative.", 400);
+            if (item.UnitCost < 0)
+                throw BillingException.InvalidRequest("Line item unit cost cannot be negative.", 400);
+        }
     }
 
     private async Task<(string InvoiceNinjaClientId, string BillTo, string ShipTo)> ResolveCustomerBillingMetadataForJobAsync(

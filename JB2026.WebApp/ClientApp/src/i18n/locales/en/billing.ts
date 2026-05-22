@@ -58,5 +58,50 @@ export const billingMessages = {
       downloadDeliveryNoteUnexpected: 'An unexpected error occurred while downloading the delivery note.',
       markSentConfirm: 'Are you sure you want to mark this invoice as sent to Invoice Ninja? This action cannot be undone.',
     },
+    editor: {
+      titleCreate: 'New Invoice',
+      titleEdit: 'Edit Invoice',
+      titleView: 'View Invoice',
+      badge: {
+        create: 'New',
+        edit: 'Draft',
+        view: 'Read-only',
+      },
+      fields: {
+        client: 'Client',
+        clientPlaceholder: 'Search clients…',
+        invoiceDate: 'Invoice Date',
+        jobNumber: 'Job Number',
+      },
+      lineItems: {
+        poNumber: 'P.O. Number',
+        description: 'Description',
+        qty: 'Qty',
+        unit: 'Unit',
+        unitCost: 'Unit Cost',
+        lineTotal: 'Line Total',
+        addLine: 'Add Line',
+        removeLine: 'Remove',
+      },
+      totals: {
+        invoiceTotal: 'Invoice Total',
+      },
+      actions: {
+        save: 'Save',
+        cancel: 'Cancel',
+        close: 'Close',
+      },
+      validation: {
+        clientRequired: 'Client is required.',
+        invoiceDateRequired: 'Invoice date is required.',
+        atLeastOneLine: 'At least one line item is required.',
+        qtyPositive: 'Quantity must be 0 or greater.',
+        unitCostNonNegative: 'Unit cost cannot be negative.',
+      },
+      messages: {
+        saveFailed: 'Failed to save invoice.',
+        loadFailed: 'Failed to load invoice details.',
+      },
+    },
   },
 } as const

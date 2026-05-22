@@ -58,5 +58,50 @@ export const billingMessages = {
       downloadDeliveryNoteUnexpected: '下載送貨單時發生未預期錯誤。',
       markSentConfirm: '確定要將此發票標記為已發送到 Invoice Ninja 嗎？此操作無法復原。',
     },
+    editor: {
+      titleCreate: '新建發票',
+      titleEdit: '編輯發票',
+      titleView: '查看發票',
+      badge: {
+        create: '新建',
+        edit: '草稿',
+        view: '唯讀',
+      },
+      fields: {
+        client: '客戶',
+        clientPlaceholder: '搜尋客戶…',
+        invoiceDate: '發票日期',
+        jobNumber: '工單編號',
+      },
+      lineItems: {
+        poNumber: '採購訂單號',
+        description: '描述',
+        qty: '數量',
+        unit: '單位',
+        unitCost: '單價',
+        lineTotal: '行小計',
+        addLine: '新增行',
+        removeLine: '刪除',
+      },
+      totals: {
+        invoiceTotal: '發票總金額',
+      },
+      actions: {
+        save: '儲存',
+        cancel: '取消',
+        close: '關閉',
+      },
+      validation: {
+        clientRequired: '請選擇客戶。',
+        invoiceDateRequired: '請填寫發票日期。',
+        atLeastOneLine: '至少需要一個行項目。',
+        qtyPositive: '數量必須為 0 或以上。',
+        unitCostNonNegative: '單價不能為負數。',
+      },
+      messages: {
+        saveFailed: '儲存發票失敗。',
+        loadFailed: '載入發票詳情失敗。',
+      },
+    },
   },
 } as const

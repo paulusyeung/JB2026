@@ -58,5 +58,50 @@ export const billingMessages = {
       downloadDeliveryNoteUnexpected: '下载送货单时发生未预期错误。',
       markSentConfirm: '确定要将此发票标记为已发送到 Invoice Ninja 吗？此操作无法撤销。',
     },
+    editor: {
+      titleCreate: '新建发票',
+      titleEdit: '编辑发票',
+      titleView: '查看发票',
+      badge: {
+        create: '新建',
+        edit: '草稿',
+        view: '只读',
+      },
+      fields: {
+        client: '客户',
+        clientPlaceholder: '搜索客户…',
+        invoiceDate: '发票日期',
+        jobNumber: '工单编号',
+      },
+      lineItems: {
+        poNumber: '采购订单号',
+        description: '描述',
+        qty: '数量',
+        unit: '单位',
+        unitCost: '单价',
+        lineTotal: '行小计',
+        addLine: '添加行',
+        removeLine: '删除',
+      },
+      totals: {
+        invoiceTotal: '发票总额',
+      },
+      actions: {
+        save: '保存',
+        cancel: '取消',
+        close: '关闭',
+      },
+      validation: {
+        clientRequired: '请选择客户。',
+        invoiceDateRequired: '请填写发票日期。',
+        atLeastOneLine: '至少需要一个行项目。',
+        qtyPositive: '数量必须大于或等于 0。',
+        unitCostNonNegative: '单价不能为负数。',
+      },
+      messages: {
+        saveFailed: '保存发票失败。',
+        loadFailed: '加载发票详情失败。',
+      },
+    },
   },
 } as const

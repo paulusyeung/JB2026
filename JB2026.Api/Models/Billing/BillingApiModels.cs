@@ -318,3 +318,118 @@ public class BillingErrorResponse
     /// </summary>
     public object? Details { get; set; }
 }
+
+// ── Invoice Editor DTOs ──────────────────────────────────────────────────────
+
+/// <summary>
+/// A selectable Invoice Ninja client for the invoice editor client picker.
+/// </summary>
+public class BillingClientOption
+{
+    /// <summary>Invoice Ninja client ID.</summary>
+    public string ExternalClientId { get; set; } = string.Empty;
+
+    /// <summary>Human-readable display name shown in the selector.</summary>
+    public string DisplayName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Response for client list/search used by the invoice editor.
+/// </summary>
+public class ListBillingClientsResponse
+{
+    public List<BillingClientOption> Clients { get; set; } = new();
+}
+
+/// <summary>
+/// A single line item as returned by the invoice editor detail endpoint.
+/// </summary>
+public class InvoiceEditorLineItemDto
+{
+    /// <summary>Opaque row identifier (client-facing only).</summary>
+    public string? Id { get; set; }
+
+    public string PoNumber { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Qty { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public decimal UnitCost { get; set; }
+
+    /// <summary>Server-computed line total (Qty × UnitCost).</summary>
+    public decimal LineTotal { get; set; }
+}
+
+/// <summary>
+/// Normalized invoice DTO returned by the editor detail endpoint.
+/// </summary>
+public class InvoiceEditorDto
+{
+    public string? ExternalInvoiceId { get; set; }
+    public string? Status { get; set; }
+    public BillingClientOption? Client { get; set; }
+
+    /// <summary>ISO date string (e.g. "2026-05-23").</summary>
+    public string? InvoiceDate { get; set; }
+
+    public string JobNumber { get; set; } = string.Empty;
+    public List<InvoiceEditorLineItemDto> LineItems { get; set; } = new();
+
+    /// <summary>Sum of all line totals.</summary>
+    public decimal TotalAmount { get; set; }
+}
+
+/// <summary>
+/// Response for GET /api/v2/billing/invoices/{externalInvoiceId}.
+/// </summary>
+public class GetInvoiceEditorDetailResponse
+{
+    public InvoiceEditorDto Invoice { get; set; } = new();
+}
+
+/// <summary>
+/// A single line item within a create or update invoice editor request.
+/// </summary>
+public class InvoiceEditorLineItemRequest
+{
+    public string PoNumber { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Qty { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public decimal UnitCost { get; set; }
+}
+
+/// <summary>
+/// Request body for POST /api/v2/billing/invoices (create).
+/// </summary>
+public class CreateInvoiceEditorRequest
+{
+    public string ExternalClientId { get; set; } = string.Empty;
+
+    /// <summary>ISO date string (e.g. "2026-05-23").</summary>
+    public string? InvoiceDate { get; set; }
+
+    public string JobNumber { get; set; } = string.Empty;
+    public List<InvoiceEditorLineItemRequest> LineItems { get; set; } = new();
+}
+
+/// <summary>
+/// Request body for PUT /api/v2/billing/invoices/{externalInvoiceId} (update draft).
+/// </summary>
+public class UpdateInvoiceEditorRequest
+{
+    public string ExternalClientId { get; set; } = string.Empty;
+
+    /// <summary>ISO date string (e.g. "2026-05-23").</summary>
+    public string? InvoiceDate { get; set; }
+
+    public string JobNumber { get; set; } = string.Empty;
+    public List<InvoiceEditorLineItemRequest> LineItems { get; set; } = new();
+}
+
+/// <summary>
+/// Response from a create or update invoice editor operation.
+/// </summary>
+public class SaveInvoiceEditorResponse
+{
+    public InvoiceBillingSummary BillingSummary { get; set; } = new();
+}
