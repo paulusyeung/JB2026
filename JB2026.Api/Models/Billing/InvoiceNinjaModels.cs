@@ -177,6 +177,12 @@ public class InvoiceNinjaInvoiceResponse
     public List<InvoiceNinjaInvitation> Invitations { get; set; } = new();
 
     /// <summary>
+    /// Indicates whether the invoice has been deleted in Invoice Ninja.
+    /// </summary>
+    [JsonPropertyName("is_deleted")]
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
     /// Timestamp of last update.
     /// </summary>
     [JsonPropertyName("updated_at")]

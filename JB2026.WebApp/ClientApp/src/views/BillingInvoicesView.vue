@@ -527,6 +527,7 @@ function statusLabel(status?: string | null) {
   if (normalized === 'viewed') return t('billing.invoices.status.viewed')
   if (normalized === 'paid') return t('billing.invoices.status.paid')
   if (normalized === 'overdue') return t('billing.invoices.status.overdue')
+  if (normalized === 'deleted') return t('billing.invoices.status.deleted')
   return status
 }
 
@@ -594,6 +595,7 @@ function statusColor(status: string) {
   if (normalized.includes('paid')) return 'success'
   if (normalized.includes('overdue')) return 'error'
   if (normalized.includes('sent') || normalized.includes('view')) return 'info'
+  if (normalized.includes('deleted')) return 'default'
   return 'warning'
 }
 </script>

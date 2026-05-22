@@ -44,6 +44,7 @@ export const billingMessages = {
       viewed: '已查看',
       paid: '已付款',
       overdue: '已逾期',
+      deleted: '已删除',
     },
     messages: {
       loadFailed: '无法加载账单发票。',

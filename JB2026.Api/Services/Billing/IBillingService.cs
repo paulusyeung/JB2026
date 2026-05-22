@@ -1058,6 +1058,11 @@ public class BillingService : IBillingService
 
     private static string ResolveInvoiceStatus(InvoiceNinjaInvoiceResponse invoice)
     {
+        if (invoice.IsDeleted)
+        {
+            return "Deleted";
+        }
+
         if (!string.IsNullOrWhiteSpace(invoice.Status))
         {
             return invoice.Status;

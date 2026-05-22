@@ -44,6 +44,7 @@ export const billingMessages = {
       viewed: 'Viewed',
       paid: 'Paid',
       overdue: 'Overdue',
+      deleted: 'Deleted',
     },
     messages: {
       loadFailed: 'Unable to load billing invoices.',
