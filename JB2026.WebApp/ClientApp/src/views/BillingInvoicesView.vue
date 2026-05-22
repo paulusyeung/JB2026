@@ -89,6 +89,28 @@
             Mark Sent
           </v-btn>
 
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn 
+                v-bind="props" 
+                variant="outlined" 
+                size="small" 
+                :disabled="!isDownloadEnabled"
+                prepend-icon="mdi-download-circle-outline"
+              >
+                Download
+              </v-btn>
+            </template>
+            <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item @click="handleDownloadInvoicePdf">
+                <v-list-item-title>Invoice PDF</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="handleDownloadDeliveryNote">
+                <v-list-item-title>Delivery Note</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ selectedInvoiceIds.length }} selected
           </span>
@@ -210,7 +232,7 @@ import { useRouter } from 'vue-router'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import { listInvoices, sendInvoice, type InvoiceBillingSummary } from '@/services/billing'
+import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
 
 type BillingInvoicesViewMode = 'detail' | 'card'
 
@@ -275,6 +297,19 @@ const isMarkSentEnabled = computed(() => {
   const selectedId = selectedInvoiceIds.value[0]
   const selectedInvoice = invoices.value.find((inv) => inv.externalInvoiceId === selectedId)
   return selectedInvoice?.status === 'Draft'
+})
+
+/**
+ * Determines if the Download button should be enabled.
+ * Enabled only when:
+ * - checkbox mode is active
+ * - exactly one invoice is selected
+ */
+const isDownloadEnabled = computed(() => {
+  if (!checkboxMode.value || selectedInvoiceIds.value.length !== 1) {
+    return false
+  }
+  return true
 })
 
 const displayedInvoices = computed(() => {
@@ -363,6 +398,91 @@ async function performMarkSent() {
     }
   } finally {
     isSendingInvoice.value = false
+  }
+}
+
+function openPdfPreviewWindow() {
+  const previewWindow = window.open('', '_blank')
+
+  if (!previewWindow) {
+    return null
+  }
+
+  previewWindow.document.title = 'Opening PDF...'
+  previewWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 16px;">Loading document preview...</p>'
+  return previewWindow
+}
+
+function showPdfPreview(previewWindow: Window, blob: Blob) {
+  const previewUrl = URL.createObjectURL(blob)
+  previewWindow.location.href = previewUrl
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(previewUrl)
+  }, 60_000)
+}
+
+/**
+ * Handles the Invoice PDF download menu selection.
+ * Opens the invoice PDF in the browser so the user can review, print, or save it.
+ */
+async function handleDownloadInvoicePdf() {
+  const selectedId = selectedInvoiceIds.value[0]
+  if (!selectedId) return
+
+  const previewWindow = openPdfPreviewWindow()
+  if (!previewWindow) {
+    errorMessage.value = 'Unable to open document preview. Please allow popups for this site and try again.'
+    return
+  }
+
+  errorMessage.value = ''
+
+  try {
+    const blob = await downloadInvoicePdf(selectedId)
+    showPdfPreview(previewWindow, blob)
+  } catch (e) {
+    previewWindow.close()
+    console.error('Failed to download invoice PDF', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message || e.message || 'Failed to download invoice PDF.'
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message || 'Failed to download invoice PDF.'
+    } else {
+      errorMessage.value = 'An unexpected error occurred while downloading the invoice PDF.'
+    }
+  }
+}
+
+/**
+ * Handles the Delivery Note download menu selection.
+ * Opens the delivery note PDF in the browser so the user can review, print, or save it.
+ */
+async function handleDownloadDeliveryNote() {
+  const selectedId = selectedInvoiceIds.value[0]
+  if (!selectedId) return
+
+  const previewWindow = openPdfPreviewWindow()
+  if (!previewWindow) {
+    errorMessage.value = 'Unable to open document preview. Please allow popups for this site and try again.'
+    return
+  }
+
+  errorMessage.value = ''
+
+  try {
+    const blob = await downloadDeliveryNote(selectedId)
+    showPdfPreview(previewWindow, blob)
+  } catch (e) {
+    previewWindow.close()
+    console.error('Failed to download delivery note', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message || e.message || 'Failed to download delivery note.'
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message || 'Failed to download delivery note.'
+    } else {
+      errorMessage.value = 'An unexpected error occurred while downloading the delivery note.'
+    }
   }
 }
 

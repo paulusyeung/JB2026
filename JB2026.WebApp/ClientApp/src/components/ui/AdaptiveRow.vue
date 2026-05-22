@@ -1,37 +1,37 @@
 "<template>
   <!-- Desktop: Table Row -->
-  <tr v-if=\"!isMobile\"
-      :class=\"['adaptive-row-tr', { 'row-selected': selected }]\"
-      @click=\"$emit('click')\">
-    <slot name=\"desktop-cells\">\n      <!-- Default cells will be provided by parent -->
+  <tr v-if="!isMobile"
+      :class="['adaptive-row-tr', { 'row-selected': selected }]"
+      @click="$emit('click')">
+    <slot name="desktop-cells">\n      <!-- Default cells will be provided by parent -->
     </slot>
   </tr>
 
   <!-- Mobile: Card -->
   <v-card v-else 
           flat 
-          class=\"adaptive-row-card mb-2\" 
-          :color=\"selected ? 'primary-lighten-5' : 'surface'\"
-          @click=\"$emit('click')\">
-    <v-card-text class=\"pa-3\">
-      <div class=\"d-flex justify-space-between align-center mb-2\">
-        <slot name=\"mobile-header\">\n          <span class=\"text-subtitle-2 font-weight-bold\">Item Details</span>\n        </slot>
-        <div class=\"d-flex align-center ga-1\">
-          <slot name=\"mobile-actions\" />
+          class="adaptive-row-card mb-2" 
+          :color="selected ? 'primary-lighten-5' : 'surface'"
+          @click="$emit('click')">
+    <v-card-text class="pa-3">
+      <div class="d-flex justify-space-between align-center mb-2">
+        <slot name="mobile-header">\n          <span class="text-subtitle-2 font-weight-bold">Item Details</span>\n        </slot>
+        <div class="d-flex align-center ga-1">
+          <slot name="mobile-actions" />
         <v-checkbox-btn 
-          :model-value=\"selected\" 
-          density=\"compact\" 
+          :model-value="selected" 
+          density="compact" 
           hide-details 
-          @click.stop=\"$emit('toggle-check')\" 
+          @click.stop="$emit('toggle-check')" 
         />
       </div>
         </div>
 
-      <div class=\"adaptive-grid\">
-        <div v-for=\"field in fields\" :key=\"field.key\" class=\"grid-item\">
-          <span class=\"field-label\">{{ field.label }}:</span>
-          <span class=\"field-value\">
-            <slot :name=\"`field-${field.key}`\" :field=\"field\">
+      <div class="adaptive-grid">
+        <div v-for="field in fields" :key="field.key" class="grid-item">
+          <span class="field-label">{{ field.label }}:</span>
+          <span class="field-value">
+            <slot :name="`field-${field.key}`" :field="field">
               {{ field.value }}
             </slot>
           </span>
@@ -41,7 +41,7 @@
   </v-card>
 </template>
 
-<script setup lang=\"ts\">
+<script setup lang="ts">
 interface Field {
   key: string;
   label: string;

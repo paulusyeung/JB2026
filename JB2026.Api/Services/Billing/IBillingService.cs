@@ -99,6 +99,21 @@ public interface IBillingService
     Task<IReadOnlyList<InvoiceBillingSummary>> ListInvoicesAsync();
 
     /// <summary>
+    /// Downloads the invoice PDF document from Invoice Ninja for the given invoice ID.
+    /// Internally fetches the invitation_key from the invoice's invitations array before downloading.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>PDF file content as byte array.</returns>
+    Task<byte[]> DownloadInvoicePdfAsync(string externalInvoiceId);
+
+    /// <summary>
+    /// Downloads the delivery note PDF document from Invoice Ninja for the given invoice ID.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>Delivery note PDF file content as byte array.</returns>
+    Task<byte[]> DownloadDeliveryNoteAsync(string externalInvoiceId);
+
+    /// <summary>
     /// Builds a generate-invoice payload from a JB2026 job order and synced customer metadata.
     /// </summary>
     /// <param name="orderId">Job order ID.</param>
@@ -881,5 +896,89 @@ public class BillingService : IBillingService
         var dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         dateTime = dateTime.AddSeconds(unixTimeStamp).ToUniversalTime();
         return dateTime;
+    }
+
+    public async Task<byte[]> DownloadInvoicePdfAsync(string externalInvoiceId)
+    {
+        try
+        {
+            _logger.LogInformation("Downloading invoice PDF for invoice {ExternalInvoiceId}", externalInvoiceId);
+
+            // Fetch the invoice with invitations included to extract invitation_key
+            var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}?include=invitations");
+            if (invoice == null)
+            {
+                throw BillingException.NotFound($"Invoice {externalInvoiceId}");
+            }
+
+            // Extract invitation_key from the first invitation in the array
+            if (invoice.Invitations == null || invoice.Invitations.Count == 0)
+            {
+                throw BillingException.InvalidRequest(
+                    $"Invoice {externalInvoiceId} has no invitations available for download.",
+                    400);
+            }
+
+            var invitationKey = invoice.Invitations[0].Key;
+            if (string.IsNullOrWhiteSpace(invitationKey))
+            {
+                throw BillingException.InvalidRequest(
+                    $"Invoice {externalInvoiceId} invitation key is empty or invalid.",
+                    400);
+            }
+
+            // Download the PDF using the invitation_key with the correct endpoint
+            var pdfBytes = await _invoiceNinjaClient.GetStreamAsync($"/invoice/{invitationKey}/download");
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                throw BillingException.NotFound($"Invoice PDF for {externalInvoiceId} not found or empty");
+            }
+
+            _logger.LogInformation("Invoice PDF downloaded successfully for invoice {ExternalInvoiceId}, {ByteCount} bytes", externalInvoiceId, pdfBytes.Length);
+            return pdfBytes;
+        }
+        catch (BillingException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download invoice PDF for {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            throw BillingException.HttpError(0, $"Failed to download invoice PDF for {externalInvoiceId}.", ex);
+        }
+    }
+
+    public async Task<byte[]> DownloadDeliveryNoteAsync(string externalInvoiceId)
+    {
+        try
+        {
+            _logger.LogInformation("Downloading delivery note for invoice {ExternalInvoiceId}", externalInvoiceId);
+
+            // Verify the invoice exists first
+            var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}");
+            if (invoice == null)
+            {
+                throw BillingException.NotFound($"Invoice {externalInvoiceId}");
+            }
+
+            // Download the delivery note
+            var deliveryNoteBytes = await _invoiceNinjaClient.GetStreamAsync($"/invoices/{externalInvoiceId}/delivery_note");
+            if (deliveryNoteBytes == null || deliveryNoteBytes.Length == 0)
+            {
+                throw BillingException.NotFound($"Delivery note for invoice {externalInvoiceId} not found or not available");
+            }
+
+            _logger.LogInformation("Delivery note downloaded successfully for invoice {ExternalInvoiceId}, {ByteCount} bytes", externalInvoiceId, deliveryNoteBytes.Length);
+            return deliveryNoteBytes;
+        }
+        catch (BillingException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download delivery note for {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            throw BillingException.HttpError(0, $"Failed to download delivery note for {externalInvoiceId}.", ex);
+        }
     }
 }

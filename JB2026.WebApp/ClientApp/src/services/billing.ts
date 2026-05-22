@@ -241,3 +241,33 @@ export async function sendInvoice(externalInvoiceId: string): Promise<InvoiceBil
   )
   return response.data.billingSummary
 }
+
+/**
+ * Downloads the invoice PDF from Invoice Ninja for the given invoice ID.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @returns Promise<Blob> containing the PDF file data.
+ * @throws Error if the invoice is not found or download fails.
+ */
+export async function downloadInvoicePdf(externalInvoiceId: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(
+    `/api/v2/billing/invoices/${externalInvoiceId}/download/pdf`,
+    { responseType: 'blob' }
+  )
+  return response.data
+}
+
+/**
+ * Downloads the delivery note PDF from Invoice Ninja for the given invoice ID.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @returns Promise<Blob> containing the PDF file data.
+ * @throws Error if the invoice is not found or delivery note is not available.
+ */
+export async function downloadDeliveryNote(externalInvoiceId: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(
+    `/api/v2/billing/invoices/${externalInvoiceId}/download/delivery-note`,
+    { responseType: 'blob' }
+  )
+  return response.data
+}

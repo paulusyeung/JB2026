@@ -641,4 +641,116 @@ public class BillingController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Downloads the invoice PDF document from Invoice Ninja for the specified invoice.
+    /// </summary>
+    /// <param name="externalInvoiceId">The Invoice Ninja invoice ID.</param>
+    /// <returns>The PDF file for download.</returns>
+    /// <response code="200">Invoice PDF downloaded successfully.</response>
+    /// <response code="404">Invoice not found.</response>
+    /// <response code="401">Unauthorized.</response>
+[HttpGet("invoices/{externalInvoiceId}/download/pdf")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DownloadInvoicePdf(string externalInvoiceId)
+    {
+        _logger.LogInformation("Downloading invoice PDF for invoice {ExternalInvoiceId}", externalInvoiceId);
+
+        try
+        {
+            var pdfBytes = await _billingService.DownloadInvoicePdfAsync(externalInvoiceId);
+
+            var fileName = $"invoice-{externalInvoiceId}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to download invoice PDF {ExternalInvoiceId}: {ErrorCode}", externalInvoiceId, ex.ErrorCode);
+
+            var statusCode = ex.ErrorCode switch
+            {
+                "NOT_FOUND" => StatusCodes.Status404NotFound,
+                "INVALID_REQUEST" => StatusCodes.Status400BadRequest,
+                "INVALID_API_KEY" => StatusCodes.Status401Unauthorized,
+                "SERVICE_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
+                "RATE_LIMITED" => StatusCodes.Status429TooManyRequests,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download invoice PDF {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "PDF_DOWNLOAD_FAILED",
+                Message = $"Failed to download invoice PDF {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Downloads the delivery note PDF document from Invoice Ninja for the specified invoice.
+    /// </summary>
+    /// <param name="externalInvoiceId">The Invoice Ninja invoice ID.</param>
+    /// <returns>The delivery note PDF file for download.</returns>
+    /// <response code="200">Delivery note PDF downloaded successfully.</response>
+    /// <response code="404">Invoice or delivery note not found.</response>
+    /// <response code="401">Unauthorized.</response>
+[HttpGet("invoices/{externalInvoiceId}/download/delivery-note")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DownloadDeliveryNote(string externalInvoiceId)
+    {
+        _logger.LogInformation("Downloading delivery note for invoice {ExternalInvoiceId}", externalInvoiceId);
+
+        try
+        {
+            var deliveryNoteBytes = await _billingService.DownloadDeliveryNoteAsync(externalInvoiceId);
+
+            var fileName = $"delivery-note-{externalInvoiceId}.pdf";
+            return File(deliveryNoteBytes, "application/pdf", fileName);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to download delivery note {ExternalInvoiceId}: {ErrorCode}", externalInvoiceId, ex.ErrorCode);
+
+            var statusCode = ex.ErrorCode switch
+            {
+                "NOT_FOUND" => StatusCodes.Status404NotFound,
+                "INVALID_REQUEST" => StatusCodes.Status400BadRequest,
+                "INVALID_API_KEY" => StatusCodes.Status401Unauthorized,
+                "SERVICE_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
+                "RATE_LIMITED" => StatusCodes.Status429TooManyRequests,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download delivery note {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "DELIVERY_NOTE_DOWNLOAD_FAILED",
+                Message = $"Failed to download delivery note {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
 }

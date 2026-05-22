@@ -51,6 +51,13 @@ public interface IInvoiceNinjaHttpClient
     /// </summary>
     /// <returns>Tuple of (isValid, errorMessage). If isValid is false, errorMessage explains why.</returns>
     (bool isValid, string errorMessage) ValidateConfiguration();
+
+    /// <summary>
+    /// Performs a GET request to Invoice Ninja API and returns the response as a byte array (for file downloads).
+    /// </summary>
+    /// <param name="endpoint">API endpoint path (e.g., "/invoice/{key}/download").</param>
+    /// <returns>Response content as bytes; null if not found.</returns>
+    Task<byte[]?> GetStreamAsync(string endpoint);
 }
 
 /// <summary>
@@ -449,5 +456,119 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
         {
             _logger.LogWarning(ex, "Unable to persist Invoice Ninja payload log to Log4Net table.");
         }
+    }
+
+    public async Task<byte[]?> GetStreamAsync(string endpoint)
+    {
+        var (isValid, errorMessage) = ValidateConfiguration();
+        if (!isValid)
+        {
+            _logger.LogError("Invoice Ninja configuration invalid: {ErrorMessage}", errorMessage);
+            throw BillingException.ConfigurationError(errorMessage);
+        }
+
+        var options = _billingOptions.Value.InvoiceNinja;
+        var url = $"{options.BaseUrl}{endpoint}";
+        var maxRetries = options.RetryMaxAttempts;
+        var backoffMultiplier = options.RetryBackoffMultiplier;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                using (var client = _httpClientFactory.CreateClient())
+                {
+                    client.DefaultRequestHeaders.Add("X-API-TOKEN", options.ApiKey);
+                    client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                    client.Timeout = TimeSpan.FromSeconds(options.HttpClientTimeoutSeconds);
+
+                    _logger.LogDebug("Invoice Ninja GET stream request: {Endpoint} (attempt {Attempt}/{MaxAttempts})", 
+                        endpoint, attempt + 1, maxRetries);
+
+                    var response = await client.GetAsync(url);
+
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        _logger.LogDebug("Invoice Ninja resource not found: {Endpoint}", endpoint);
+                        return null;
+                    }
+
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        _logger.LogError("Invoice Ninja authentication failed (401): {Endpoint}", endpoint);
+                        throw BillingException.InvalidApiKey();
+                    }
+
+                    if ((int)response.StatusCode == 429)
+                    {
+                        _logger.LogWarning("Invoice Ninja rate limit hit (429): {Endpoint}", endpoint);
+                        if (attempt < maxRetries - 1)
+                        {
+                            var delayMs = (int)(1000 * Math.Pow(backoffMultiplier, attempt));
+                            _logger.LogWarning("Rate limited, retrying in {DelayMs}ms", delayMs);
+                            await Task.Delay(delayMs);
+                            continue;
+                        }
+                        throw BillingException.RateLimited();
+                    }
+
+                    if ((int)response.StatusCode is 502 or 503 or 504)
+                    {
+                        _logger.LogWarning("Invoice Ninja service unavailable ({StatusCode}): {Endpoint}", (int)response.StatusCode, endpoint);
+                        if (attempt < maxRetries - 1)
+                        {
+                            var delayMs = (int)(1000 * Math.Pow(backoffMultiplier, attempt));
+                            _logger.LogWarning("Service unavailable, retrying in {DelayMs}ms", delayMs);
+                            await Task.Delay(delayMs);
+                            continue;
+                        }
+                        throw BillingException.ServiceUnavailable((int)response.StatusCode);
+                    }
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogError("Invoice Ninja GET failed with status {StatusCode}: {Endpoint}", (int)response.StatusCode, endpoint);
+                        throw BillingException.HttpError((int)response.StatusCode, $"Invoice Ninja API returned {(int)response.StatusCode}");
+                    }
+
+                    var content = await response.Content.ReadAsByteArrayAsync();
+                    _logger.LogDebug("Invoice Ninja GET stream succeeded: {Endpoint}, {ByteCount} bytes", endpoint, content.Length);
+                    return content;
+                }
+            }
+            catch (BillingException)
+            {
+                throw;
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogWarning(ex, "Invoice Ninja request timeout: {Endpoint} (attempt {Attempt})", endpoint, attempt + 1);
+                if (attempt < maxRetries - 1)
+                {
+                    var delayMs = (int)(1000 * Math.Pow(backoffMultiplier, attempt));
+                    await Task.Delay(delayMs);
+                    continue;
+                }
+                throw BillingException.HttpError(0, "Invoice Ninja request timeout after retries", ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Invoice Ninja HTTP error: {Endpoint} (attempt {Attempt})", endpoint, attempt + 1);
+                if (attempt < maxRetries - 1)
+                {
+                    var delayMs = (int)(1000 * Math.Pow(backoffMultiplier, attempt));
+                    await Task.Delay(delayMs);
+                    continue;
+                }
+                throw BillingException.HttpError(0, "Invoice Ninja request failed after retries", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Invoice Ninja GET stream failed: {Endpoint}: {ErrorMessage}", endpoint, ex.Message);
+                throw BillingException.HttpError(0, $"Invoice Ninja request failed: {ex.Message}", ex);
+            }
+        }
+
+        throw BillingException.HttpError(0, "Invoice Ninja request failed after all retry attempts");
     }
 }

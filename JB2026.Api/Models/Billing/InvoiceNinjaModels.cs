@@ -155,10 +155,35 @@ public class InvoiceNinjaInvoiceResponse
     public InvoiceNinjaClientResponse? Client { get; set; }
 
     /// <summary>
+    /// Invitations for this invoice (included when requested with ?include=invitations).
+    /// Used to extract the invitation_key for PDF downloads.
+    /// </summary>
+    [JsonPropertyName("invitations")]
+    public List<InvoiceNinjaInvitation> Invitations { get; set; } = new();
+
+    /// <summary>
     /// Timestamp of last update.
     /// </summary>
     [JsonPropertyName("updated_at")]
     public long? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Invoice Ninja invitation model (used for PDF download link extraction).
+/// </summary>
+public class InvoiceNinjaInvitation
+{
+    /// <summary>
+    /// Unique invitation key used for PDF download endpoint.
+    /// </summary>
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Email address associated with this invitation.
+    /// </summary>
+    [JsonPropertyName("contact_id")]
+    public string ContactId { get; set; } = string.Empty;
 }
 
 /// <summary>
