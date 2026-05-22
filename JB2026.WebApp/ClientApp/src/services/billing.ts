@@ -121,6 +121,14 @@ export interface RefreshInvoiceStatusResponse {
 }
 
 /**
+ * Response for sending a draft invoice.
+ */
+export interface SendInvoiceResponse {
+  billingSummary: InvoiceBillingSummary
+  sentAt: string
+}
+
+/**
  * Response for invoice list retrieval.
  */
 export interface ListInvoicesResponse {
@@ -216,6 +224,20 @@ export async function getInvoiceSummary(externalInvoiceId: string): Promise<Invo
 export async function refreshInvoiceStatus(externalInvoiceId: string): Promise<InvoiceBillingSummary | null> {
   const response = await apiClient.post<RefreshInvoiceStatusResponse>(
     `/api/v2/billing/invoices/${externalInvoiceId}/refresh`
+  )
+  return response.data.billingSummary
+}
+
+/**
+ * Sends a draft invoice via Invoice Ninja, transitioning it from Draft to Sent.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @returns Updated billing summary with status Sent.
+ * @throws Error if the invoice is not in Draft status or the request fails.
+ */
+export async function sendInvoice(externalInvoiceId: string): Promise<InvoiceBillingSummary> {
+  const response = await apiClient.post<SendInvoiceResponse>(
+    `/api/v2/billing/invoices/${externalInvoiceId}/send`
   )
   return response.data.billingSummary
 }

@@ -283,6 +283,22 @@ public class RefreshInvoiceStatusResponse
 }
 
 /// <summary>
+/// Response for invoice send action (Draft → Sent transition).
+/// </summary>
+public class SendInvoiceResponse
+{
+    /// <summary>
+    /// Updated billing summary with new status (Sent).
+    /// </summary>
+    public InvoiceBillingSummary BillingSummary { get; set; } = new();
+
+    /// <summary>
+    /// Timestamp when the send operation completed.
+    /// </summary>
+    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
 /// Error response for failed billing operations.
 /// </summary>
 public class BillingErrorResponse

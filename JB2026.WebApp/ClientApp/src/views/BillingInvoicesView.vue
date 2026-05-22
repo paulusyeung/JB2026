@@ -78,6 +78,17 @@
             New Invoice
           </v-btn>
 
+          <v-btn 
+            variant="outlined" 
+            size="small" 
+            :disabled="!isMarkSentEnabled || isSendingInvoice"
+            :loading="isSendingInvoice"
+            prepend-icon="mdi-send-circle-outline" 
+            @click="handleMarkSent"
+          >
+            Mark Sent
+          </v-btn>
+
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ selectedInvoiceIds.length }} selected
           </span>
@@ -172,6 +183,23 @@
         </v-data-table>
       </v-card-text>
     </v-card>
+
+    <!-- Confirmation Dialog for Mark Sent -->
+    <v-dialog v-model="showMarkSentConfirmation" max-width="400">
+      <v-card>
+        <v-card-title>Confirm Mark as Sent</v-card-title>
+        <v-card-text>
+          Are you sure you want to mark this invoice as sent to Invoice Ninja? This action cannot be undone.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showMarkSentConfirmation = false">Cancel</v-btn>
+          <v-btn color="primary" variant="elevated" :loading="isSendingInvoice" @click="performMarkSent">
+            Mark as Sent
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </section>
 </template>
 
@@ -182,7 +210,7 @@ import { useRouter } from 'vue-router'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import { listInvoices, type InvoiceBillingSummary } from '@/services/billing'
+import { listInvoices, sendInvoice, type InvoiceBillingSummary } from '@/services/billing'
 
 type BillingInvoicesViewMode = 'detail' | 'card'
 
@@ -194,6 +222,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const invoices = ref<InvoiceBillingSummary[]>([])
 const selectedInvoiceIds = ref<string[]>([])
+const isSendingInvoice = ref(false)
+const showMarkSentConfirmation = ref(false)
 const viewSettings = useViewSettings('billing-invoices', {
   visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate', 'lastSyncedAt'],
   sortKey: 'invoiceDate',
@@ -230,6 +260,22 @@ const columnOptions = computed(() =>
 const sortableColumns = computed(() =>
   allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
 )
+
+/**
+ * Determines if the Mark Sent button should be enabled.
+ * Enabled only when:
+ * - checkbox mode is active
+ * - exactly one invoice is selected
+ * - that invoice has Draft status
+ */
+const isMarkSentEnabled = computed(() => {
+  if (!checkboxMode.value || selectedInvoiceIds.value.length !== 1) {
+    return false
+  }
+  const selectedId = selectedInvoiceIds.value[0]
+  const selectedInvoice = invoices.value.find((inv) => inv.externalInvoiceId === selectedId)
+  return selectedInvoice?.status === 'Draft'
+})
 
 const displayedInvoices = computed(() => {
   const result = [...invoices.value]
@@ -272,6 +318,52 @@ function openInvoice(invoice: InvoiceBillingSummary) {
 
 function openNewInvoice() {
   void router.push({ name: 'job-order-job-list' })
+}
+
+/**
+ * Handles the Mark Sent button click.
+ * Shows a confirmation dialog before performing the send action.
+ */
+function handleMarkSent() {
+  showMarkSentConfirmation.value = true
+}
+
+/**
+ * Performs the actual send operation after user confirmation.
+ * Sends the selected draft invoice to Invoice Ninja, updates the local list,
+ * clears selection, and displays any errors.
+ */
+async function performMarkSent() {
+  const selectedId = selectedInvoiceIds.value[0]
+  if (!selectedId) return
+
+  isSendingInvoice.value = true
+  errorMessage.value = ''
+
+  try {
+    const updatedSummary = await sendInvoice(selectedId)
+    
+    // Find the invoice in the list and replace it with the updated summary
+    const invoiceIndex = invoices.value.findIndex((inv) => inv.externalInvoiceId === selectedId)
+    if (invoiceIndex !== -1) {
+      invoices.value[invoiceIndex] = updatedSummary
+    }
+    
+    // Clear selection and close dialog
+    selectedInvoiceIds.value = []
+    showMarkSentConfirmation.value = false
+  } catch (e) {
+    console.error('Failed to send invoice', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message || e.message || 'Failed to send invoice.'
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message || 'Failed to send invoice.'
+    } else {
+      errorMessage.value = 'An unexpected error occurred while sending the invoice.'
+    }
+  } finally {
+    isSendingInvoice.value = false
+  }
 }
 
 function toggleColumn(columnKey: string) {

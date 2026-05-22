@@ -95,6 +95,19 @@ public class BillingException : Exception
     }
 
     /// <summary>
+    /// Factory for invalid business logic or constraint violations (400).
+    /// </summary>
+    public static BillingException InvalidRequest(string message, int statusCode = 400, Exception? innerException = null)
+    {
+        return new BillingException(
+            "INVALID_REQUEST",
+            message,
+            statusCode,
+            null,
+            innerException);
+    }
+
+    /// <summary>
     /// Factory for generic HTTP errors.
     /// </summary>
     public static BillingException HttpError(int statusCode, string? message = null, Exception? innerException = null)

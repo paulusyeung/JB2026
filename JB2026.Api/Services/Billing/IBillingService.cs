@@ -78,6 +78,14 @@ public interface IBillingService
     Task<InvoiceBillingSummary?> RefreshInvoiceStatusAsync(string externalInvoiceId);
 
     /// <summary>
+    /// Sends a draft invoice to Invoice Ninja, transitioning it from Draft to Sent status.
+    /// The invoice must be in Draft status; otherwise a BillingException is thrown.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>Updated billing summary with status Sent.</returns>
+    Task<InvoiceBillingSummary> SendInvoiceAsync(string externalInvoiceId);
+
+    /// <summary>
     /// Previews invoice payload before creation, including resolved custom field values and warnings.
     /// </summary>
     /// <param name="request">Preview request payload.</param>
@@ -358,6 +366,58 @@ public class BillingService : IBillingService
     {
         _logger.LogDebug("Refreshing invoice status for {ExternalInvoiceId}", externalInvoiceId);
         return await GetInvoiceSummaryAsync(externalInvoiceId);
+    }
+
+    public async Task<InvoiceBillingSummary> SendInvoiceAsync(string externalInvoiceId)
+    {
+        _logger.LogInformation("Sending invoice {ExternalInvoiceId} via Invoice Ninja", externalInvoiceId);
+
+        try
+        {
+            // Fetch the current invoice to validate it's in Draft status
+            var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}");
+            if (invoice == null)
+            {
+                throw BillingException.NotFound($"Invoice {externalInvoiceId}");
+            }
+
+            var currentStatus = ResolveInvoiceStatus(invoice);
+            if (!string.Equals(currentStatus, "Draft", StringComparison.OrdinalIgnoreCase))
+            {
+                throw BillingException.InvalidRequest(
+                    $"Invoice {externalInvoiceId} is in status '{currentStatus}' and cannot be sent. Only Draft invoices can be sent.",
+                    400);
+            }
+
+            // Use Invoice Ninja v5 bulk action endpoint to mark invoice as sent
+            // This is the documented way to send invoices in Invoice Ninja v5
+            var bulkActionPayload = new
+            {
+                action = "mark_sent",
+                ids = new[] { externalInvoiceId }
+            };
+
+            await _invoiceNinjaClient.PostAsync<dynamic>("/invoices/bulk", bulkActionPayload);
+
+            // Fetch the updated invoice to return current billing summary
+            var updatedInvoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}");
+            if (updatedInvoice == null)
+            {
+                throw BillingException.NotFound($"Invoice {externalInvoiceId} after send");
+            }
+
+            _logger.LogInformation("Invoice {ExternalInvoiceId} sent successfully via bulk action endpoint", externalInvoiceId);
+            return MapToInvoiceBillingSummary(updatedInvoice);
+        }
+        catch (BillingException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send invoice {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            throw BillingException.HttpError(0, $"Failed to send invoice {externalInvoiceId}.", ex);
+        }
     }
 
     public Task<PreviewInvoiceResponse> PreviewInvoiceAsync(PreviewInvoiceRequest request)

@@ -567,4 +567,78 @@ public class BillingController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Sends a draft invoice via Invoice Ninja, transitioning its status from Draft to Sent.
+    /// The invoice must be in Draft status; otherwise, a 400 error is returned.
+    /// </summary>
+    /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <returns>Updated billing summary with status Sent.</returns>
+    /// <response code="200">Invoice sent successfully.</response>
+    /// <response code="400">Invoice is not in Draft status or invalid request.</response>
+    /// <response code="401">Unauthorized.</response>
+    /// <response code="404">Invoice not found.</response>
+    /// <response code="500">Send operation failed.</response>
+    [HttpPost("invoices/{externalInvoiceId}/send")]
+    [ProducesResponseType(typeof(SendInvoiceResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<SendInvoiceResponse>> SendInvoice(string externalInvoiceId)
+    {
+        if (string.IsNullOrWhiteSpace(externalInvoiceId))
+        {
+            return BadRequest(new BillingErrorResponse
+            {
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Invoice ID is required."
+            });
+        }
+
+        _logger.LogInformation("Sending invoice {ExternalInvoiceId}", externalInvoiceId);
+
+        try
+        {
+            var billingSummary = await _billingService.SendInvoiceAsync(externalInvoiceId);
+
+            var response = new SendInvoiceResponse
+            {
+                BillingSummary = billingSummary,
+                SentAt = DateTime.UtcNow
+            };
+
+            _logger.LogInformation("Invoice {ExternalInvoiceId} sent successfully", externalInvoiceId);
+            return Ok(response);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogError(ex, "Failed to send invoice {ExternalInvoiceId}: {ErrorCode} - {ErrorMessage}", externalInvoiceId, ex.ErrorCode, ex.Message);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                400 => StatusCodes.Status400BadRequest,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send invoice {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "INVOICE_SEND_FAILED",
+                Message = $"Failed to send invoice {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
 }
