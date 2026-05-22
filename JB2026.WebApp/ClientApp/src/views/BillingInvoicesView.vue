@@ -4,8 +4,8 @@
       <v-card-text>
         <div class="filter-bar">
           <div class="view-heading">
-            <div class="text-h6">Billing Invoices</div>
-            <div class="text-caption text-medium-emphasis">Invoice Ninja synced invoice summaries</div>
+            <div class="text-h6">{{ t('billing.invoices.title') }}</div>
+            <div class="text-caption text-medium-emphasis">{{ t('billing.invoices.subtitle') }}</div>
           </div>
         </div>
 
@@ -15,7 +15,7 @@
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
-                Columns
+                {{ t('billing.invoices.actions.columns') }}
               </v-btn>
             </template>
             <v-list density="compact" class="toolbar-menu-list">
@@ -31,7 +31,7 @@
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
-                Sorting
+                {{ t('billing.invoices.actions.sorting') }}
               </v-btn>
             </template>
             <v-card min-width="280" class="pa-3">
@@ -42,32 +42,32 @@
                 item-value="key"
                 density="compact"
                 variant="outlined"
-                label="Sort by"
+                :label="t('billing.invoices.actions.sortBy')"
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">Asc</v-btn>
-                <v-btn value="desc">Desc</v-btn>
+                <v-btn value="asc">{{ t('billing.invoices.actions.asc') }}</v-btn>
+                <v-btn value="desc">{{ t('billing.invoices.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="checkboxMode = !checkboxMode">
-            Check Box
+            {{ t('billing.invoices.actions.checkbox') }}
           </v-btn>
 
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
-                Views
+                {{ t('billing.invoices.actions.views') }}
               </v-btn>
             </template>
             <v-list density="compact" class="toolbar-menu-list">
               <v-list-item prepend-icon="mdi-table" :active="viewMode === 'detail'" @click="setViewMode('detail')">
-                <v-list-item-title>Detail View</v-list-item-title>
+                <v-list-item-title>{{ t('billing.invoices.actions.detailView') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
-                <v-list-item-title>Card View</v-list-item-title>
+                <v-list-item-title>{{ t('billing.invoices.actions.cardView') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -75,7 +75,7 @@
           <v-divider vertical class="mx-1" />
 
           <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewInvoice">
-            New Invoice
+            {{ t('billing.invoices.actions.newInvoice') }}
           </v-btn>
 
           <v-btn 
@@ -86,7 +86,7 @@
             prepend-icon="mdi-send-circle-outline" 
             @click="handleMarkSent"
           >
-            Mark Sent
+            {{ t('billing.invoices.actions.markSent') }}
           </v-btn>
 
           <v-menu location="bottom">
@@ -98,21 +98,21 @@
                 :disabled="!isDownloadEnabled"
                 prepend-icon="mdi-download-circle-outline"
               >
-                Download
+                {{ t('billing.invoices.actions.download') }}
               </v-btn>
             </template>
             <v-list density="compact" class="toolbar-menu-list">
               <v-list-item @click="handleDownloadInvoicePdf">
-                <v-list-item-title>Invoice PDF</v-list-item-title>
+                <v-list-item-title>{{ t('billing.invoices.actions.invoicePdf') }}</v-list-item-title>
               </v-list-item>
               <v-list-item @click="handleDownloadDeliveryNote">
-                <v-list-item-title>Delivery Note</v-list-item-title>
+                <v-list-item-title>{{ t('billing.invoices.actions.deliveryNote') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
 
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
-            {{ selectedInvoiceIds.length }} selected
+            {{ t('billing.invoices.labels.selected', { count: selectedInvoiceIds.length }) }}
           </span>
         </div>
 
@@ -137,22 +137,22 @@
 
             <div class="invoice-card__header">
               <div>
-                <div class="text-subtitle-2 font-weight-bold">{{ invoice.invoiceNumber || invoice.externalInvoiceId }}</div>
-                <div class="text-caption text-medium-emphasis">{{ invoice.clientName || '-' }}</div>
+                <div class="text-subtitle-2 font-weight-bold">{{ displayValue(invoice.invoiceNumber || invoice.externalInvoiceId) }}</div>
+                <div class="text-caption text-medium-emphasis">{{ displayValue(invoice.clientName) }}</div>
               </div>
             </div>
 
             <div class="invoice-card__body">
-              <span>{{ invoice.invoiceDate ? format(invoice.invoiceDate) : '-' }}</span>
+              <span>{{ invoice.invoiceDate ? format(invoice.invoiceDate) : t('billing.invoices.labels.empty') }}</span>
               <v-chip size="small" :color="statusColor(invoice.status)" variant="tonal">
-                {{ invoice.status || 'Unknown' }}
+                {{ statusLabel(invoice.status) }}
               </v-chip>
             </div>
 
             <div class="invoice-card__footer text-caption text-medium-emphasis">
-              <span>Amount: {{ formatCurrency(invoice.amount) }}</span>
-              <span>Due: {{ invoice.dueDate ? format(invoice.dueDate) : '-' }}</span>
-              <span>Last Synced: {{ invoice.lastSyncedAt ? format(invoice.lastSyncedAt) : '-' }}</span>
+              <span>{{ t('billing.invoices.labels.amount') }}: {{ formatCurrency(invoice.amount) }}</span>
+              <span>{{ t('billing.invoices.labels.due') }}: {{ invoice.dueDate ? format(invoice.dueDate) : t('billing.invoices.labels.empty') }}</span>
+              <span>{{ t('billing.invoices.labels.lastSynced') }}: {{ invoice.lastSyncedAt ? format(invoice.lastSyncedAt) : t('billing.invoices.labels.empty') }}</span>
             </div>
           </v-card>
         </div>
@@ -178,16 +178,16 @@
           </template>
 
           <template #[`item.clientName`]="{ item }">
-            {{ item.clientName || '-' }}
+            {{ displayValue(item.clientName) }}
           </template>
 
           <template #[`item.invoiceDate`]="{ item }">
-            {{ item.invoiceDate ? format(item.invoiceDate) : '-' }}
+            {{ item.invoiceDate ? format(item.invoiceDate) : t('billing.invoices.labels.empty') }}
           </template>
 
           <template #[`item.status`]="{ item }">
             <v-chip size="small" :color="statusColor(item.status)" variant="tonal">
-              {{ item.status || 'Unknown' }}
+              {{ statusLabel(item.status) }}
             </v-chip>
           </template>
 
@@ -196,11 +196,11 @@
           </template>
 
           <template #[`item.dueDate`]="{ item }">
-            {{ item.dueDate ? format(item.dueDate) : '-' }}
+            {{ item.dueDate ? format(item.dueDate) : t('billing.invoices.labels.empty') }}
           </template>
 
           <template #[`item.lastSyncedAt`]="{ item }">
-              {{ item.lastSyncedAt ? format(item.lastSyncedAt) : '-' }}
+              {{ item.lastSyncedAt ? format(item.lastSyncedAt) : t('billing.invoices.labels.empty') }}
           </template>
         </v-data-table>
       </v-card-text>
@@ -209,15 +209,15 @@
     <!-- Confirmation Dialog for Mark Sent -->
     <v-dialog v-model="showMarkSentConfirmation" max-width="400">
       <v-card>
-        <v-card-title>Confirm Mark as Sent</v-card-title>
+        <v-card-title>{{ t('billing.invoices.actions.confirmMarkSent') }}</v-card-title>
         <v-card-text>
-          Are you sure you want to mark this invoice as sent to Invoice Ninja? This action cannot be undone.
+          {{ t('billing.invoices.messages.markSentConfirm') }}
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="showMarkSentConfirmation = false">Cancel</v-btn>
+          <v-btn variant="text" @click="showMarkSentConfirmation = false">{{ t('billing.invoices.actions.cancel') }}</v-btn>
           <v-btn color="primary" variant="elevated" :loading="isSendingInvoice" @click="performMarkSent">
-            Mark as Sent
+            {{ t('billing.invoices.actions.markAsSent') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -228,6 +228,7 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -236,6 +237,7 @@ import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, ty
 
 type BillingInvoicesViewMode = 'detail' | 'card'
 
+const { t } = useI18n()
 const { formatCurrency } = useLocaleFormatters()
 const { format } = useGlobalDateFormatter()
 const router = useRouter()
@@ -262,13 +264,13 @@ const viewMode = viewSettings.viewMode
 const isCardView = computed(() => viewMode.value === 'card')
 
 const allHeaders = computed(() => [
-  { title: 'Invoice', key: 'invoiceNumber', minWidth: '180px' },
-  { title: 'Client', key: 'clientName', minWidth: '220px' },
-  { title: 'Invoice Date', key: 'invoiceDate', width: '130px' },
-  { title: 'Status', key: 'status', width: '140px' },
-  { title: 'Amount', key: 'amount', width: '140px', align: 'end' as const },
-  { title: 'Due Date', key: 'dueDate', width: '130px' },
-  { title: 'Last Synced', key: 'lastSyncedAt', width: '180px' },
+  { title: t('billing.invoices.headers.invoice'), key: 'invoiceNumber', minWidth: '180px' },
+  { title: t('billing.invoices.headers.client'), key: 'clientName', minWidth: '220px' },
+  { title: t('billing.invoices.headers.invoiceDate'), key: 'invoiceDate', width: '130px' },
+  { title: t('billing.invoices.headers.status'), key: 'status', width: '140px' },
+  { title: t('billing.invoices.headers.amount'), key: 'amount', width: '140px', align: 'end' as const },
+  { title: t('billing.invoices.headers.dueDate'), key: 'dueDate', width: '130px' },
+  { title: t('billing.invoices.headers.lastSynced'), key: 'lastSyncedAt', width: '180px' },
 ])
 
 const headers = computed(() =>
@@ -333,11 +335,11 @@ async function loadInvoices() {
   } catch (e) {
     console.error('Failed to load billing invoices', e)
     if (axios.isAxiosError<{ message?: string }>(e)) {
-      errorMessage.value = e.response?.data?.message || e.message || 'Unable to load billing invoices.'
+      errorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.loadFailed')
     } else if (e instanceof Error) {
-      errorMessage.value = e.message || 'Unable to load billing invoices.'
+      errorMessage.value = e.message || t('billing.invoices.messages.loadFailed')
     } else {
-      errorMessage.value = 'Unable to load billing invoices.'
+      errorMessage.value = t('billing.invoices.messages.loadFailed')
     }
   } finally {
     loading.value = false
@@ -390,11 +392,11 @@ async function performMarkSent() {
   } catch (e) {
     console.error('Failed to send invoice', e)
     if (axios.isAxiosError<{ message?: string }>(e)) {
-      errorMessage.value = e.response?.data?.message || e.message || 'Failed to send invoice.'
+      errorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.sendFailed')
     } else if (e instanceof Error) {
-      errorMessage.value = e.message || 'Failed to send invoice.'
+      errorMessage.value = e.message || t('billing.invoices.messages.sendFailed')
     } else {
-      errorMessage.value = 'An unexpected error occurred while sending the invoice.'
+      errorMessage.value = t('billing.invoices.messages.sendUnexpected')
     }
   } finally {
     isSendingInvoice.value = false
@@ -408,8 +410,8 @@ function openPdfPreviewWindow() {
     return null
   }
 
-  previewWindow.document.title = 'Opening PDF...'
-  previewWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 16px;">Loading document preview...</p>'
+  previewWindow.document.title = t('billing.invoices.messages.previewTitle')
+  previewWindow.document.body.innerHTML = `<p style="font-family: sans-serif; padding: 16px;">${t('billing.invoices.messages.previewLoading')}</p>`
   return previewWindow
 }
 
@@ -432,7 +434,7 @@ async function handleDownloadInvoicePdf() {
 
   const previewWindow = openPdfPreviewWindow()
   if (!previewWindow) {
-    errorMessage.value = 'Unable to open document preview. Please allow popups for this site and try again.'
+    errorMessage.value = t('billing.invoices.messages.previewBlocked')
     return
   }
 
@@ -445,11 +447,11 @@ async function handleDownloadInvoicePdf() {
     previewWindow.close()
     console.error('Failed to download invoice PDF', e)
     if (axios.isAxiosError<{ message?: string }>(e)) {
-      errorMessage.value = e.response?.data?.message || e.message || 'Failed to download invoice PDF.'
+      errorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.downloadInvoicePdfFailed')
     } else if (e instanceof Error) {
-      errorMessage.value = e.message || 'Failed to download invoice PDF.'
+      errorMessage.value = e.message || t('billing.invoices.messages.downloadInvoicePdfFailed')
     } else {
-      errorMessage.value = 'An unexpected error occurred while downloading the invoice PDF.'
+      errorMessage.value = t('billing.invoices.messages.downloadInvoicePdfUnexpected')
     }
   }
 }
@@ -464,7 +466,7 @@ async function handleDownloadDeliveryNote() {
 
   const previewWindow = openPdfPreviewWindow()
   if (!previewWindow) {
-    errorMessage.value = 'Unable to open document preview. Please allow popups for this site and try again.'
+    errorMessage.value = t('billing.invoices.messages.previewBlocked')
     return
   }
 
@@ -477,13 +479,31 @@ async function handleDownloadDeliveryNote() {
     previewWindow.close()
     console.error('Failed to download delivery note', e)
     if (axios.isAxiosError<{ message?: string }>(e)) {
-      errorMessage.value = e.response?.data?.message || e.message || 'Failed to download delivery note.'
+      errorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.downloadDeliveryNoteFailed')
     } else if (e instanceof Error) {
-      errorMessage.value = e.message || 'Failed to download delivery note.'
+      errorMessage.value = e.message || t('billing.invoices.messages.downloadDeliveryNoteFailed')
     } else {
-      errorMessage.value = 'An unexpected error occurred while downloading the delivery note.'
+      errorMessage.value = t('billing.invoices.messages.downloadDeliveryNoteUnexpected')
     }
   }
+}
+
+function displayValue(value?: string | null) {
+  return value || t('billing.invoices.labels.empty')
+}
+
+function statusLabel(status?: string | null) {
+  if (!status) {
+    return t('billing.invoices.status.unknown')
+  }
+
+  const normalized = status.trim().toLowerCase()
+  if (normalized === 'draft') return t('billing.invoices.status.draft')
+  if (normalized === 'sent') return t('billing.invoices.status.sent')
+  if (normalized === 'viewed') return t('billing.invoices.status.viewed')
+  if (normalized === 'paid') return t('billing.invoices.status.paid')
+  if (normalized === 'overdue') return t('billing.invoices.status.overdue')
+  return status
 }
 
 function toggleColumn(columnKey: string) {

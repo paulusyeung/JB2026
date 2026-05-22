@@ -12,6 +12,7 @@ import { settingsMessages } from './settings'
 import { stockMessages } from './stock'
 import { smlMessages } from './sml'
 import { reportsMessages } from './reports'
+import { billingMessages } from './billing'
 import { jobsMessages } from './jobs'
 import { jobOrderMessages } from './jobOrder'
 import { quotationsMessages } from './quotations'
@@ -36,6 +37,7 @@ export const zhHansMessages = {
   stock: stockMessages,
   sml: smlMessages,
   reports: reportsMessages,
+  billing: billingMessages,
   jobs: jobsMessages,
   jobOrder: jobOrderMessages,
   quotations: quotationsMessages,
