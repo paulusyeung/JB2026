@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Billing invoice editor SHALL parse supported Job Number expressions
-The billing invoice editor SHALL accept an empty Job Number value or a Job Number expression composed of canonical `orderNumber-jobSuffix` tokens separated by commas, with optional slash expansion of additional suffixes that share the same order number prefix.
+The billing invoice editor SHALL accept an empty Job Number value or a Job Number expression composed of canonical user-facing `orderNumber-jobSuffix` tokens separated by commas, with optional slash expansion of additional suffixes that share the same order number prefix.
 
 #### Scenario: Empty Job Number leaves manual editing unchanged
 - **WHEN** the user leaves the Job Number field empty
@@ -20,11 +20,15 @@ The billing invoice editor SHALL accept an empty Job Number value or a Job Numbe
 - **THEN** the system SHALL show a validation error and SHALL not generate invoice items from that value
 
 ### Requirement: Billing invoice editor SHALL resolve each canonical Job Number from the JobListView data source family
-For a valid Job Number expression, the system SHALL resolve each canonical Job Number against the same job-order source family used by JobListView and SHALL generate at most one invoice line item per resolved Job Number.
+For a valid Job Number expression, the system SHALL resolve each canonical Job Number through a billing-focused batch lookup backed by the same underlying job-order source family used by JobListView and SHALL generate at most one invoice line item per resolved Job Number.
 
 #### Scenario: All job numbers resolve successfully
 - **WHEN** the user enters `168824-1, 168825-1` and both job numbers are found in the lookup source
 - **THEN** the system SHALL generate exactly two invoice line items in the same order as the parsed job numbers
+
+#### Scenario: Canonical input matches zero-padded stored job suffixes
+- **WHEN** the user enters `168824-1` and the matching stored job record has order number `168824` with job number `01`
+- **THEN** the system SHALL treat the suffixes as the same job and resolve that record successfully
 
 #### Scenario: A job number cannot be resolved
 - **WHEN** at least one canonical Job Number is not found in the lookup source
@@ -47,7 +51,23 @@ For each resolved Job Number, the generated invoice line item SHALL set `P.O. Nu
 
 #### Scenario: Section 1 content is unavailable
 - **WHEN** a resolved job does not have extractable section 1 Product Details content
-- **THEN** the system SHALL surface that job as requiring manual review instead of generating a misleading description
+- **THEN** the system SHALL still generate the line item with its `P.O. Number`, leave `Description` blank, and flag that row as requiring manual review instead of generating a misleading description
+
+### Requirement: Billing invoice editor SHALL require an explicit refresh action before overwriting generated rows
+The billing invoice editor SHALL not regenerate invoice rows from Job Numbers automatically. It SHALL surface an explicit refresh action when the Job Number field no longer matches the current generated set, and it SHALL protect manual edits before replacing rows.
+
+#### Scenario: Changing Job Number shows refresh action without automatic regeneration
+- **WHEN** the user changes the Job Number value after opening the editor or after a previous autofill
+- **THEN** the system SHALL show a contextual "Refresh from Job Numbers" action
+- **AND** the system SHALL NOT replace invoice rows until the user explicitly runs that action
+
+#### Scenario: Dirty grid requires overwrite confirmation
+- **WHEN** the user has manually edited, added, or removed invoice rows after generation and then runs the refresh action
+- **THEN** the system SHALL prompt for confirmation before replacing the current rows
+
+#### Scenario: Clean grid refreshes without confirmation
+- **WHEN** the current grid has not been manually modified since the last generation and the user runs the refresh action
+- **THEN** the system SHALL replace the generated set without showing an overwrite confirmation dialog
 
 ### Requirement: Generated line items SHALL remain editable after autofill
 After autofill completes, the invoice editor SHALL keep the generated line items in the editable grid so the user can review, adjust, add, or remove rows before saving.
