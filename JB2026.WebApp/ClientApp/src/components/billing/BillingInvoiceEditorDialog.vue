@@ -77,24 +77,27 @@
                 :label="t('billing.invoices.editor.fields.jobNumber')"
                 density="compact"
                 variant="outlined"
-              />
+              >
+                <template v-if="autofillRefreshVisible" #append-inner>
+                  <v-tooltip :text="t('billing.invoices.editor.actions.refreshFromJobNumbers')" location="top">
+                    <template #activator="{ props: tooltipProps }">
+                      <v-btn
+                        v-bind="tooltipProps"
+                        icon="mdi-refresh"
+                        size="x-small"
+                        variant="tonal"
+                        :loading="autofillLoading"
+                        @click="handleAutofillRefresh"
+                      />
+                    </template>
+                  </v-tooltip>
+                </template>
+              </v-text-field>
             </v-col>
           </v-row>
 
           <div v-if="jobNumberValidationMessage" class="text-caption text-error mb-2">
             {{ jobNumberValidationMessage }}
-          </div>
-
-          <div v-if="autofillRefreshVisible" class="d-flex justify-end mb-2">
-            <v-btn
-              variant="outlined"
-              size="small"
-              color="primary"
-              :loading="autofillLoading"
-              @click="handleAutofillRefresh"
-            >
-              {{ t('billing.invoices.editor.actions.refreshFromJobNumbers') }}
-            </v-btn>
           </div>
 
           <v-alert
