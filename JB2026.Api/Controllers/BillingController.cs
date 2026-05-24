@@ -843,6 +843,58 @@ public class BillingController : ControllerBase
     }
 
     /// <summary>
+    /// Resolves canonical job numbers into billing invoice editor autofill rows.
+    /// </summary>
+    [HttpPost("invoices/autofill-lookup")]
+    [ProducesResponseType(typeof(LookupInvoiceEditorAutofillResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> LookupInvoiceEditorAutofill([FromBody] LookupInvoiceEditorAutofillRequest request)
+    {
+        if (request.CanonicalJobNumbers == null || request.CanonicalJobNumbers.Count == 0)
+        {
+            return BadRequest(new BillingErrorResponse
+            {
+                ErrorCode = "INVALID_REQUEST",
+                Message = "At least one canonical job number is required."
+            });
+        }
+
+        try
+        {
+            var jobs = await _billingService.LookupInvoiceEditorAutofillAsync(request.CanonicalJobNumbers);
+            return Ok(new LookupInvoiceEditorAutofillResponse { Jobs = jobs.ToList() });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to lookup invoice editor autofill jobs: {ErrorCode}", ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error looking up invoice editor autofill jobs: {ErrorMessage}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "LOOKUP_INVOICE_AUTOFILL_FAILED",
+                Message = "Failed to resolve invoice editor autofill jobs.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
     /// Creates a new invoice in Invoice Ninja from the editor form.
     /// </summary>
     [HttpPost("invoices")]

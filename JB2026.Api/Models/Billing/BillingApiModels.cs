@@ -387,6 +387,52 @@ public class GetInvoiceEditorDetailResponse
 }
 
 /// <summary>
+/// Lookup request for resolving canonical job numbers into billing invoice editor autofill rows.
+/// </summary>
+public class LookupInvoiceEditorAutofillRequest
+{
+    public List<string> CanonicalJobNumbers { get; set; } = new();
+}
+
+/// <summary>
+/// Autofill lookup status values for billing invoice editor rows.
+/// </summary>
+public static class InvoiceEditorAutofillLookupStatuses
+{
+    public const string Resolved = "Resolved";
+    public const string Unresolved = "Unresolved";
+    public const string ResolvedButMissingSection1 = "ResolvedButMissingSection1";
+}
+
+/// <summary>
+/// A single resolved or unresolved job lookup result for invoice editor autofill.
+/// </summary>
+public class InvoiceEditorAutofillLookupItemDto
+{
+    public string CanonicalJobNumber { get; set; } = string.Empty;
+
+    public Guid? OrderId { get; set; }
+
+    public string PurchaseOrder { get; set; } = string.Empty;
+
+    public string ProductDetails { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public string Status { get; set; } = InvoiceEditorAutofillLookupStatuses.Resolved;
+
+    public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Response for invoice editor autofill lookup.
+/// </summary>
+public class LookupInvoiceEditorAutofillResponse
+{
+    public List<InvoiceEditorAutofillLookupItemDto> Jobs { get; set; } = new();
+}
+
+/// <summary>
 /// A single line item within a create or update invoice editor request.
 /// </summary>
 public class InvoiceEditorLineItemRequest

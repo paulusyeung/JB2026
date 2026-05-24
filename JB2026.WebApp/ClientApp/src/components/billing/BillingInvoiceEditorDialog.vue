@@ -81,6 +81,42 @@
             </v-col>
           </v-row>
 
+          <div v-if="jobNumberValidationMessage" class="text-caption text-error mb-2">
+            {{ jobNumberValidationMessage }}
+          </div>
+
+          <div v-if="autofillRefreshVisible" class="d-flex justify-end mb-2">
+            <v-btn
+              variant="outlined"
+              size="small"
+              color="primary"
+              :loading="autofillLoading"
+              @click="handleAutofillRefresh"
+            >
+              {{ t('billing.invoices.editor.actions.refreshFromJobNumbers') }}
+            </v-btn>
+          </div>
+
+          <v-alert
+            v-if="unresolvedAutofillJobs.length > 0"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-2"
+          >
+            {{ t('billing.invoices.editor.messages.unresolvedJobs', { jobs: unresolvedAutofillJobs.join(', ') }) }}
+          </v-alert>
+
+          <v-alert
+            v-if="manualReviewAutofillJobs.length > 0"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-2"
+          >
+            {{ t('billing.invoices.editor.messages.manualReviewJobs', { jobs: manualReviewAutofillJobs.join(', ') }) }}
+          </v-alert>
+
           <!-- Line items table -->
           <div class="mt-2">
             <v-table density="compact" class="line-items-table">
@@ -108,12 +144,16 @@
                   <td class="py-1">
                     <v-textarea
                       v-model="line.description"
+                      class="description-textarea"
                       density="compact"
                       variant="outlined"
                       hide-details
                       auto-grow
-                      rows="2"
+                      rows="3"
                     />
+                    <div v-if="line.autofillStatus === 'ResolvedButMissingSection1'" class="text-caption text-warning mt-1">
+                      {{ t('billing.invoices.editor.messages.manualReviewRow') }}
+                    </div>
                   </td>
                   <td class="py-1">
                     <v-text-field
@@ -202,6 +242,23 @@
           {{ t('billing.invoices.editor.actions.save') }}
         </v-btn>
       </v-card-actions>
+
+      <v-dialog v-model="showAutofillOverwriteConfirmation" max-width="420">
+        <v-card>
+          <v-card-title>{{ t('billing.invoices.editor.actions.confirmRefresh') }}</v-card-title>
+          <v-card-text>{{ t('billing.invoices.editor.messages.refreshOverwriteConfirm') }}</v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="showAutofillOverwriteConfirmation = false">
+              {{ t('billing.invoices.editor.actions.cancel') }}
+            </v-btn>
+            <v-btn color="primary" variant="elevated" :loading="autofillLoading" @click="confirmAutofillOverwrite">
+              {{ t('billing.invoices.editor.actions.refreshFromJobNumbers') }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <div class="resize-handle" @mousedown.stop.prevent="startResize" />
     </v-card>
   </v-dialog>
@@ -216,11 +273,15 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import {
   listBillingClients,
   getInvoiceEditorDetail,
+  lookupInvoiceEditorAutofill,
   createInvoice,
   updateInvoice,
   type BillingClientOption,
+  type InvoiceEditorAutofillLookupItem,
+  type InvoiceEditorAutofillLookupStatus,
   type InvoiceBillingSummary,
 } from '@/services/billing'
+import { buildJobNumberSignature, parseJobNumberExpression } from './invoiceAutofill'
 
 // ── Props & Emits ─────────────────────────────────────────────────────────────
 
@@ -255,6 +316,8 @@ interface FormLineItem {
   unit: string
   unitCostStr: string
   lineTotal: number
+  sourceJobNumber: string | null
+  autofillStatus: InvoiceEditorAutofillLookupStatus | null
 }
 
 interface FormState {
@@ -275,13 +338,15 @@ function emptyLine(): FormLineItem {
     unit: '',
     unitCostStr: '0',
     lineTotal: 0,
+    sourceJobNumber: null,
+    autofillStatus: null,
   }
 }
 
 function resetForm(): FormState {
   return {
     client: null,
-    invoiceDate: '',
+    invoiceDate: toIsoDate(new Date()),
     jobNumber: '',
     lineItems: [emptyLine()],
   }
@@ -310,16 +375,27 @@ const modeBadgeColor = computed(() => {
   return 'primary'
 })
 
+const jobNumberParseResult = computed(() => parseJobNumberExpression(form.value.jobNumber))
+const currentCanonicalJobNumbers = computed(() => jobNumberParseResult.value.canonicalJobNumbers)
+const currentAutofillSignature = computed(() => buildJobNumberSignature(currentCanonicalJobNumbers.value))
+const jobNumberValidationMessage = computed(() =>
+  jobNumberParseResult.value.error ? t('billing.invoices.editor.validation.jobNumberFormat') : '',
+)
+
 // ── Dialog Size & Position ────────────────────────────────────────────────────
 
 const datePickerOpen = ref(false)
 
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function onDatePicked(date: Date | null) {
   if (date) {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    form.value.invoiceDate = `${y}-${m}-${d}`
+    form.value.invoiceDate = toIsoDate(date)
   }
   datePickerOpen.value = false
 }
@@ -411,6 +487,25 @@ const invoiceTotal = computed(() =>
   form.value.lineItems.reduce((sum, item) => sum + item.lineTotal, 0),
 )
 
+const autofillLoading = ref(false)
+const unresolvedAutofillJobs = ref<string[]>([])
+const manualReviewAutofillJobs = ref<string[]>([])
+const lastGeneratedAutofillSignature = ref('')
+const lastGeneratedLineItemsSnapshot = ref('')
+const showAutofillOverwriteConfirmation = ref(false)
+
+const autofillDirty = computed(() =>
+  lastGeneratedLineItemsSnapshot.value.length > 0
+  && serializeLineItems(form.value.lineItems) !== lastGeneratedLineItemsSnapshot.value,
+)
+
+const autofillRefreshVisible = computed(() =>
+  !isReadOnly.value
+  && form.value.jobNumber.trim().length > 0
+  && !jobNumberParseResult.value.error
+  && currentAutofillSignature.value !== lastGeneratedAutofillSignature.value,
+)
+
 // ── Client Autocomplete ───────────────────────────────────────────────────────
 
 const clientOptions = ref<BillingClientOption[]>([])
@@ -470,8 +565,15 @@ async function loadDetail() {
             unit: li.unit,
             unitCostStr: String(li.unitCost),
             lineTotal: li.lineTotal,
+            sourceJobNumber: null,
+            autofillStatus: null,
           }))
         : [emptyLine()]
+
+    lastGeneratedAutofillSignature.value = buildJobNumberSignature(parseJobNumberExpression(dto.jobNumber).canonicalJobNumbers)
+    lastGeneratedLineItemsSnapshot.value = ''
+    unresolvedAutofillJobs.value = []
+    manualReviewAutofillJobs.value = []
 
     // Seed client options with the loaded client so it shows immediately
     if (dto.client) {
@@ -502,6 +604,10 @@ watch(
       if (props.mode === 'create') {
         form.value = resetForm()
         clientOptions.value = []
+        lastGeneratedAutofillSignature.value = ''
+        lastGeneratedLineItemsSnapshot.value = ''
+        unresolvedAutofillJobs.value = []
+        manualReviewAutofillJobs.value = []
         void loadClients()
       } else {
         form.value = resetForm()
@@ -515,6 +621,14 @@ watch(
     } else {
       overlayEl.value = null
     }
+  },
+)
+
+watch(
+  () => form.value.jobNumber,
+  () => {
+    unresolvedAutofillJobs.value = []
+    manualReviewAutofillJobs.value = []
   },
 )
 
@@ -550,6 +664,91 @@ function addLine() {
 
 function removeLine(idx: number) {
   form.value.lineItems.splice(idx, 1)
+}
+
+function serializeLineItems(lineItems: FormLineItem[]): string {
+  return JSON.stringify(lineItems.map((item) => ({
+    poNumber: item.poNumber,
+    description: item.description,
+    qtyStr: item.qtyStr,
+    unit: item.unit,
+    unitCostStr: item.unitCostStr,
+  })))
+}
+
+function createAutofillLineItem(item: InvoiceEditorAutofillLookupItem): FormLineItem {
+  return {
+    id: `autofill-${item.canonicalJobNumber}`,
+    poNumber: item.purchaseOrder,
+    description: item.description,
+    qtyStr: '1',
+    unit: '',
+    unitCostStr: '0',
+    lineTotal: 0,
+    sourceJobNumber: item.canonicalJobNumber,
+    autofillStatus: item.status,
+  }
+}
+
+async function handleAutofillRefresh() {
+  if (jobNumberParseResult.value.error) {
+    return
+  }
+
+  if (currentCanonicalJobNumbers.value.length === 0) {
+    return
+  }
+
+  if (autofillDirty.value) {
+    showAutofillOverwriteConfirmation.value = true
+    return
+  }
+
+  await runAutofillRefresh()
+}
+
+async function confirmAutofillOverwrite() {
+  showAutofillOverwriteConfirmation.value = false
+  await runAutofillRefresh()
+}
+
+async function runAutofillRefresh() {
+  autofillLoading.value = true
+  errorMessage.value = ''
+  unresolvedAutofillJobs.value = []
+  manualReviewAutofillJobs.value = []
+
+  try {
+    const results = await lookupInvoiceEditorAutofill(currentCanonicalJobNumbers.value)
+    const nextLineItems = results
+      .filter((item) => item.status !== 'Unresolved')
+      .map(createAutofillLineItem)
+
+    unresolvedAutofillJobs.value = results
+      .filter((item) => item.status === 'Unresolved')
+      .map((item) => item.canonicalJobNumber)
+
+    manualReviewAutofillJobs.value = results
+      .filter((item) => item.status === 'ResolvedButMissingSection1')
+      .map((item) => item.canonicalJobNumber)
+
+    if (nextLineItems.length > 0) {
+      form.value.lineItems = nextLineItems
+      lastGeneratedAutofillSignature.value = currentAutofillSignature.value
+      lastGeneratedLineItemsSnapshot.value = serializeLineItems(nextLineItems)
+    }
+  } catch (e) {
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value =
+        e.response?.data?.message ?? e.message ?? t('billing.invoices.editor.messages.refreshFailed')
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message
+    } else {
+      errorMessage.value = t('billing.invoices.editor.messages.refreshFailed')
+    }
+  } finally {
+    autofillLoading.value = false
+  }
 }
 
 // ── Save ──────────────────────────────────────────────────────────────────────
@@ -654,6 +853,12 @@ function validateLineItems(): string | null {
 
 .line-items-table :deep(.text-center .v-field__input) {
   text-align: center;
+}
+
+.line-items-table :deep(.description-textarea textarea) {
+  resize: vertical;
+  overflow: auto;
+  min-height: 88px;
 }
 
 .resize-handle {

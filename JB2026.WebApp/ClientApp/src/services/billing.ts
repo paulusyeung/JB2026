@@ -322,6 +322,25 @@ export interface GetInvoiceEditorDetailResponse {
   invoice: InvoiceEditorDto
 }
 
+export type InvoiceEditorAutofillLookupStatus =
+  | 'Resolved'
+  | 'Unresolved'
+  | 'ResolvedButMissingSection1'
+
+export interface InvoiceEditorAutofillLookupItem {
+  canonicalJobNumber: string
+  orderId?: string
+  purchaseOrder: string
+  productDetails: string
+  description: string
+  status: InvoiceEditorAutofillLookupStatus
+  message: string
+}
+
+export interface LookupInvoiceEditorAutofillResponse {
+  jobs: InvoiceEditorAutofillLookupItem[]
+}
+
 /**
  * A single line item in a create or update invoice editor request.
  */
@@ -381,6 +400,16 @@ export async function getInvoiceEditorDetail(externalInvoiceId: string): Promise
     `/api/v2/billing/invoices/${externalInvoiceId}`,
   )
   return response.data.invoice
+}
+
+export async function lookupInvoiceEditorAutofill(
+  canonicalJobNumbers: string[],
+): Promise<InvoiceEditorAutofillLookupItem[]> {
+  const response = await apiClient.post<LookupInvoiceEditorAutofillResponse>(
+    '/api/v2/billing/invoices/autofill-lookup',
+    { canonicalJobNumbers },
+  )
+  return response.data.jobs
 }
 
 /**

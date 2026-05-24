@@ -6,6 +6,7 @@ using JB2026.EfCore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using System.Linq.Expressions;
 
 /// <summary>
 /// High-level interface for billing operations with Invoice Ninja.
@@ -141,6 +142,13 @@ public interface IBillingService
     /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
     /// <returns>Editor DTO with client, date, job number, and line items.</returns>
     Task<InvoiceEditorDto> GetInvoiceEditorDetailAsync(string externalInvoiceId);
+
+    /// <summary>
+    /// Resolves canonical job numbers into billing invoice editor autofill rows.
+    /// </summary>
+    /// <param name="canonicalJobNumbers">Canonical user-facing job numbers such as orderNumber-jobSuffix.</param>
+    /// <returns>Resolved, unresolved, or manual-review row payloads for invoice editor autofill.</returns>
+    Task<IReadOnlyList<InvoiceEditorAutofillLookupItemDto>> LookupInvoiceEditorAutofillAsync(IReadOnlyList<string> canonicalJobNumbers);
 
     /// <summary>
     /// Creates a new invoice in Invoice Ninja from the editor form.
@@ -658,6 +666,143 @@ public class BillingService : IBillingService
             LineItems = lineItems,
             TotalAmount = lineItems.Sum(l => l.LineTotal)
         };
+    }
+
+    public async Task<IReadOnlyList<InvoiceEditorAutofillLookupItemDto>> LookupInvoiceEditorAutofillAsync(IReadOnlyList<string> canonicalJobNumbers)
+    {
+        if (_readContext is null)
+        {
+            throw new BillingException("DATA_CONTEXT_UNAVAILABLE", "Invoice editor autofill is unavailable in the current runtime mode.");
+        }
+
+        if (canonicalJobNumbers.Count == 0)
+        {
+            return Array.Empty<InvoiceEditorAutofillLookupItemDto>();
+        }
+
+        var orderedReferences = new List<CanonicalJobReference>();
+        var invalidItems = new List<InvoiceEditorAutofillLookupItemDto>();
+        var seenCanonical = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var jobNumber in canonicalJobNumbers)
+        {
+            var trimmed = jobNumber?.Trim() ?? string.Empty;
+            if (trimmed.Length == 0 || !seenCanonical.Add(trimmed))
+            {
+                continue;
+            }
+
+            if (!BillingInvoiceAutofillHelper.TryParseCanonicalJobNumber(trimmed, out var reference) || reference is null)
+            {
+                invalidItems.Add(new InvoiceEditorAutofillLookupItemDto
+                {
+                    CanonicalJobNumber = BillingInvoiceAutofillHelper.SanitizeForJson(trimmed),
+                    Status = InvoiceEditorAutofillLookupStatuses.Unresolved,
+                    Message = "Unsupported canonical job number format."
+                });
+                continue;
+            }
+
+            orderedReferences.Add(reference);
+        }
+
+        var orderNumbers = orderedReferences
+            .Select(item => BillingInvoiceAutofillHelper.NormalizeOrderNumber(item.OrderNumber))
+            .Where(item => item.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var jobSuffixes = orderedReferences.Select(item => item.JobSuffix).Distinct().ToList();
+
+        var suffixPredicate = BuildJobSuffixPredicate(jobSuffixes);
+
+        var jobs = await _readContext.JobOrders
+            .AsNoTracking()
+            .Where(job => !job.Retired)
+            .Where(suffixPredicate)
+            .Select(job => new
+            {
+                job.OrderId,
+                job.OrderNumber,
+                job.JobNumber,
+                job.CustomerRef,
+                job.PONumber,
+                job.OriginalPONumber,
+                job.ProductDetails,
+            })
+            .ToListAsync();
+
+        var matchingJobs = jobs
+            .Where(job => orderNumbers.Contains(BillingInvoiceAutofillHelper.NormalizeOrderNumber(job.OrderNumber)))
+            .ToList();
+
+        var jobsByCanonical = matchingJobs
+            .Where(job => !string.IsNullOrWhiteSpace(job.OrderNumber) && job.JobNumber.HasValue)
+            .GroupBy(
+                job => BillingInvoiceAutofillHelper.BuildCanonicalLookupKey(job.OrderNumber, job.JobNumber!.Value),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        var resolvedItems = orderedReferences.Select(reference =>
+        {
+            var lookupKey = BillingInvoiceAutofillHelper.BuildCanonicalLookupKey(reference.OrderNumber, reference.JobSuffix);
+            if (!jobsByCanonical.TryGetValue(lookupKey, out var job))
+            {
+                return new InvoiceEditorAutofillLookupItemDto
+                {
+                    CanonicalJobNumber = BillingInvoiceAutofillHelper.SanitizeForJson(reference.CanonicalJobNumber),
+                    Status = InvoiceEditorAutofillLookupStatuses.Unresolved,
+                    Message = "Job number could not be resolved."
+                };
+            }
+
+            var description = BillingInvoiceAutofillHelper.ExtractSectionOneDescription(job.ProductDetails);
+            var missingSectionOne = string.IsNullOrWhiteSpace(description);
+            var purchaseOrder = !string.IsNullOrWhiteSpace(job.CustomerRef)
+                ? job.CustomerRef
+                : !string.IsNullOrWhiteSpace(job.PONumber)
+                    ? job.PONumber
+                    : job.OriginalPONumber;
+
+            return new InvoiceEditorAutofillLookupItemDto
+            {
+                CanonicalJobNumber = BillingInvoiceAutofillHelper.SanitizeForJson(reference.CanonicalJobNumber),
+                OrderId = job.OrderId,
+                PurchaseOrder = BillingInvoiceAutofillHelper.SanitizeForJson(purchaseOrder),
+                ProductDetails = BillingInvoiceAutofillHelper.SanitizeForJson(job.ProductDetails),
+                Description = BillingInvoiceAutofillHelper.SanitizeForJson(description),
+                Status = missingSectionOne
+                    ? InvoiceEditorAutofillLookupStatuses.ResolvedButMissingSection1
+                    : InvoiceEditorAutofillLookupStatuses.Resolved,
+                Message = missingSectionOne ? "Section 1 could not be extracted. Manual review required." : string.Empty,
+            };
+        });
+
+        return resolvedItems.Concat(invalidItems).ToList();
+    }
+
+    private static Expression<Func<JB2026.EfCore.Models.JobOrder, bool>> BuildJobSuffixPredicate(IReadOnlyCollection<int> jobSuffixes)
+    {
+        if (jobSuffixes.Count == 0)
+        {
+            return job => false;
+        }
+
+        var parameter = Expression.Parameter(typeof(JB2026.EfCore.Models.JobOrder), "job");
+        var jobNumber = Expression.Property(parameter, nameof(JB2026.EfCore.Models.JobOrder.JobNumber));
+        var hasValue = Expression.Property(jobNumber, nameof(Nullable<int>.HasValue));
+        var value = Expression.Property(jobNumber, nameof(Nullable<int>.Value));
+
+        Expression? matchesAnySuffix = null;
+        foreach (var suffix in jobSuffixes)
+        {
+            var equalsSuffix = Expression.Equal(value, Expression.Constant(suffix));
+            matchesAnySuffix = matchesAnySuffix is null
+                ? equalsSuffix
+                : Expression.OrElse(matchesAnySuffix, equalsSuffix);
+        }
+
+        var body = Expression.AndAlso(hasValue, matchesAnySuffix!);
+        return Expression.Lambda<Func<JB2026.EfCore.Models.JobOrder, bool>>(body, parameter);
     }
 
     public async Task<InvoiceBillingSummary> CreateInvoiceFromEditorAsync(CreateInvoiceEditorRequest request)
