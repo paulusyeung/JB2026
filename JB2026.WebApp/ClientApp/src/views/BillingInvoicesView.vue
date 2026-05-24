@@ -372,13 +372,8 @@ function openNewInvoice() {
   showEditorDialog.value = true
 }
 
-function handleInvoiceSaved(summary: InvoiceBillingSummary) {
-  const idx = invoices.value.findIndex((inv) => inv.externalInvoiceId === summary.externalInvoiceId)
-  if (idx !== -1) {
-    invoices.value.splice(idx, 1, summary)
-  } else {
-    invoices.value.unshift(summary)
-  }
+async function handleInvoiceSaved() {
+  await loadInvoices()
 }
 
 /**
