@@ -95,6 +95,7 @@ export const adminMessages = {
           preference: '偏好設定',
           newCustomer: '新增客戶',
           syncBilling: '同步帳單系統',
+          merge: '合併客戶',
           popup: '彈出視窗',
           sortBy: '排序欄位',
           asc: '升冪',
@@ -115,6 +116,15 @@ export const adminMessages = {
           billingError: '帳單同步失敗',
           billingSyncSuccess: '客戶已成功同步至 Invoice Ninja。',
           billingSyncFailed: '同步客戶至 Invoice Ninja 失敗: {error}',
+          mergeSuccess: '客戶合併成功。',
+          mergeFailed: '合併客戶失敗，請再試一次。',
+        },
+        merge: {
+          dialogTitle: '合併客戶',
+          hint: '選取要保留的客戶，所有其他已選客戶將被停用。',
+          targetRequired: '請選取要保留的客戶。',
+          confirm: '合併',
+          cancel: '取消',
         },
         form: {
           newTitle: '新增客戶',

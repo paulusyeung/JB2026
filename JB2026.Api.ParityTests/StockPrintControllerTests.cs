@@ -25,12 +25,21 @@ public sealed class StockPrintControllerTests
         return new JB5LegacyReadContext(options);
     }
 
+    private static JB5LegacyWriteContext CreateWriteContext()
+    {
+        var options = new DbContextOptionsBuilder<JB5LegacyWriteContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+
+        return new JB5LegacyWriteContext(options);
+    }
+
     private static StockController CreateController(JB5LegacyReadContext context)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        var legacyFiles = Microsoft.Extensions.Options.Options.Create(new JB2026.Api.Options.LegacyFilesOptions());
         var composer = new StockProductPrintComposer(context);
         var renderer = new StockProductPdfRenderer();
-        var controller = new StockController(context, NullLogger<StockController>.Instance, configuration, composer, renderer)
+        var controller = new StockController(context, CreateWriteContext(), NullLogger<StockController>.Instance, legacyFiles, composer, renderer)
         {
             ControllerContext = new ControllerContext
             {

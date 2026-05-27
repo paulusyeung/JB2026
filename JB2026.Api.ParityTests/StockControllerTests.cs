@@ -22,12 +22,22 @@ public sealed class StockControllerTests
         return new JB5LegacyReadContext(options);
     }
 
+    private static JB5LegacyWriteContext CreateWriteContext(string? databaseName = null)
+    {
+        var options = new DbContextOptionsBuilder<JB5LegacyWriteContext>()
+            .UseInMemoryDatabase(databaseName ?? Guid.NewGuid().ToString("N"))
+            .Options;
+
+        return new JB5LegacyWriteContext(options);
+    }
+
     private static StockController CreateController(JB5LegacyReadContext context)
     {
         var options = Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions());
         var composer = new StockProductPrintComposer(context);
         var renderer = new StockProductPdfRenderer();
-        var controller = new StockController(context, NullLogger<StockController>.Instance, options, composer, renderer);
+        using var writeContext = CreateWriteContext();
+        var controller = new StockController(context, writeContext, NullLogger<StockController>.Instance, options, composer, renderer);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -250,6 +260,7 @@ public sealed class StockControllerTests
 
             var controller = new StockController(
                 context,
+                CreateWriteContext(),
                 NullLogger<StockController>.Instance,
                 options,
                 new StockProductPrintComposer(context),
@@ -343,6 +354,7 @@ public sealed class StockControllerTests
 
             var controller = new StockController(
                 context,
+                CreateWriteContext(),
                 NullLogger<StockController>.Instance,
                 options,
                 new StockProductPrintComposer(context),

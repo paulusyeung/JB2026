@@ -167,6 +167,11 @@ export interface UpdateAdminCustomerRequest {
   shipToAddresses: CustomerShipToAddress[]
 }
 
+export interface MergeAdminCustomersRequest {
+  targetCustomerId: string
+  customerIds: string[]
+}
+
 export interface AdminSupplierListItem {
   supplierId: string
   supplierName: string

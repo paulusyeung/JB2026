@@ -18,6 +18,7 @@ import type {
   AdminQuotationItemListItem,
   AdminSupplierListItem,
   AdminSupplierRecord,
+  MergeAdminCustomersRequest,
   AdminOrderTypeWorkflowPayload,
   UpdateAdminOrderTypeWorkflowsRequest,
   CreateAdminUserRequest,
@@ -201,6 +202,10 @@ export async function updateAdminCustomer(id: string, request: UpdateAdminCustom
 
 export async function deleteAdminCustomer(id: string): Promise<void> {
   await apiClient.delete(`/api/v2/admin/customers/${id}`)
+}
+
+export async function mergeAdminCustomers(request: MergeAdminCustomersRequest): Promise<void> {
+  await apiClient.post('/api/v2/admin/customers/merge', request)
 }
 
 export async function getAdminSuppliers(query: AdminSuppliersQuery = {}): Promise<AdminSupplierListItem[]> {

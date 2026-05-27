@@ -105,6 +105,10 @@ public sealed class ReportsControllerTests
                     TotalCostA = 123.45m,
                     UnitCostA = 1.23m,
                     Status = 1,
+                    CreatedOn = new DateTime(2026, 1, 1),
+                    CreatedBy = "tester",
+                    ModifiedOn = new DateTime(2026, 1, 1),
+                    ModifiedBy = "tester",
                 },
             ];
         }

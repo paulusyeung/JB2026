@@ -842,6 +842,139 @@ public sealed class AdminController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("customers/merge")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MergeCustomers(
+        [FromServices] JB5LegacyWriteContext legacyContext,
+        [FromBody] MergeAdminCustomersRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var customerIds = request.CustomerIds
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        if (customerIds.Length < 2)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.CustomerIds)] = ["Select at least two customers to merge."]
+            }));
+        }
+
+        if (request.TargetCustomerId == Guid.Empty)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.TargetCustomerId)] = ["A target customer is required."]
+            }));
+        }
+
+        if (!customerIds.Contains(request.TargetCustomerId))
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.TargetCustomerId)] = ["The target customer must be one of the selected customers."]
+            }));
+        }
+
+        // Load customers one by one to avoid OPENJSON ($) on legacy DB compatibility level.
+        var customers = new List<JB2026.EfCore.Models.Customer>(customerIds.Length);
+        foreach (var customerId in customerIds)
+        {
+            var found = await legacyContext.Customers
+                .FirstOrDefaultAsync(c => c.CustomerId == customerId, cancellationToken);
+            if (found is not null) customers.Add(found);
+        }
+
+        if (customers.Count != customerIds.Length)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Customer not found",
+                Detail = "One or more selected customers no longer exist.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        var targetCustomer = customers.First(customer => customer.CustomerId == request.TargetCustomerId);
+        if (targetCustomer.Retired)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.TargetCustomerId)] = ["The target customer is already retired."]
+            }));
+        }
+
+        var sourceCustomerIds = customerIds
+            .Where(customerId => customerId != request.TargetCustomerId)
+            .ToArray();
+
+        var retiredCustomers = customers
+            .Where(customer => sourceCustomerIds.Contains(customer.CustomerId))
+            .ToArray();
+
+        if (retiredCustomers.Any(customer => customer.Retired))
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.CustomerIds)] = ["Retired customers cannot be merged."]
+            }));
+        }
+
+        var actorId = ResolveActorId();
+        var retiredOn = DateTime.Now;
+
+        await using var transaction = await legacyContext.Database.BeginTransactionAsync(cancellationToken);
+
+        var invoiceHeaders = new List<JB2026.EfCore.Models.InvoiceHeader>();
+        foreach (var sourceId in sourceCustomerIds)
+        {
+            var headers = await legacyContext.InvoiceHeaders
+                .Where(header => header.CustomerId.HasValue && header.CustomerId.Value == sourceId)
+                .ToListAsync(cancellationToken);
+            invoiceHeaders.AddRange(headers);
+        }
+
+        foreach (var header in invoiceHeaders)
+        {
+            header.CustomerId = request.TargetCustomerId;
+        }
+
+        var quotationHeaders = new List<JB2026.EfCore.Models.QtHeader>();
+        foreach (var sourceId in sourceCustomerIds)
+        {
+            var headers = await legacyContext.QtHeaders
+                .Where(header => header.CustomerId.HasValue && header.CustomerId.Value == sourceId)
+                .ToListAsync(cancellationToken);
+            quotationHeaders.AddRange(headers);
+        }
+
+        foreach (var header in quotationHeaders)
+        {
+            header.CustomerId = request.TargetCustomerId;
+        }
+
+        foreach (var customer in retiredCustomers)
+        {
+            customer.Retired = true;
+            customer.RetiredOn = retiredOn;
+            customer.RetiredBy = actorId;
+        }
+
+        await legacyContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     private static AdminCustomerRecordResponse MapToCustomerRecordResponse(CustomerStoredProcedureRecord customer)
     {
         var metadata = ParseCustomerMetadata(customer.MetadataXml);

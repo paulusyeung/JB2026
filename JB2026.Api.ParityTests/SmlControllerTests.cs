@@ -88,6 +88,10 @@ public sealed class SmlControllerTests
                     TotalCostA = 100m,
                     UnitCostA = 1m,
                     Status = 1,
+                    CreatedOn = new DateTime(2026, 3, 10),
+                    CreatedBy = "alice",
+                    ModifiedOn = new DateTime(2026, 3, 10),
+                    ModifiedBy = "alice",
                 },
                 new QuotationListItemResponse
                 {
@@ -110,6 +114,10 @@ public sealed class SmlControllerTests
                     TotalCostA = 200m,
                     UnitCostA = 2m,
                     Status = 1,
+                    CreatedOn = new DateTime(2026, 3, 15),
+                    CreatedBy = "bob",
+                    ModifiedOn = new DateTime(2026, 3, 15),
+                    ModifiedBy = "bob",
                 },
                 new QuotationListItemResponse
                 {
@@ -132,6 +140,10 @@ public sealed class SmlControllerTests
                     TotalCostA = 300m,
                     UnitCostA = 3m,
                     Status = 1,
+                    CreatedOn = new DateTime(2026, 4, 5),
+                    CreatedBy = "cara",
+                    ModifiedOn = new DateTime(2026, 4, 5),
+                    ModifiedBy = "cara",
                 },
             ];
         }

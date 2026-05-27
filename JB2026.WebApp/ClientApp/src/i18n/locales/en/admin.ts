@@ -97,6 +97,7 @@ export const adminMessages = {
           preference: 'Preference',
           newCustomer: 'New Customer',
           syncBilling: 'Sync with Billing',
+          merge: 'Merge Customers',
           popup: 'Popup',
           sortBy: 'Sort By',
           asc: 'Asc',
@@ -117,6 +118,15 @@ export const adminMessages = {
           billingError: 'Billing sync failed',
           billingSyncSuccess: 'Customer synced with Invoice Ninja successfully.',
           billingSyncFailed: 'Failed to sync customer with Invoice Ninja: {error}',
+          mergeSuccess: 'Customers merged successfully.',
+          mergeFailed: 'Failed to merge customers. Please try again.',
+        },
+        merge: {
+          dialogTitle: 'Merge Customers',
+          hint: 'Select the customer to keep. All other selected customers will be retired.',
+          targetRequired: 'Select a customer to keep.',
+          confirm: 'Merge',
+          cancel: 'Cancel',
         },
         form: {
           newTitle: 'New Customer',

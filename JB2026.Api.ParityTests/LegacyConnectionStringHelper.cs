@@ -7,7 +7,9 @@ internal static class LegacyConnectionStringHelper
 {
     public static string ResolveLegacyProviderConnectionString()
     {
-        const string appConfigPath = @"C:\Projects\JB2015\JB5.EF6\App.Config";
+        var appConfigPath = OperatingSystem.IsWindows()
+            ? @"C:\Projects\JB2015\JB5.EF6\App.Config"
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Projects/JB2015/JB5.EF6/App.Config");
         var document = XDocument.Load(appConfigPath);
         var entityConnection = document
             .Descendants("add")

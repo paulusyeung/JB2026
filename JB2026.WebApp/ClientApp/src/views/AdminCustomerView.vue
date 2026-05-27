@@ -111,6 +111,18 @@
                 {{ !selectedCustomerId ? t('admin.customer.messages.selectRecordFirst') : (!canSyncSelectedCustomer ? t('admin.customer.messages.syncRequiresCode') : '') }}
               </v-tooltip>
             </v-btn>
+
+            <v-btn
+              :disabled="!canMergeSelectedCustomers"
+              :loading="merging"
+              variant="outlined"
+              size="small"
+              color="primary"
+              prepend-icon="mdi-account-multiple-outline"
+              @click="openMergeDialog"
+            >
+              {{ t('admin.customer.actions.merge') }}
+            </v-btn>
           </template>
 
           <v-menu v-else location="bottom end">
@@ -139,6 +151,13 @@
                 @click="syncSelectedCustomer"
               >
                 <v-list-item-title>{{ t('admin.customer.actions.syncBilling') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                :disabled="!canMergeSelectedCustomers"
+                prepend-icon="mdi-account-multiple-outline"
+                @click="openMergeDialog"
+              >
+                <v-list-item-title>{{ t('admin.customer.actions.merge') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -244,6 +263,37 @@
       />
     </v-dialog>
 
+    <v-dialog v-model="mergeDialogOpen" max-width="480" :persistent="merging">
+      <v-card>
+        <v-card-title class="text-h6">{{ t('admin.customer.merge.dialogTitle') }}</v-card-title>
+        <v-card-text>
+          <p class="text-body-2 text-medium-emphasis mb-4">{{ t('admin.customer.merge.hint') }}</p>
+          <v-radio-group v-model="mergeTargetId" hide-details>
+            <v-radio
+              v-for="customer in mergeSelectedCustomers"
+              :key="customer.customerId"
+              :value="customer.customerId"
+              :label="customer.customerName + (customer.customerCode ? ' (' + customer.customerCode + ')' : '')"
+            />
+          </v-radio-group>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" :disabled="merging" @click="mergeDialogOpen = false">
+            {{ t('admin.customer.merge.cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :disabled="!mergeTargetId"
+            :loading="merging"
+            @click="confirmMerge"
+          >
+            {{ t('admin.customer.merge.confirm') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
       {{ successMessage }}
       <template #actions>
@@ -261,7 +311,7 @@ import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/Li
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import AdminCustomerRecordDialog from '@/components/forms/AdminCustomerRecordDialog.vue'
-import { getAdminCustomers } from '@/services/admin'
+import { getAdminCustomers, mergeAdminCustomers } from '@/services/admin'
 import { syncCustomerToBilling } from '@/services/billing'
 import type { AdminCustomerListItem, AdminCustomerRecord } from '@/types/api'
 
@@ -301,6 +351,9 @@ const saveSuccess = ref(false)
 const successMessage = ref('')
 const syncingCustomerId = ref<string | null>(null)
 const billingStatus = ref<{ [customerId: string]: CustomerBillingSyncStatus }>({})
+const mergeDialogOpen = ref(false)
+const mergeTargetId = ref<string | null>(null)
+const merging = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
 const theme = useTheme()
@@ -377,6 +430,12 @@ const displayedRows = computed<AdminCustomerDisplayItem[]>(() => {
 })
 
 const selectedCustomerId = computed(() => selectedCustomerIds.value[0] ?? null)
+
+const canMergeSelectedCustomers = computed(() => selectedCustomerIds.value.length >= 2 && !merging.value)
+
+const mergeSelectedCustomers = computed(() =>
+  rows.value.filter((r) => selectedCustomerIds.value.includes(r.customerId)),
+)
 
 const canSyncSelectedCustomer = computed(() => {
   const customerId = selectedCustomerId.value
@@ -508,6 +567,37 @@ function formatDateCell(value: string): string {
 
 function isBackendBillingSynced(item: AdminCustomerListItem): boolean {
   return item.billingSyncStatus === 'success' && !!item.invoiceNinjaClientId
+}
+
+function openMergeDialog() {
+  mergeTargetId.value = null
+  mergeDialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function confirmMerge() {
+  const targetId = mergeTargetId.value
+  if (!targetId || selectedCustomerIds.value.length < 2) return
+
+  merging.value = true
+  errorMessage.value = ''
+
+  try {
+    await mergeAdminCustomers({
+      targetCustomerId: targetId,
+      customerIds: selectedCustomerIds.value,
+    })
+    mergeDialogOpen.value = false
+    await load()
+    selectedCustomerIds.value = rows.value.some((r) => r.customerId === targetId) ? [targetId] : []
+    successMessage.value = t('admin.customer.messages.mergeSuccess')
+    saveSuccess.value = true
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+    errorMessage.value = t('admin.customer.messages.mergeFailed', { error: errorMsg })
+  } finally {
+    merging.value = false
+  }
 }
 
 async function syncSelectedCustomer() {

@@ -17,7 +17,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetAll(null, "acme", 2, "A", "job");
+        var result = controller.GetAll(null, "acme", 2, "A", "job", null, null);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
@@ -33,7 +33,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetAll(null, "acme", 0, null, null);
+        var result = controller.GetAll(null, "acme", 0, null, null, null, null);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
@@ -49,7 +49,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetAll(500, null, 0, null, "order");
+        var result = controller.GetAll(500, null, 0, null, "order", null, null);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
@@ -65,7 +65,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetStats(null, null, 0);
+        var result = controller.GetStats(new DateOnly(2026, 12, 31), new DateOnly(2026, 1, 1));
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
@@ -195,6 +195,7 @@ public sealed class JobOrdersControllerTests
                 OrderTitle = "Sample",
                 ProductCode = string.Empty,
                 ProductStyle = string.Empty,
+                ProductDetails = string.Empty,
                 OutputRef = string.Empty,
                 InvoiceRef = string.Empty,
                 InvoiceAmount = 0m,
