@@ -962,6 +962,24 @@ public sealed class AdminController : ControllerBase
             header.CustomerId = request.TargetCustomerId;
         }
 
+        foreach (var sourceCustomer in retiredCustomers)
+        {
+            if (string.IsNullOrEmpty(sourceCustomer.CustomerName))
+            {
+                continue;
+            }
+
+            var matchingJobOrders = await legacyContext.JobOrders
+                .Where(order => order.CustomerName != null
+                    && EF.Functions.Collate(order.CustomerName, "Latin1_General_100_BIN2") == sourceCustomer.CustomerName)
+                .ToListAsync(cancellationToken);
+
+            foreach (var jobOrder in matchingJobOrders)
+            {
+                jobOrder.CustomerName = targetCustomer.CustomerName;
+            }
+        }
+
         foreach (var customer in retiredCustomers)
         {
             customer.Retired = true;

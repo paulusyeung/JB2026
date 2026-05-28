@@ -22,12 +22,19 @@ The system MUST open a merge dialog that lists the selected customers and MUST a
 - **WHEN** the user selects a target customer in the merge dialog
 - **THEN** the dialog keeps exactly one customer marked as the surviving target at a time
 
-### Requirement: Merge reassigns invoice and quotation ownership
+### Requirement: Merge reassigns dependent customer references
 When a merge is confirmed, the system MUST update every selected non-target customer's `InvoiceHeader.CustomerId` and `QtHeader.CustomerId` reference to the chosen target customer before source customers are retired.
+
+The system MUST also update `JobOrder.CustomerName` from each selected non-target customer's exact customer name to the chosen target customer's name using a case-sensitive match.
 
 #### Scenario: References move to the selected target
 - **WHEN** the user confirms a merge with one target customer and one or more source customers
 - **THEN** all `InvoiceHeader` and `QtHeader` rows that referenced the source customers reference the target customer after the merge completes
+
+#### Scenario: Exact-case job order customer names are rewritten to the target name
+- **WHEN** the user confirms a merge and one or more `JobOrder` rows have `CustomerName` exactly equal to a selected non-target customer's name
+- **THEN** those `JobOrder.CustomerName` values are rewritten to the target customer's name after the merge completes
+- **AND** `JobOrder` rows whose `CustomerName` differs only by letter casing remain unchanged
 
 ### Requirement: Merge retires non-target customers only
 When a merge is confirmed, the system MUST leave the target customer unchanged and MUST retire each non-target customer in the merge set by setting `Customer.Retired = true`, `Customer.RetiredOn` to the execution date, and `Customer.RetiredBy` to the authenticated login user.

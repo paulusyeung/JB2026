@@ -96,7 +96,73 @@ public sealed class CustomerMergeCorrectnessTests
         }
         finally
         {
-            await CleanupAsync(writeContext, [invoice1Id, invoice2Id], [qtHeaderId], [targetId, source1Id, source2Id]);
+            await CleanupAsync(writeContext, [invoice1Id, invoice2Id], [qtHeaderId], [], [targetId, source1Id, source2Id]);
+        }
+    }
+
+    [Fact]
+    public async Task MergeCustomers_rewrites_job_order_customer_name_with_exact_case_match_only()
+    {
+        await using var writeContext = LegacyDbContextFactory.CreateWriteContext();
+        await using var readContext = LegacyDbContextFactory.CreateReadContext();
+
+        var customerTemplate = await readContext.Customers.AsNoTracking().FirstAsync();
+        var jobOrderTemplate = await readContext.JobOrders.AsNoTracking().FirstAsync();
+        var now = DateTime.Now;
+
+        var targetId = Guid.NewGuid();
+        var sourceId = Guid.NewGuid();
+
+        var target = BuildCustomer(targetId, "OPSX-MERGE-TARGET-JO", customerTemplate, now);
+        var source = BuildCustomer(sourceId, "OPSX-MERGE-SRC-JO", customerTemplate, now);
+
+        writeContext.Customers.AddRange(target, source);
+        await writeContext.SaveChangesAsync();
+
+        var exactMatchOrderId = Guid.NewGuid();
+        var differentCaseOrderId = Guid.NewGuid();
+        var unrelatedOrderId = Guid.NewGuid();
+
+        var exactMatchOrder = BuildJobOrder(exactMatchOrderId, source.CustomerName, jobOrderTemplate, now);
+        var differentCaseOrder = BuildJobOrder(
+            differentCaseOrderId,
+            source.CustomerName!.ToUpperInvariant(),
+            jobOrderTemplate,
+            now);
+        var unrelatedOrder = BuildJobOrder(unrelatedOrderId, "OPSX-UNRELATED-CUSTOMER", jobOrderTemplate, now);
+
+        writeContext.JobOrders.AddRange(exactMatchOrder, differentCaseOrder, unrelatedOrder);
+        await writeContext.SaveChangesAsync();
+
+        try
+        {
+            var controller = BuildController(Guid.NewGuid());
+            var request = new MergeAdminCustomersRequest
+            {
+                TargetCustomerId = targetId,
+                CustomerIds = [targetId, sourceId],
+            };
+
+            var result = await controller.MergeCustomers(writeContext, request, CancellationToken.None);
+            Assert.IsType<NoContentResult>(result);
+
+            var refreshedExactMatchOrder = await readContext.JobOrders.AsNoTracking()
+                .FirstOrDefaultAsync(order => order.OrderId == exactMatchOrderId);
+            var refreshedDifferentCaseOrder = await readContext.JobOrders.AsNoTracking()
+                .FirstOrDefaultAsync(order => order.OrderId == differentCaseOrderId);
+            var refreshedUnrelatedOrder = await readContext.JobOrders.AsNoTracking()
+                .FirstOrDefaultAsync(order => order.OrderId == unrelatedOrderId);
+
+            Assert.NotNull(refreshedExactMatchOrder);
+            Assert.NotNull(refreshedDifferentCaseOrder);
+            Assert.NotNull(refreshedUnrelatedOrder);
+            Assert.Equal(target.CustomerName, refreshedExactMatchOrder!.CustomerName);
+            Assert.Equal(source.CustomerName!.ToUpperInvariant(), refreshedDifferentCaseOrder!.CustomerName);
+            Assert.Equal("OPSX-UNRELATED-CUSTOMER", refreshedUnrelatedOrder!.CustomerName);
+        }
+        finally
+        {
+            await CleanupAsync(writeContext, [], [], [exactMatchOrderId, differentCaseOrderId, unrelatedOrderId], [targetId, sourceId]);
         }
     }
 
@@ -171,7 +237,7 @@ public sealed class CustomerMergeCorrectnessTests
         }
         finally
         {
-            await CleanupAsync(writeContext, [], [], [retiredTargetId, sourceId]);
+            await CleanupAsync(writeContext, [], [], [], [retiredTargetId, sourceId]);
         }
     }
 
@@ -211,7 +277,7 @@ public sealed class CustomerMergeCorrectnessTests
         }
         finally
         {
-            await CleanupAsync(writeContext, [], [], [targetId, retiredSourceId]);
+            await CleanupAsync(writeContext, [], [], [], [targetId, retiredSourceId]);
         }
     }
 
@@ -303,10 +369,47 @@ public sealed class CustomerMergeCorrectnessTests
             Retired = false,
         };
 
+    private static JobOrder BuildJobOrder(Guid id, string? customerName, JobOrder template, DateTime now) =>
+        new()
+        {
+            OrderId = id,
+            OrderType = template.OrderType,
+            OrderNumber = $"JO{id:N}"[..10],
+            JobNumber = (template.JobNumber ?? 0) + 100,
+            CustomerName = customerName,
+            CustomerRef = template.CustomerRef,
+            OrderTitle = $"ORDER-{id:N}"[..Math.Min($"ORDER-{id:N}".Length, 128)],
+            ProductCode = template.ProductCode,
+            ProductStyle = template.ProductStyle,
+            ProductDetails = template.ProductDetails,
+            OrderedOn = template.OrderedOn,
+            OrderedBy = template.OrderedBy,
+            OutputRef = template.OutputRef,
+            InvoiceRef = template.InvoiceRef,
+            InvoiceAmount = template.InvoiceAmount,
+            Qty = template.Qty,
+            QtyText = template.QtyText,
+            RequiredOn = template.RequiredOn,
+            CompletedOn = template.CompletedOn,
+            SONumber = template.SONumber,
+            PONumber = template.PONumber,
+            OriginalSONumber = template.OriginalSONumber,
+            OriginalPONumber = template.OriginalPONumber,
+            PaymentTerms = template.PaymentTerms,
+            Remarks = template.Remarks,
+            Status = template.Status,
+            CreatedOn = now,
+            CreatedBy = template.CreatedBy,
+            ModifiedOn = now,
+            ModifiedBy = template.ModifiedBy,
+            Retired = false,
+        };
+
     private static async Task CleanupAsync(
         JB2026.EfCore.Data.JB5LegacyWriteContext writeContext,
         Guid[] invoiceHeaderIds,
         Guid[] qtHeaderIds,
+        Guid[] jobOrderIds,
         Guid[] customerIds)
     {
         // Use per-ID queries to avoid OPENJSON ($) on legacy DB compatibility level.
@@ -320,6 +423,12 @@ public sealed class CustomerMergeCorrectnessTests
         {
             var qt = await writeContext.QtHeaders.FirstOrDefaultAsync(h => h.HeaderId == id);
             if (qt is not null) writeContext.QtHeaders.Remove(qt);
+        }
+
+        foreach (var id in jobOrderIds)
+        {
+            var jobOrder = await writeContext.JobOrders.FirstOrDefaultAsync(order => order.OrderId == id);
+            if (jobOrder is not null) writeContext.JobOrders.Remove(jobOrder);
         }
 
         foreach (var id in customerIds)
