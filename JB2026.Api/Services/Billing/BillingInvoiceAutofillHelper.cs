@@ -5,6 +5,74 @@ using System.Text.RegularExpressions;
 
 public static partial class BillingInvoiceAutofillHelper
 {
+    public static IReadOnlyList<string> ParseCanonicalJobNumberExpression(string? expression)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return Array.Empty<string>();
+        }
+
+        var trimmed = expression.Trim();
+        var canonicalJobNumbers = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawSegment in trimmed.Split(','))
+        {
+            var segment = rawSegment.Trim();
+            if (segment.Length == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            if (segment.Contains('/'))
+            {
+                var parts = segment.Split('/').Select(part => part.Trim()).ToArray();
+                if (parts.Length == 0)
+                {
+                    return Array.Empty<string>();
+                }
+
+                var firstReference = parts[0];
+                var separatorIndex = firstReference.LastIndexOf('-');
+                if (separatorIndex <= 0 || separatorIndex >= firstReference.Length - 1)
+                {
+                    return Array.Empty<string>();
+                }
+
+                var orderNumber = firstReference[..separatorIndex].Trim();
+                var firstSuffix = NormalizeJobSuffix(firstReference[(separatorIndex + 1)..]);
+                if (orderNumber.Length == 0 || firstSuffix is null)
+                {
+                    return Array.Empty<string>();
+                }
+
+                AddCanonicalJobNumber(canonicalJobNumbers, seen, BuildCanonicalLookupKey(orderNumber, firstSuffix.Value));
+
+                foreach (var suffixPart in parts.Skip(1))
+                {
+                    var suffix = NormalizeJobSuffix(suffixPart);
+                    if (suffix is null)
+                    {
+                        return Array.Empty<string>();
+                    }
+
+                    AddCanonicalJobNumber(canonicalJobNumbers, seen, BuildCanonicalLookupKey(orderNumber, suffix.Value));
+                }
+
+                continue;
+            }
+
+            if (!TryParseCanonicalJobNumber(segment, out var reference) || reference is null)
+            {
+                return Array.Empty<string>();
+            }
+
+            AddCanonicalJobNumber(canonicalJobNumbers, seen, reference.CanonicalJobNumber);
+        }
+
+        return canonicalJobNumbers;
+    }
+
     public static string BuildCanonicalLookupKey(string? orderNumber, int jobSuffix)
     {
         return $"{NormalizeOrderNumber(orderNumber)}-{jobSuffix}";
@@ -75,6 +143,27 @@ public static partial class BillingInvoiceAutofillHelper
 
         reference = new CanonicalJobReference(trimmed, NormalizeOrderNumber(orderNumber), jobSuffix);
         return true;
+    }
+
+    private static int? NormalizeJobSuffix(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return int.TryParse(trimmed, out var jobSuffix) && jobSuffix > 0
+            ? jobSuffix
+            : null;
+    }
+
+    private static void AddCanonicalJobNumber(List<string> target, HashSet<string> seen, string canonicalJobNumber)
+    {
+        if (seen.Add(canonicalJobNumber))
+        {
+            target.Add(canonicalJobNumber);
+        }
     }
 
     public static string NormalizeProductDetailsPlainText(string? productDetails)

@@ -1,6 +1,7 @@
 namespace JB2026.Api.Controllers;
 
 using JB2026.Api.Models.Billing;
+using JB2026.Api.Services;
 using JB2026.Api.Services.Billing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -16,11 +17,16 @@ using Microsoft.AspNetCore.Mvc;
 public class BillingController : ControllerBase
 {
     private readonly IBillingService _billingService;
+    private readonly ICurrentUserProfileService _currentUserProfileService;
     private readonly ILogger<BillingController> _logger;
 
-    public BillingController(IBillingService billingService, ILogger<BillingController> logger)
+    public BillingController(
+        IBillingService billingService,
+        ICurrentUserProfileService currentUserProfileService,
+        ILogger<BillingController> logger)
     {
         _billingService = billingService;
+        _currentUserProfileService = currentUserProfileService;
         _logger = logger;
     }
 
@@ -599,7 +605,10 @@ public class BillingController : ControllerBase
 
         try
         {
-            var billingSummary = await _billingService.SendInvoiceAsync(externalInvoiceId);
+            var currentUser = _currentUserProfileService.GetCurrentUser();
+            var modifiedBy = currentUser?.UserId ?? Guid.Empty;
+
+            var billingSummary = await _billingService.SendInvoiceAsync(externalInvoiceId, modifiedBy);
 
             var response = new SendInvoiceResponse
             {

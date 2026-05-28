@@ -14,6 +14,30 @@ namespace JB2026.Api.ParityTests;
 public sealed class BillingInvoiceAutofillLookupTests
 {
     [Fact]
+    public void ParseCanonicalJobNumberExpression_ExpandsSlashSeparatedSegmentInOrder()
+    {
+        var result = BillingInvoiceAutofillHelper.ParseCanonicalJobNumberExpression("168824-1/2/3");
+
+        Assert.Equal(["168824-1", "168824-2", "168824-3"], result);
+    }
+
+    [Fact]
+    public void ParseCanonicalJobNumberExpression_ExpandsCommaSeparatedSegmentsInOrder()
+    {
+        var result = BillingInvoiceAutofillHelper.ParseCanonicalJobNumberExpression("168824-2, 168825-1, 168824-2");
+
+        Assert.Equal(["168824-2", "168825-1"], result);
+    }
+
+    [Fact]
+    public void ParseCanonicalJobNumberExpression_InvalidSegment_ReturnsEmpty()
+    {
+        var result = BillingInvoiceAutofillHelper.ParseCanonicalJobNumberExpression("168824-1, bad-value");
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public void ExtractSectionOneDescription_PlainText_ReturnsSectionBodyWithoutHeader()
     {
         const string productDetails = "1.印刷內容：\nLine A\nLine B\n2.尺寸：\nIgnore me";

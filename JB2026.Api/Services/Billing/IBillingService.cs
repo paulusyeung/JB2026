@@ -81,10 +81,12 @@ public interface IBillingService
     /// <summary>
     /// Sends a draft invoice to Invoice Ninja, transitioning it from Draft to Sent status.
     /// The invoice must be in Draft status; otherwise a BillingException is thrown.
+    /// After a successful send, best-effort updates the linked job order's invoice fields.
     /// </summary>
     /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
+    /// <param name="modifiedBy">ID of the user performing the Mark Sent action (for ModifiedBy audit field).</param>
     /// <returns>Updated billing summary with status Sent.</returns>
-    Task<InvoiceBillingSummary> SendInvoiceAsync(string externalInvoiceId);
+    Task<InvoiceBillingSummary> SendInvoiceAsync(string externalInvoiceId, Guid modifiedBy);
 
     /// <summary>
     /// Previews invoice payload before creation, including resolved custom field values and warnings.
@@ -128,6 +130,18 @@ public interface IBillingService
     /// <param name="summary">Billing summary returned by Invoice Ninja generation.</param>
     /// <returns>True when update was applied; false when order was not found.</returns>
     Task<bool> PersistJobOrderBillingSummaryAsync(Guid orderId, InvoiceBillingSummary summary);
+
+    /// <summary>
+    /// Updates invoice amount and audit fields on the Job Order whose InvoiceRef matches the given
+    /// external invoice ID. Called after a draft invoice is marked as sent so that the job record
+    /// stays in sync with the Invoice Ninja invoice state.
+    /// </summary>
+    /// <param name="invoiceRef">External Invoice Ninja invoice ID stored in the job's InvoiceRef field.</param>
+    /// <param name="invoiceNumber">Human-readable Invoice Ninja invoice number (e.g. "0023") to store as Invoice No on the job order.</param>
+    /// <param name="invoiceAmount">Confirmed total amount from the sent invoice.</param>
+    /// <param name="modifiedBy">ID of the user performing the Mark Sent action.</param>
+    /// <returns>True when the job order was found and updated; false otherwise.</returns>
+    Task<bool> UpdateJobOrderInvoiceDataByRefAsync(string invoiceRef, string invoiceNumber, decimal invoiceAmount, Guid modifiedBy);
 
     /// <summary>
     /// Lists Invoice Ninja clients matching an optional search query for the editor client picker.
@@ -419,7 +433,7 @@ public class BillingService : IBillingService
         return await GetInvoiceSummaryAsync(externalInvoiceId);
     }
 
-    public async Task<InvoiceBillingSummary> SendInvoiceAsync(string externalInvoiceId)
+    public async Task<InvoiceBillingSummary> SendInvoiceAsync(string externalInvoiceId, Guid modifiedBy)
     {
         _logger.LogInformation("Sending invoice {ExternalInvoiceId} via Invoice Ninja", externalInvoiceId);
 
@@ -458,6 +472,18 @@ public class BillingService : IBillingService
             }
 
             _logger.LogInformation("Invoice {ExternalInvoiceId} sent successfully via bulk action endpoint", externalInvoiceId);
+
+            // Best-effort: update the linked job order's invoice data so it stays in sync.
+            // Failures are logged but do not affect the invoice send result.
+            try
+            {
+                await TryUpdateJobOrderFromInvoiceAsync(externalInvoiceId, updatedInvoice, modifiedBy);
+            }
+            catch (Exception jobEx)
+            {
+                _logger.LogWarning(jobEx, "Non-fatal: failed to update job order for invoice {ExternalInvoiceId}", externalInvoiceId);
+            }
+
             return MapToInvoiceBillingSummary(updatedInvoice);
         }
         catch (BillingException)
@@ -469,6 +495,94 @@ public class BillingService : IBillingService
             _logger.LogError(ex, "Failed to send invoice {ExternalInvoiceId}: {ErrorMessage}", externalInvoiceId, ex.Message);
             throw BillingException.HttpError(0, $"Failed to send invoice {externalInvoiceId}.", ex);
         }
+    }
+
+    /// <summary>
+    /// Attempts to find and update the job order linked to the given Invoice Ninja invoice.
+    /// Uses two lookup strategies:
+    ///   1. InvoiceRef == externalInvoiceId  (set during invoice generation via PersistJobOrderBillingSummaryAsync)
+    ///   2. JobNumber from the invoice's job-number custom field (covers editor-created invoices)
+    /// Silently returns if no matching job order is found.
+    /// </summary>
+    private async Task TryUpdateJobOrderFromInvoiceAsync(
+        string externalInvoiceId,
+        InvoiceNinjaInvoiceResponse invoice,
+        Guid modifiedBy)
+    {
+        if (_writeContext is null)
+        {
+            _logger.LogWarning("Skipping job order invoice sync: write context unavailable for invoice {ExternalInvoiceId}", externalInvoiceId);
+            return;
+        }
+
+        JB2026.EfCore.Models.JobOrder? order = null;
+
+        // Strategy 1: look up by InvoiceRef set during invoice generation
+        order = await _writeContext.JobOrders.FirstOrDefaultAsync(x => x.InvoiceRef == externalInvoiceId);
+
+        if (order is null)
+        {
+            _logger.LogInformation(
+                "InvoiceRef lookup missed for {ExternalInvoiceId}; trying job-number custom field fallback",
+                externalInvoiceId);
+
+            var customFields = _billingOptions.Value.InvoiceNinja.CustomFields;
+            var jobNumberStr = !string.IsNullOrWhiteSpace(customFields.InvoiceJobNo)
+                ? invoice.GetCustomValue(customFields.InvoiceJobNo)
+                : string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(jobNumberStr))
+            {
+                // Strategy 2a: integer job number stored as plain string (e.g. "5")
+                if (int.TryParse(jobNumberStr, out var jobNumberInt))
+                {
+                    order = await _writeContext.JobOrders.FirstOrDefaultAsync(x => x.JobNumber == jobNumberInt);
+                }
+
+                // Strategy 2b: canonical "OrderNumber-JobNumber" format (e.g. "A001-5")
+                if (order is null &&
+                    BillingInvoiceAutofillHelper.TryParseCanonicalJobNumber(jobNumberStr, out var jobRef) &&
+                    jobRef is not null)
+                {
+                    order = await _writeContext.JobOrders.FirstOrDefaultAsync(
+                        x => x.OrderNumber == jobRef.OrderNumber && x.JobNumber == jobRef.JobSuffix);
+                }
+
+                // Strategy 2c: multi-job expression from the invoice editor (e.g. "A001-1/2, A002-3").
+                if (order is null)
+                {
+                    var firstCanonicalJobNumber = BillingInvoiceAutofillHelper
+                        .ParseCanonicalJobNumberExpression(jobNumberStr)
+                        .FirstOrDefault();
+
+                    if (BillingInvoiceAutofillHelper.TryParseCanonicalJobNumber(firstCanonicalJobNumber, out var parsedFirstJobRef)
+                        && parsedFirstJobRef is not null)
+                    {
+                        order = await _writeContext.JobOrders.FirstOrDefaultAsync(
+                            x => x.OrderNumber == parsedFirstJobRef.OrderNumber && x.JobNumber == parsedFirstJobRef.JobSuffix);
+                    }
+                }
+            }
+        }
+
+        if (order is null)
+        {
+            _logger.LogWarning(
+                "No job order found for invoice {ExternalInvoiceId}; invoice data not synced to job record",
+                externalInvoiceId);
+            return;
+        }
+
+        order.InvoiceRef = invoice.Number;
+        order.InvoiceAmount = invoice.Amount;
+        order.ModifiedOn = DateTime.UtcNow;
+        order.ModifiedBy = modifiedBy;
+
+        await _writeContext.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Updated job order {OrderId} with invoice number {InvoiceNumber} and amount {Amount} after mark-sent for invoice {ExternalInvoiceId}",
+            order.OrderId, invoice.Number, invoice.Amount, externalInvoiceId);
     }
 
     public Task<PreviewInvoiceResponse> PreviewInvoiceAsync(PreviewInvoiceRequest request)
@@ -591,6 +705,38 @@ public class BillingService : IBillingService
         order.ModifiedOn = DateTime.UtcNow;
 
         await _writeContext.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> UpdateJobOrderInvoiceDataByRefAsync(string invoiceRef, string invoiceNumber, decimal invoiceAmount, Guid modifiedBy)
+    {
+        if (_writeContext is null)
+        {
+            _logger.LogWarning("Skipping job order invoice data update because write context is unavailable");
+            return false;
+        }
+
+        var order = await _writeContext.JobOrders.FirstOrDefaultAsync(x => x.InvoiceRef == invoiceRef);
+        if (order is null)
+        {
+            _logger.LogWarning("No job order with InvoiceRef {InvoiceRef} found; skipping invoice data update", invoiceRef);
+            return false;
+        }
+
+        order.InvoiceRef = invoiceNumber;
+        order.InvoiceAmount = invoiceAmount;
+        order.ModifiedOn = DateTime.UtcNow;
+        order.ModifiedBy = modifiedBy;
+
+        await _writeContext.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Updated job order {OrderId} invoice data (invoiceNumber={InvoiceNumber}, amount={Amount}) after mark-sent for InvoiceRef {InvoiceRef}",
+            order.OrderId,
+            invoiceNumber,
+            invoiceAmount,
+            invoiceRef);
+
         return true;
     }
 
