@@ -237,7 +237,6 @@
 import axios from 'axios'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
@@ -249,7 +248,6 @@ type BillingInvoicesViewMode = 'detail' | 'card'
 const { t } = useI18n()
 const { formatCurrency } = useLocaleFormatters()
 const { format } = useGlobalDateFormatter()
-const router = useRouter()
 
 const loading = ref(false)
 const errorMessage = ref('')

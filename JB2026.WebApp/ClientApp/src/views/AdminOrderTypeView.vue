@@ -156,6 +156,7 @@ function moveRight(moveAll: boolean) {
   const index = availableWorkflows.value.findIndex((item) => item.workflowId === selectedAvailableId.value)
   if (index < 0) return
   const [item] = availableWorkflows.value.splice(index, 1)
+  if (!item) return
   selectedWorkflows.value.push(item)
   selectedAvailableId.value = null
 }
@@ -173,6 +174,7 @@ function moveLeft(moveAll: boolean) {
   const index = selectedWorkflows.value.findIndex((item) => item.workflowId === selectedSelectedId.value)
   if (index < 0) return
   const [item] = selectedWorkflows.value.splice(index, 1)
+  if (!item) return
   availableWorkflows.value.push(item)
   selectedSelectedId.value = null
 }
@@ -185,12 +187,14 @@ function moveUp(toTop: boolean) {
 
   if (toTop) {
     const [item] = selectedWorkflows.value.splice(index, 1)
+    if (!item) return
     selectedWorkflows.value.unshift(item)
     return
   }
 
   if (index === 0) return
   const [item] = selectedWorkflows.value.splice(index, 1)
+  if (!item) return
   selectedWorkflows.value.splice(index - 1, 0, item)
 }
 
@@ -202,12 +206,14 @@ function moveDown(toBottom: boolean) {
 
   if (toBottom) {
     const [item] = selectedWorkflows.value.splice(index, 1)
+    if (!item) return
     selectedWorkflows.value.push(item)
     return
   }
 
   if (index >= selectedWorkflows.value.length - 1) return
   const [item] = selectedWorkflows.value.splice(index, 1)
+  if (!item) return
   selectedWorkflows.value.splice(index + 1, 0, item)
 }
 

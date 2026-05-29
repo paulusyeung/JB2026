@@ -179,13 +179,13 @@
 
         <ListMobileCard
           v-if="isPhoneLayout"
-          :items="displayedRows as unknown as Record<string, unknown>[]"
-          :columns="mobileColumns as unknown as ListMobileCardColumn<Record<string, unknown>>[]"
+          :items="displayedRows"
+          :columns="mobileColumns"
           item-key="customerId"
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedCustomerIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as unknown as AdminCustomerDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item)"
         />
 
         <div v-else-if="isCardView" class="customer-card-list">
@@ -306,7 +306,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
@@ -356,8 +355,6 @@ const mergeTargetId = ref<string | null>(null)
 const merging = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const isCardView = computed(() => viewMode.value === 'card')
@@ -468,11 +465,6 @@ async function applyLookup() {
   await load()
 }
 
-async function refreshList() {
-  lookup.value = ''
-  await load()
-}
-
 function toggleColumn(columnKey: string) {
   if (visibleColumnKeys.value.includes(columnKey)) {
     if (visibleColumnKeys.value.length > 1) {
@@ -541,10 +533,6 @@ async function handleDeleted(id: string) {
   selectedCustomerIds.value = selectedCustomerIds.value.filter((customerId) => customerId !== id)
   successMessage.value = t('admin.customer.messages.deleteSuccess')
   saveSuccess.value = true
-}
-
-function showUnavailable(actionKey: string) {
-  errorMessage.value = t('admin.customer.messages.actionUnavailable', { action: t(actionKey) })
 }
 
 function setViewMode(mode: AdminCustomerViewMode) {

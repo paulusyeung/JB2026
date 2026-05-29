@@ -494,9 +494,7 @@ import { useDisplay } from 'vuetify'
 import { getAvailableSchedule, getOnAirSchedule, saveScheduleBatch } from '@/services/scheduler'
 import type { JobScheduleAvailableItem, JobScheduleOnAirItem } from '@/types/api'
 import AdaptiveRow from '@/components/ui/AdaptiveRow.vue'
-import JobActionMenu from '@/components/ui/JobActionMenu.vue'
 import WorkflowStatusPicker from '@/components/ui/WorkflowStatusPicker.vue'
-import { useTouch } from '@/composables/useTouch'
 
 const { t } = useI18n({ useScope: 'global' })
 const display = useDisplay()
@@ -808,6 +806,23 @@ function toggleUrgency(level: number) {
     }
   }
   checkedScheduled.value = []
+}
+
+function handleStatusChange(groupId: string, value: number | string) {
+  const numericValue = typeof value === 'number' ? value : Number(value)
+  if (Number.isNaN(numericValue)) {
+    return
+  }
+
+  if (groupId === 'step1') {
+    setStep1Status(numericValue)
+  } else if (groupId === 'step2') {
+    setStep2Status(numericValue)
+  } else if (groupId === 'urgency') {
+    toggleUrgency(numericValue)
+  }
+
+  statusSheet.value = false
 }
 
 // ─── unresolved ───────────────────────────────────────────────────────────────

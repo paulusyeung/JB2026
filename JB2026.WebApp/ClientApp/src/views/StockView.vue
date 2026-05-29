@@ -305,7 +305,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDisplay, useTheme } from 'vuetify'
+import { useDisplay } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
@@ -334,13 +334,11 @@ const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatCurrency, formatNumber } = useLocaleFormatters()
 const sessionStore = useSessionStore()
-const theme = useTheme()
 const display = useDisplay()
-const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const canDeleteAttachments = computed(() => {
   const rawRole = sessionStore.profile?.role
-  const normalizedRole = typeof rawRole === 'number' ? rawRole.toString() : String(rawRole ?? '').toLowerCase().trim()
+  const normalizedRole = String(rawRole ?? '').toLowerCase().trim()
   return normalizedRole === 'admin' || normalizedRole === '4'
 })
 
@@ -578,6 +576,10 @@ function openStockAttachmentDialog() {
   }
 
   const productId = selectedIds.value[0]
+  if (!productId) {
+    return
+  }
+
   const row = rows.value.find((item) => item.productId === productId)
   if (!row) {
     return
@@ -594,10 +596,6 @@ async function onAttachmentChanged() {
 
 async function onStockInOutSaved(_result: StockInOutTransactionResult) {
   await load()
-}
-
-function showUnavailable(actionKey: string) {
-  errorMessage.value = t('stock.messages.actionUnavailable', { action: t(actionKey) })
 }
 
 async function startDelete() {

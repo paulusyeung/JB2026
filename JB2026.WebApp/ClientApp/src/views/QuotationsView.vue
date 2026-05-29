@@ -141,7 +141,7 @@
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedHeaderIdsAsString"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => openQuotation(item as QuotationListItem)"
+          :on-card-click="(item) => openQuotation(item)"
         >
           <template #actions="{ item }">
             <v-menu location="bottom end">
@@ -153,7 +153,7 @@
               </template>
 
               <v-list density="compact" class="toolbar-menu-list">
-                <v-list-item prepend-icon="mdi-open-in-app" @click.stop="openQuotation(item as QuotationListItem)">
+                <v-list-item prepend-icon="mdi-open-in-app" @click.stop="openQuotation(item)">
                   <v-list-item-title>{{ t('common.open') }}</v-list-item-title>
                 </v-list-item>
                 <v-list-item prepend-icon="mdi-printer" @click.stop="printList">
@@ -253,11 +253,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import QuotationFormDialog from '@/components/forms/QuotationFormDialog.vue'
 import { useQuotationsStore } from '@/stores/quotations'
@@ -268,9 +266,6 @@ type SortItem = { key: string, order: 'asc' | 'desc' }
 const store = useQuotationsStore()
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
-const { formatNumber } = useLocaleFormatters()
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 
 const formOpen = ref(false)
 const formQuotation = ref<QuotationListItem | null>(null)

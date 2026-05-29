@@ -656,6 +656,10 @@ function allowNumericOnly(e: KeyboardEvent) {
 
 function recalcLine(idx: number) {
   const item = form.value.lineItems[idx]
+  if (!item) {
+    return
+  }
+
   const qty = parseFloat(item.qtyStr) || 0
   const cost = parseFloat(item.unitCostStr) || 0
   item.lineTotal = Math.round(qty * cost * 100) / 100

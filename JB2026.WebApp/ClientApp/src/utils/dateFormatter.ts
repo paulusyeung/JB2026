@@ -93,7 +93,7 @@ export function formatDate(
   
   // Special handling for ISO dates
   if (format === DATE_FORMATS.ISO_DATE) {
-    return date.toISOString().split('T')[0]
+    return date.toISOString().slice(0, 10)
   }
   if (format === DATE_FORMATS.ISO_DATETIME) {
     return date.toISOString()

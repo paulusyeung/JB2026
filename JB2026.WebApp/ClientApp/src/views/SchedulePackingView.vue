@@ -289,7 +289,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useDisplay, useTheme } from 'vuetify'
+import { useDisplay } from 'vuetify'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
@@ -297,7 +297,6 @@ import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerD
 import { getJobDetail } from '@/services/jobs'
 import { getPackingSchedule, updatePendingWorkflow } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePackingItem } from '@/types/api'
-import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 
 const rows = ref<JobSchedulePackingItem[]>([])
@@ -344,11 +343,8 @@ const viewMode = viewSettings.viewMode
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
-const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 const display = useDisplay()
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const isCardView = computed(() => viewMode.value === 'card')
 

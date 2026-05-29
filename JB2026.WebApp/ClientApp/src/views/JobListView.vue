@@ -494,7 +494,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useDisplay, useTheme } from 'vuetify'
+import { useDisplay } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
@@ -577,15 +577,13 @@ const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
-const { formatCurrency: formatCurrencyByLocale, formatNumber } = useLocaleFormatters()
+const { formatCurrency: formatCurrencyByLocale } = useLocaleFormatters()
 
 function formatCurrency(value: number) {
   return value === 0 ? '' : formatCurrencyByLocale(value)
 }
-const theme = useTheme()
 const display = useDisplay()
 const router = useRouter()
-const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
 const cardViewLabel = computed(() => t('jobOrder.jobList.actions.cardView'))

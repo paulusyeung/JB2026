@@ -459,8 +459,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDisplay, useTheme } from 'vuetify'
-import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useDisplay } from 'vuetify'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
@@ -521,10 +520,7 @@ const {
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
-const { formatNumber } = useLocaleFormatters()
-const theme = useTheme()
 const display = useDisplay()
-const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
 const cardViewLabel = computed(() => t('jobOrder.jobList.actions.cardView'))

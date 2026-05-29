@@ -227,7 +227,7 @@ const themeStore = useThemeStore()
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const isNarrowPhoneLayout = computed(() => display.xs.value && display.width.value <= 430)
 const webPivotTheme = computed(() => {
-  if (themeStore.current !== 'dark') {
+  if (themeStore.mode !== 'dark') {
     return {
       preset: 'default',
       colors: {
@@ -407,7 +407,7 @@ watch([lookup, month, rowField, measure], async () => {
   scheduleHydratePivot()
 })
 
-watch(() => themeStore.current, async () => {
+watch(() => themeStore.mode, async () => {
   if (!pivotMounted.value || !pivotAvailable.value) {
     return
   }

@@ -236,8 +236,9 @@ async function loadRecord(customerId: string | null) {
     draft.billTo = customer.billTo
     draft.shipToAddresses = (customer.shipToAddresses ?? []).map((entry) => ({ ...entry }))
 
-    if (draft.shipToAddresses.length > 0) {
-      selectedShipToName.value = draft.shipToAddresses[0].name
+    const firstShipToEntry = draft.shipToAddresses[0]
+    if (firstShipToEntry) {
+      selectedShipToName.value = firstShipToEntry.name
     } else {
       selectedShipToName.value = null
       shipToDraftName.value = ''
@@ -311,8 +312,9 @@ function deleteShipToEntry() {
 
   draft.shipToAddresses = draft.shipToAddresses.filter((entry) => entry.name !== selectedShipToName.value)
 
-  if (draft.shipToAddresses.length > 0) {
-    selectedShipToName.value = draft.shipToAddresses[0].name
+  const firstShipToEntry = draft.shipToAddresses[0]
+  if (firstShipToEntry) {
+    selectedShipToName.value = firstShipToEntry.name
   } else {
     selectedShipToName.value = null
     shipToDraftName.value = ''

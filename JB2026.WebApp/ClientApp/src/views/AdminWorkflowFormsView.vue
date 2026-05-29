@@ -124,7 +124,7 @@
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedFormIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as WorkflowFormDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item)"
         />
 
         <v-data-table
@@ -175,7 +175,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { getAdminWorkflowForms } from '@/services/admin'
@@ -202,8 +201,6 @@ const saveSuccess = ref(false)
 const successMessage = ref('')
 
 const { t } = useI18n({ useScope: 'global' })
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [
@@ -283,6 +280,11 @@ async function applyLookup() {
 async function refreshList() {
   lookup.value = ''
   await load()
+}
+
+function showUnavailable(actionKey: string) {
+  successMessage.value = t('common.unavailable', { action: t(actionKey) })
+  saveSuccess.value = true
 }
 
 function toggleColumn(columnKey: string) {

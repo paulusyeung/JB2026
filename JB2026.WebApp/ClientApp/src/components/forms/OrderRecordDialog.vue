@@ -295,26 +295,6 @@ const orderedByOptions = computed(() => {
   return [...values].sort((a, b) => a.localeCompare(b))
 })
 
-const paymentTermsOptions = computed(() => {
-  const values = new Set<string>()
-  for (const row of props.allOrders) {
-    if (row.paymentTerms) {
-      values.add(row.paymentTerms)
-    }
-  }
-  values.add('Net 7')
-  values.add('Net 14')
-  values.add('Net 30')
-  values.add('Net 60')
-  values.add('COD')
-  values.add('Prepaid')
-  if (draft.value.paymentTerms) {
-    values.add(draft.value.paymentTerms)
-  }
-
-  return [...values]
-})
-
 const relatedOrders = computed(() => {
   if (!props.order) return []
   return props.allOrders

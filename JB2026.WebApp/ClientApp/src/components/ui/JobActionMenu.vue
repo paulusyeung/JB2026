@@ -1,5 +1,5 @@
 <template>
-  <v-menu :activator="slotProps" location="bottom right" transition="slide-y-transition">
+  <v-menu :activator="activator" location="bottom right" transition="slide-y-transition">
     <v-card min-width="200" class="action-menu-card">
       <v-card-text class="pa-2">
         <div class="text-overline mb-1 px-2 text-center">{{ title }}</div>
@@ -45,6 +45,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ComponentPublicInstance } from 'vue'
+
 interface Machine {
   id: string;
   color: string;
@@ -58,6 +60,7 @@ interface CustomAction {
 }
 
 defineProps<{
+  activator?: Element | ComponentPublicInstance | 'parent';
   title: string;
   machines: Machine[];
   otherActions: CustomAction[];

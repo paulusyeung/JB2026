@@ -233,7 +233,7 @@ router.beforeEach(async (to) => {
   const requiredRoles = to.meta.roles as string[] | undefined
   if (requiredRoles && requiredRoles.length > 0) {
     const rawRole = sessionStore.profile?.role
-    const userRole = typeof rawRole === 'number' ? rawRole.toString() : rawRole?.toLowerCase().trim()
+    const userRole = String(rawRole ?? '').toLowerCase().trim()
     
     if (!userRole || !requiredRoles.some((r) => {
       const checkRole = r.toLowerCase().trim()

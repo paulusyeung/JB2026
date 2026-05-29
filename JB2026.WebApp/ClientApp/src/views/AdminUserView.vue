@@ -132,7 +132,7 @@
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedUserIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as AdminUserDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item)"
         />
 
         <div v-else-if="isCardView" class="user-card-list">
@@ -222,7 +222,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
@@ -259,8 +258,6 @@ const saveSuccess = ref(false)
 const successMessage = ref('')
 
 const { t } = useI18n({ useScope: 'global' })
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const isCardView = computed(() => viewMode.value === 'card')

@@ -87,7 +87,7 @@
               {{ t('admin.quotationItemGroup.actions.preference') }}
             </v-btn>
 
-            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup">
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup()">
               {{ t('admin.quotationItemGroup.actions.popup') }}
             </v-btn>
 
@@ -116,7 +116,7 @@
               <v-list-item prepend-icon="mdi-tune" disabled>
                 <v-list-item-title>{{ t('admin.quotationItemGroup.actions.preference') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup">
+              <v-list-item prepend-icon="mdi-open-in-new" :disabled="!selectedItemGroupId" @click="openPopup()">
                 <v-list-item-title>{{ t('admin.quotationItemGroup.actions.popup') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-plus" @click="openNewItemGroup">
@@ -138,7 +138,7 @@
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedItemGroupIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as AdminQuotationItemGroupDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item)"
         />
 
         <v-data-table
@@ -190,7 +190,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -230,8 +229,6 @@ const visibleColumnKeys = ref<string[]>([
 
 const { t } = useI18n({ useScope: 'global' })
 const { activeLocale } = useLocaleFormatters()
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const allHeaders = computed(() => [

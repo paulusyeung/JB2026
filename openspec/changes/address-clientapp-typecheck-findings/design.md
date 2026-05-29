@@ -70,6 +70,28 @@ The findings are not all equivalent. Some failures are primarily validation nois
 
 Rollback is code-level rather than migration-based: each remediation slice should be independently reversible, and no runtime behavior change should depend on partially completed cleanup in unrelated areas.
 
+## Implementation Notes
+
+- Canonical validation command: `npm --prefix /home/paulus/Projects/JB2026/JB2026.WebApp/ClientApp run typecheck`
+- Baseline check on 2026-05-30 confirms the command now reports the real remediation backlog rather than failing on the previously broken `useTouch.ts` file or unsupported TypeScript config state.
+- Current compiler snapshot: 98 errors.
+- Current error groups:
+	- CKEditor integration mismatch: `RichTextEditor.vue`, `JobOrderActionDialogs.vue`
+	- Shared UI contract failures: `ListMobileCard.vue`, `JobActionMenu.vue`, `WorkflowStatusPicker.vue`, view callers that depend on those contracts
+	- Null-safety and strict state updates: admin customer/supplier dialogs, `SchedulePendingView.vue`, `AdminOrderTypeView.vue`, stock/product role normalization
+	- View/store contract mismatches: theme store property usage, missing handler/export bindings in scheduler and admin workflow views
+	- Strict-mode hygiene: unused locals/imports across multiple views and dialog components
+
+These groups should remain the implementation order unless a later repair exposes a more direct shared root cause.
+
+### CKEditor remediation notes
+
+- Active integration points: `src/components/editor/RichTextEditor.vue`, `src/components/forms/JobOrderActionDialogs.vue`
+- Shared typing boundary: `@ckeditor/ckeditor5-vue` consumes the editor constructor contract and was resolved against `ckeditor5@44.3.0`
+- Root cause confirmed on 2026-05-30: `@ckeditor/ckeditor5-build-classic` was pinned to `43.3.1`, producing an editor type mismatch with the Vue wrapper
+- Applied fix: align `@ckeditor/ckeditor5-build-classic` to `44.3.0` through the package manager so both CKEditor call sites share the same package contract
+- Focused validation: `./node_modules/.bin/vue-tsc -b --pretty false 2>&1 | grep -E "RichTextEditor|JobOrderActionDialogs|ckeditor" || true` produced no output after the dependency alignment
+
 ## Open Questions
 
 - Which shared UI typing boundary should be repaired first after CKEditor: `ListMobileCard`, scheduler/action-menu contracts, or store/view-model contract mismatches?

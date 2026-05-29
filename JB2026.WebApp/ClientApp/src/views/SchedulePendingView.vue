@@ -338,7 +338,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useDisplay, useTheme } from 'vuetify'
+import { useDisplay } from 'vuetify'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
@@ -346,7 +346,6 @@ import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerD
 import { getJobDetail } from '@/services/jobs'
 import { getPendingSchedule, updatePendingUrgency, updatePendingWorkflow } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
-import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 
 const rows = ref<JobSchedulePendingItem[]>([])
@@ -395,11 +394,8 @@ const viewMode = viewSettings.viewMode
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
-const { formatNumber } = useLocaleFormatters()
 const router = useRouter()
 const display = useDisplay()
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const isCardView = computed(() => viewMode.value === 'card')
 
@@ -454,8 +450,6 @@ const displayedRows = computed(() => {
 
   return result
 })
-
-const activeRow = computed(() => rows.value.find((row) => row.orderId === activeOrderId.value) ?? null)
 
 onMounted(async () => {
   await load()
@@ -519,14 +513,6 @@ function onRowClick(_event: Event, payload: { item: JobSchedulePendingItem }) {
 
 function setViewMode(mode: 'detail' | 'card') {
   viewMode.value = mode
-}
-
-async function openPopup() {
-  if (!activeRow.value) {
-    return
-  }
-
-  await openEditor(activeRow.value)
 }
 
 async function openEditor(record: JobSchedulePendingItem) {
@@ -606,12 +592,13 @@ async function applyWorkflow(stepIndex: number, targetStatus: number) {
     for (const orderId of selectedOrderIds.value) {
       const result = await updatePendingWorkflow(orderId, { stepIndex, targetStatus })
       const rowIndex = rows.value.findIndex((r) => r.orderId === orderId)
-      if (rowIndex !== -1) {
+      const currentRow = rows.value[rowIndex]
+      if (currentRow) {
         rows.value[rowIndex] = {
-          ...rows.value[rowIndex],
-          step1Status: result.step1Status ?? rows.value[rowIndex].step1Status,
-          step2Status: result.step2Status ?? rows.value[rowIndex].step2Status,
-          step3Status: result.step3Status ?? rows.value[rowIndex].step3Status,
+          ...currentRow,
+          step1Status: result.step1Status ?? currentRow.step1Status,
+          step2Status: result.step2Status ?? currentRow.step2Status,
+          step3Status: result.step3Status ?? currentRow.step3Status,
         }
       }
     }
@@ -629,9 +616,10 @@ async function applyUrgency(targetColor: 'red' | 'yellow') {
     for (const orderId of selectedOrderIds.value) {
       const result = await updatePendingUrgency(orderId, { targetColor })
       const rowIndex = rows.value.findIndex((r) => r.orderId === orderId)
-      if (rowIndex !== -1) {
+      const currentRow = rows.value[rowIndex]
+      if (currentRow) {
         rows.value[rowIndex] = {
-          ...rows.value[rowIndex],
+          ...currentRow,
           urgencyLevel: result.urgencyLevel,
         }
       }

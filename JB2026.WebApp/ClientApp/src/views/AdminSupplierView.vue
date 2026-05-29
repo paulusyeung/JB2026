@@ -128,7 +128,7 @@
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedSupplierIds"
           :on-select="handleMobileSelect"
-          :on-card-click="(item) => onMobileCardClick(item as AdminSupplierDisplayItem)"
+          :on-card-click="(item) => onMobileCardClick(item)"
         />
 
         <div v-else-if="isCardView" class="supplier-card-list">
@@ -213,7 +213,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from 'vuetify'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
@@ -251,8 +250,6 @@ const saveSuccess = ref(false)
 const successMessage = ref('')
 
 const { t } = useI18n({ useScope: 'global' })
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const isCardView = computed(() => viewMode.value === 'card')
@@ -344,11 +341,6 @@ async function applyLookup() {
   await load()
 }
 
-async function refreshList() {
-  lookup.value = ''
-  await load()
-}
-
 function toggleColumn(columnKey: string) {
   if (visibleColumnKeys.value.includes(columnKey)) {
     if (visibleColumnKeys.value.length > 1) {
@@ -418,10 +410,6 @@ async function handleDeleted(id: string) {
   selectedSupplierIds.value = selectedSupplierIds.value.filter((supplierId) => supplierId !== id)
   successMessage.value = t('admin.supplier.messages.deleteSuccess')
   saveSuccess.value = true
-}
-
-function showUnavailable(actionKey: string) {
-  errorMessage.value = t('admin.supplier.messages.actionUnavailable', { action: t(actionKey) })
 }
 
 function setViewMode(mode: AdminSupplierViewMode) {

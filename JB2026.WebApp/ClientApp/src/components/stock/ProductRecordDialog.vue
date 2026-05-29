@@ -344,7 +344,7 @@ const errors = reactive<Record<string, string[]>>({
 const isEditMode = computed(() => currentMode.value === 'edit' && !!currentProductId.value)
 const canDeleteAttachments = computed(() => {
   const rawRole = sessionStore.profile?.role
-  const normalizedRole = typeof rawRole === 'number' ? rawRole.toString() : String(rawRole ?? '').toLowerCase().trim()
+  const normalizedRole = String(rawRole ?? '').toLowerCase().trim()
   return normalizedRole === 'admin' || normalizedRole === '4'
 })
 

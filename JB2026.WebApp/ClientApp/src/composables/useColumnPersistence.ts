@@ -9,7 +9,7 @@ interface ViewSettings {
   sortKey?: string
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
-  viewMode?: 'detail' | 'card'
+  viewMode?: 'detail' | 'card' | 'table'
 }
 
 const SAVE_DEBOUNCE_MS = 500
@@ -30,7 +30,7 @@ export function useViewSettings(viewId: string, defaults: {
   sortKey?: string
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
-  viewMode?: 'detail' | 'card'
+  viewMode?: 'detail' | 'card' | 'table'
 }) {
   const storageKey = `${STORAGE_PREFIX}${viewId}`
   const objectId = getViewObjectId(viewId)
@@ -40,7 +40,7 @@ export function useViewSettings(viewId: string, defaults: {
   const sortKey = ref<string | undefined>(defaults.sortKey)
   const sortDirection = ref<'asc' | 'desc' | undefined>(defaults.sortDirection)
   const checkboxMode = ref<boolean | undefined>(defaults.checkboxMode)
-  const viewMode = ref<'detail' | 'card' | undefined>(defaults.viewMode)
+  const viewMode = ref<'detail' | 'card' | 'table' | undefined>(defaults.viewMode)
 
   function parseSettings(raw: string | null): ViewSettings | null {
     if (!raw) {

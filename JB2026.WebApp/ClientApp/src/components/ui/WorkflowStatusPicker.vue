@@ -1,20 +1,20 @@
-"<template>
-  <div class=\"status-picker\">
-    <div v-for=\"group in groups\" :key=\"group.id\" class=\"status-group mb-4\">
-      <div class=\"text-caption font-weight-bold text-medium-emphasis mb-2 ml-1\">
+<template>
+  <div class="status-picker">
+    <div v-for="group in groups" :key="group.id" class="status-group mb-4">
+      <div class="text-caption font-weight-bold text-medium-emphasis mb-2 ml-1">
         {{ group.label }}
       </div>
-      <div class=\"d-flex ga-2 flex-wrap\">
+      <div class="d-flex ga-2 flex-wrap">
         <v-btn
-          v-for=\"option in group.options\"
-          :key=\"option.value\"
-          variant=\"tonal\"
-          size=\"small\"
-          :color=\"option.color\"
-          class=\"status-btn\"
-          @click=\"$emit('select', group.id, option.value)\"
+          v-for="option in group.options"
+          :key="option.value"
+          variant="tonal"
+          size="small"
+          :color="option.color"
+          class="status-btn"
+          @click="emit('select', group.id, option.value)"
         >
-          <v-icon start size=\"16\">mdi-circle</v-icon>
+          <v-icon start size="16">mdi-circle</v-icon>
           {{ option.text }}
         </v-btn>
       </div>
@@ -22,24 +22,26 @@
   </div>
 </template>
 
-<script setup lang=\"ts\">
+<script setup lang="ts">
 interface StatusOption {
-  value: number | string;
-  text: string;
-  color: string;
+  value: number | string
+  text: string
+  color: string
 }
 
 interface StatusGroup {
-  id: string;
-  label: string;
-  options: StatusOption[];
+  id: string
+  label: string
+  options: StatusOption[]
 }
 
 defineProps<{
-  groups: StatusGroup[];
-}>();
+  groups: StatusGroup[]
+}>()
 
-defineEmits(['select']);
+const emit = defineEmits<{
+  (e: 'select', groupId: string, value: number | string): void
+}>()
 </script>
 
 <style scoped>
@@ -48,8 +50,9 @@ defineEmits(['select']);
   font-weight: 500;
   border-radius: 8px !important;
 }
+
 .status-group {
   border-left: 3px solid rgba(var(--v-theme-primary), 0.3);
   padding-left: 12px;
 }
-</style>"
+</style>

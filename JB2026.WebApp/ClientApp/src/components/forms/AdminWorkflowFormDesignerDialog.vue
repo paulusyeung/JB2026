@@ -38,7 +38,6 @@
 
         <!-- Canvas -->
         <div
-          ref="canvasRef"
           class="designer-canvas"
           @click.self="deselectControl"
         >
@@ -246,7 +245,6 @@ const saving = ref(false)
 const errorMessage = ref('')
 const controls = ref<FormControl[]>([])
 const selectedName = ref<string | null>(null)
-const canvasRef = ref<HTMLElement | null>(null)
 const addControlDialog = ref(false)
 const pendingControlType = ref<ControlType>('Label')
 const pendingControlName = ref('')

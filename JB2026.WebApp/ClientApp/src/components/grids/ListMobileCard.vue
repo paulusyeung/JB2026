@@ -2,11 +2,11 @@
   <div class="list-mobile-card-stack">
     <v-card
       v-for="item in items"
-      :key="String(item[itemKey])"
+      :key="getItemKey(item)"
       rounded="lg"
       elevation="0"
       class="list-mobile-card"
-      @click="onCardClick(item)"
+      @click="handleCardClick(item)"
     >
       <div class="list-mobile-card__header">
         <div class="list-mobile-card__header-content">
@@ -50,7 +50,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-export type ListMobileCardColumn<T = Record<string, unknown>> = {
+type ListMobileCardItem = any
+
+export type ListMobileCardColumn<T = ListMobileCardItem> = {
   key: string
   label?: string
   section?: 'header' | 'body' | 'footer'
@@ -60,13 +62,13 @@ export type ListMobileCardColumn<T = Record<string, unknown>> = {
 
 const props = withDefaults(
   defineProps<{
-    items: Record<string, unknown>[]
-    columns: ListMobileCardColumn[]
+    items: ListMobileCardItem[]
+    columns: ListMobileCardColumn<any>[]
     itemKey?: string
     checkboxMode?: boolean
     selectedIds?: string[]
-    onSelect?: (item: Record<string, unknown>, selected: boolean) => void
-    onCardClick?: (item: Record<string, unknown>) => void
+    onSelect?: (item: any, selected: boolean) => void
+    onCardClick?: (item: any) => void
   }>(),
   {
     itemKey: 'id',
@@ -81,12 +83,20 @@ const headerColumns = computed(() => props.columns.filter((column) => (column.se
 const bodyColumns = computed(() => props.columns.filter((column) => (column.section ?? 'body') === 'body'))
 const footerColumns = computed(() => props.columns.filter((column) => column.section === 'footer'))
 
-function formatValue(item: Record<string, unknown>, column: ListMobileCardColumn) {
+function asRecord(item: ListMobileCardItem): Record<string, unknown> {
+  return item as Record<string, unknown>
+}
+
+function getItemKey(item: ListMobileCardItem) {
+  return String(asRecord(item)[props.itemKey])
+}
+
+function formatValue(item: ListMobileCardItem, column: ListMobileCardColumn<any>) {
   if (column.formatter) {
     return column.formatter(item)
   }
 
-  const value = item[column.key]
+  const value = asRecord(item)[column.key]
   if (value === null || value === undefined || value === '') {
     return '-'
   }
@@ -94,13 +104,17 @@ function formatValue(item: Record<string, unknown>, column: ListMobileCardColumn
   return String(value)
 }
 
-function isSelected(item: Record<string, unknown>) {
-  return props.selectedIds.includes(String(item[props.itemKey]))
+function isSelected(item: ListMobileCardItem) {
+  return props.selectedIds.includes(String(asRecord(item)[props.itemKey]))
 }
 
-function toggleSelection(item: Record<string, unknown>) {
+function toggleSelection(item: ListMobileCardItem) {
   const selected = !isSelected(item)
-  props.onSelect?.(item, selected)
+  props.onSelect?.(asRecord(item), selected)
+}
+
+function handleCardClick(item: ListMobileCardItem) {
+  props.onCardClick?.(asRecord(item))
 }
 </script>
 
