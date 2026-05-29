@@ -61,7 +61,6 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       roles: ['Admin'],
       children: [
         { title: t('routes.billingInvoices'), to: '/billing/invoices', icon: 'mdi-receipt-text-check-outline' },
-        { title: t('routes.billingSettings'), to: '/billing/settings', icon: 'mdi-cog-outline' },
       ],
     },
     {
@@ -91,6 +90,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       icon: 'mdi-cog-outline',
       roles: ['Admin'],
       children: [
+        { title: t('routes.billingSettings'), to: '/billing/settings', icon: 'mdi-cog-outline' },
         { title: t('routes.settingsSystemParameters'), to: '/settings/system-parameters', icon: 'mdi-tune-vertical-variant' },
       ],
     },

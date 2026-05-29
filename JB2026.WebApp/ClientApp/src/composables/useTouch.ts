@@ -1,8 +1,9 @@
-"import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export function useTouch() {
   const isTouchDevice = ref(false)
   const safeAreaInsetBottom = ref(0)
+  const legacyNavigator = navigator as Navigator & { msMaxTouchPoints?: number }
 
   const updateSafeArea = () => {
     // Get the CSS variable for safe area inset bottom
@@ -24,7 +25,7 @@ export function useTouch() {
     isTouchDevice.value = (
       'ontouchstart' in window ||
       navigator.maxTouchPoints > 0 ||
-      navigator.msMaxTouchPoints > 0
+      (legacyNavigator.msMaxTouchPoints ?? 0) > 0
     )
     
     updateSafeArea()
@@ -39,4 +40,4 @@ export function useTouch() {
     isTouchDevice,
     safeAreaInsetBottom
   }
-}"
+}
