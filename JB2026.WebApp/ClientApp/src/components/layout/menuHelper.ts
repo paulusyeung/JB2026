@@ -61,6 +61,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       roles: ['Admin'],
       children: [
         { title: t('routes.billingInvoices'), to: '/billing/invoices', icon: 'mdi-receipt-text-check-outline' },
+        { title: t('routes.billingInvoiceStats'), to: '/billing/invoice-stats', icon: 'mdi-chart-areaspline' },
       ],
     },
     {

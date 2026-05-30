@@ -23,6 +23,7 @@ export const routesMessages = {
   smlInvoiceStats: 'Invoice Stats',
     billing: 'Billing',
     billingInvoices: 'Invoices',
+    billingInvoiceStats: 'Invoice Stats',
     billingInvoiceDetail: 'Invoice Detail',
     billingSettings: 'Billing Settings',
       stock: 'Stock',

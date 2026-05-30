@@ -1,4 +1,19 @@
 export const billingMessages = {
+  invoiceStats: {
+    title: '发票统计',
+    subtitle: '来自 Invoice Ninja 的本年度已发送发票摘要。',
+    rows: '行数：{count}',
+    exportToExcel: '导出到 Excel',
+    blank: '(空白)',
+    unknownPeriod: '未知',
+    empty: '未找到本年度已发送的发票。',
+    mobilePreferredNotice: '透视分析更适合桌面端。移动端将显示精简摘要和发票列表。',
+    summary: {
+      invoices: '发票数',
+      invoiceAmount: '发票金额',
+    },
+    loadFailed: '无法加载账单发票统计。',
+  },
   invoices: {
     title: '账单发票',
     subtitle: '已与 Invoice Ninja 同步的发票摘要',

@@ -1,4 +1,19 @@
 export const billingMessages = {
+  invoiceStats: {
+    title: 'Invoice stats',
+    subtitle: 'Invoice Ninja-backed sent invoice summary for the current year.',
+    rows: 'Rows: {count}',
+    exportToExcel: 'Export To Excel',
+    blank: '(blank)',
+    unknownPeriod: 'Unknown',
+    empty: 'No sent invoices found for the current year.',
+    mobilePreferredNotice: 'Desktop preferred for pivot analysis. Mobile mode shows a compact summary and invoice list.',
+    summary: {
+      invoices: 'Invoices',
+      invoiceAmount: 'Invoice Amount',
+    },
+    loadFailed: 'Unable to load billing invoice stats.',
+  },
   invoices: {
     title: 'Billing Invoices',
     subtitle: 'Invoice Ninja synced invoice summaries',

@@ -9,7 +9,7 @@ async function injectFakeSession(page: Page) {
     localStorage.setItem('jb2026.accessToken', 'smoke-test-fake-token')
     localStorage.setItem(
       'jb2026.sessionProfile',
-      JSON.stringify({ userId: 'test', displayName: 'Smoke Test', email: 'smoke@test.local' }),
+      JSON.stringify({ userId: 'test', username: 'admin', displayName: 'Smoke Test', email: 'smoke@test.local', role: 'Admin' }),
     )
   })
 }
@@ -366,6 +366,56 @@ async function mockApiRoutes(page: Page) {
       },
     }),
   )
+
+  // Billing invoices endpoint (Invoice Ninja-backed summaries)
+  await page.route('**/api/v2/billing/invoices', (route) =>
+    route.fulfill({
+      json: {
+        invoices: [
+          {
+            externalInvoiceId: 'inv-1',
+            invoiceNumber: 'INV-2026-001',
+            clientName: 'Acme Print',
+            invoiceDate: '2026-01-15',
+            amount: 1200.5,
+            status: 'Sent',
+            dueDate: '2026-02-15',
+            lastSyncedAt: '2026-01-16T08:00:00Z',
+          },
+          {
+            externalInvoiceId: 'inv-2',
+            invoiceNumber: 'INV-2026-002',
+            clientName: 'Beta Labels',
+            invoiceDate: '2026-03-08',
+            amount: 880,
+            status: 'Sent',
+            dueDate: '2026-04-08',
+            lastSyncedAt: '2026-03-08T10:00:00Z',
+          },
+          {
+            externalInvoiceId: 'inv-3',
+            invoiceNumber: 'INV-2026-003',
+            clientName: 'Draft Customer',
+            invoiceDate: '2026-05-01',
+            amount: 333,
+            status: 'Draft',
+            dueDate: '2026-06-01',
+            lastSyncedAt: '2026-05-01T09:00:00Z',
+          },
+          {
+            externalInvoiceId: 'inv-4',
+            invoiceNumber: 'INV-2025-001',
+            clientName: 'Legacy Customer',
+            invoiceDate: '2025-12-31',
+            amount: 444,
+            status: 'Sent',
+            dueDate: '2026-01-31',
+            lastSyncedAt: '2025-12-31T09:00:00Z',
+          },
+        ],
+      },
+    }),
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -621,6 +671,22 @@ test.describe('Slice A — read-only lists and dashboard', () => {
     await expect(page).toHaveURL(/\/app\/job-order\/sml\/invoice-stats$/)
     await expect(page.getByRole('heading', { name: 'Invoice stats' })).toBeVisible()
     await expect(page.getByText(/Rows:\s*[0-9]+/)).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toBeVisible()
+    await expect(page.locator('web-pivot-table')).toHaveCount(1)
+  })
+
+  test('billing invoice stats view renders current-year sent Invoice Ninja summaries', async ({ page }) => {
+    test.setTimeout(120000)
+
+    await injectFakeSession(page)
+    await mockApiRoutes(page)
+    await page.goto('/app/billing/invoice-stats', { waitUntil: 'domcontentloaded' })
+
+    await expect(page).toHaveURL(/\/app\/billing\/invoice-stats$/)
+    await expect(page.getByText('Invoice Ninja-backed sent invoice summary for the current year.')).toBeVisible()
+    await expect(page.getByText(/Rows:\s*2/)).toBeVisible()
+    await expect(page.getByText('Acme Print')).toBeVisible()
+    await expect(page.getByText('Beta Labels')).toBeVisible()
     await expect(page.locator('web-pivot-table')).toBeVisible()
     await expect(page.locator('web-pivot-table')).toHaveCount(1)
   })

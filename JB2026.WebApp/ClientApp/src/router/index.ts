@@ -29,6 +29,7 @@ const legacyLeafRoutes = [
   { path: '/admin/fcm-console', name: 'admin-fcm-console', titleKey: 'routes.adminFcmConsole' },
   { path: '/settings/system-parameters', name: 'settings-system-parameters', titleKey: 'routes.settingsSystemParameters' },
   { path: '/billing/invoices', name: 'billing-invoices', titleKey: 'routes.billingInvoices' },
+  { path: '/billing/invoice-stats', name: 'billing-invoice-stats', titleKey: 'routes.billingInvoiceStats' },
   { path: '/billing/invoices/:externalInvoiceId', name: 'billing-invoice-detail', titleKey: 'routes.billingInvoiceDetail' },
   { path: '/billing/settings', name: 'billing-settings', titleKey: 'routes.billingSettings' },
 ] as const
@@ -195,6 +196,8 @@ const router = createRouter({
           ? () => import('@/views/SettingsView.vue')
         : route.path === '/billing/invoices'
           ? () => import('@/views/BillingInvoicesView.vue')
+        : route.path === '/billing/invoice-stats'
+          ? () => import('@/views/BillingInvoiceStatsView.vue')
         : route.path === '/billing/invoices/:externalInvoiceId'
           ? () => import('@/views/BillingInvoiceDetailView.vue')
         : route.path === '/billing/settings'
