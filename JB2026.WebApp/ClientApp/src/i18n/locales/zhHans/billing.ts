@@ -1,12 +1,15 @@
 export const billingMessages = {
   invoiceStats: {
     title: '发票统计',
-    subtitle: '来自 Invoice Ninja 的本年度已发送发票摘要。',
+    subtitle: '来自 Invoice Ninja 的已发送发票摘要。未选择日期范围时，默认显示本年度数据。',
+    startDate: '开始日期',
+    endDate: '结束日期',
     rows: '行数：{count}',
     exportToExcel: '导出到 Excel',
     blank: '(空白)',
     unknownPeriod: '未知',
-    empty: '未找到本年度已发送的发票。',
+    empty: '未找到本年度已发送的发票。可选择日期范围以扩大结果。',
+    emptyFiltered: '未找到所选日期范围内已发送的发票。',
     mobilePreferredNotice: '透视分析更适合桌面端。移动端将显示精简摘要和发票列表。',
     summary: {
       invoices: '发票数',

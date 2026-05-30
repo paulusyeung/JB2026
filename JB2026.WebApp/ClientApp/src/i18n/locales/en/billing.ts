@@ -1,12 +1,15 @@
 export const billingMessages = {
   invoiceStats: {
     title: 'Invoice stats',
-    subtitle: 'Invoice Ninja-backed sent invoice summary for the current year.',
+    subtitle: 'Invoice Ninja-backed sent invoice summary. Defaults to the current year unless a date range is selected.',
+    startDate: 'Start date',
+    endDate: 'End date',
     rows: 'Rows: {count}',
     exportToExcel: 'Export To Excel',
     blank: '(blank)',
     unknownPeriod: 'Unknown',
-    empty: 'No sent invoices found for the current year.',
+    empty: 'No sent invoices found for the current year. Select a date range to widen the results.',
+    emptyFiltered: 'No sent invoices found for the selected date range.',
     mobilePreferredNotice: 'Desktop preferred for pivot analysis. Mobile mode shows a compact summary and invoice list.',
     summary: {
       invoices: 'Invoices',

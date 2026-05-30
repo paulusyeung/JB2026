@@ -8,6 +8,32 @@
             <div class="text-caption text-medium-emphasis">{{ t('billing.invoiceStats.subtitle') }}</div>
           </div>
 
+          <div class="toolbar-filters">
+            <v-text-field
+              v-model="startDate"
+              type="date"
+              density="comfortable"
+              :label="t('billing.invoiceStats.startDate')"
+              variant="solo-filled"
+              hide-details
+              @keydown.enter="refresh"
+            />
+
+            <v-text-field
+              v-model="endDate"
+              type="date"
+              density="comfortable"
+              :label="t('billing.invoiceStats.endDate')"
+              variant="solo-filled"
+              hide-details
+              @keydown.enter="refresh"
+            />
+
+            <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="refresh">
+              {{ t('common.search') }}
+            </v-btn>
+          </div>
+
           <div class="toolbar-actions">
             <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loading" @click="load">
               {{ t('common.refresh') }}
@@ -85,7 +111,7 @@
         </div>
 
         <div v-if="!loading && rows.length === 0" class="text-body-2 text-medium-emphasis py-6 text-center">
-          {{ t('billing.invoiceStats.empty') }}
+          {{ emptyMessage }}
         </div>
       </v-card-text>
     </v-card>
@@ -211,11 +237,19 @@ const errorMessage = ref('')
 const pivotRef = ref<WptElement | null>(null)
 const pivotMounted = ref(false)
 const pivotAvailable = ref(false)
+const startDate = ref('')
+const endDate = ref('')
 
 let hydrateRetryTimer: number | null = null
 let hydrateAttempts = 0
 const MAX_HYDRATE_ATTEMPTS = 8
 
+const hasDateRangeFilter = computed(() => startDate.value.length > 0 || endDate.value.length > 0)
+const emptyMessage = computed(() => (
+  hasDateRangeFilter.value
+    ? t('billing.invoiceStats.emptyFiltered')
+    : t('billing.invoiceStats.empty')
+))
 const totalInvoiceAmount = computed(() => rows.value.reduce((total, row) => total + row.invoiceAmount, 0))
 const uniqueInvoiceCount = computed(() => rows.value.length)
 const sortedRows = computed(() => [...rows.value].sort((left, right) => right.invoiceAmount - left.invoiceAmount))
@@ -277,7 +311,7 @@ async function load() {
   try {
     const invoices = await listInvoices()
     rows.value = invoices
-      .filter(isCurrentYearSentInvoice)
+      .filter(matchesInvoiceFilter)
       .map(mapInvoiceToStatsRow)
 
     if (pivotMounted.value) {
@@ -292,22 +326,40 @@ async function load() {
   }
 }
 
-function isCurrentYearSentInvoice(invoice: InvoiceBillingSummary): boolean {
+async function refresh() {
+  await load()
+}
+
+function matchesInvoiceFilter(invoice: InvoiceBillingSummary): boolean {
   const status = invoice.status?.trim().toLowerCase()
   if (status !== 'sent') {
     return false
   }
 
-  const parsedDate = invoice.invoiceDate ? new Date(invoice.invoiceDate) : null
+  const parsedDate = parseInvoiceDate(invoice.invoiceDate)
   if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
     return false
   }
 
-  return parsedDate.getFullYear() === currentYear
+  if (!hasDateRangeFilter.value) {
+    return parsedDate.getFullYear() === currentYear
+  }
+
+  const start = parseDateBoundary(startDate.value, 'start')
+  if (start && parsedDate < start) {
+    return false
+  }
+
+  const end = parseDateBoundary(endDate.value, 'end')
+  if (end && parsedDate > end) {
+    return false
+  }
+
+  return true
 }
 
 function mapInvoiceToStatsRow(invoice: InvoiceBillingSummary): BillingInvoiceStatsRow {
-  const parsedDate = invoice.invoiceDate ? new Date(invoice.invoiceDate) : null
+  const parsedDate = parseInvoiceDate(invoice.invoiceDate)
   const hasValidDate = Boolean(parsedDate && !Number.isNaN(parsedDate.getTime()))
   const unknownPeriod = t('billing.invoiceStats.unknownPeriod')
 
@@ -320,6 +372,32 @@ function mapInvoiceToStatsRow(invoice: InvoiceBillingSummary): BillingInvoiceSta
     year: hasValidDate && parsedDate ? String(parsedDate.getFullYear()) : unknownPeriod,
     month: hasValidDate && parsedDate ? String(parsedDate.getMonth() + 1).padStart(2, '0') : unknownPeriod,
   }
+}
+
+function parseInvoiceDate(value?: string): Date | null {
+  if (!value) {
+    return null
+  }
+
+  const parsedDate = new Date(value)
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate
+}
+
+function parseDateBoundary(value: string, boundary: 'start' | 'end'): Date | null {
+  if (!value) {
+    return null
+  }
+
+  const parsedDate = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null
+  }
+
+  if (boundary === 'end') {
+    parsedDate.setHours(23, 59, 59, 999)
+  }
+
+  return parsedDate
 }
 
 async function hydratePivot() {
@@ -524,6 +602,14 @@ function csvEscape(value: string | number): string {
   flex-wrap: wrap;
 }
 
+.toolbar-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: center;
+  flex: 1 1 420px;
+}
+
 .pivot-shell {
   overflow: auto;
   border: 1px solid var(--pivot-shell-border);
@@ -551,6 +637,7 @@ function csvEscape(value: string | number): string {
 }
 
 @media (max-width: 600px) {
+  .toolbar-filters,
   .toolbar-actions {
     width: 100%;
   }

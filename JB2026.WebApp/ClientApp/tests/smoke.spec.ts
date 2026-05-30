@@ -675,7 +675,7 @@ test.describe('Slice A — read-only lists and dashboard', () => {
     await expect(page.locator('web-pivot-table')).toHaveCount(1)
   })
 
-  test('billing invoice stats view renders current-year sent Invoice Ninja summaries', async ({ page }) => {
+  test('billing invoice stats view renders current-year sent Invoice Ninja summaries and supports date filters', async ({ page }) => {
     test.setTimeout(120000)
 
     await injectFakeSession(page)
@@ -689,6 +689,13 @@ test.describe('Slice A — read-only lists and dashboard', () => {
     await expect(page.getByText('Beta Labels')).toBeVisible()
     await expect(page.locator('web-pivot-table')).toBeVisible()
     await expect(page.locator('web-pivot-table')).toHaveCount(1)
+
+    await page.getByLabel('Start date').fill('2026-03-01')
+    await page.getByLabel('End date').fill('2026-03-31')
+    await page.getByRole('button', { name: 'Search' }).click()
+
+    await expect(page.getByText(/Rows:\s*1/)).toBeVisible()
+    await expect(page.getByText('Beta Labels')).toBeVisible()
   })
 
   test('sidebar shows validated legacy groups and hides planned areas', async ({ page }) => {
