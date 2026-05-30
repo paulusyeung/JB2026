@@ -567,7 +567,7 @@ function exportToCsv() {
 }
 
 function formatAmountCurrency(value: number): string {
-  return formatCurrency(value)
+  return `\$${formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function csvEscape(value: string | number): string {
