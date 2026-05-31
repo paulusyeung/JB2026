@@ -26,10 +26,10 @@
         :trend="5"
       />
       <KpiCard
-        :label="t('dashboard.kpi.quotationsLoadedLabel')"
-        :value="String(quotations.rowCount)"
-        :helper="t('dashboard.kpi.quotationsLoadedHelper')"
-        icon="mdi-file-document-outline"
+        :label="t('dashboard.kpi.invoicesLoadedLabel')"
+        :value="String(invoiceCount)"
+        :helper="t('dashboard.kpi.invoicesLoadedHelper')"
+        icon="mdi-receipt-text-outline"
         :trend="-2"
       />
     </div>
@@ -124,14 +124,14 @@ import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { useOrdersStore } from '@/stores/orders'
-import { useQuotationsStore } from '@/stores/quotations'
+import { listInvoices, type InvoiceBillingSummary } from '@/services/billing'
 import { useThemeStore } from '@/stores/theme'
 import type { ActivityItem } from '@/components/layout/ActivityTimeline.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 
 type DateRangeKey = 'today' | 'last7Days' | 'last30Days' | 'last90Days' | 'thisYear' | 'allTime'
 
-const quotations = useQuotationsStore()
+const invoiceCount = ref(0)
 const orders = useOrdersStore()
 const themeStore = useThemeStore()
 const router = useRouter()
@@ -311,14 +311,14 @@ const chartData = computed(() => ({
   labels: [
     t('dashboard.volumeTrend.labels.orders'),
     t('dashboard.volumeTrend.labels.jobs'),
-    t('dashboard.volumeTrend.labels.quotations'),
+    t('dashboard.volumeTrend.labels.invoices'),
   ],
   datasets: [
     {
       label: t('dashboard.volumeTrend.datasetLabel'),
       backgroundColor: chartPalette.value.bars,
       borderRadius: 12,
-      data: [orders.uniqueOrderCount, jobListRows.value.length, quotations.rowCount],
+      data: [orders.uniqueOrderCount, jobListRows.value.length, invoiceCount.value],
     },
   ],
 }))
@@ -422,6 +422,48 @@ function buildDateRangeParams() {
   return params
 }
 
+function buildDateBoundary(value: string, endOfDay = false) {
+  return Date.parse(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`)
+}
+
+function matchesInvoiceFilters(
+  invoice: InvoiceBillingSummary,
+  filters: { search: string },
+  dateRangeParams: { startOn?: string; endOn?: string },
+) {
+  const search = filters.search.trim().toLowerCase()
+  if (search) {
+    const matchesSearch = [invoice.invoiceNumber, invoice.clientName, invoice.status]
+      .some((value) => value?.toLowerCase().includes(search))
+
+    if (!matchesSearch) {
+      return false
+    }
+  }
+
+  if (!dateRangeParams.startOn && !dateRangeParams.endOn) {
+    return true
+  }
+
+  const invoiceTimestamp = parseTimestamp(invoice.invoiceDate) ?? parseTimestamp(invoice.lastSyncedAt)
+  if (invoiceTimestamp == null) {
+    return false
+  }
+
+  const startTimestamp = dateRangeParams.startOn ? buildDateBoundary(dateRangeParams.startOn) : null
+  const endTimestamp = dateRangeParams.endOn ? buildDateBoundary(dateRangeParams.endOn, true) : null
+
+  if (startTimestamp != null && invoiceTimestamp < startTimestamp) {
+    return false
+  }
+
+  if (endTimestamp != null && invoiceTimestamp > endTimestamp) {
+    return false
+  }
+
+  return true
+}
+
 async function reload() {
   loading.value = true
   error.value = null
@@ -434,17 +476,16 @@ async function reload() {
       startOn: dateRangeParams.startOn,
       endOn: dateRangeParams.endOn,
     }
-    const dateParam = dateRangeParams.startOn ? new Date(dateRangeParams.startOn) : undefined
 
     await Promise.all([
       getJobList(orderParams).then((rows) => {
         jobListRows.value = rows
       }),
-      quotations.load(dateParam),
+      listInvoices().then((invoices) => {
+        invoiceCount.value = invoices.filter((invoice) => matchesInvoiceFilters(invoice, dashboardFilters.value, dateRangeParams)).length
+      }),
       orders.load(orderParams),
     ])
-
-    quotations.keyword = dashboardFilters.value.search || ''
   } catch (e) {
     console.error('Failed to load dashboard data:', e)
     error.value = t('dashboard.loadFailed')
