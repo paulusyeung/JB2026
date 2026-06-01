@@ -226,10 +226,6 @@
           <template #[`item.dueDate`]="{ item }">
             {{ item.dueDate ? format(item.dueDate) : t('billing.invoices.labels.empty') }}
           </template>
-
-          <template #[`item.lastSyncedAt`]="{ item }">
-              {{ item.lastSyncedAt ? format(item.lastSyncedAt) : t('billing.invoices.labels.empty') }}
-          </template>
         </v-data-table>
       </v-card-text>
     </v-card>
@@ -291,7 +287,7 @@ const showEditorDialog = ref(false)
 const editorMode = ref<'create' | 'edit' | 'view'>('create')
 const editorInvoiceId = ref<string | undefined>(undefined)
 const viewSettings = useViewSettings('billing-invoices', {
-  visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate', 'lastSyncedAt'],
+  visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate'],
   sortKey: 'invoiceDate',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -312,7 +308,6 @@ const allHeaders = computed(() => [
   { title: t('billing.invoices.headers.status'), key: 'status', width: '140px' },
   { title: t('billing.invoices.headers.amount'), key: 'amount', width: '140px', align: 'end' as const },
   { title: t('billing.invoices.headers.dueDate'), key: 'dueDate', width: '130px' },
-  { title: t('billing.invoices.headers.lastSynced'), key: 'lastSyncedAt', width: '180px' },
 ])
 
 const headers = computed(() =>
