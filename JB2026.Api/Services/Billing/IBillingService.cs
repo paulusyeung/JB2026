@@ -753,7 +753,10 @@ public class BillingService : IBillingService
             .Select(c => new BillingClientOption
             {
                 ExternalClientId = c.Id,
-                DisplayName = !string.IsNullOrWhiteSpace(c.DisplayName) ? c.DisplayName : c.Name
+                Name = c.Name,
+                DisplayName = !string.IsNullOrWhiteSpace(c.DisplayName) ? c.DisplayName : c.Name,
+                IdNumber = c.IdNumber,
+                OutstandingBalance = c.Balance,
             })
             .ToList();
     }
@@ -773,9 +776,12 @@ public class BillingService : IBillingService
             clientOption = new BillingClientOption
             {
                 ExternalClientId = invoice.Client.Id,
+                Name = invoice.Client.Name,
                 DisplayName = !string.IsNullOrWhiteSpace(invoice.Client.DisplayName)
                     ? invoice.Client.DisplayName
-                    : invoice.Client.Name
+                    : invoice.Client.Name,
+                IdNumber = invoice.Client.IdNumber,
+                OutstandingBalance = invoice.Client.Balance,
             };
         }
         else if (!string.IsNullOrWhiteSpace(invoice.ClientId))

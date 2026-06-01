@@ -35,6 +35,12 @@ public class InvoiceNinjaClientResponse
     public string CurrencyId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Current outstanding balance for the client.
+    /// </summary>
+    [JsonPropertyName("balance")]
+    public decimal Balance { get; set; }
+
+    /// <summary>
     /// Custom field values keyed by field key.
     /// </summary>
     [JsonPropertyName("custom_values")]

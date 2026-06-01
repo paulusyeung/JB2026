@@ -329,8 +329,17 @@ public class BillingClientOption
     /// <summary>Invoice Ninja client ID.</summary>
     public string ExternalClientId { get; set; } = string.Empty;
 
+    /// <summary>Invoice Ninja client name.</summary>
+    public string Name { get; set; } = string.Empty;
+
     /// <summary>Human-readable display name shown in the selector.</summary>
     public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>Optional external client code/number.</summary>
+    public string IdNumber { get; set; } = string.Empty;
+
+    /// <summary>Raw outstanding balance from Invoice Ninja.</summary>
+    public decimal OutstandingBalance { get; set; }
 }
 
 /// <summary>

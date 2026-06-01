@@ -1,4 +1,36 @@
 export const billingMessages = {
+  statement: {
+    title: '帳單結單',
+    subtitle: '來自 Invoice Ninja 的客戶結餘清單，供後續結單動作使用',
+    lookup: '客戶搜尋',
+    actions: {
+      columns: '欄位',
+      sorting: '排序',
+      sortBy: '排序欄位',
+      asc: '升冪',
+      desc: '降冪',
+      checkbox: '核取方塊',
+      views: '檢視',
+      detailView: '明細檢視',
+      cardView: '卡片檢視',
+      statement: '結單',
+      selected: '已選 {count} 筆',
+    },
+    headers: {
+      clientName: '客戶',
+      clientCode: '客戶編號',
+      externalClientId: '客戶 ID',
+      outstandingBalance: '未結餘額',
+    },
+    labels: {
+      empty: '-',
+    },
+    messages: {
+      loadFailed: '無法載入帳單結單客戶清單。',
+      selectSingleClient: '請選取且只選取一個客戶核取方塊以啟用結單。',
+      pendingAction: '結單動作將於後續變更中加入。',
+    },
+  },
   invoiceStats: {
     title: '發票統計',
     subtitle: '來自 Invoice Ninja 的已發送發票摘要。未選日期範圍時，預設顯示本年度資料。',

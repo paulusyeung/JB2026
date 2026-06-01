@@ -1,4 +1,36 @@
 export const billingMessages = {
+  statement: {
+    title: '账单结单',
+    subtitle: '来自 Invoice Ninja 的客户结余列表，供后续结单动作使用',
+    lookup: '客户搜索',
+    actions: {
+      columns: '栏位',
+      sorting: '排序',
+      sortBy: '排序字段',
+      asc: '升序',
+      desc: '降序',
+      checkbox: '复选框',
+      views: '视图',
+      detailView: '明细视图',
+      cardView: '卡片视图',
+      statement: '结单',
+      selected: '已选 {count} 条',
+    },
+    headers: {
+      clientName: '客户',
+      clientCode: '客户编号',
+      externalClientId: '客户 ID',
+      outstandingBalance: '未结余额',
+    },
+    labels: {
+      empty: '-',
+    },
+    messages: {
+      loadFailed: '无法加载账单结单客户列表。',
+      selectSingleClient: '请选择且仅选择一个客户复选框以启用结单。',
+      pendingAction: '结单动作将在后续变更中加入。',
+    },
+  },
   invoiceStats: {
     title: '发票统计',
     subtitle: '来自 Invoice Ninja 的已发送发票摘要。未选择日期范围时，默认显示本年度数据。',

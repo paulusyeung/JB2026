@@ -23,6 +23,7 @@ export const routesMessages = {
   smlInvoiceStats: '發票統計',
     billing: '帳單',
     billingInvoices: '發票',
+    billingStatement: '結單',
     billingInvoiceStats: '發票統計',
     billingInvoiceDetail: '發票詳情',
     billingSettings: '帳單設定',

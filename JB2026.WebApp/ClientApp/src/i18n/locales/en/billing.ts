@@ -1,4 +1,36 @@
 export const billingMessages = {
+  statement: {
+    title: 'Billing Statement',
+    subtitle: 'Invoice Ninja client balances prepared for statement actions',
+    lookup: 'Client lookup',
+    actions: {
+      columns: 'Columns',
+      sorting: 'Sorting',
+      sortBy: 'Sort by',
+      asc: 'Asc',
+      desc: 'Desc',
+      checkbox: 'Check Box',
+      views: 'Views',
+      detailView: 'Detail View',
+      cardView: 'Card View',
+      statement: 'Statement',
+      selected: '{count} selected',
+    },
+    headers: {
+      clientName: 'Client',
+      clientCode: 'Client Code',
+      externalClientId: 'Client ID',
+      outstandingBalance: 'Outstanding Balance',
+    },
+    labels: {
+      empty: '-',
+    },
+    messages: {
+      loadFailed: 'Unable to load billing statement clients.',
+      selectSingleClient: 'Select exactly one client checkbox to enable Statement.',
+      pendingAction: 'Statement action will be added in a follow-up change.',
+    },
+  },
   invoiceStats: {
     title: 'Invoice stats',
     subtitle: 'Invoice Ninja-backed sent invoice summary. Defaults to the current year unless a date range is selected.',

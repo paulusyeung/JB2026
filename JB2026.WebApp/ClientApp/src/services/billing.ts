@@ -275,12 +275,17 @@ export async function downloadDeliveryNote(externalInvoiceId: string): Promise<B
 // ── Invoice Editor Types & Functions ─────────────────────────────────────────
 
 /**
- * A selectable Invoice Ninja client for the invoice editor client picker.
+ * A selectable Invoice Ninja client for billing screens.
  */
 export interface BillingClientOption {
   externalClientId: string
+  name: string
   displayName: string
+  idNumber: string
+  outstandingBalance: number
 }
+
+export type BillingStatementClient = BillingClientOption
 
 /**
  * Response for the billing client list endpoint.
@@ -380,7 +385,7 @@ export interface SaveInvoiceResponse {
 }
 
 /**
- * Lists Invoice Ninja clients for the editor client picker.
+ * Lists Invoice Ninja clients for billing screens.
  *
  * @param query Optional search term; returns up to 100 clients when omitted.
  */
