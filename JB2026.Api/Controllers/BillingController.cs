@@ -534,11 +534,11 @@ public class BillingController : ControllerBase
     [HttpGet("invoices")]
     [ProducesResponseType(typeof(ListInvoicesResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<ListInvoicesResponse>> ListInvoices()
+    public async Task<ActionResult<ListInvoicesResponse>> ListInvoices([FromQuery] string? lookup = null, [FromQuery] string? invoiceLookup = null)
     {
         try
         {
-            var invoices = await _billingService.ListInvoicesAsync();
+            var invoices = await _billingService.ListInvoicesAsync(lookup, invoiceLookup);
             return Ok(new ListInvoicesResponse
             {
                 Invoices = invoices.ToList()

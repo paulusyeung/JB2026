@@ -9,6 +9,34 @@
           </div>
         </div>
 
+        <div class="search-bar">
+          <v-text-field
+            v-model="lookup"
+            density="comfortable"
+            :label="t('billing.invoices.lookup')"
+            prepend-inner-icon="mdi-magnify"
+            variant="solo-filled"
+            hide-details
+            clearable
+            @keydown.enter="applyLookup"
+          />
+
+          <v-text-field
+            v-model="invoiceLookup"
+            density="comfortable"
+            :label="t('billing.invoices.invoiceLookup')"
+            prepend-inner-icon="mdi-file-document-outline"
+            variant="solo-filled"
+            hide-details
+            clearable
+            @keydown.enter="applyLookup"
+          />
+
+          <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="applyLookup">
+            {{ t('common.search') }}
+          </v-btn>
+        </div>
+
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
 
         <div class="toolbar-bar mb-2">
@@ -252,6 +280,8 @@ const { format } = useGlobalDateFormatter()
 const loading = ref(false)
 const errorMessage = ref('')
 const invoices = ref<InvoiceBillingSummary[]>([])
+const lookup = ref('')
+const invoiceLookup = ref('')
 const selectedInvoiceIds = ref<string[]>([])
 const isSendingInvoice = ref(false)
 const showMarkSentConfirmation = ref(false)
@@ -343,7 +373,10 @@ async function loadInvoices() {
   loading.value = true
   errorMessage.value = ''
   try {
-    invoices.value = await listInvoices()
+    invoices.value = await listInvoices(
+      lookup.value.trim() || undefined,
+      invoiceLookup.value.trim() || undefined,
+    )
   } catch (e) {
     console.error('Failed to load billing invoices', e)
     if (axios.isAxiosError<{ message?: string }>(e)) {
@@ -356,6 +389,10 @@ async function loadInvoices() {
   } finally {
     loading.value = false
   }
+}
+
+async function applyLookup() {
+  await loadInvoices()
 }
 
 function openInvoice(invoice: InvoiceBillingSummary) {
@@ -606,9 +643,13 @@ function statusColor(status: string) {
 }
 
 .filter-bar {
+  margin-bottom: 12px;
+}
+
+.search-bar {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(260px, 1fr) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
   align-items: center;
   margin-bottom: 16px;
 }
@@ -699,7 +740,7 @@ function statusColor(status: string) {
 }
 
 @media (max-width: 960px) {
-  .filter-bar {
+  .search-bar {
     grid-template-columns: 1fr;
   }
 }

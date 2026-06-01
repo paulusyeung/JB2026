@@ -196,8 +196,13 @@ export async function previewInvoice(request: PreviewInvoiceRequest): Promise<Pr
 /**
  * Lists invoice summaries for billing list screens.
  */
-export async function listInvoices(): Promise<InvoiceBillingSummary[]> {
-  const response = await apiClient.get<ListInvoicesResponse>('/api/v2/billing/invoices')
+export async function listInvoices(lookup?: string, invoiceLookup?: string): Promise<InvoiceBillingSummary[]> {
+  const response = await apiClient.get<ListInvoicesResponse>('/api/v2/billing/invoices', {
+    params: {
+      ...(lookup ? { lookup } : {}),
+      ...(invoiceLookup ? { invoiceLookup } : {}),
+    },
+  })
   return response.data.invoices
 }
 

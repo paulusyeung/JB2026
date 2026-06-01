@@ -99,7 +99,7 @@ public interface IBillingService
     /// Lists invoice summaries from Invoice Ninja for billing list screens.
     /// </summary>
     /// <returns>Invoice summary list.</returns>
-    Task<IReadOnlyList<InvoiceBillingSummary>> ListInvoicesAsync();
+    Task<IReadOnlyList<InvoiceBillingSummary>> ListInvoicesAsync(string? lookup = null, string? invoiceLookup = null);
 
     /// <summary>
     /// Downloads the invoice PDF document from Invoice Ninja for the given invoice ID.
@@ -646,7 +646,7 @@ public class BillingService : IBillingService
         return Task.FromResult(response);
     }
 
-    public async Task<IReadOnlyList<InvoiceBillingSummary>> ListInvoicesAsync()
+    public async Task<IReadOnlyList<InvoiceBillingSummary>> ListInvoicesAsync(string? lookup = null, string? invoiceLookup = null)
     {
         try
         {
@@ -656,7 +656,25 @@ public class BillingService : IBillingService
                 return Array.Empty<InvoiceBillingSummary>();
             }
 
-            return invoices.Select(MapToInvoiceBillingSummary).ToList();
+            var summaries = invoices.Select(MapToInvoiceBillingSummary);
+
+            if (!string.IsNullOrWhiteSpace(lookup))
+            {
+                var token = lookup.Trim();
+                summaries = summaries.Where(summary =>
+                    !string.IsNullOrWhiteSpace(summary.ClientName) &&
+                    summary.ClientName.Contains(token, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(invoiceLookup))
+            {
+                var invoiceToken = invoiceLookup.Trim();
+                summaries = summaries.Where(summary =>
+                    !string.IsNullOrWhiteSpace(summary.InvoiceNumber) &&
+                    summary.InvoiceNumber.Contains(invoiceToken, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return summaries.ToList();
         }
         catch (Exception ex)
         {

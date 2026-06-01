@@ -86,6 +86,8 @@ export const billingMessages = {
   invoices: {
     title: '帳單發票',
     subtitle: '已與 Invoice Ninja 同步的發票摘要',
+    lookup: '客戶查詢',
+    invoiceLookup: '發票查詢',
     actions: {
       columns: '欄位',
       sorting: '排序',

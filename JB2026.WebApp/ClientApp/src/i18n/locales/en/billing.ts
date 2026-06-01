@@ -86,6 +86,8 @@ export const billingMessages = {
   invoices: {
     title: 'Billing Invoices',
     subtitle: 'Invoice Ninja synced invoice summaries',
+    lookup: 'Client lookup',
+    invoiceLookup: 'Invoice lookup',
     actions: {
       columns: 'Columns',
       sorting: 'Sorting',
