@@ -319,6 +319,66 @@ public class BillingErrorResponse
     public object? Details { get; set; }
 }
 
+/// <summary>
+/// Supported date-range presets for billing statement generation.
+/// </summary>
+public static class BillingStatementDateRangePresets
+{
+    public const string AllOutstanding = "All Outstanding";
+    public const string ThisMonth = "This Month";
+    public const string LastMonth = "Last Month";
+    public const string ThisQuarter = "This Quarter";
+    public const string ThisYear = "This Year";
+}
+
+/// <summary>
+/// Supported status values for billing statement generation.
+/// </summary>
+public static class BillingStatementStatuses
+{
+    public const string All = "All";
+    public const string Paid = "Paid";
+    public const string Unpaid = "Unpaid";
+}
+
+/// <summary>
+/// Request body and query model for billing statement launch and retrieval.
+/// </summary>
+public class BillingStatementLaunchRequest
+{
+    public string ExternalClientId { get; set; } = string.Empty;
+
+    public string DateRangePreset { get; set; } = BillingStatementDateRangePresets.AllOutstanding;
+
+    public string Status { get; set; } = BillingStatementStatuses.All;
+
+    public bool IncludeCredits { get; set; }
+
+    public bool IncludePayments { get; set; }
+
+    public bool IncludeAging { get; set; }
+}
+
+/// <summary>
+/// Response returned when a statement launch URL is prepared.
+/// </summary>
+public class BillingStatementLaunchResponse
+{
+    public string LaunchUrl { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Normalized billing statement document returned by the service layer.
+/// </summary>
+public class BillingStatementDocument
+{
+    public byte[] Content { get; set; } = [];
+
+    public string ContentType { get; set; } = "application/pdf";
+
+    public string FileName { get; set; } = "client-statement.pdf";
+}
+
 // ── Invoice Editor DTOs ──────────────────────────────────────────────────────
 
 /// <summary>

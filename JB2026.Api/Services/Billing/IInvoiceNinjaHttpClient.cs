@@ -32,6 +32,14 @@ public interface IInvoiceNinjaHttpClient
     Task<T> PostAsync<T>(string endpoint, object body) where T : class;
 
     /// <summary>
+    /// Performs a POST request to Invoice Ninja API and returns the raw binary response.
+    /// </summary>
+    /// <param name="endpoint">API endpoint path.</param>
+    /// <param name="body">Request body to serialize and send.</param>
+    /// <returns>Binary response content with content metadata.</returns>
+    Task<InvoiceNinjaBinaryResponse> PostStreamAsync(string endpoint, object body);
+
+    /// <summary>
     /// Performs a PUT request to Invoice Ninja API.
     /// </summary>
     /// <typeparam name="T">Response data type.</typeparam>
@@ -58,6 +66,15 @@ public interface IInvoiceNinjaHttpClient
     /// <param name="endpoint">API endpoint path (e.g., "/invoice/{key}/download").</param>
     /// <returns>Response content as bytes; null if not found.</returns>
     Task<byte[]?> GetStreamAsync(string endpoint);
+}
+
+public class InvoiceNinjaBinaryResponse
+{
+    public byte[] Content { get; set; } = [];
+
+    public string ContentType { get; set; } = "application/octet-stream";
+
+    public string? FileName { get; set; }
 }
 
 /// <summary>
@@ -257,6 +274,86 @@ public class InvoiceNinjaHttpClient : IInvoiceNinjaHttpClient
         }
     }
 
+    public async Task<InvoiceNinjaBinaryResponse> PostStreamAsync(string endpoint, object body)
+    {
+        var (isValid, errorMessage) = ValidateConfiguration();
+        if (!isValid)
+        {
+            _logger.LogError("Invoice Ninja configuration invalid: {ErrorMessage}", errorMessage);
+            throw BillingException.ConfigurationError(errorMessage);
+        }
+
+        var options = _billingOptions.Value.InvoiceNinja;
+        var url = $"{options.BaseUrl}{endpoint}";
+
+        try
+        {
+            using (var client = _httpClientFactory.CreateClient())
+            {
+                client.DefaultRequestHeaders.Add("X-API-TOKEN", options.ApiKey);
+                client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                client.Timeout = TimeSpan.FromSeconds(options.HttpClientTimeoutSeconds);
+
+                var payload = SerializeForLog(body);
+                _logger.LogInformation("Invoice Ninja POST stream request: {Endpoint} Payload: {Payload}", endpoint, payload);
+                await PersistLegacyLog4NetEntryAsync("INFO", "InvoiceNinjaHttpClient", $"POST {endpoint} Payload: {payload}");
+
+                var response = await client.PostAsJsonAsync(url, body);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _logger.LogError("Invoice Ninja authentication failed (401): {Endpoint}", endpoint);
+                    throw BillingException.InvalidApiKey();
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogError("Invoice Ninja resource not found (404): {Endpoint}", endpoint);
+                    throw BillingException.NotFound(endpoint);
+                }
+
+                if ((int)response.StatusCode == 429)
+                {
+                    _logger.LogWarning("Invoice Ninja rate limit hit (429): {Endpoint}", endpoint);
+                    throw BillingException.RateLimited();
+                }
+
+                if ((int)response.StatusCode is 502 or 503 or 504)
+                {
+                    _logger.LogWarning("Invoice Ninja service unavailable ({StatusCode}): {Endpoint}", (int)response.StatusCode, endpoint);
+                    throw BillingException.ServiceUnavailable((int)response.StatusCode);
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+                    var errorContent = TruncateForLog(responseBody);
+                    _logger.LogError("Invoice Ninja POST stream failed with status {StatusCode}: {Endpoint}", (int)response.StatusCode, endpoint);
+                    _logger.LogError("Invoice Ninja POST stream error response: {ResponseBody}", errorContent);
+                    throw BuildHttpError((int)response.StatusCode, responseBody);
+                }
+
+                return new InvoiceNinjaBinaryResponse
+                {
+                    Content = await response.Content.ReadAsByteArrayAsync(),
+                    ContentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream",
+                    FileName = TrimContentDispositionFileName(
+                        response.Content.Headers.ContentDisposition?.FileNameStar
+                        ?? response.Content.Headers.ContentDisposition?.FileName)
+                };
+            }
+        }
+        catch (BillingException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Invoice Ninja POST stream failed at endpoint {Endpoint}: {ErrorMessage}", endpoint, ex.Message);
+            throw BillingException.HttpError(0, "Invoice Ninja POST stream request failed.", ex);
+        }
+    }
+
     public async Task<T> PutAsync<T>(string endpoint, object body) where T : class
     {
         var (isValid, errorMessage) = ValidateConfiguration();
@@ -427,6 +524,74 @@ public class InvoiceNinjaHttpClient : IInvoiceNinjaHttpClient
         }
 
         return value[..maxLength] + "...<truncated>";
+    }
+
+    private static string? TrimContentDispositionFileName(string? fileName)
+    {
+        return string.IsNullOrWhiteSpace(fileName)
+            ? null
+            : fileName.Trim().Trim('"');
+    }
+
+    private static BillingException BuildHttpError(int statusCode, string? responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return BillingException.HttpError(statusCode, $"Invoice Ninja API returned {statusCode}");
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+
+            if (root.TryGetProperty("message", out var messageElement))
+            {
+                var message = messageElement.GetString();
+                var details = ExtractValidationDetails(root);
+                if (!string.IsNullOrWhiteSpace(message))
+                {
+                    var fullMessage = details.Count == 0
+                        ? message
+                        : $"{message} {string.Join(' ', details)}";
+                    return new BillingException("HTTP_ERROR", fullMessage, statusCode, details.Count == 0 ? null : details);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall back to a generic message when the upstream response is not JSON.
+        }
+
+        return BillingException.HttpError(statusCode, $"Invoice Ninja API returned {statusCode}: {TruncateForLog(responseBody)}");
+    }
+
+    private static List<string> ExtractValidationDetails(JsonElement root)
+    {
+        var details = new List<string>();
+        if (!root.TryGetProperty("errors", out var errorsElement) || errorsElement.ValueKind != JsonValueKind.Object)
+        {
+            return details;
+        }
+
+        foreach (var property in errorsElement.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var item in property.Value.EnumerateArray())
+            {
+                var text = item.GetString();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    details.Add(text);
+                }
+            }
+        }
+
+        return details;
     }
 
     private async Task PersistLegacyLog4NetEntryAsync(string level, string logger, string message)

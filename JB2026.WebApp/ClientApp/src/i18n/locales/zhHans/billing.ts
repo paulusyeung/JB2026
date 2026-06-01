@@ -3,6 +3,35 @@ export const billingMessages = {
     title: '账单结单',
     subtitle: '来自 Invoice Ninja 的客户结余列表，供后续结单动作使用',
     lookup: '客户搜索',
+    dialog: {
+      title: '客户结单',
+      subtitle: '为 {client} 生成结单',
+      fields: {
+        dateRange: '日期范围',
+        status: '状态',
+        selectors: '选项',
+      },
+      selectors: {
+        credits: '贷项',
+        payments: '付款',
+        aging: '账龄',
+      },
+      presets: {
+        allOutstanding: '全部未结',
+        thisMonth: '本月',
+        lastMonth: '上月',
+        thisQuarter: '本季度',
+        thisYear: '本年度',
+        all: '全部',
+        paid: '已付款',
+        unpaid: '未付款',
+      },
+      actions: {
+        close: '关闭',
+        cancel: '取消',
+        proceed: '继续',
+      },
+    },
     actions: {
       columns: '栏位',
       sorting: '排序',
@@ -28,6 +57,11 @@ export const billingMessages = {
     messages: {
       loadFailed: '无法加载账单结单客户列表。',
       selectSingleClient: '请选择且仅选择一个客户复选框以启用结单。',
+      previewBlocked: '无法打开结单预览。请允许此站点弹出窗口后重试。',
+      previewLoading: '正在加载结单预览...',
+      previewTitle: '正在打开结单...',
+      launchFailed: '启动客户结单失败。',
+      launchUnexpected: '启动客户结单时发生未预期错误。',
       pendingAction: '结单动作将在后续变更中加入。',
     },
   },

@@ -287,6 +287,38 @@ export interface BillingClientOption {
 
 export type BillingStatementClient = BillingClientOption
 
+export const BILLING_STATEMENT_DATE_RANGE_PRESETS = {
+  allOutstanding: 'All Outstanding',
+  thisMonth: 'This Month',
+  lastMonth: 'Last Month',
+  thisQuarter: 'This Quarter',
+  thisYear: 'This Year',
+} as const
+
+export type BillingStatementDateRangePreset =
+  typeof BILLING_STATEMENT_DATE_RANGE_PRESETS[keyof typeof BILLING_STATEMENT_DATE_RANGE_PRESETS]
+
+export const BILLING_STATEMENT_STATUSES = {
+  all: 'All',
+  paid: 'Paid',
+  unpaid: 'Unpaid',
+} as const
+
+export type BillingStatementStatus = typeof BILLING_STATEMENT_STATUSES[keyof typeof BILLING_STATEMENT_STATUSES]
+
+export interface BillingStatementLaunchRequest {
+  externalClientId: string
+  dateRangePreset: BillingStatementDateRangePreset
+  status: BillingStatementStatus
+  includeCredits: boolean
+  includePayments: boolean
+  includeAging: boolean
+}
+
+export interface BillingStatementLaunchResponse {
+  launchUrl: string
+}
+
 /**
  * Response for the billing client list endpoint.
  */
@@ -393,6 +425,16 @@ export async function listBillingClients(query?: string): Promise<BillingClientO
   const params = query ? { query } : {}
   const response = await apiClient.get<ListBillingClientsResponse>('/api/v2/billing/clients', { params })
   return response.data.clients
+}
+
+export async function createBillingStatementLaunch(request: BillingStatementLaunchRequest): Promise<string> {
+  const response = await apiClient.post<BillingStatementLaunchResponse>('/api/v2/billing/statements/client', request)
+  return response.data.launchUrl
+}
+
+export async function downloadBillingStatementDocument(launchUrl: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(launchUrl, { responseType: 'blob' })
+  return response.data
 }
 
 /**

@@ -199,6 +199,15 @@
         </v-data-table>
       </v-card-text>
     </v-card>
+
+    <BillingStatementRequestDialog
+      :model-value="statementDialogOpen"
+      :client-name="selectedStatementClient?.clientName ?? ''"
+      :submitting="statementLaunchLoading"
+      :error-message="statementDialogErrorMessage"
+      @update:model-value="handleStatementDialogToggle"
+      @submit="handleStatementProceed"
+    />
   </section>
 </template>
 
@@ -206,10 +215,17 @@
 import axios from 'axios'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import BillingStatementRequestDialog from '@/components/billing/BillingStatementRequestDialog.vue'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { listBillingClients, type BillingStatementClient } from '@/services/billing'
+import {
+  createBillingStatementLaunch,
+  downloadBillingStatementDocument,
+  type BillingStatementLaunchRequest,
+  listBillingClients,
+  type BillingStatementClient,
+} from '@/services/billing'
 
 type BillingStatementViewMode = 'detail' | 'card'
 
@@ -228,6 +244,9 @@ const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
 const selectedClientIds = ref<string[]>([])
+const statementDialogOpen = ref(false)
+const statementLaunchLoading = ref(false)
+const statementDialogErrorMessage = ref('')
 const viewSettings = useViewSettings('billing-statement', {
   visibleColumns: ['icon', 'ln', 'clientName', 'clientCode', 'outstandingBalance'],
   sortKey: 'clientName',
@@ -299,6 +318,9 @@ const displayedRows = computed<BillingStatementDisplayItem[]>(() => {
 })
 
 const canOpenStatement = computed(() => checkboxMode.value && selectedClientIds.value.length === 1)
+const selectedStatementClient = computed(() =>
+  displayedRows.value.find((row) => row.externalClientId === selectedClientIds.value[0]),
+)
 
 const balanceFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
@@ -373,7 +395,103 @@ function handleStatement() {
     return
   }
 
-  errorMessage.value = t('billing.statement.messages.pendingAction')
+  statementDialogErrorMessage.value = ''
+  statementDialogOpen.value = true
+}
+
+function handleStatementDialogToggle(open: boolean) {
+  statementDialogOpen.value = open
+
+  if (!open) {
+    statementDialogErrorMessage.value = ''
+  }
+}
+
+function openStatementPreviewWindow() {
+  const previewWindow = window.open('', '_blank')
+
+  if (!previewWindow) {
+    return null
+  }
+
+  previewWindow.document.title = t('billing.statement.messages.previewTitle')
+  previewWindow.document.body.innerHTML = `<p style="font-family: sans-serif; padding: 16px;">${t('billing.statement.messages.previewLoading')}</p>`
+  return previewWindow
+}
+
+function renderStatementPreview(previewWindow: Window, documentBlob: Blob) {
+  const objectUrl = URL.createObjectURL(documentBlob)
+
+  previewWindow.document.title = t('billing.statement.messages.previewTitle')
+  previewWindow.document.body.innerHTML = ''
+  previewWindow.document.body.style.margin = '0'
+
+  const iframe = previewWindow.document.createElement('iframe')
+  iframe.src = objectUrl
+  iframe.title = t('billing.statement.messages.previewTitle')
+  iframe.style.border = '0'
+  iframe.style.width = '100vw'
+  iframe.style.height = '100vh'
+
+  previewWindow.document.body.appendChild(iframe)
+  previewWindow.addEventListener('beforeunload', () => URL.revokeObjectURL(objectUrl), { once: true })
+}
+
+async function extractStatementLaunchErrorMessage(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    if (error instanceof Error) {
+      return error.message || t('billing.statement.messages.launchFailed')
+    }
+
+    return t('billing.statement.messages.launchUnexpected')
+  }
+
+  const responseData = error.response?.data
+  if (responseData instanceof Blob) {
+    try {
+      const text = await responseData.text()
+      const parsed = JSON.parse(text) as { message?: string }
+      if (parsed.message) {
+        return parsed.message
+      }
+    } catch {
+      // Fall back to the normal axios message below.
+    }
+  }
+
+  return error.response?.data?.message || error.message || t('billing.statement.messages.launchFailed')
+}
+
+async function handleStatementProceed(request: BillingStatementLaunchRequest) {
+  const selectedClientId = selectedClientIds.value[0]
+  if (!selectedClientId) {
+    statementDialogErrorMessage.value = t('billing.statement.messages.selectSingleClient')
+    return
+  }
+
+  const previewWindow = openStatementPreviewWindow()
+  if (!previewWindow) {
+    statementDialogErrorMessage.value = t('billing.statement.messages.previewBlocked')
+    return
+  }
+
+  statementLaunchLoading.value = true
+  statementDialogErrorMessage.value = ''
+
+  try {
+    const launchUrl = await createBillingStatementLaunch({
+      ...request,
+      externalClientId: selectedClientId,
+    })
+    const statementDocument = await downloadBillingStatementDocument(launchUrl)
+
+    renderStatementPreview(previewWindow, statementDocument)
+  } catch (error) {
+    previewWindow.close()
+    statementDialogErrorMessage.value = await extractStatementLaunchErrorMessage(error)
+  } finally {
+    statementLaunchLoading.value = false
+  }
 }
 
 function formatOutstandingBalance(value: number) {

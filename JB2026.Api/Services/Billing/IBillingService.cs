@@ -151,6 +151,20 @@ public interface IBillingService
     Task<IReadOnlyList<BillingClientOption>> GetBillingClientsAsync(string? query);
 
     /// <summary>
+    /// Validates and normalizes a client statement launch request.
+    /// </summary>
+    /// <param name="request">Raw statement request from the UI.</param>
+    /// <returns>Normalized request safe to encode into a launch URL.</returns>
+    Task<BillingStatementLaunchRequest> PrepareClientStatementLaunchAsync(BillingStatementLaunchRequest request);
+
+    /// <summary>
+    /// Retrieves a client statement document from Invoice Ninja using the normalized billing request.
+    /// </summary>
+    /// <param name="request">Normalized statement request.</param>
+    /// <returns>Statement document content and metadata.</returns>
+    Task<BillingStatementDocument> GetClientStatementAsync(BillingStatementLaunchRequest request);
+
+    /// <summary>
     /// Returns a normalized editor DTO for an existing invoice (for edit or read-only view).
     /// </summary>
     /// <param name="externalInvoiceId">Invoice Ninja invoice ID.</param>
@@ -761,6 +775,82 @@ public class BillingService : IBillingService
             .ToList();
     }
 
+    public async Task<BillingStatementLaunchRequest> PrepareClientStatementLaunchAsync(BillingStatementLaunchRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var normalized = new BillingStatementLaunchRequest
+        {
+            ExternalClientId = request.ExternalClientId?.Trim() ?? string.Empty,
+            DateRangePreset = NormalizeStatementDateRangePreset(request.DateRangePreset),
+            Status = NormalizeStatementStatus(request.Status),
+            IncludeCredits = request.IncludeCredits,
+            IncludePayments = request.IncludePayments,
+            IncludeAging = request.IncludeAging,
+        };
+
+        ValidateStatementLaunchRequest(normalized);
+
+        var client = await _invoiceNinjaClient.GetAsync<InvoiceNinjaClientResponse>($"/clients/{normalized.ExternalClientId}");
+        if (client == null)
+        {
+            throw BillingException.NotFound($"Client {normalized.ExternalClientId}");
+        }
+
+        return normalized;
+    }
+
+    public async Task<BillingStatementDocument> GetClientStatementAsync(BillingStatementLaunchRequest request)
+    {
+        var normalized = await PrepareClientStatementLaunchAsync(request);
+        var (startDate, endDate) = ResolveStatementDateRange(normalized.DateRangePreset, DateTime.UtcNow);
+
+        var payload = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["client_id"] = normalized.ExternalClientId,
+        };
+
+        if (normalized.IncludeCredits)
+        {
+            payload["show_credits_table"] = true;
+        }
+
+        if (normalized.IncludePayments)
+        {
+            payload["show_payments_table"] = true;
+        }
+
+        if (normalized.IncludeAging)
+        {
+            payload["show_aging_table"] = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(startDate))
+        {
+            payload["start_date"] = startDate;
+        }
+
+        if (!string.IsNullOrWhiteSpace(endDate))
+        {
+            payload["end_date"] = endDate;
+        }
+
+        var response = await _invoiceNinjaClient.PostStreamAsync("/client_statement", payload);
+        if (response.Content.Length == 0)
+        {
+            throw BillingException.NotFound($"Client statement for {normalized.ExternalClientId}");
+        }
+
+        return new BillingStatementDocument
+        {
+            Content = response.Content,
+            ContentType = string.IsNullOrWhiteSpace(response.ContentType) ? "application/pdf" : response.ContentType,
+            FileName = string.IsNullOrWhiteSpace(response.FileName)
+                ? BuildClientStatementFileName(normalized.ExternalClientId, response.ContentType)
+                : response.FileName,
+        };
+    }
+
     public async Task<InvoiceEditorDto> GetInvoiceEditorDetailAsync(string externalInvoiceId)
     {
         var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>(
@@ -1063,6 +1153,109 @@ public class BillingService : IBillingService
             if (item.UnitCost < 0)
                 throw BillingException.InvalidRequest("Line item unit cost cannot be negative.", 400);
         }
+    }
+
+    private static void ValidateStatementLaunchRequest(BillingStatementLaunchRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.ExternalClientId))
+        {
+            throw BillingException.InvalidRequest("Client selection is required.", 400);
+        }
+
+        if (!string.Equals(request.Status, BillingStatementStatuses.All, StringComparison.Ordinal))
+        {
+            throw BillingException.InvalidRequest(
+                "The selected status option is not currently supported for statement generation.",
+                400);
+        }
+    }
+
+    private static string NormalizeStatementDateRangePreset(string? preset)
+    {
+        var value = preset?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return BillingStatementDateRangePresets.AllOutstanding;
+        }
+
+        return value.ToLowerInvariant() switch
+        {
+            "all outstanding" => BillingStatementDateRangePresets.AllOutstanding,
+            "this month" => BillingStatementDateRangePresets.ThisMonth,
+            "last month" => BillingStatementDateRangePresets.LastMonth,
+            "this quarter" => BillingStatementDateRangePresets.ThisQuarter,
+            "this year" => BillingStatementDateRangePresets.ThisYear,
+            _ => throw BillingException.InvalidRequest($"Unsupported statement date range preset '{value}'.", 400),
+        };
+    }
+
+    private static string NormalizeStatementStatus(string? status)
+    {
+        var value = status?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return BillingStatementStatuses.All;
+        }
+
+        return value.ToLowerInvariant() switch
+        {
+            "all" => BillingStatementStatuses.All,
+            "paid" => BillingStatementStatuses.Paid,
+            "unpaid" => BillingStatementStatuses.Unpaid,
+            _ => throw BillingException.InvalidRequest($"Unsupported statement status '{value}'.", 400),
+        };
+    }
+
+    private static (string? StartDate, string? EndDate) ResolveStatementDateRange(string preset, DateTime utcNow)
+    {
+        var today = utcNow.Date;
+
+        return preset switch
+        {
+            BillingStatementDateRangePresets.AllOutstanding => FormatDateRange(
+                new DateTime(2000, 1, 1),
+                today),
+            BillingStatementDateRangePresets.ThisMonth => FormatDateRange(
+                new DateTime(today.Year, today.Month, 1),
+                new DateTime(today.Year, today.Month, DateTime.DaysInMonth(today.Year, today.Month))),
+            BillingStatementDateRangePresets.LastMonth => ResolveLastMonthDateRange(today),
+            BillingStatementDateRangePresets.ThisQuarter => ResolveThisQuarterDateRange(today),
+            BillingStatementDateRangePresets.ThisYear => FormatDateRange(
+                new DateTime(today.Year, 1, 1),
+                new DateTime(today.Year, 12, 31)),
+            _ => throw BillingException.InvalidRequest($"Unsupported statement date range preset '{preset}'.", 400),
+        };
+    }
+
+    private static (string StartDate, string EndDate) ResolveLastMonthDateRange(DateTime today)
+    {
+        var previousMonth = today.Month == 1 ? 12 : today.Month - 1;
+        var previousYear = today.Month == 1 ? today.Year - 1 : today.Year;
+
+        return FormatDateRange(
+            new DateTime(previousYear, previousMonth, 1),
+            new DateTime(previousYear, previousMonth, DateTime.DaysInMonth(previousYear, previousMonth)));
+    }
+
+    private static (string StartDate, string EndDate) ResolveThisQuarterDateRange(DateTime today)
+    {
+        var quarterStartMonth = ((today.Month - 1) / 3) * 3 + 1;
+        var quarterEndMonth = quarterStartMonth + 2;
+
+        return FormatDateRange(
+            new DateTime(today.Year, quarterStartMonth, 1),
+            new DateTime(today.Year, quarterEndMonth, DateTime.DaysInMonth(today.Year, quarterEndMonth)));
+    }
+
+    private static (string StartDate, string EndDate) FormatDateRange(DateTime startDate, DateTime endDate)
+    {
+        return (startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
+    }
+
+    private static string BuildClientStatementFileName(string externalClientId, string? contentType)
+    {
+        var extension = string.Equals(contentType, "text/html", StringComparison.OrdinalIgnoreCase) ? "html" : "pdf";
+        return $"client-statement-{externalClientId}.{extension}";
     }
 
     private async Task<(string InvoiceNinjaClientId, string BillTo, string ShipTo)> ResolveCustomerBillingMetadataForJobAsync(

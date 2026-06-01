@@ -3,6 +3,35 @@ export const billingMessages = {
     title: 'Billing Statement',
     subtitle: 'Invoice Ninja client balances prepared for statement actions',
     lookup: 'Client lookup',
+    dialog: {
+      title: 'Client Statement',
+      subtitle: 'Generate a statement for {client}',
+      fields: {
+        dateRange: 'Date Range',
+        status: 'Status',
+        selectors: 'Selectors',
+      },
+      selectors: {
+        credits: 'Credits',
+        payments: 'Payments',
+        aging: 'Aging',
+      },
+      presets: {
+        allOutstanding: 'All Outstanding',
+        thisMonth: 'This Month',
+        lastMonth: 'Last Month',
+        thisQuarter: 'This Quarter',
+        thisYear: 'This Year',
+        all: 'All',
+        paid: 'Paid',
+        unpaid: 'Unpaid',
+      },
+      actions: {
+        close: 'Close',
+        cancel: 'Cancel',
+        proceed: 'Proceed',
+      },
+    },
     actions: {
       columns: 'Columns',
       sorting: 'Sorting',
@@ -28,6 +57,11 @@ export const billingMessages = {
     messages: {
       loadFailed: 'Unable to load billing statement clients.',
       selectSingleClient: 'Select exactly one client checkbox to enable Statement.',
+      previewBlocked: 'Unable to open the statement preview. Please allow popups for this site and try again.',
+      previewLoading: 'Loading statement preview...',
+      previewTitle: 'Opening statement...',
+      launchFailed: 'Failed to launch the client statement.',
+      launchUnexpected: 'An unexpected error occurred while launching the client statement.',
       pendingAction: 'Statement action will be added in a follow-up change.',
     },
   },

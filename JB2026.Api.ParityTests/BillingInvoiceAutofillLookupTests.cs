@@ -366,6 +366,8 @@ public sealed class BillingInvoiceAutofillLookupTests
 
         public Task<T> PostAsync<T>(string endpoint, object body) where T : class => throw new NotSupportedException();
 
+        public Task<InvoiceNinjaBinaryResponse> PostStreamAsync(string endpoint, object body) => throw new NotSupportedException();
+
         public Task<T> PutAsync<T>(string endpoint, object body) where T : class => throw new NotSupportedException();
 
         public Task<bool> IsConnectedAsync() => Task.FromResult(true);

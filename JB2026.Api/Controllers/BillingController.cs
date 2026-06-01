@@ -6,6 +6,7 @@ using JB2026.Api.Services.Billing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 
 /// <summary>
 /// API controller for billing operations with Invoice Ninja.
@@ -808,6 +809,104 @@ public class BillingController : ControllerBase
     }
 
     /// <summary>
+    /// Validates a client statement request and returns a launch URL for opening it in a new tab.
+    /// </summary>
+    [HttpPost("statements/client")]
+    [ProducesResponseType(typeof(BillingStatementLaunchResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateClientStatementLaunch([FromBody] BillingStatementLaunchRequest request)
+    {
+        try
+        {
+            var normalized = await _billingService.PrepareClientStatementLaunchAsync(request);
+            return Ok(new BillingStatementLaunchResponse
+            {
+                LaunchUrl = BuildClientStatementLaunchUrl(normalized)
+            });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to create client statement launch URL for client {ExternalClientId}: {ErrorCode}", request.ExternalClientId, ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                400 => StatusCodes.Status400BadRequest,
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error creating client statement launch URL for client {ExternalClientId}: {ErrorMessage}", request.ExternalClientId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "STATEMENT_LAUNCH_FAILED",
+                Message = "Failed to create billing statement launch URL.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Retrieves the generated client statement from Invoice Ninja and serves it inline.
+    /// </summary>
+    [HttpGet("statements/client")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetClientStatement([FromQuery] BillingStatementLaunchRequest request)
+    {
+        try
+        {
+            var statement = await _billingService.GetClientStatementAsync(request);
+            Response.Headers.ContentDisposition = $"inline; filename=\"{statement.FileName}\"";
+            return File(statement.Content, statement.ContentType);
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve client statement for client {ExternalClientId}: {ErrorCode}", request.ExternalClientId, ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                400 => StatusCodes.Status400BadRequest,
+                401 => StatusCodes.Status401Unauthorized,
+                404 => StatusCodes.Status404NotFound,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error retrieving client statement for client {ExternalClientId}: {ErrorMessage}", request.ExternalClientId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "STATEMENT_RETRIEVAL_FAILED",
+                Message = "Failed to retrieve client statement.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
     /// Returns a normalized invoice editor DTO for viewing or editing an existing invoice.
     /// </summary>
     [HttpGet("invoices/{externalInvoiceId}")]
@@ -990,6 +1089,22 @@ public class BillingController : ControllerBase
                 Details = null
             });
         }
+    }
+
+    private string BuildClientStatementLaunchUrl(BillingStatementLaunchRequest request)
+    {
+        var query = QueryString.Create(new List<KeyValuePair<string, string?>>
+        {
+            new("externalClientId", request.ExternalClientId),
+            new("dateRangePreset", request.DateRangePreset),
+            new("status", request.Status),
+            new("includeCredits", request.IncludeCredits.ToString().ToLowerInvariant()),
+            new("includePayments", request.IncludePayments.ToString().ToLowerInvariant()),
+            new("includeAging", request.IncludeAging.ToString().ToLowerInvariant()),
+        });
+
+        var pathBase = Request.PathBase.HasValue ? Request.PathBase.Value : string.Empty;
+        return $"{pathBase}/api/v2/billing/statements/client{query}";
     }
 }
 
