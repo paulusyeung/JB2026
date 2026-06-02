@@ -2,6 +2,7 @@ namespace JB2026.Api.Services.Billing;
 
 using JB2026.Api.Models.Billing;
 using JB2026.Api.Options;
+using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -225,6 +226,8 @@ public class BillingService : IBillingService
     private readonly IOptions<BillingOptions> _billingOptions;
     private readonly JB5LegacyReadContext? _readContext;
     private readonly JB5LegacyWriteContext? _writeContext;
+    private readonly ISettingsService? _settingsService;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<BillingService> _logger;
 
     public BillingService(
@@ -237,6 +240,8 @@ public class BillingService : IBillingService
         _billingOptions = billingOptions;
         _readContext = serviceProvider.GetService<JB5LegacyReadContext>();
         _writeContext = serviceProvider.GetService<JB5LegacyWriteContext>();
+        _settingsService = serviceProvider.GetService<ISettingsService>();
+        _timeProvider = serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
         _logger = logger;
     }
 
@@ -821,7 +826,9 @@ public class BillingService : IBillingService
     public async Task<BillingStatementDocument> GetClientStatementAsync(BillingStatementLaunchRequest request)
     {
         var normalized = await PrepareClientStatementLaunchAsync(request);
-        var (startDate, endDate) = ResolveStatementDateRange(normalized.DateRangePreset, DateTime.UtcNow);
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
+        var today = ResolveStatementToday(utcNow);
+        var (startDate, endDate) = ResolveStatementDateRange(normalized.DateRangePreset, today);
 
         var payload = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
@@ -1224,10 +1231,33 @@ public class BillingService : IBillingService
         };
     }
 
-    private static (string? StartDate, string? EndDate) ResolveStatementDateRange(string preset, DateTime utcNow)
+    private DateTime ResolveStatementToday(DateTime utcNow)
     {
-        var today = utcNow.Date;
+        var timeZoneId = _settingsService?.Get().TimeZone?.Trim();
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            return utcNow.Date;
+        }
 
+        try
+        {
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            return TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone).Date;
+        }
+        catch (TimeZoneNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Falling back to UTC for billing statement date range because timezone {TimeZoneId} was not found.", timeZoneId);
+        }
+        catch (InvalidTimeZoneException ex)
+        {
+            _logger.LogWarning(ex, "Falling back to UTC for billing statement date range because timezone {TimeZoneId} is invalid.", timeZoneId);
+        }
+
+        return utcNow.Date;
+    }
+
+    private static (string? StartDate, string? EndDate) ResolveStatementDateRange(string preset, DateTime today)
+    {
         return preset switch
         {
             BillingStatementDateRangePresets.AllOutstanding => FormatDateRange(

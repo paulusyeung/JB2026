@@ -114,6 +114,48 @@ public sealed class BillingClientStatementTests
     }
 
     [Fact]
+    public async Task GetClientStatementAsync_UsesConfiguredBusinessTimezoneForAllOutstandingEndDate()
+    {
+        await using var readContext = CreateReadContext();
+        var client = new InvoiceNinjaClientResponse { Id = "client-1", Name = "Acme" };
+        var httpClient = new RecordingInvoiceNinjaHttpClient(client);
+        var settingsService = new InMemorySettingsService();
+        settingsService.Update(new UpdateSettingsRequest
+        {
+            CompanyName = "JB2026 Printing",
+            TimeZone = "Asia/Kuala_Lumpur",
+            CurrencyCode = "MYR",
+            EnableLegacyFallback = true,
+            OwnerName = "Marche Label & Printing Limited",
+            NextOrderNumber = "168360",
+            NextProductNumber = "005356",
+            NextQuotationNumber = "170024",
+            CommonQueryIndex = 2,
+            CompletedQueryIndex = 1,
+            ScheduleQueryRange = 1,
+            GmailAccount = "job.book@marchehk.com",
+            GmailPassword = "24110810",
+            DateFormatPreference = SettingsResponse.DefaultDateFormatPreference,
+        });
+
+        var service = CreateBillingService(
+            readContext,
+            httpClient,
+            settingsService,
+            new FixedTimeProvider(new DateTimeOffset(2026, 6, 2, 17, 30, 0, TimeSpan.Zero)));
+
+        await service.GetClientStatementAsync(new BillingStatementLaunchRequest
+        {
+            ExternalClientId = "client-1",
+            DateRangePreset = BillingStatementDateRangePresets.AllOutstanding,
+            Status = BillingStatementStatuses.All,
+        });
+
+        var payload = Assert.IsType<Dictionary<string, object?>>(httpClient.LastPostStreamBody);
+        Assert.Equal("2026-06-03", payload["end_date"]);
+    }
+
+    [Fact]
     public async Task CreateClientStatementLaunch_ReturnsLaunchUrlForNormalizedRequest()
     {
         await using var readContext = CreateReadContext();
@@ -168,10 +210,22 @@ public sealed class BillingClientStatementTests
 
     private static BillingService CreateBillingService(
         JB5LegacyReadContext readContext,
-        IInvoiceNinjaHttpClient invoiceNinjaHttpClient)
+        IInvoiceNinjaHttpClient invoiceNinjaHttpClient,
+        ISettingsService? settingsService = null,
+        TimeProvider? timeProvider = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(readContext);
+        if (settingsService != null)
+        {
+            services.AddSingleton(settingsService);
+        }
+
+        if (timeProvider != null)
+        {
+            services.AddSingleton(timeProvider);
+        }
+
         var provider = services.BuildServiceProvider();
 
         return new BillingService(
@@ -265,5 +319,10 @@ public sealed class BillingClientStatementTests
         public (bool isValid, string errorMessage) ValidateConfiguration() => (true, string.Empty);
 
         public Task<byte[]?> GetStreamAsync(string endpoint) => Task.FromResult<byte[]?>(null);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }
