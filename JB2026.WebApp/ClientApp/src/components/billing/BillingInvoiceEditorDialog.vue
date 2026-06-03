@@ -424,7 +424,9 @@ function toIsoDate(date: Date): string {
 
 function onInvoiceDatePicked(date: Date | null) {
   if (date) {
-    form.value.invoiceDate = toIsoDate(date)
+    const iso = toIsoDate(date)
+    form.value.invoiceDate = iso
+    form.value.dueDate = iso
   }
   datePickerOpen.value = false
 }
