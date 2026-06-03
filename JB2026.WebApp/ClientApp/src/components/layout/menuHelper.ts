@@ -29,16 +29,16 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
             { title: t('routes.jobOrderSchedulePackingOnAir'), to: '/job-order/schedule/packing-on-air', icon: 'mdi-package-variant-closed' },
           ],
         },
-        {
-          title: t('routes.sml'),
-          icon: 'mdi-folder-multiple-outline',
-          children: [
-            { title: t('routes.smlRtfList'), to: '/job-order/sml/rtf-list', icon: 'mdi-file-document-outline' },
-            { title: t('routes.smlInvoiceList'), to: '/job-order/sml/invoice-list', icon: 'mdi-receipt-text-outline' },
-            { title: t('routes.smlRtfStats'), to: '/job-order/sml/rtf-stats', icon: 'mdi-chart-bar' },
-            { title: t('routes.smlInvoiceStats'), to: '/job-order/sml/invoice-stats', icon: 'mdi-chart-areaspline' },
-          ],
-        },
+        // {
+        //   title: t('routes.sml'),
+        //   icon: 'mdi-folder-multiple-outline',
+        //   children: [
+        //     { title: t('routes.smlRtfList'), to: '/job-order/sml/rtf-list', icon: 'mdi-file-document-outline' },
+        //     { title: t('routes.smlInvoiceList'), to: '/job-order/sml/invoice-list', icon: 'mdi-receipt-text-outline' },
+        //     { title: t('routes.smlRtfStats'), to: '/job-order/sml/rtf-stats', icon: 'mdi-chart-bar' },
+        //     { title: t('routes.smlInvoiceStats'), to: '/job-order/sml/invoice-stats', icon: 'mdi-chart-areaspline' },
+        //   ],
+        // },
         {
           title: t('routes.reports'),
           icon: 'mdi-chart-box-outline',
@@ -70,21 +70,21 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       icon: 'mdi-shield-account-outline',
       roles: ['Admin'],
       children: [
-        { title: t('routes.adminWorkflow'), to: '/admin/workflow', icon: 'mdi-source-branch' },
-        { title: t('routes.adminWorkflowForms'), to: '/admin/workflow-forms', icon: 'mdi-file-tree-outline' },
+        // { title: t('routes.adminWorkflow'), to: '/admin/workflow', icon: 'mdi-source-branch' },
+        // { title: t('routes.adminWorkflowForms'), to: '/admin/workflow-forms', icon: 'mdi-file-tree-outline' },
         { title: t('routes.adminOrderType'), to: '/admin/order-type', icon: 'mdi-shape-outline' },
         { title: t('routes.adminUser'), to: '/admin/user', icon: 'mdi-account-outline' },
         { title: t('routes.adminCustomer'), to: '/admin/customer', icon: 'mdi-account-group-outline' },
         { title: t('routes.adminSupplier'), to: '/admin/supplier', icon: 'mdi-truck-outline' },
-        {
-          title: t('routes.quotations'),
-          icon: 'mdi-file-document-multiple-outline',
-          children: [
-            { title: t('routes.adminQuotationItemGroup'), to: '/admin/quotation/item-group', icon: 'mdi-shape-plus-outline' },
-            { title: t('routes.adminQuotationItem'), to: '/admin/quotation/item', icon: 'mdi-tag-outline' },
-          ],
-        },
-        { title: t('routes.adminFcmConsole'), to: '/admin/fcm-console', icon: 'mdi-bell-badge-outline' },
+        // {
+        //   title: t('routes.quotations'),
+        //   icon: 'mdi-file-document-multiple-outline',
+        //   children: [
+        //     { title: t('routes.adminQuotationItemGroup'), to: '/admin/quotation/item-group', icon: 'mdi-shape-plus-outline' },
+        //     { title: t('routes.adminQuotationItem'), to: '/admin/quotation/item', icon: 'mdi-tag-outline' },
+        //   ],
+        // },
+        // { title: t('routes.adminFcmConsole'), to: '/admin/fcm-console', icon: 'mdi-bell-badge-outline' },
       ],
     },
     {
