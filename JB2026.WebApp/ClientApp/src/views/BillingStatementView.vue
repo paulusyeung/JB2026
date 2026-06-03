@@ -570,7 +570,7 @@ function compareClients(left: BillingStatementDisplayItem, right: BillingStateme
 
 .billing-statement-balance {
   display: inline-block;
-  text-align: left;
+  text-align: right;
   width: 100%;
 }
 
