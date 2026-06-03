@@ -929,6 +929,7 @@ public class BillingService : IBillingService
             Status = ResolveInvoiceStatus(invoice),
             Client = clientOption,
             InvoiceDate = string.IsNullOrWhiteSpace(invoice.InvoiceDate) ? null : invoice.InvoiceDate,
+            DueDate = string.IsNullOrWhiteSpace(invoice.DueDate) ? null : invoice.DueDate,
             JobNumber = jobNumber,
             LineItems = lineItems,
             TotalAmount = lineItems.Sum(l => l.LineTotal)
@@ -1074,7 +1075,7 @@ public class BillingService : IBillingService
 
     public async Task<InvoiceBillingSummary> CreateInvoiceFromEditorAsync(CreateInvoiceEditorRequest request)
     {
-        ValidateEditorRequest(request.ExternalClientId, request.InvoiceDate, request.LineItems);
+        ValidateEditorRequest(request.ExternalClientId, request.InvoiceDate, request.DueDate, request.LineItems);
 
         var customFields = _billingOptions.Value.InvoiceNinja.CustomFields;
 
@@ -1097,6 +1098,7 @@ public class BillingService : IBillingService
         {
             ClientId = request.ExternalClientId,
             Date = request.InvoiceDate,
+            DueDate = request.DueDate,
             LineItems = lineItems
         };
         if (!string.IsNullOrWhiteSpace(customFields.InvoiceJobNo))
@@ -1114,7 +1116,7 @@ public class BillingService : IBillingService
         string externalInvoiceId,
         UpdateInvoiceEditorRequest request)
     {
-        ValidateEditorRequest(request.ExternalClientId, request.InvoiceDate, request.LineItems);
+        ValidateEditorRequest(request.ExternalClientId, request.InvoiceDate, request.DueDate, request.LineItems);
 
         var existing = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}");
         if (existing == null)
@@ -1147,6 +1149,7 @@ public class BillingService : IBillingService
         {
             ClientId = request.ExternalClientId,
             Date = request.InvoiceDate,
+            DueDate = request.DueDate,
             LineItems = lineItems
         };
         if (!string.IsNullOrWhiteSpace(customFields.InvoiceJobNo))
@@ -1163,12 +1166,15 @@ public class BillingService : IBillingService
     private static void ValidateEditorRequest(
         string externalClientId,
         string? invoiceDate,
+        string? dueDate,
         List<InvoiceEditorLineItemRequest> lineItems)
     {
         if (string.IsNullOrWhiteSpace(externalClientId))
             throw BillingException.InvalidRequest("Client selection is required.", 400);
         if (string.IsNullOrWhiteSpace(invoiceDate))
             throw BillingException.InvalidRequest("Invoice date is required.", 400);
+        if (string.IsNullOrWhiteSpace(dueDate))
+            throw BillingException.InvalidRequest("Due date is required.", 400);
         if (lineItems == null || lineItems.Count == 0)
             throw BillingException.InvalidRequest("At least one line item is required.", 400);
         foreach (var item in lineItems)

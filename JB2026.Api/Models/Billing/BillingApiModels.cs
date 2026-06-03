@@ -440,6 +440,9 @@ public class InvoiceEditorDto
     /// <summary>ISO date string (e.g. "2026-05-23").</summary>
     public string? InvoiceDate { get; set; }
 
+    /// <summary>ISO date string (e.g. "2026-05-23").</summary>
+    public string? DueDate { get; set; }
+
     public string JobNumber { get; set; } = string.Empty;
     public List<InvoiceEditorLineItemDto> LineItems { get; set; } = new();
 
@@ -523,6 +526,9 @@ public class CreateInvoiceEditorRequest
     /// <summary>ISO date string (e.g. "2026-05-23").</summary>
     public string? InvoiceDate { get; set; }
 
+    /// <summary>ISO date string (e.g. "2026-05-23").</summary>
+    public string? DueDate { get; set; }
+
     public string JobNumber { get; set; } = string.Empty;
     public List<InvoiceEditorLineItemRequest> LineItems { get; set; } = new();
 }
@@ -536,6 +542,9 @@ public class UpdateInvoiceEditorRequest
 
     /// <summary>ISO date string (e.g. "2026-05-23").</summary>
     public string? InvoiceDate { get; set; }
+
+    /// <summary>ISO date string (e.g. "2026-05-23").</summary>
+    public string? DueDate { get; set; }
 
     public string JobNumber { get; set; } = string.Empty;
     public List<InvoiceEditorLineItemRequest> LineItems { get; set; } = new();

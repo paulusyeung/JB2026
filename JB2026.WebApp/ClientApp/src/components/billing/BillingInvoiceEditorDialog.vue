@@ -27,7 +27,7 @@
         <v-form ref="formRef">
           <v-row dense>
             <!-- Client selector -->
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="4">
               <v-autocomplete
                 v-model="form.client"
                 v-model:search="clientSearchText"
@@ -48,7 +48,7 @@
             </v-col>
 
             <!-- Invoice date -->
-            <v-col cols="12" md="3">
+            <v-col cols="12" md="2">
               <v-menu v-model="datePickerOpen" :close-on-content-click="false">
                 <template #activator="{ props: menuProps }">
                   <v-text-field
@@ -65,13 +65,36 @@
                 <v-date-picker
                   :model-value="form.invoiceDate ? new Date(form.invoiceDate + 'T12:00:00') : undefined"
                   hide-header
-                  @update:model-value="onDatePicked"
+                  @update:model-value="onInvoiceDatePicked"
+                />
+              </v-menu>
+            </v-col>
+
+            <!-- Due date -->
+            <v-col cols="12" md="2">
+              <v-menu v-model="dueDatePickerOpen" :close-on-content-click="false">
+                <template #activator="{ props: menuProps }">
+                  <v-text-field
+                    :model-value="form.dueDate ? format(form.dueDate) : ''"
+                    :label="t('billing.invoices.editor.fields.dueDate')"
+                    :rules="[rules.dueDateRequired]"
+                    density="compact"
+                    variant="outlined"
+                    readonly
+                    append-inner-icon="mdi-calendar"
+                    v-bind="menuProps"
+                  />
+                </template>
+                <v-date-picker
+                  :model-value="form.dueDate ? new Date(form.dueDate + 'T12:00:00') : undefined"
+                  hide-header
+                  @update:model-value="onDueDatePicked"
                 />
               </v-menu>
             </v-col>
 
             <!-- Job number -->
-            <v-col cols="12" md="3">
+            <v-col cols="12" md="4">
               <v-text-field
                 v-model="form.jobNumber"
                 :label="t('billing.invoices.editor.fields.jobNumber')"
@@ -326,6 +349,7 @@ interface FormLineItem {
 interface FormState {
   client: BillingClientOption | null
   invoiceDate: string
+  dueDate: string
   jobNumber: string
   lineItems: FormLineItem[]
 }
@@ -350,6 +374,7 @@ function resetForm(): FormState {
   return {
     client: null,
     invoiceDate: toIsoDate(new Date()),
+    dueDate: toIsoDate(new Date()),
     jobNumber: '',
     lineItems: [emptyLine()],
   }
@@ -388,6 +413,7 @@ const jobNumberValidationMessage = computed(() =>
 // ── Dialog Size & Position ────────────────────────────────────────────────────
 
 const datePickerOpen = ref(false)
+const dueDatePickerOpen = ref(false)
 
 function toIsoDate(date: Date): string {
   const y = date.getFullYear()
@@ -396,11 +422,18 @@ function toIsoDate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
-function onDatePicked(date: Date | null) {
+function onInvoiceDatePicked(date: Date | null) {
   if (date) {
     form.value.invoiceDate = toIsoDate(date)
   }
   datePickerOpen.value = false
+}
+
+function onDueDatePicked(date: Date | null) {
+  if (date) {
+    form.value.dueDate = toIsoDate(date)
+  }
+  dueDatePickerOpen.value = false
 }
 
 const DIALOG_SIZE_KEY = 'billing-invoice-editor-size'
@@ -557,6 +590,7 @@ async function loadDetail() {
     const dto = await getInvoiceEditorDetail(props.externalInvoiceId)
     form.value.client = dto.client ?? null
     form.value.invoiceDate = dto.invoiceDate ?? ''
+    form.value.dueDate = dto.dueDate ?? toIsoDate(new Date())
     form.value.jobNumber = dto.jobNumber
     form.value.lineItems =
       dto.lineItems.length > 0
@@ -768,6 +802,8 @@ const rules = {
     !!v || t('billing.invoices.editor.validation.clientRequired'),
   invoiceDateRequired: (v: string) =>
     !!v || t('billing.invoices.editor.validation.invoiceDateRequired'),
+  dueDateRequired: (v: string) =>
+    !!v || t('billing.invoices.editor.validation.dueDateRequired'),
 }
 
 async function handleSave() {
@@ -799,6 +835,7 @@ async function handleSave() {
       summary = await createInvoice({
         externalClientId: form.value.client!.externalClientId,
         invoiceDate: form.value.invoiceDate || undefined,
+        dueDate: form.value.dueDate || undefined,
         jobNumber: form.value.jobNumber,
         lineItems,
       })
@@ -806,6 +843,7 @@ async function handleSave() {
       summary = await updateInvoice(props.externalInvoiceId!, {
         externalClientId: form.value.client!.externalClientId,
         invoiceDate: form.value.invoiceDate || undefined,
+        dueDate: form.value.dueDate || undefined,
         jobNumber: form.value.jobNumber,
         lineItems,
       })

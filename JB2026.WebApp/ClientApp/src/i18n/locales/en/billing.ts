@@ -158,6 +158,7 @@ export const billingMessages = {
         client: 'Client',
         clientPlaceholder: 'Search clients…',
         invoiceDate: 'Invoice Date',
+        dueDate: 'Due Date',
         jobNumber: 'Job Number',
       },
       lineItems: {
@@ -183,6 +184,7 @@ export const billingMessages = {
       validation: {
         clientRequired: 'Client is required.',
         invoiceDateRequired: 'Invoice date is required.',
+        dueDateRequired: 'Due date is required.',
         atLeastOneLine: 'At least one line item is required.',
         qtyPositive: 'Quantity must be 0 or greater.',
         unitCostNonNegative: 'Unit cost cannot be negative.',

@@ -352,6 +352,7 @@ export interface InvoiceEditorDto {
   status?: string
   client?: BillingClientOption
   invoiceDate?: string
+  dueDate?: string
   jobNumber: string
   lineItems: InvoiceEditorLineItem[]
   totalAmount: number
@@ -400,6 +401,7 @@ export interface InvoiceEditorLineItemRequest {
 export interface CreateInvoiceRequest {
   externalClientId: string
   invoiceDate?: string
+  dueDate?: string
   jobNumber: string
   lineItems: InvoiceEditorLineItemRequest[]
 }
@@ -410,6 +412,7 @@ export interface CreateInvoiceRequest {
 export interface UpdateInvoiceRequest {
   externalClientId: string
   invoiceDate?: string
+  dueDate?: string
   jobNumber: string
   lineItems: InvoiceEditorLineItemRequest[]
 }

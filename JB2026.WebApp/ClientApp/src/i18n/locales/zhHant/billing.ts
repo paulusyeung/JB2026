@@ -158,6 +158,7 @@ export const billingMessages = {
         client: '客戶',
         clientPlaceholder: '搜尋客戶…',
         invoiceDate: '發票日期',
+        dueDate: '到期日期',
         jobNumber: '工單編號',
       },
       lineItems: {
@@ -183,6 +184,7 @@ export const billingMessages = {
       validation: {
         clientRequired: '請選擇客戶。',
         invoiceDateRequired: '請填寫發票日期。',
+        dueDateRequired: '請填寫到期日期。',
         atLeastOneLine: '至少需要一個行項目。',
         qtyPositive: '數量必須為 0 或以上。',
         unitCostNonNegative: '單價不能為負數。',

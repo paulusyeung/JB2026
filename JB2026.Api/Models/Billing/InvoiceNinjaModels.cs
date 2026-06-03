@@ -274,10 +274,10 @@ public class CreateInvoiceNinjaInvoiceRequest
     public string? Date { get; set; }
 
     /// <summary>
-    /// Invoice due date (optional).
+    /// Invoice due date (ISO date string, e.g. "2026-05-23").
     /// </summary>
     [JsonPropertyName("due_date")]
-    public long? DueDate { get; set; }
+    public string? DueDate { get; set; }
 
     [JsonPropertyName("custom_value1")]
     public string CustomValue1 { get; set; } = string.Empty;
