@@ -14,7 +14,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       title: t('routes.jobOrder'),
       icon: 'mdi-clipboard-text-outline',
       children: [
-        { title: t('routes.jobOrderQuotationList'), to: '/job-order/quotation-list', icon: 'mdi-file-document-multiple-outline' },
+        // { title: t('routes.jobOrderQuotationList'), to: '/job-order/quotation-list', icon: 'mdi-file-document-multiple-outline' },
         { title: t('routes.jobOrderOrderList'), to: '/job-order/order-list', icon: 'mdi-format-list-bulleted' },
         { title: t('routes.jobOrderJobList'), to: '/job-order/job-list', icon: 'mdi-briefcase-outline' },
         { title: t('routes.jobOrderJobStats'), to: '/job-order/job-stats', icon: 'mdi-chart-line' },
