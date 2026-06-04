@@ -66,20 +66,7 @@
           {{ t('billing.invoiceStats.rows', { count: formatNumber(rows.length) }) }}
         </div>
 
-        <v-row dense class="mb-3">
-          <v-col cols="6" md="3">
-            <v-card rounded="lg" variant="flat" class="pa-3 border">
-              <div class="text-caption text-medium-emphasis">{{ t('billing.invoiceStats.summary.invoices') }}</div>
-              <div class="text-h6 font-weight-bold">{{ formatNumber(uniqueInvoiceCount) }}</div>
-            </v-card>
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-card rounded="lg" variant="flat" class="pa-3 border">
-              <div class="text-caption text-medium-emphasis">{{ t('billing.invoiceStats.summary.invoiceAmount') }}</div>
-              <div class="text-h6 font-weight-bold">{{ formatAmountCurrency(totalInvoiceAmount) }}</div>
-            </v-card>
-          </v-col>
-        </v-row>
+        
 
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-3" />
 
