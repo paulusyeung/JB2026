@@ -36,15 +36,19 @@
           </v-btn>
         </div>
 
-        <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
-        <v-alert
-          v-if="showInitialWindowNotice"
-          type="info"
-          variant="tonal"
-          class="mt-3 mb-2"
-        >
+        <v-snackbar v-model="errorSnackbarOpen" color="warning" timeout="4000" location="top">
+          {{ errorMessage }}
+          <template #actions>
+            <v-btn variant="text" @click="errorSnackbarOpen = false">{{ t('common.close') }}</v-btn>
+          </template>
+        </v-snackbar>
+
+        <v-snackbar v-model="initialWindowNoticeOpen" color="info" timeout="5000" location="top">
           {{ t('jobOrder.jobList.initialWindowNotice') }}
-        </v-alert>
+          <template #actions>
+            <v-btn variant="text" @click="initialWindowNoticeOpen = false">{{ t('common.close') }}</v-btn>
+          </template>
+        </v-snackbar>
 
         <div class="toolbar-bar mb-2">
           <v-menu location="bottom">
@@ -518,6 +522,8 @@ const rows = ref<JobOrderRecord[]>([])
 const loading = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
+const errorSnackbarOpen = ref(false)
+const initialWindowNoticeOpen = ref(false)
 const lookup = ref('')
 const commonQuery = ref(0)
 const selectedOrderIds = ref<string[]>([])
@@ -667,6 +673,8 @@ onMounted(async () => {
 async function load() {
   loading.value = true
   errorMessage.value = ''
+  errorSnackbarOpen.value = false
+  initialWindowNoticeOpen.value = false
   selectedOrderIds.value = []
   try {
     rows.value = await getJobList({
@@ -682,8 +690,13 @@ async function load() {
     if (!activeOrderId.value && rows.value.length > 0) {
       activeOrderId.value = rows.value[0]?.orderId ?? null
     }
+
+    if (!hasActiveFilters.value && rows.value.length > 0) {
+      initialWindowNoticeOpen.value = true
+    }
   } catch {
     errorMessage.value = t('jobOrder.jobList.loadFailed')
+    errorSnackbarOpen.value = true
   } finally {
     loading.value = false
   }
@@ -884,6 +897,7 @@ async function confirmBatchDelete() {
   await load()
   if (failed > 0) {
     errorMessage.value = t('jobOrder.jobList.batchDeleteResult', { succeeded, failed, total })
+    errorSnackbarOpen.value = true
   }
 }
 
