@@ -36,7 +36,9 @@
           </v-btn>
         </div>
 
-        <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ errorMessage }}</v-alert>
+        <v-snackbar v-model="snackbarOpen" :timeout="4000" color="warning" variant="tonal">
+          {{ errorMessage }}
+        </v-snackbar>
 
         <div class="toolbar-bar mb-2">
           <v-menu location="bottom">
@@ -474,6 +476,7 @@ type OrderListViewMode = 'detail' | 'card'
 const rows = ref<JobOrderRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+const snackbarOpen = ref(false)
 const lookup = ref('')
 const commonQuery = ref(0)
 const selectedOrderIds = ref<string[]>([])
@@ -653,6 +656,7 @@ onMounted(async () => {
 async function load() {
   loading.value = true
   errorMessage.value = ''
+  snackbarOpen.value = false
   selectedOrderIds.value = []
   expandedMasterIds.value = []
   try {
@@ -662,8 +666,9 @@ async function load() {
       take: 500,
     })
     await hydrateInvoiceSummaries(rows.value)
-  } catch {
+  } catch (e) {
     errorMessage.value = t('jobOrder.orderList.loadFailed')
+    snackbarOpen.value = true
   } finally {
     loading.value = false
   }
@@ -766,6 +771,7 @@ async function openJobForm(record: JobOrderRecord) {
     jobFormOpen.value = true
   } catch {
     errorMessage.value = t('jobOrder.openEditFailed')
+    snackbarOpen.value = true
   }
 }
 
@@ -797,6 +803,7 @@ async function openEdit(record: JobOrderRecord) {
     formOpen.value = true
   } catch {
     errorMessage.value = t('jobOrder.openEditFailed')
+    snackbarOpen.value = true
   }
 }
 
@@ -870,6 +877,7 @@ async function confirmBatchDelete() {
   await load()
   if (failed > 0) {
     errorMessage.value = t('jobOrder.orderList.batchDeleteFailed')
+    snackbarOpen.value = true
   }
 }
 
