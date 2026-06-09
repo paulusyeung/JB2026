@@ -993,6 +993,35 @@ public sealed class AdminController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("customers/{id:guid}/summarize-contact")]
+    [ProducesResponseType(typeof(SummarizeCustomerContactResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SummarizeCustomerContactResponse>> SummarizeCustomerContact(
+        Guid id,
+        [FromServices] CustomerSummaryService customerSummaryService,
+        [FromBody] SummarizeCustomerContactRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var result = await customerSummaryService.SummarizeAsync(id, request, cancellationToken);
+        if (result is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Customer not found",
+                Detail = $"No customer exists for id '{id}'.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        return Ok(result);
+    }
+
     private static AdminCustomerRecordResponse MapToCustomerRecordResponse(CustomerStoredProcedureRecord customer)
     {
         var metadata = ParseCustomerMetadata(customer.MetadataXml);

@@ -6,6 +6,7 @@ using JB2026.Infrastructure.Extensions;
 using JB2026.Reporting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using OllamaSharp;
 using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +59,12 @@ builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSecti
 builder.Services.Configure<JobListOptions>(builder.Configuration.GetSection(JobListOptions.SectionName));
 builder.Services.Configure<LegacyFilesOptions>(builder.Configuration.GetSection(LegacyFilesOptions.SectionName));
 builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection(BillingOptions.SectionName));
+builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection(OllamaOptions.SectionName));
+
+var ollamaBaseUrl = builder.Configuration.GetValue<string>("Ollama:BaseUrl") ?? "http://localhost:11434";
+var ollamaModel = builder.Configuration.GetValue<string>("Ollama:DefaultModel") ?? "llama3";
+builder.Services.AddSingleton<IOllamaApiClient>(_ => new OllamaApiClient(ollamaBaseUrl, ollamaModel));
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IInvoiceNinjaHttpClient, InvoiceNinjaHttpClient>();
 builder.Services.AddScoped<IBillingService, BillingService>();
@@ -118,6 +125,8 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddScoped<IUserInfoStoredProcedureGateway, UserInfoStoredProcedureGateway>();
 	builder.Services.AddScoped<ISystemInfoStoredProcedureGateway, SystemInfoStoredProcedureGateway>();
 	builder.Services.AddScoped<ISettingsService, SystemInfoSettingsService>();
+	builder.Services.AddScoped<AISummaryService>();
+	builder.Services.AddScoped<CustomerSummaryService>();
 }
 else
 {

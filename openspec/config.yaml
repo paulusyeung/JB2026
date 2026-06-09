@@ -3,11 +3,14 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: .NET 8 / C# 12, ASP.NET Core, EF Core, Blazor (WASM + Server), MudBlazor UI
+  API pattern: Controllers with [FromServices] DI, stored procedure gateways (ICustomerStoredProcedureGateway pattern)
+  Database: Legacy SQL via stored procedures + EF Core read/write contexts
+  Metadata: JSON-in-Xml column (MetadataXml) parsed via System.Text.Json with XML fallback
+  Spec conventions: proposal.md (why/what), design.md (how), specs/ (ADDED/MODIFIED Requirements with BDD Scenarios), tasks.md (checklist)
+  Domain: Job management, billing, stock management, customer/supplier administration
+  We follow existing naming and DI patterns when adding new services
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
