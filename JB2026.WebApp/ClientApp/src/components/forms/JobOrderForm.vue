@@ -497,6 +497,8 @@ function parseCompositeOrderNumber(orderNumber: string) {
 
 function formatLegacyDate(value: string | null): string {
   if (!value) return ''
+  // Treat '1900-01-01' as a legacy empty/sentinel date
+  if (value.startsWith('1900-01-01')) return ''
   return value.slice(0, 10)
 }
 
