@@ -402,7 +402,7 @@ const legacyInvoiceAmount = computed(() => {
 })
 const legacyCompletedOn = computed(() => formatLegacyDate(legacyRecord.value?.completedOn ?? null))
 const legacyModifiedOn = computed(() => formatLegacyDate(legacyRecord.value?.modifiedOn ?? null))
-const legacyQuotationNumber = computed(() => '')
+const legacyQuotationNumber = computed(() => legacyRecord.value?.productStyle ?? '')
 const legacyType = computed(() => {
   const match = statusOptions.value.find((item) => item.value === draft.value.status)
   return match?.label ?? ''
