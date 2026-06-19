@@ -329,7 +329,7 @@ const saving = ref(false)
 const errorMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
 const legacyRecord = ref<JobOrderRecord | null>(null)
-const legacyBrand = ref('')
+const legacyBrand = computed(() => draft.value.orderTitle ?? '')
 const legacyPrintingPaper = ref('')
 const legacyFinishingOutput = ref('')
 const legacyPackagingRequirement = ref('')
@@ -349,7 +349,6 @@ watch(
   async (job) => {
     draft.value = buildDraft(job)
     legacyRecord.value = null
-    legacyBrand.value = ''
     errorMessage.value = ''
     clearPreviewImage()
 
