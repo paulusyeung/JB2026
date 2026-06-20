@@ -259,7 +259,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         var order = new JobOrder
         {
             OrderId = Guid.NewGuid(),
-            OrderType = 0,
+            OrderType = request.OrderType,
             OrderNumber = request.OrderNumber,
             JobNumber = int.TryParse(request.JobNumber, out var jobNumber) ? jobNumber : null,
             CustomerName = request.CustomerName,
@@ -306,6 +306,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             order.ProductDetails = request.ProductDetails;
         }
         order.Status = request.Status;
+        order.OrderType = request.OrderType;
         order.ModifiedBy = ParseActorGuidOrFallback(actor);
         order.ModifiedOn = DateTime.UtcNow;
 

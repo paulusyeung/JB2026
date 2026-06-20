@@ -32,4 +32,7 @@ public sealed class UpdateJobOrderRequest
 
     [Range(0, 99)]
     public int Status { get; init; }
+
+    [Range(0, 3)]
+    public int OrderType { get; init; }
 }

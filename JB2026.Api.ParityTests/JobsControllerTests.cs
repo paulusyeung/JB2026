@@ -107,12 +107,14 @@ public sealed class JobsControllerTests
             PaymentTerms = "Net 14",
             Remarks = "Updated",
             Status = 1,
+            OrderType = 2,
         });
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsType<JobOrderResponse>(ok.Value);
         Assert.Equal(orderId, payload.OrderId);
         Assert.Equal("Acme 2", payload.CustomerName);
+        Assert.Equal(2, payload.OrderType);
         Assert.Equal("admin", repository.LastActor);
     }
 
@@ -187,7 +189,7 @@ public sealed class JobsControllerTests
             return Task.FromResult(new JobOrderResponse
             {
                 OrderId = Guid.NewGuid(),
-                OrderType = 0,
+                OrderType = request.OrderType,
                 OrderNumber = request.OrderNumber,
                 JobNumber = request.JobNumber,
                 CustomerName = request.CustomerName,
@@ -227,7 +229,7 @@ public sealed class JobsControllerTests
             return Task.FromResult<JobOrderResponse?>(new JobOrderResponse
             {
                 OrderId = orderId,
-                OrderType = 0,
+                OrderType = request.OrderType,
                 OrderNumber = "JB260330",
                 JobNumber = "01",
                 CustomerName = request.CustomerName,

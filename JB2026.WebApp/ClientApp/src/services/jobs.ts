@@ -13,6 +13,7 @@ interface CreateJobRequest {
   paymentTerms: string
   remarks: string
   status: number
+  orderType: number
 }
 
 interface UpdateJobRequest {
@@ -25,6 +26,7 @@ interface UpdateJobRequest {
   remarks: string
   productDetails?: string
   status: number
+  orderType: number
 }
 
 export interface JobQuery {
@@ -103,6 +105,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       remarks: data.remarks,
       productDetails: data.productDetails,
       status: data.status,
+      orderType: data.orderType,
     }
 
     await apiClient.patch(`/api/v2/jobs/${data.orderId}`, payload)
@@ -119,6 +122,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       paymentTerms: data.paymentTerms,
       remarks: data.remarks,
       status: data.status,
+      orderType: data.orderType,
     }
 
     await apiClient.post('/api/v2/jobs', payload)

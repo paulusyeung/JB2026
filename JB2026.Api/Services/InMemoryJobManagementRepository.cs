@@ -206,6 +206,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         var record = new JobRecord
         {
             OrderId = orderId,
+            OrderType = request.OrderType,
             OrderNumber = request.OrderNumber,
             JobNumber = request.JobNumber,
             CustomerName = request.CustomerName,
@@ -247,6 +248,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Remarks = request.Remarks,
             ProductDetails = request.ProductDetails ?? current.ProductDetails,
             Status = request.Status,
+            OrderType = request.OrderType,
             ModifiedBy = actor,
             ModifiedOn = DateTime.UtcNow,
             StyleTitles = [request.OrderTitle, .. current.StyleTitles.Skip(1)]
@@ -314,7 +316,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return new JobOrderResponse
         {
             OrderId = job.OrderId,
-            OrderType = 0,
+            OrderType = job.OrderType,
             OrderNumber = job.OrderNumber,
             JobNumber = job.JobNumber,
             CustomerName = job.CustomerName,
@@ -426,6 +428,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
     private sealed record JobRecord
     {
         public required Guid OrderId { get; init; }
+        public int OrderType { get; init; }
         public required string OrderNumber { get; init; }
         public required string JobNumber { get; init; }
         public required string CustomerName { get; init; }
