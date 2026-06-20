@@ -83,10 +83,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from 'vuetify'
+import { useOrderTypeOptions } from '@/composables/useOrderTypeOptions'
 import { getAdminOrderTypeWorkflows, updateAdminOrderTypeWorkflows } from '@/services/admin'
 import type { AdminOrderTypeWorkflowItem } from '@/types/api'
 
 const { t } = useI18n({ useScope: 'global' })
+const { orderTypeOptions } = useOrderTypeOptions()
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
@@ -99,13 +101,6 @@ const saving = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const message = ref('')
-
-const orderTypeOptions = computed(() => [
-  { value: 0, label: t('admin.orderType.options.printing') },
-  { value: 1, label: t('admin.orderType.options.printedLabel') },
-  { value: 2, label: t('admin.orderType.options.wovenLabel') },
-  { value: 3, label: t('admin.orderType.options.other') },
-])
 
 const canSave = computed(() => selectedOrderType.value !== null && selectedWorkflows.value.length > 0 && !saving.value && !loading.value)
 

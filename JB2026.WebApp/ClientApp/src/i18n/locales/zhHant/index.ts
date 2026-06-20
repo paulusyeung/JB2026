@@ -20,6 +20,7 @@ import { schedulerMessages } from './scheduler'
 import { editorMessages } from './editor'
 import { jobFormMessages } from './jobForm'
 import { legacySliceMessages } from './legacySlice'
+import { orderTypesMessages } from './orderTypes'
 import { themeMessages } from './theme'
 
 export const zhHantMessages = {
@@ -45,5 +46,6 @@ export const zhHantMessages = {
   editor: editorMessages,
   jobForm: jobFormMessages,
   legacySlice: legacySliceMessages,
+  orderTypes: orderTypesMessages,
   theme: themeMessages,
 } as const

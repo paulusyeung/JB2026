@@ -127,15 +127,29 @@
             />
 
             <v-select
-              v-model="draft.status"
+              v-model="draft.orderType"
               :label="t('jobForm.fields.type')"
-              :items="statusOptions"
+              :items="orderTypeOptions"
               item-title="label"
               item-value="value"
               variant="outlined"
               density="compact"
               hide-details="auto"
-            />
+            >
+              <template #item="{ props: itemProps, item }">
+                <v-list-item v-bind="itemProps" :title="item.raw.label">
+                  <template #prepend>
+                    <v-icon :color="item.raw.color">{{ item.raw.icon }}</v-icon>
+                  </template>
+                </v-list-item>
+              </template>
+              <template #selection="{ item }">
+                <div class="d-flex align-center ga-2">
+                  <v-icon :color="item.raw.color" size="small">{{ item.raw.icon }}</v-icon>
+                  <span>{{ item.raw.label }}</span>
+                </div>
+              </template>
+            </v-select>
 
             <v-text-field
               v-model="legacyQuotationNumber"
@@ -298,6 +312,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { VForm } from 'vuetify/components'
+import { useOrderTypeOptions } from '@/composables/useOrderTypeOptions'
 import { saveJob } from '@/services/jobs'
 import { getJobOrder, getJobPreviewBlob } from '@/services/jobOrders'
 import type { JobDetail, JobOrderFormData, JobOrderRecord } from '@/types/api'
@@ -326,6 +341,7 @@ const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const saving = ref(false)
 const errorMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
+const { orderTypeOptions } = useOrderTypeOptions()
 const legacyRecord = ref<JobOrderRecord | null>(null)
 const legacyBrand = computed(() => draft.value.orderTitle ?? '')
 const legacyProductCode = ref('')
@@ -380,14 +396,6 @@ onBeforeUnmount(() => {
 // ---------------------------------------------------------------------------
 // Static option lists (Phase 6: these will be loaded from /api/v2/lookups in a future sprint)
 // ---------------------------------------------------------------------------
-const statusOptions = computed(() => [
-  { value: 0, label: t('jobForm.statuses.draft') },
-  { value: 1, label: t('jobForm.statuses.inProgress') },
-  { value: 2, label: t('jobForm.statuses.onHold') },
-  { value: 3, label: t('jobForm.statuses.completed') },
-  { value: 4, label: t('jobForm.statuses.cancelled') },
-])
-
 const paymentTermsOptions = computed(() => [
   t('jobForm.paymentTerms.net7'),
   t('jobForm.paymentTerms.net14'),
@@ -447,6 +455,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       requiredOn: today,
       qty: 1,
       status: 0,
+      orderType: 0,
       paymentTerms: '',
       remarks: '',
     }
@@ -466,6 +475,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     requiredOn: job.requiredOn?.slice(0, 10) ?? '',
     qty: job.qty,
     status: job.status,
+    orderType: 0,
     paymentTerms: job.paymentTerms ?? '',
     remarks: job.remarks ?? '',
   }
@@ -510,6 +520,9 @@ function syncLegacyFields(record: JobOrderRecord | null) {
     typeof record?.invoiceAmount === 'number' ? formatAmount(record.invoiceAmount) : ''
   legacyCompletedOn.value = formatLegacyDate(record?.completedOn ?? null)
   legacyQuotationNumber.value = record?.productStyle ?? ''
+  if (record) {
+    draft.value.orderType = record.orderType
+  }
 }
 
 async function handleSubmit() {

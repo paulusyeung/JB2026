@@ -220,7 +220,7 @@
 
           <template #[`item.orderType`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="16" :color="orderTypeMeta(item.orderType).color">{{ orderTypeMeta(item.orderType).icon }}</v-icon>
+              <v-icon size="16" :color="getOrderTypeMeta(item.orderType).color">{{ getOrderTypeMeta(item.orderType).icon }}</v-icon>
             </div>
           </template>
 
@@ -298,6 +298,7 @@ import { getJobDetail } from '@/services/jobs'
 import { getPackingSchedule, updatePendingWorkflow } from '@/services/scheduler'
 import type { JobDetail, JobSchedulePackingItem } from '@/types/api'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { getOrderTypeMeta } from '@/utils/orderType'
 
 const rows = ref<JobSchedulePackingItem[]>([])
 const loading = ref(false)
@@ -552,19 +553,6 @@ function workflowColor(status: number | null) {
   if (status === 2) return 'success'
   if (status === 3) return 'blue'
   return 'grey-lighten-1'
-}
-
-function orderTypeMeta(orderType: number) {
-  switch (orderType) {
-    case 0:
-      return { icon: 'mdi-tag-outline', color: 'success' }
-    case 1:
-      return { icon: 'mdi-label-outline', color: 'error' }
-    case 2:
-      return { icon: 'mdi-ribbon', color: 'warning' }
-    default:
-      return { icon: 'mdi-shape-outline', color: 'info' }
-  }
 }
 
 function showActionNotice(message: string) {

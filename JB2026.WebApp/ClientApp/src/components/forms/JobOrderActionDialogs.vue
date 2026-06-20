@@ -544,6 +544,7 @@ async function saveProductDetails() {
       requiredOn: props.job.requiredOn?.slice(0, 10) ?? '',
       qty: props.job.qty,
       status: props.job.status,
+      orderType: 0,
       paymentTerms: props.job.paymentTerms ?? '',
       remarks: props.job.remarks ?? '',
       productDetails: productDetails.value,

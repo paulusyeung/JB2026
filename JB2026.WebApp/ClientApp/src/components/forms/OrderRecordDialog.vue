@@ -319,6 +319,7 @@ function buildDraft(order: JobOrderRecord): JobOrderFormData {
     requiredOn: order.requiredOn?.slice(0, 10) ?? '',
     qty: order.qty,
     status: order.status,
+    orderType: order.orderType,
     paymentTerms: order.paymentTerms ?? '',
     remarks: order.remarks ?? '',
   }
@@ -399,6 +400,7 @@ function buildCreateDraft(): JobOrderFormData {
     requiredOn: today,
     qty: 1,
     status: 0,
+    orderType: 0,
     paymentTerms: props.order?.paymentTerms || 'Net 30',
     remarks: '',
   }

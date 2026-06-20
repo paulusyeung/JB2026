@@ -844,6 +844,7 @@ export interface JobOrderFormData {
   requiredOn: string
   qty: number
   status: number
+  orderType: number
   paymentTerms: string
   remarks: string
   productDetails?: string

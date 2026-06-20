@@ -209,8 +209,8 @@
           >
             <div class="job-mobile-card__header">
               <div class="d-flex align-center ga-2">
-                <v-icon size="18" :color="orderTypeMeta(row.orderType).color">
-                  {{ orderTypeMeta(row.orderType).icon }}
+                <v-icon size="18" :color="getOrderTypeMeta(row.orderType).color">
+                  {{ getOrderTypeMeta(row.orderType).icon }}
                 </v-icon>
                 <div>
                   <div class="text-subtitle-2 font-weight-bold">{{ compositeOrderNumber(row) }}</div>
@@ -334,7 +334,7 @@
 
             <template #[`item.orderType`]="{ item }">
               <div class="d-flex justify-center">
-                <v-icon size="16" :color="orderTypeMeta(item.orderType).color">{{ orderTypeMeta(item.orderType).icon }}</v-icon>
+                <v-icon size="16" :color="getOrderTypeMeta(item.orderType).color">{{ getOrderTypeMeta(item.orderType).icon }}</v-icon>
               </div>
             </template>
 
@@ -504,6 +504,7 @@ import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { getOrderTypeMeta } from '@/utils/orderType'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getJobDetail } from '@/services/jobs'
 import { deleteJobOrder, getJobList } from '@/services/jobOrders'
@@ -1046,19 +1047,6 @@ function statusColor(status: number) {
   if (status === 1) return 'amber'
   if (status === 2) return 'success'
   return 'error'
-}
-
-function orderTypeMeta(orderType: number) {
-  switch (orderType) {
-    case 1:
-      return { icon: 'mdi-tag-text-outline', color: 'error' }
-    case 2:
-      return { icon: 'mdi-label-outline', color: 'warning' }
-    case 3:
-      return { icon: 'mdi-shape-outline', color: 'secondary' }
-    default:
-      return { icon: 'mdi-tag-outline', color: 'success' }
-  }
 }
 
 function openNew() {
