@@ -253,7 +253,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
     public async Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
     {
-        var actorId = ParseActorGuidOrFallback(actor);
+        var actorId = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
         var now = DateTime.UtcNow;
 
         var order = new JobOrder
@@ -272,6 +272,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             PaymentTerms = request.PaymentTerms,
             Remarks = request.Remarks,
             Status = request.Status,
+            SONumber = request.SONumber,
+            OriginalSONumber = request.OriginalSONumber,
             CreatedBy = actorId,
             CreatedOn = now,
             ModifiedBy = actorId,
@@ -307,7 +309,9 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         }
         order.Status = request.Status;
         order.OrderType = request.OrderType;
-        order.ModifiedBy = ParseActorGuidOrFallback(actor);
+        order.SONumber = request.SONumber;
+        order.OriginalSONumber = request.OriginalSONumber;
+        order.ModifiedBy = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
         order.ModifiedOn = DateTime.UtcNow;
 
         await _writeContext.SaveChangesAsync();
@@ -420,7 +424,9 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                     Length = 0,
                     AttachmentType = attachment.AttachmentType
                 })
-                .ToList()
+                .ToList(),
+            SONumber = job.SONumber,
+            OriginalSONumber = job.OriginalSONumber
         };
     }
 
@@ -466,7 +472,9 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             CreatedBy = createdBy,
             CreatedOn = job.CreatedOn,
             ModifiedBy = modifiedBy,
-            ModifiedOn = job.ModifiedOn
+            ModifiedOn = job.ModifiedOn,
+            SONumber = job.SONumber,
+            OriginalSONumber = job.OriginalSONumber
         };
     }
 
@@ -500,7 +508,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             CreatedBy = order.CreatedBy ?? string.Empty,
             CreatedOn = order.CreatedOn,
             ModifiedBy = order.ModifiedBy,
-            ModifiedOn = order.ModifiedOn
+            ModifiedOn = order.ModifiedOn,
+            SONumber = order.SONumber
         };
     }
 
@@ -537,8 +546,20 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         return jobNumber.HasValue ? $"{lhs}-{jobNumber.Value}" : lhs;
     }
 
-    private static Guid ParseActorGuidOrFallback(string actor)
+    private async Task<Guid?> ResolveUserGuidAsync(string actor)
     {
-        return Guid.TryParse(actor, out var actorId) ? actorId : Guid.NewGuid();
+        if (string.IsNullOrWhiteSpace(actor))
+            return null;
+
+        if (Guid.TryParse(actor, out var guid))
+            return guid;
+
+        var user = await _readContext.vwUserList_Actives
+            .AsNoTracking()
+            .Where(u => u.UserName == actor || u.UserAlias == actor)
+            .Select(u => (Guid?)u.UserId)
+            .FirstOrDefaultAsync();
+
+        return user;
     }
 }

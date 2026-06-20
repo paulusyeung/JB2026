@@ -13,6 +13,8 @@ interface CreateJobOrderRequest {
   paymentTerms: string
   remarks: string
   status: number
+  soNumber?: string
+  originalSONumber?: string
 }
 
 interface UpdateJobOrderRequest {
@@ -24,6 +26,8 @@ interface UpdateJobOrderRequest {
   paymentTerms: string
   remarks: string
   status: number
+  soNumber?: string
+  originalSONumber?: string
 }
 
 export async function getJobOrders(): Promise<JobOrderRecord[]> {

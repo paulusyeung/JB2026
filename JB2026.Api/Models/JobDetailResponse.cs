@@ -31,4 +31,8 @@ public sealed class JobDetailResponse
     public required string[] StyleTitles { get; init; }
 
     public required IReadOnlyList<JobAttachmentResponse> Attachments { get; init; }
+
+    public string? SONumber { get; init; }
+
+    public string? OriginalSONumber { get; init; }
 }

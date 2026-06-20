@@ -30,6 +30,8 @@ export const jobFormMessages = {
         packagingRequirement: 'Packaging Requirement',
         preview: 'Preview',
         remarks: 'Remarks',
+        salesOrderNumber: 'Printing Time (hr)',
+        originalSalesOrderNumber: 'COGS',
       },
       actions: {
         cancel: 'Cancel',
@@ -93,6 +95,8 @@ export const jobFormMessages = {
         nonNegative: 'Must be 0 or greater',
         dateFormat: 'Date must use yyyy-MM-dd format',
         requiredAfterOrdered: 'Required On must not be before Ordered On',
+        maxOneDecimal: 'Max 1 decimal place',
+        maxTwoDecimals: 'Max 2 decimal places',
       },
       saveFailed: 'Save failed - verify the API is reachable and try again.',
       statuses: {

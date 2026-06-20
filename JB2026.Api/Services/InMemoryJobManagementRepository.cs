@@ -220,6 +220,8 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Remarks = request.Remarks,
             ProductDetails = string.Empty,
             Status = request.Status,
+            SONumber = request.SONumber,
+            OriginalSONumber = request.OriginalSONumber,
             CreatedBy = actor,
             CreatedOn = timestamp,
             StyleTitles = [request.OrderTitle],
@@ -249,6 +251,8 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             ProductDetails = request.ProductDetails ?? current.ProductDetails,
             Status = request.Status,
             OrderType = request.OrderType,
+            SONumber = request.SONumber,
+            OriginalSONumber = request.OriginalSONumber,
             ModifiedBy = actor,
             ModifiedOn = DateTime.UtcNow,
             StyleTitles = [request.OrderTitle, .. current.StyleTitles.Skip(1)]
@@ -307,7 +311,9 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                     ContentType = attachment.ContentType,
                     Length = attachment.Length
                 })
-                .ToList()
+                .ToList(),
+            SONumber = job.SONumber,
+            OriginalSONumber = job.OriginalSONumber
         };
     }
 
@@ -341,7 +347,9 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             CreatedBy = job.CreatedBy,
             CreatedOn = job.CreatedOn,
             ModifiedBy = job.ModifiedBy,
-            ModifiedOn = job.ModifiedOn
+            ModifiedOn = job.ModifiedOn,
+            SONumber = job.SONumber,
+            OriginalSONumber = job.OriginalSONumber
         };
     }
 
@@ -446,6 +454,8 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public required DateTime CreatedOn { get; init; }
         public string? ModifiedBy { get; init; }
         public DateTime? ModifiedOn { get; init; }
+        public string? SONumber { get; init; }
+        public string? OriginalSONumber { get; init; }
         public required string[] StyleTitles { get; init; }
         public required IReadOnlyList<JobAttachmentRecord> Attachments { get; init; }
         public string CompositeOrderNumber => $"{OrderNumber}-{JobNumber}";

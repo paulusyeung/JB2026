@@ -351,6 +351,8 @@ export interface JobDetail extends JobListItem {
   productDetails: string
   styleTitles: string[]
   attachments: JobAttachment[]
+  soNumber?: string
+  originalSONumber?: string
 }
 
 export interface JobOrderPrintRequest {
@@ -848,6 +850,8 @@ export interface JobOrderFormData {
   paymentTerms: string
   remarks: string
   productDetails?: string
+  soNumber?: string
+  originalSONumber?: string
 }
 
 export interface JobOrderRecord {
@@ -878,6 +882,8 @@ export interface JobOrderRecord {
   createdOn: string
   modifiedBy: string | null
   modifiedOn: string | null
+  soNumber?: string
+  originalSONumber?: string
 }
 
 export interface JobStatsRecord {

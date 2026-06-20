@@ -55,4 +55,8 @@ public sealed class JobOrderResponse
     public string? ModifiedBy { get; init; }
 
     public DateTime? ModifiedOn { get; init; }
+
+    public string? SONumber { get; init; }
+
+    public string? OriginalSONumber { get; init; }
 }

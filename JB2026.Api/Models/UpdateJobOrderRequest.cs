@@ -35,4 +35,10 @@ public sealed class UpdateJobOrderRequest
 
     [Range(0, 3)]
     public int OrderType { get; init; }
+
+    [StringLength(32)]
+    public string? SONumber { get; init; }
+
+    [StringLength(32)]
+    public string? OriginalSONumber { get; init; }
 }

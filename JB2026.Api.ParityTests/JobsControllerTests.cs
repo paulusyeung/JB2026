@@ -215,6 +215,8 @@ public sealed class JobsControllerTests
                 CreatedOn = DateTime.UtcNow,
                 ModifiedBy = actor,
                 ModifiedOn = DateTime.UtcNow,
+                SONumber = request.SONumber,
+                OriginalSONumber = request.OriginalSONumber,
             });
         }
 
@@ -255,6 +257,8 @@ public sealed class JobsControllerTests
                 CreatedOn = new DateTime(2026, 3, 30),
                 ModifiedBy = actor,
                 ModifiedOn = DateTime.UtcNow,
+                SONumber = request.SONumber,
+                OriginalSONumber = request.OriginalSONumber,
             });
         }
 

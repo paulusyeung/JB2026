@@ -212,7 +212,9 @@ public sealed class JobOrdersControllerTests
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 4, 1),
                 ModifiedBy = "admin",
-                ModifiedOn = new DateTime(2026, 4, 1)
+                ModifiedOn = new DateTime(2026, 4, 1),
+                SONumber = null,
+                OriginalSONumber = null
             };
         }
     }

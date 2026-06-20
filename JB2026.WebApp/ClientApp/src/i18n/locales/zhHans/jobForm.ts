@@ -30,6 +30,8 @@ export const jobFormMessages = {
         packagingRequirement: '包装要求',
         preview: '预览',
         remarks: '备注',
+        salesOrderNumber: '印刷时间（小时）',
+        originalSalesOrderNumber: 'COGS',
       },
       actions: {
         cancel: '取消',
@@ -93,6 +95,8 @@ export const jobFormMessages = {
         nonNegative: '必须大于等于 0',
         dateFormat: '日期格式必须为 yyyy-MM-dd',
         requiredAfterOrdered: '要求日期不得早于下单日期',
+        maxOneDecimal: '最多1位小数',
+        maxTwoDecimals: '最多2位小数',
       },
       saveFailed: '保存失败，请确认 API 可访问后重试。',
       statuses: {

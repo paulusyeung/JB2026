@@ -92,6 +92,18 @@
               density="compact"
               hide-details="auto"
             />
+
+            <v-text-field
+              v-model="draft.soNumber"
+              :label="t('jobForm.fields.salesOrderNumber')"
+              type="number"
+              step="0.1"
+              min="0"
+              variant="outlined"
+              density="compact"
+              hide-details="auto"
+              :rules="[maxOneDecimal]"
+            />
           </div>
 
           <div class="legacy-col">
@@ -157,6 +169,18 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
+            />
+
+            <v-text-field
+              v-model="draft.originalSONumber"
+              :label="t('jobForm.fields.originalSalesOrderNumber')"
+              type="number"
+              step="0.01"
+              min="0"
+              variant="outlined"
+              density="compact"
+              hide-details="auto"
+              :rules="[maxTwoDecimals]"
             />
           </div>
 
@@ -299,8 +323,8 @@
 
       <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
         <v-spacer />
-        <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('jobForm.actions.cancel') }}</v-btn>
-        <v-btn color="primary" type="submit" :loading="saving" min-width="120">
+        <v-btn variant="tonal" color="primary" :disabled="saving" @click="emit('cancel')">{{ t('jobForm.actions.cancel') }}</v-btn>
+        <v-btn variant="tonal" color="primary" type="submit" :loading="saving" min-width="120">
           {{ isNew ? t('jobForm.actions.create') : t('jobForm.actions.saveChanges') }}
         </v-btn>
       </v-card-actions>
@@ -422,6 +446,16 @@ const required = (v: string | number) => (v !== '' && v !== null && v !== undefi
 
 const positiveNumber = (v: number) => v >= 0 || t('jobForm.validation.nonNegative')
 
+const maxOneDecimal = (v: string) => {
+  if (!v) return true
+  return /^\d+(\.\d)?$/.test(v) || t('jobForm.validation.maxOneDecimal')
+}
+
+const maxTwoDecimals = (v: string) => {
+  if (!v) return true
+  return /^\d+(\.\d{1,2})?$/.test(v) || t('jobForm.validation.maxTwoDecimals')
+}
+
 const validIsoDate = (v: string) => {
   const normalized = (v ?? '').trim()
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
@@ -458,6 +492,8 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       orderType: 0,
       paymentTerms: '',
       remarks: '',
+      soNumber: '',
+      originalSONumber: '',
     }
   }
 
@@ -478,6 +514,8 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     orderType: 0,
     paymentTerms: job.paymentTerms ?? '',
     remarks: job.remarks ?? '',
+    soNumber: job.soNumber ?? '',
+    originalSONumber: job.originalSONumber ?? '',
   }
 }
 
@@ -849,10 +887,21 @@ async function loadPreviewImage(job: JobDetail) {
   color: #edf2f7;
 }
 
+:deep(.v-theme--light) .legacy-form-surface .v-field-label,
+:deep(.v-theme--light) .legacy-form-surface .v-label {
+  color: #999999 !important;
+  opacity: 1 !important;
+}
+
 :deep(.v-theme--dark) .legacy-form-surface .v-field-label,
 :deep(.v-theme--dark) .legacy-form-surface .v-label {
-  color: #cfd6de;
-  opacity: 1;
+  color: #666666 !important;
+  opacity: 1 !important;
+}
+
+:deep(.legacy-form-surface) .v-field--focused .v-field-label {
+  color: rgba(var(--v-theme-on-surface), 0.9) !important;
+  opacity: 1 !important;
 }
 
 :deep(.v-theme--dark) .legacy-form-surface .v-field--variant-outlined .v-field__outline {
