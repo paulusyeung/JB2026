@@ -65,6 +65,7 @@
               density="compact"
               hide-details="auto"
               :rules="[required]"
+              :readonly="!isNew"
             />
 
             <v-text-field
@@ -82,7 +83,6 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
 
             <v-text-field
@@ -108,10 +108,10 @@
             <v-text-field
               v-model="legacyCompletedOn"
               :label="t('jobForm.fields.completedOn')"
+              placeholder="yyyy-MM-dd"
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
 
             <v-text-field
@@ -126,13 +126,15 @@
               :rules="[positiveNumber]"
             />
 
-            <v-text-field
-              v-model="legacyType"
+            <v-select
+              v-model="draft.status"
               :label="t('jobForm.fields.type')"
+              :items="statusOptions"
+              item-title="label"
+              item-value="value"
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
 
             <v-text-field
@@ -141,7 +143,6 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
           </div>
 
@@ -171,7 +172,6 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
 
             <v-text-field
@@ -180,7 +180,6 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
 
             <v-text-field
@@ -189,7 +188,6 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
-              readonly
             />
           </div>
         </div>
@@ -330,6 +328,12 @@ const errorMessage = ref('')
 const { t } = useI18n({ useScope: 'global' })
 const legacyRecord = ref<JobOrderRecord | null>(null)
 const legacyBrand = computed(() => draft.value.orderTitle ?? '')
+const legacyProductCode = ref('')
+const legacyOutputRef = ref('')
+const legacyInvoiceNo = ref('')
+const legacyInvoiceAmount = ref('')
+const legacyCompletedOn = ref('')
+const legacyQuotationNumber = ref('')
 const legacyPrintingPaper = ref('')
 const legacyFinishingOutput = ref('')
 const legacyPackagingRequirement = ref('')
@@ -349,6 +353,7 @@ watch(
   async (job) => {
     draft.value = buildDraft(job)
     legacyRecord.value = null
+    syncLegacyFields(null)
     errorMessage.value = ''
     clearPreviewImage()
 
@@ -356,6 +361,7 @@ watch(
 
     try {
       legacyRecord.value = await getJobOrder(job.orderId)
+      syncLegacyFields(legacyRecord.value)
       await loadPreviewImage(job)
     } catch {
       // Keep the form usable even if legacy detail endpoint is unavailable.
@@ -393,20 +399,7 @@ const paymentTermsOptions = computed(() => [
 
 const legacyAttributeOptions = computed(() => ['', ...paymentTermsOptions.value])
 
-const legacyProductCode = computed(() => legacyRecord.value?.productCode ?? '')
-const legacyOutputRef = computed(() => legacyRecord.value?.outputRef ?? '')
-const legacyInvoiceNo = computed(() => legacyRecord.value?.invoiceRef ?? '')
-const legacyInvoiceAmount = computed(() => {
-  const value = legacyRecord.value?.invoiceAmount
-  return typeof value === 'number' ? formatAmount(value) : ''
-})
-const legacyCompletedOn = computed(() => formatLegacyDate(legacyRecord.value?.completedOn ?? null))
 const legacyModifiedOn = computed(() => formatLegacyDate(legacyRecord.value?.modifiedOn ?? null))
-const legacyQuotationNumber = computed(() => legacyRecord.value?.productStyle ?? '')
-const legacyType = computed(() => {
-  const match = statusOptions.value.find((item) => item.value === draft.value.status)
-  return match?.label ?? ''
-})
 const legacyProductDetails = computed(() => {
   if (legacyRecord.value?.productDetails?.trim()) return legacyRecord.value.productDetails
   if (legacyRecord.value?.productStyle?.trim()) return legacyRecord.value.productStyle
@@ -507,6 +500,16 @@ function formatAmount(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function syncLegacyFields(record: JobOrderRecord | null) {
+  legacyProductCode.value = record?.productCode ?? ''
+  legacyOutputRef.value = record?.outputRef ?? ''
+  legacyInvoiceNo.value = record?.invoiceRef ?? ''
+  legacyInvoiceAmount.value =
+    typeof record?.invoiceAmount === 'number' ? formatAmount(record.invoiceAmount) : ''
+  legacyCompletedOn.value = formatLegacyDate(record?.completedOn ?? null)
+  legacyQuotationNumber.value = record?.productStyle ?? ''
 }
 
 async function handleSubmit() {
@@ -658,8 +661,16 @@ async function loadPreviewImage(job: JobDetail) {
 
 .legacy-form-surface {
   --legacy-notes-height: 188px;
-  background: #d9d9d9;
   color: #1f2328;
+}
+
+.legacy-form-surface :deep(.v-field) {
+  background: #fff;
+}
+
+.legacy-form-surface :deep(.v-input:has(input[readonly]) .v-field),
+.legacy-form-surface :deep(.v-input:has(textarea[readonly]) .v-field) {
+  background: #e8e8e8;
 }
 
 .legacy-toolbar {
@@ -804,7 +815,6 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 :deep(.v-theme--dark) .legacy-form-surface {
-  background: #242a30;
   color: #e7ebf0;
 }
 
@@ -813,8 +823,13 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 :deep(.v-theme--dark) .legacy-form-surface .v-field {
-  background: #2f3841;
+  background: #3a4550;
   color: #edf2f7;
+}
+
+:deep(.v-theme--dark .legacy-form-surface .v-input:has(input[readonly]) .v-field),
+:deep(.v-theme--dark .legacy-form-surface .v-input:has(textarea[readonly]) .v-field) {
+  background: #2f3841;
 }
 
 :deep(.v-theme--dark) .legacy-form-surface .v-field__input {
