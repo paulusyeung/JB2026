@@ -890,16 +890,18 @@ public sealed class JobSchedulesController : ControllerBase
                     .AsNoTracking(),
                 order => order.OrderId,
                 orderIds)
-            .Select(o => new { o.OrderId, o.ProductDetails, o.OrderTitle })
+            .Select(o => new { o.OrderId, o.ProductDetails, o.OrderTitle, o.SONumber })
             .ToListAsync(cancellationToken);
 
         var printMap = orderDetails.ToDictionary(o => o.OrderId, o => ExtractPrintInfo(o.ProductDetails, o.OrderTitle));
+        var soMap = orderDetails.Where(o => !string.IsNullOrWhiteSpace(o.SONumber)).ToDictionary(o => o.OrderId, o => o.SONumber);
 
         var result = rows.Select(row =>
         {
             var orderId = row.OrderId ?? Guid.Empty;
             workflowMap.TryGetValue(orderId, out var steps);
             printMap.TryGetValue(orderId, out var print);
+            soMap.TryGetValue(orderId, out var soNumber);
 
             return new JobScheduleOnAirItemResponse
             {
@@ -917,6 +919,7 @@ public sealed class JobSchedulesController : ControllerBase
                 PrintQty = print?[2] ?? string.Empty,
                 PrintColor = print?[1] ?? string.Empty,
                 PrintSize = print?[0] ?? string.Empty,
+                SONumber = soNumber,
             };
         }).ToList();
 

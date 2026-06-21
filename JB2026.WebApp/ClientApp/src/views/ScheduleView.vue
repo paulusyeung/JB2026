@@ -244,6 +244,7 @@
                     <col class="col-order" />
                     <col :style="{ width: `${scheduledColumnWidths.customer}px` }" />
                     <col :style="{ width: `${scheduledColumnWidths.title}px` }" />
+                    <col class="col-print-time" />
                     <col class="col-machine" />
                     <col class="col-light" />
                     <col class="col-light" />
@@ -268,6 +269,9 @@
                           {{ t('scheduler.schedule.columns.title') }}
                           <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'title')" />
                         </div>
+                      </th>
+                      <th class="col-print-time text-center">
+                        <v-icon size="14">mdi-clock-outline</v-icon>
                       </th>
                       <th class="col-machine">M</th>
                       <th class="col-light">@1</th>
@@ -317,6 +321,7 @@
                       </td>
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
+                      <td class="col-print-time">{{ formatPrintTime(item.soNumber) }}</td>
                       <td class="col-machine text-center">
                         <v-chip size="x-small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
                       </td>
@@ -621,6 +626,13 @@ const allScheduledChecked = computed(
   () => scheduledDisplay.value.length > 0 && checkedScheduled.value.length === scheduledDisplay.value.length,
 )
 
+function formatPrintTime(value: string | undefined | null): string {
+  if (!value) return ''
+  const num = parseFloat(value)
+  if (isNaN(num)) return value
+  return num.toFixed(1)
+}
+
 // ─── field mappers for adaptive rows ──────────────────────────────────────────
 function getAvailableFields(item: JobScheduleAvailableItem) {
   return [
@@ -635,6 +647,7 @@ function getScheduledFields(item: ScheduledItemState) {
     { key: 'order', label: t('scheduler.schedule.columns.order'), value: item.orderNumber },
     { key: 'customer', label: t('scheduler.schedule.columns.customer'), value: item.customerName },
     { key: 'title', label: t('scheduler.schedule.columns.title'), value: item.orderTitle },
+    { key: 'printTime', label: 'Print Time', value: formatPrintTime(item.soNumber) },
     { key: 'machine', label: 'Machine', value: `M${item.machineNumber}` },
     { key: 'qty', label: t('scheduler.schedule.columns.printQty'), value: item.printQty },
     { key: 'color', label: t('scheduler.schedule.columns.printColor'), value: item.printColor },
@@ -1175,6 +1188,7 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .col-title    { min-width: 140px; }
 .col-machine  { width: 52px; min-width: 52px; }
 .col-light    { width: 34px; min-width: 34px; text-align: center; }
+.col-print-time { width: 32px; min-width: 32px; text-align: right; }
 .col-print-qty { width: 88px; min-width: 88px; }
 .col-print-color { width: 110px; min-width: 110px; }
 .col-print-size { width: 118px; min-width: 118px; }

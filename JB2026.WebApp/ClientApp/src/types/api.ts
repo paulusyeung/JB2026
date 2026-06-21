@@ -800,6 +800,7 @@ export interface JobScheduleOnAirItem {
   printQty: string
   printColor: string
   printSize: string
+  soNumber?: string
 }
 
 export interface SaveScheduleBatchItem {
