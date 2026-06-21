@@ -108,7 +108,17 @@
                     >
                       <td class="col-check"><v-checkbox-btn :model-value="checkedAvailable.includes(item.orderId)" density="compact" hide-details @click.stop="toggleAvailableCheck(item.orderId)" /></td>
                       <td class="col-num text-center">{{ index + 1 }}</td>
-                      <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
+                      <td class="col-order">
+                        <v-btn
+                          variant="text"
+                          color="primary"
+                          density="compact"
+                          class="px-0 text-none order-link"
+                          @click.stop="openOrderForm(item.orderId)"
+                        >
+                          {{ item.orderNumber }}
+                        </v-btn>
+                      </td>
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
                     </tr>
@@ -127,7 +137,15 @@
                     @toggle-check="toggleAvailableCheck(item.orderId)"
                   >
                     <template #mobile-header>
-                      <span class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</span>
+                      <v-btn
+                        variant="text"
+                        color="primary"
+                        density="compact"
+                        class="px-0 text-none order-link"
+                        @click.stop="openOrderForm(item.orderId)"
+                      >
+                        {{ item.orderNumber }}
+                      </v-btn>
                     </template>
                   </AdaptiveRow>
                 </div>
@@ -286,7 +304,17 @@
                     >
                       <td class="col-check"><v-checkbox-btn :model-value="checkedScheduled.includes(item.orderId)" density="compact" hide-details @click.stop="toggleScheduledCheck(item.orderId)" /></td>
                       <td class="col-num text-center">{{ index + 1 }}</td>
-                      <td class="col-order text-primary font-weight-medium">{{ item.orderNumber }}</td>
+                      <td class="col-order">
+                        <v-btn
+                          variant="text"
+                          color="primary"
+                          density="compact"
+                          class="px-0 text-none order-link"
+                          @click.stop="openOrderForm(item.orderId)"
+                        >
+                          {{ item.orderNumber }}
+                        </v-btn>
+                      </td>
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
                       <td class="col-machine text-center">
@@ -406,7 +434,15 @@
                 @toggle-check="toggleAvailableCheck(item.orderId)"
               >
                 <template #mobile-header>
-                  <span class="text-subtitle-2 font-weight-bold text-primary">{{ item.orderNumber }}</span>
+                  <v-btn
+                    variant="text"
+                    color="primary"
+                    density="compact"
+                    class="px-0 text-none order-link"
+                    @click.stop="openOrderForm(item.orderId)"
+                  >
+                    {{ item.orderNumber }}
+                  </v-btn>
                 </template>
               </AdaptiveRow>
             </div>
@@ -484,6 +520,15 @@
       </v-card>
     </v-bottom-sheet>
 
+    <!-- Job Order Editor Dialog -->
+    <v-dialog v-model="formOpen" max-width="760" scrollable>
+      <JobOrderForm
+        v-if="formJob"
+        :job="formJob"
+        @saved="handleFormSaved"
+        @cancel="formOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
@@ -492,9 +537,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { getAvailableSchedule, getOnAirSchedule, saveScheduleBatch } from '@/services/scheduler'
-import type { JobScheduleAvailableItem, JobScheduleOnAirItem } from '@/types/api'
+import { getJobDetail } from '@/services/jobs'
+import type { JobDetail, JobScheduleAvailableItem, JobScheduleOnAirItem } from '@/types/api'
 import AdaptiveRow from '@/components/ui/AdaptiveRow.vue'
 import WorkflowStatusPicker from '@/components/ui/WorkflowStatusPicker.vue'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 
 const { t } = useI18n({ useScope: 'global' })
 const display = useDisplay()
@@ -508,6 +555,8 @@ const errorMessage = ref('')
 const saveDialog = ref(false)
 const availableSheet = ref(false)
 const statusSheet = ref(false)
+const formOpen = ref(false)
+const formJob = ref<JobDetail | null>(null)
 const machineFilter = ref('0')
 
 const allAvailableItems = ref<JobScheduleAvailableItem[]>([])
@@ -884,6 +933,21 @@ async function executeSave() {
   } finally {
     saving.value = false
   }
+}
+
+// ─── job order form ──────────────────────────────────────────────────────────
+async function openOrderForm(orderId: string) {
+  try {
+    formJob.value = await getJobDetail(orderId)
+    formOpen.value = true
+  } catch {
+    errorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+async function handleFormSaved() {
+  formOpen.value = false
+  await load()
 }
 
 // ─── display helpers ──────────────────────────────────────────────────────────
