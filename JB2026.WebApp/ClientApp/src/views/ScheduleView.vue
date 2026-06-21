@@ -244,11 +244,11 @@
                     <col class="col-order" />
                     <col :style="{ width: `${scheduledColumnWidths.customer}px` }" />
                     <col :style="{ width: `${scheduledColumnWidths.title}px` }" />
-                    <col class="col-print-time" />
                     <col class="col-machine" />
                     <col class="col-light" />
                     <col class="col-light" />
                     <col class="col-light" />
+                    <col class="col-print-time" />
                     <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printQty}px` }" />
                     <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printColor}px` }" />
                     <col v-if="!isPhoneLayout" :style="{ width: `${scheduledColumnWidths.printSize}px` }" />
@@ -270,14 +270,14 @@
                           <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'title')" />
                         </div>
                       </th>
-                      <th class="col-print-time text-center">
-                        <v-icon size="14">mdi-clock-outline</v-icon>
-                      </th>
                       <th class="col-machine">M</th>
                       <th class="col-light">@1</th>
                       <th class="col-light">@2</th>
                       <th class="col-light">
                         <v-icon size="14">mdi-bell</v-icon>
+                      </th>
+                      <th class="col-print-time text-center">
+                        <v-icon size="14">mdi-clock-outline</v-icon>
                       </th>
                       <th v-if="!isPhoneLayout" class="col-print-qty resizable-header" :style="{ width: `${scheduledColumnWidths.printQty}px` }">
                         <div class="header-content">
@@ -321,7 +321,6 @@
                       </td>
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
-                      <td class="col-print-time">{{ formatPrintTime(item.soNumber) }}</td>
                       <td class="col-machine text-center">
                         <v-chip size="x-small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
                       </td>
@@ -335,6 +334,7 @@
                         <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
                         <span v-else>-</span>
                       </td>
+                      <td class="col-print-time">{{ formatPrintTime(item.soNumber) }}</td>
                       <td v-if="!isPhoneLayout" class="col-print-qty">{{ item.printQty }}</td>
                       <td v-if="!isPhoneLayout" class="col-print-color">{{ item.printColor }}</td>
                       <td v-if="!isPhoneLayout" class="col-print-size">{{ item.printSize }}</td>
