@@ -270,10 +270,10 @@
                           <span class="resize-handle" @mousedown.prevent="startResize($event, 'scheduled', 'title')" />
                         </div>
                       </th>
-                      <th class="col-machine">M</th>
-                      <th class="col-light">@1</th>
-                      <th class="col-light">@2</th>
-                      <th class="col-light">
+                      <th class="col-machine text-center">M</th>
+                      <th class="col-light text-center">@1</th>
+                      <th class="col-light text-center">@2</th>
+                      <th class="col-light text-center">
                         <v-icon size="14">mdi-bell</v-icon>
                       </th>
                       <th class="col-print-time text-center">
@@ -1253,9 +1253,9 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .col-order { width: 92px; min-width: 92px; }
 .col-customer { width: 150px; min-width: 150px; }
 .col-title    { min-width: 140px; }
-.col-machine  { width: 52px; min-width: 52px; }
+.col-machine  { width: 34px; min-width: 34px; text-align: center; }
 .col-light    { width: 34px; min-width: 34px; text-align: center; }
-.col-print-time { width: 32px; min-width: 32px; text-align: right; }
+.col-print-time { width: 34px; min-width: 34px; text-align: right; }
 .col-print-qty { width: 88px; min-width: 88px; }
 .col-print-color { width: 110px; min-width: 110px; }
 .col-print-size { width: 118px; min-width: 118px; }
