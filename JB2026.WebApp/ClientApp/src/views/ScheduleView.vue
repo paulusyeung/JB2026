@@ -532,14 +532,38 @@
         :job="formJob"
         @saved="handleFormSaved"
         @cancel="formOpen = false"
+        @attachment="handleAttachment"
+        @print-order="handlePrintOrder"
+        @workflow="handleWorkflow"
+        @product-details-edit="handleProductDetailsEdit"
       />
     </v-dialog>
+
+    <JobOrderActionDialogs
+      :job="formJob"
+      v-model:attachment-open="attachmentDialogOpen"
+      v-model:product-details-open="productDetailsDialogOpen"
+      @updated="handleActionUpdated"
+      @error="showActionNotice"
+    />
+
+    <JobOrderPrintManagerDialog
+      v-model="printManagerOpen"
+      :order-id="printManagerJob?.orderId ?? null"
+      :order-number="printManagerJob?.orderNumber ?? ''"
+      :style-titles="printManagerJob?.styleTitles"
+    />
+
+    <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
+      {{ actionNoticeMessage }}
+    </v-snackbar>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { getAvailableSchedule, getOnAirSchedule, saveScheduleBatch } from '@/services/scheduler'
 import { getJobDetail } from '@/services/jobs'
@@ -547,8 +571,11 @@ import type { JobDetail, JobScheduleAvailableItem, JobScheduleOnAirItem } from '
 import AdaptiveRow from '@/components/ui/AdaptiveRow.vue'
 import WorkflowStatusPicker from '@/components/ui/WorkflowStatusPicker.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 
 const { t } = useI18n({ useScope: 'global' })
+const router = useRouter()
 const display = useDisplay()
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const isNarrowPhoneLayout = computed(() => display.xs.value && display.width.value <= 430)
@@ -563,6 +590,12 @@ const statusSheet = ref(false)
 const formOpen = ref(false)
 const formJob = ref<JobDetail | null>(null)
 const machineFilter = ref('0')
+const attachmentDialogOpen = ref(false)
+const productDetailsDialogOpen = ref(false)
+const actionNoticeOpen = ref(false)
+const actionNoticeMessage = ref('')
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
 
 const allAvailableItems = ref<JobScheduleAvailableItem[]>([])
 const scheduledItems = ref<ScheduledItemState[]>([])
@@ -945,6 +978,40 @@ async function executeSave() {
     saveDialog.value = false
   } finally {
     saving.value = false
+  }
+}
+
+// ─── job order form toolbar handlers ──────────────────────────────────────────
+function showActionNotice(message: string) {
+  actionNoticeMessage.value = message
+  actionNoticeOpen.value = true
+}
+
+function handleAttachment(job: JobDetail) {
+  formJob.value = job
+  attachmentDialogOpen.value = true
+}
+
+function handleProductDetailsEdit(job: JobDetail) {
+  formJob.value = job
+  productDetailsDialogOpen.value = true
+}
+
+function handlePrintOrder(job: JobDetail) {
+  printManagerJob.value = job
+  printManagerOpen.value = true
+}
+
+function handleWorkflow(job: JobDetail) {
+  void router.push({ name: 'admin-workflow', query: { orderId: job.orderId } })
+}
+
+async function handleActionUpdated() {
+  if (!formJob.value) return
+  try {
+    formJob.value = await getJobDetail(formJob.value.orderId)
+  } catch {
+    // ignore
   }
 }
 
