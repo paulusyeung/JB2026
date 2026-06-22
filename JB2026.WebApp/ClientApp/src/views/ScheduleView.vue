@@ -83,7 +83,7 @@
                   <thead>
                     <tr>
                       <th class="col-check"><v-checkbox-btn v-model="allAvailableChecked" density="compact" hide-details @click="toggleAllAvailable" /></th>
-                      <th class="col-num">#</th>
+                      <th class="col-num text-center">#</th>
                       <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
                       <th class="col-customer resizable-header" :style="{ width: `${availableColumnWidths.customer}px` }">
                         <div class="header-content">
@@ -256,7 +256,7 @@
                   <thead>
                     <tr>
                       <th class="col-check"><v-checkbox-btn v-model="allScheduledChecked" density="compact" hide-details @click="toggleAllScheduled" /></th>
-                      <th class="col-num">#</th>
+                      <th class="col-num text-center">#</th>
                       <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
                       <th class="col-customer resizable-header" :style="{ width: `${scheduledColumnWidths.customer}px` }">
                         <div class="header-content">
