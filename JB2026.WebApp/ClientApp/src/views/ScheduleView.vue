@@ -198,42 +198,42 @@
 
           <!-- Scheduled panel -->
           <div class="schedule-panel scheduled-panel">
-            <!-- Workflow light toolbar -->
-            <div class="d-flex align-center ga-1 mb-1 light-toolbar">
-              <span class="text-caption text-medium-emphasis">@1:</span>
-              <v-btn v-for="c in lightColors1" :key="`a1-${c.value}`"
-                icon size="x-small" density="compact" :color="c.color" variant="tonal"
-                @click="setStep1Status(c.value)">
-                <v-icon size="12">mdi-circle</v-icon>
-              </v-btn>
-              <v-divider vertical class="mx-1" />
-              <span class="text-caption text-medium-emphasis">@2:</span>
-              <v-btn v-for="c in lightColors2" :key="`a2-${c.value}`"
-                icon size="x-small" density="compact" :color="c.color" variant="tonal"
-                @click="setStep2Status(c.value)">
-                <v-icon size="12">mdi-circle</v-icon>
-              </v-btn>
-              <v-divider vertical class="mx-1" />
-              <v-tooltip :text="t('scheduler.schedule.urgency.red')" location="bottom">
-                <template #activator="{ props }">
-                  <v-btn v-bind="props" icon size="x-small" density="compact" color="error" variant="tonal"
-                    @click="toggleUrgency(4)">
-                    <v-icon size="12">mdi-bell-alert</v-icon>
-                  </v-btn>
-                </template>
-              </v-tooltip>
-              <v-tooltip :text="t('scheduler.schedule.urgency.yellow')" location="bottom">
-                <template #activator="{ props }">
-                  <v-btn v-bind="props" icon size="x-small" density="compact" color="warning" variant="tonal"
-                    @click="toggleUrgency(2)">
-                    <v-icon size="12">mdi-bell</v-icon>
-                  </v-btn>
-                </template>
-              </v-tooltip>
-            </div>
-
-            <div class="panel-header text-caption font-weight-bold text-medium-emphasis mb-1">
-              {{ t('scheduler.schedule.scheduled.title') }} ({{ scheduledDisplay.length }})
+            <div class="d-flex align-center mb-1">
+              <div class="panel-header text-caption font-weight-bold text-medium-emphasis">
+                {{ t('scheduler.schedule.scheduled.title') }} ({{ scheduledDisplay.length }})
+              </div>
+              <div class="d-flex align-center ga-1 light-toolbar" style="flex: 1; justify-content: center;">
+                <span class="text-caption text-medium-emphasis">@1:</span>
+                <v-btn v-for="c in lightColors1" :key="`a1-${c.value}`"
+                  icon size="x-small" density="compact" :color="c.color" variant="tonal"
+                  @click="setStep1Status(c.value)">
+                  <v-icon size="12">mdi-circle</v-icon>
+                </v-btn>
+                <v-divider vertical class="mx-1" />
+                <span class="text-caption text-medium-emphasis">@2:</span>
+                <v-btn v-for="c in lightColors2" :key="`a2-${c.value}`"
+                  icon size="x-small" density="compact" :color="c.color" variant="tonal"
+                  @click="setStep2Status(c.value)">
+                  <v-icon size="12">mdi-circle</v-icon>
+                </v-btn>
+                <v-divider vertical class="mx-1" />
+                <v-tooltip :text="t('scheduler.schedule.urgency.red')" location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" icon size="x-small" density="compact" color="error" variant="tonal"
+                      @click="toggleUrgency(4)">
+                      <v-icon size="12">mdi-bell-alert</v-icon>
+                    </v-btn>
+                  </template>
+                </v-tooltip>
+                <v-tooltip :text="t('scheduler.schedule.urgency.yellow')" location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" icon size="x-small" density="compact" color="warning" variant="tonal"
+                      @click="toggleUrgency(2)">
+                      <v-icon size="12">mdi-bell</v-icon>
+                    </v-btn>
+                  </template>
+                </v-tooltip>
+              </div>
             </div>
             <div class="list-container">
               <template v-if="!isPhoneLayout">
