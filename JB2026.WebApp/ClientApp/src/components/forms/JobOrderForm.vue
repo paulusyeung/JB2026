@@ -297,6 +297,7 @@
               rows="5"
               density="compact"
               class="legacy-notes-box"
+              hide-details="auto" 
             />
 
             <div class="legacy-preview mt-3">
