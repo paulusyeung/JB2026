@@ -43,13 +43,6 @@
           </template>
         </v-snackbar>
 
-        <v-snackbar v-model="initialWindowNoticeOpen" color="info" timeout="5000" location="top">
-          {{ t('jobOrder.jobList.initialWindowNotice') }}
-          <template #actions>
-            <v-btn variant="text" @click="initialWindowNoticeOpen = false">{{ t('common.close') }}</v-btn>
-          </template>
-        </v-snackbar>
-
         <div class="toolbar-bar mb-2">
           <v-menu location="bottom">
             <template #activator="{ props }">
@@ -207,6 +200,15 @@
             class="job-mobile-card"
             @click="openEditor(row)"
           >
+            <v-checkbox-btn
+              v-if="checkboxMode"
+              :model-value="selectedOrderIds.includes(row.orderId)"
+              density="compact"
+              hide-details
+              class="job-mobile-card__checkbox"
+              @click.stop="toggleSelected(row.orderId)"
+            />
+
             <div class="job-mobile-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" :color="getOrderTypeMeta(row.orderType).color">
@@ -217,14 +219,6 @@
                   <div class="text-caption text-medium-emphasis">{{ row.customerName || '-' }}</div>
                 </div>
               </div>
-
-              <v-checkbox-btn
-                v-if="checkboxMode"
-                :model-value="selectedOrderIds.includes(row.orderId)"
-                density="compact"
-                hide-details
-                @click.stop="toggleSelected(row.orderId)"
-              />
             </div>
 
             <div class="job-mobile-card__body">
@@ -524,7 +518,6 @@ const loading = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
 const errorSnackbarOpen = ref(false)
-const initialWindowNoticeOpen = ref(false)
 const lookup = ref('')
 const commonQuery = ref(0)
 const selectedOrderIds = ref<string[]>([])
@@ -633,9 +626,6 @@ const sortableColumns = computed(() =>
 
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
 
-const hasActiveFilters = computed(() => lookup.value.trim().length > 0 || commonQuery.value > 0)
-const showInitialWindowNotice = computed(() => !hasActiveFilters.value && rows.value.length > 0)
-
 const hasSingleSelection = computed(() => selectedOrderIds.value.length === 1)
 const attachmentAndPrintDisabled = computed(() => !hasSingleSelection.value)
 
@@ -675,7 +665,6 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   errorSnackbarOpen.value = false
-  initialWindowNoticeOpen.value = false
   selectedOrderIds.value = []
   try {
     rows.value = await getJobList({
@@ -692,9 +681,6 @@ async function load() {
       activeOrderId.value = rows.value[0]?.orderId ?? null
     }
 
-    if (!hasActiveFilters.value && rows.value.length > 0) {
-      initialWindowNoticeOpen.value = true
-    }
   } catch {
     errorMessage.value = t('jobOrder.jobList.loadFailed')
     errorSnackbarOpen.value = true
@@ -1112,6 +1098,7 @@ async function handleActionUpdated() {
 
 .toolbar-new-order-btn {
   min-width: 168px;
+  display: none;  /* 2026.06.24 paulus: hiden, add new job from OrderRecordDialog */
 }
 
 .toolbar-bar {
@@ -1179,11 +1166,31 @@ async function handleActionUpdated() {
 
 .job-mobile-card {
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
   background: rgb(var(--v-theme-surface));
   cursor: pointer;
+}
+
+.job-mobile-card__checkbox {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.job-mobile-card__header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.job-mobile-card__body,
+.job-mobile-card__footer,
+.job-mobile-card__meta,
+.job-mobile-card__actions {
+  grid-column: 1 / -1;
 }
 
 .job-mobile-card:active {
