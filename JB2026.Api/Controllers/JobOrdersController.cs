@@ -1,8 +1,10 @@
 using JB2026.Api.Models;
 using JB2026.Api.Options;
 using JB2026.Api.Services;
+using JB2026.EfCore.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Controllers;
@@ -193,6 +195,44 @@ public sealed class JobOrdersController : ControllerBase
             "Deleted job order {OrderId} ({WorkflowCount} workflows, {AttachmentCount} attachments)",
             id, jobDetail.StyleTitles.Length, jobDetail.Attachments.Count);
         return Ok(order);
+    }
+
+    [HttpGet("~/api/v2/order-types/{orderType}/workflow-attributes")]
+    [ProducesResponseType(typeof(OrderTypeWorkflowAttributeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<OrderTypeWorkflowAttributeResponse>> GetWorkflowAttributes(
+        [FromServices] JB5LegacyReadContext readContext,
+        int orderType,
+        CancellationToken cancellationToken = default)
+    {
+        if (orderType is < 0 or > 3)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(orderType)] = ["OrderType must be between 0 and 3."]
+            }));
+        }
+
+        var attributes = await readContext.Z_OrderTypeWorkflows
+            .AsNoTracking()
+            .Where(mapping => mapping.OrderType == orderType && mapping.WorkflowId.HasValue)
+            .Where(mapping => mapping.Workflow!.Z_WorkflowForms.Any())
+            .OrderBy(mapping => mapping.WorkIndex)
+            .Include(mapping => mapping.Workflow)
+            .Select(mapping => new OrderTypeWorkflowAttributeItemResponse
+            {
+                WorkIndex = mapping.WorkIndex,
+                WorkflowName = mapping.Workflow!.WorkflowName ?? string.Empty,
+                Options = mapping.Workflow.WorkTitle != null
+                    ? mapping.Workflow.WorkTitle.Split(';', StringSplitOptions.None).ToList()
+                    : new List<string>(),
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(new OrderTypeWorkflowAttributeResponse
+        {
+            WorkflowAttributes = attributes,
+        });
     }
 
     private void DeleteAttachmentFiles(Guid orderId, JobDetailResponse jobDetail)

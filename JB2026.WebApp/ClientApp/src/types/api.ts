@@ -835,6 +835,12 @@ export interface RescheduleCompletedSchedulesRequest {
   orderIds: string[]
 }
 
+export interface OrderTypeWorkflowAttribute {
+  workIndex: number
+  workflowName: string
+  options: string[]
+}
+
 export interface JobOrderFormData {
   orderId: string | null
   orderNumber: string
@@ -853,6 +859,7 @@ export interface JobOrderFormData {
   productDetails?: string
   soNumber?: string
   originalSONumber?: string
+  workflowAttributes: Record<string, string>
 }
 
 export interface JobOrderRecord {

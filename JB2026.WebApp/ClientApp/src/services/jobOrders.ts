@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { JobOrderRecord, JobStatsRecord } from '@/types/api'
+import type { JobOrderRecord, JobStatsRecord, OrderTypeWorkflowAttribute } from '@/types/api'
 
 interface CreateJobOrderRequest {
   orderNumber: string
@@ -93,6 +93,13 @@ export async function getJobStats(params: {
   })
 
   return response.data
+}
+
+export async function getOrderTypeWorkflowAttributes(orderType: number): Promise<OrderTypeWorkflowAttribute[]> {
+  const response = await apiClient.get<{ workflowAttributes: OrderTypeWorkflowAttribute[] }>(
+    `/api/v2/order-types/${orderType}/workflow-attributes`,
+  )
+  return response.data.workflowAttributes
 }
 
 export async function getJobOrder(id: string): Promise<JobOrderRecord> {

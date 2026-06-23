@@ -253,38 +253,16 @@
             </div>
 
             <div class="legacy-attribute-grid mt-3">
-              <div class="legacy-attribute-row">
+              <div v-for="(attr, index) in workflowAttributeDefs" :key="attr.workflowName" class="legacy-attribute-row">
                 <v-select
-                  v-model="legacyPrintingPaper"
-                  :label="t('jobForm.fields.printingPaper')"
-                  :items="legacyAttributeOptions"
+                  v-model="workflowAttributeValues[attr.workflowName]"
+                  :label="attr.workflowName"
+                  :items="attr.options"
                   variant="outlined"
                   density="compact"
                   hide-details
                 />
-                <span class="legacy-indicator legacy-indicator-blue" />
-              </div>
-              <div class="legacy-attribute-row">
-                <v-select
-                  v-model="legacyFinishingOutput"
-                  :label="t('jobForm.fields.finishingOutput')"
-                  :items="legacyAttributeOptions"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-                <span class="legacy-indicator legacy-indicator-green" />
-              </div>
-              <div class="legacy-attribute-row">
-                <v-select
-                  v-model="legacyPackagingRequirement"
-                  :label="t('jobForm.fields.packagingRequirement')"
-                  :items="legacyAttributeOptions"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-                <span class="legacy-indicator legacy-indicator-red" />
+                <span :class="['legacy-indicator', indicatorColor(index)]" />
               </div>
             </div>
           </div>
@@ -339,8 +317,8 @@ import { useI18n } from 'vue-i18n'
 import type { VForm } from 'vuetify/components'
 import { useOrderTypeOptions } from '@/composables/useOrderTypeOptions'
 import { saveJob } from '@/services/jobs'
-import { getJobOrder, getJobPreviewBlob } from '@/services/jobOrders'
-import type { JobDetail, JobOrderFormData, JobOrderRecord } from '@/types/api'
+import { getJobOrder, getJobPreviewBlob, getOrderTypeWorkflowAttributes } from '@/services/jobOrders'
+import type { JobDetail, JobOrderFormData, JobOrderRecord, OrderTypeWorkflowAttribute } from '@/types/api'
 
 // ---------------------------------------------------------------------------
 // Props / emits
@@ -375,9 +353,8 @@ const legacyInvoiceNo = ref('')
 const legacyInvoiceAmount = ref('')
 const legacyCompletedOn = ref('')
 const legacyQuotationNumber = ref('')
-const legacyPrintingPaper = ref('')
-const legacyFinishingOutput = ref('')
-const legacyPackagingRequirement = ref('')
+const workflowAttributeDefs = ref<OrderTypeWorkflowAttribute[]>([])
+const workflowAttributeValues = ref<Record<string, string>>({})
 const previewImageUrl = ref<string | null>(null)
 const dragOffset = ref({ x: 0, y: 0 })
 const dragPointer = ref<{ id: number; startX: number; startY: number; originX: number; originY: number } | null>(null)
@@ -397,6 +374,7 @@ watch(
     syncLegacyFields(null)
     errorMessage.value = ''
     clearPreviewImage()
+    fetchWorkflowAttributes(draft.value.orderType)
 
     if (!job?.orderId) return
 
@@ -417,20 +395,6 @@ onBeforeUnmount(() => {
   stopDrag()
   clearPreviewImage()
 })
-
-// ---------------------------------------------------------------------------
-// Static option lists (Phase 6: these will be loaded from /api/v2/lookups in a future sprint)
-// ---------------------------------------------------------------------------
-const paymentTermsOptions = computed(() => [
-  t('jobForm.paymentTerms.net7'),
-  t('jobForm.paymentTerms.net14'),
-  t('jobForm.paymentTerms.net30'),
-  t('jobForm.paymentTerms.net60'),
-  t('jobForm.paymentTerms.cod'),
-  t('jobForm.paymentTerms.prepaid'),
-])
-
-const legacyAttributeOptions = computed(() => ['', ...paymentTermsOptions.value])
 
 const legacyModifiedOn = computed(() => formatLegacyDate(legacyRecord.value?.modifiedOn ?? null))
 const legacyProductDetails = computed(() => {
@@ -495,6 +459,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       remarks: '',
       soNumber: '',
       originalSONumber: '',
+      workflowAttributes: {},
     }
   }
 
@@ -517,6 +482,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     remarks: job.remarks ?? '',
     soNumber: job.soNumber ?? '',
     originalSONumber: job.originalSONumber ?? '',
+    workflowAttributes: {},
   }
 }
 
@@ -568,6 +534,8 @@ async function handleSubmit() {
   const { valid } = await formRef.value!.validate()
   if (!valid) return
 
+  draft.value.workflowAttributes = { ...workflowAttributeValues.value }
+
   saving.value = true
   errorMessage.value = ''
 
@@ -580,6 +548,33 @@ async function handleSubmit() {
     saving.value = false
   }
 }
+
+const legacyIndicatorColors = [
+  'legacy-indicator-blue',
+  'legacy-indicator-green',
+  'legacy-indicator-red',
+  'legacy-indicator-orange',
+  'legacy-indicator-purple',
+  'legacy-indicator-teal',
+]
+
+function indicatorColor(index: number): string {
+  return legacyIndicatorColors[index % legacyIndicatorColors.length]
+}
+
+async function fetchWorkflowAttributes(orderType: number) {
+  workflowAttributeDefs.value = []
+  workflowAttributeValues.value = {}
+  try {
+    workflowAttributeDefs.value = await getOrderTypeWorkflowAttributes(orderType)
+  } catch {
+    console.warn('Failed to fetch workflow attributes for order type', orderType)
+  }
+}
+
+watch(() => draft.value.orderType, (orderType) => {
+  fetchWorkflowAttributes(orderType)
+})
 
 function handleAttachmentClick() {
   if (!props.job) return
@@ -837,6 +832,18 @@ async function loadPreviewImage(job: JobDetail) {
 
 .legacy-indicator-red {
   background: #e76464;
+}
+
+.legacy-indicator-orange {
+  background: #f4a261;
+}
+
+.legacy-indicator-purple {
+  background: #9b59b6;
+}
+
+.legacy-indicator-teal {
+  background: #1abc9c;
 }
 
 .legacy-preview {
