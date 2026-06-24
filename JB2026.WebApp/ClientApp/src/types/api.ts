@@ -353,6 +353,7 @@ export interface JobDetail extends JobListItem {
   attachments: JobAttachment[]
   soNumber?: string
   originalSONumber?: string
+  workflowAttributes?: Record<string, string>
 }
 
 export interface JobOrderPrintRequest {

@@ -222,6 +222,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Status = request.Status,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
+            WorkflowAttributes = request.WorkflowAttributes,
             CreatedBy = actor,
             CreatedOn = timestamp,
             StyleTitles = [request.OrderTitle],
@@ -253,6 +254,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             OrderType = request.OrderType,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
+            WorkflowAttributes = request.WorkflowAttributes,
             ModifiedBy = actor,
             ModifiedOn = DateTime.UtcNow,
             StyleTitles = [request.OrderTitle, .. current.StyleTitles.Skip(1)]
@@ -313,7 +315,8 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 })
                 .ToList(),
             SONumber = job.SONumber,
-            OriginalSONumber = job.OriginalSONumber
+            OriginalSONumber = job.OriginalSONumber,
+            WorkflowAttributes = job.WorkflowAttributes
         };
     }
 
@@ -456,6 +459,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public DateTime? ModifiedOn { get; init; }
         public string? SONumber { get; init; }
         public string? OriginalSONumber { get; init; }
+        public Dictionary<string, string>? WorkflowAttributes { get; init; }
         public required string[] StyleTitles { get; init; }
         public required IReadOnlyList<JobAttachmentRecord> Attachments { get; init; }
         public string CompositeOrderNumber => $"{OrderNumber}-{JobNumber}";

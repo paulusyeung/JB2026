@@ -16,6 +16,7 @@ interface CreateJobRequest {
   orderType: number
   soNumber?: string
   originalSONumber?: string
+  workflowAttributes?: Record<string, string>
 }
 
 interface UpdateJobRequest {
@@ -31,6 +32,7 @@ interface UpdateJobRequest {
   orderType: number
   soNumber?: string
   originalSONumber?: string
+  workflowAttributes?: Record<string, string>
 }
 
 export interface JobQuery {
@@ -112,6 +114,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       orderType: data.orderType,
       soNumber: data.soNumber,
       originalSONumber: data.originalSONumber,
+      workflowAttributes: data.workflowAttributes,
     }
 
     await apiClient.patch(`/api/v2/jobs/${data.orderId}`, payload)
@@ -131,6 +134,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       orderType: data.orderType,
       soNumber: data.soNumber,
       originalSONumber: data.originalSONumber,
+      workflowAttributes: data.workflowAttributes,
     }
 
     await apiClient.post('/api/v2/jobs', payload)

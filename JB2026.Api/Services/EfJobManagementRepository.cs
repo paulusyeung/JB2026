@@ -9,6 +9,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 {
     private readonly JB5LegacyReadContext _readContext;
     private readonly JB5LegacyWriteContext _writeContext;
+    private readonly ILogger<EfJobManagementRepository> _logger;
 
     private static readonly Func<JB5LegacyReadContext, int, IEnumerable<JobOrder>> CompiledGetJobOrders =
         EF.CompileQuery((JB5LegacyReadContext db, int take) =>
@@ -26,6 +27,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                 .AsNoTracking()
                 .Include(order => order.JobSchedules)
                 .Include(order => order.JobWorkflows)
+                    .ThenInclude(w => w.Workflow)
                 .Include(order => order.JobAttachments)
                 .FirstOrDefault(order => order.OrderId == orderId));
 
@@ -43,10 +45,14 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         EF.CompileQuery((JB5LegacyWriteContext db, Guid orderId) =>
             db.JobOrders.FirstOrDefault(order => order.OrderId == orderId));
 
-    public EfJobManagementRepository(JB5LegacyReadContext readContext, JB5LegacyWriteContext writeContext)
+    public EfJobManagementRepository(
+        JB5LegacyReadContext readContext,
+        JB5LegacyWriteContext writeContext,
+        ILogger<EfJobManagementRepository> logger)
     {
         _readContext = readContext;
         _writeContext = writeContext;
+        _logger = logger;
     }
 
     public IReadOnlyList<JobListItemResponse> GetRange(DateOnly startOn, int days)
@@ -284,6 +290,32 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         _writeContext.JobOrders.Add(order);
         await _writeContext.SaveChangesAsync();
 
+        if (request.WorkflowAttributes is not null && request.WorkflowAttributes.Count > 0)
+        {
+            var lookup = await BuildAttributeLookupAsync(request.OrderType);
+            foreach (var (name, value) in request.WorkflowAttributes)
+            {
+                if (!lookup.TryGetValue(name, out var attr))
+                {
+                    _logger.LogWarning("Unknown workflow attribute '{Name}' for order type {OrderType}", name, request.OrderType);
+                    continue;
+                }
+
+                _writeContext.JobWorkflows.Add(new JobWorkflow
+                {
+                    JobWorkflowId = Guid.NewGuid(),
+                    OrderId = order.OrderId,
+                    WorkflowId = attr.WorkflowId,
+                    WorkIndex = attr.WorkIndex,
+                    WorkTitle = value,
+                    WorkStatus = null,
+                    WorkInstruction = null,
+                    WorkNotes = null,
+                });
+            }
+            await _writeContext.SaveChangesAsync();
+        }
+
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
         return MapOrder(order, userDisplayNameLookup);
     }
@@ -315,6 +347,61 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         order.ModifiedOn = DateTime.UtcNow;
 
         await _writeContext.SaveChangesAsync();
+
+        if (request.WorkflowAttributes is not null)
+        {
+            var lookup = await BuildAttributeLookupAsync(request.OrderType);
+            var seenIds = new HashSet<Guid>();
+
+            foreach (var (name, value) in request.WorkflowAttributes)
+            {
+                if (!lookup.TryGetValue(name, out var attr))
+                {
+                    _logger.LogWarning("Unknown workflow attribute '{Name}' for order type {OrderType}", name, request.OrderType);
+                    continue;
+                }
+
+                seenIds.Add(attr.WorkflowId);
+
+                var existing = await _writeContext.JobWorkflows
+                    .FirstOrDefaultAsync(jw => jw.OrderId == orderId && jw.WorkflowId == attr.WorkflowId);
+
+                if (existing is null)
+                {
+                    _writeContext.JobWorkflows.Add(new JobWorkflow
+                    {
+                        JobWorkflowId = Guid.NewGuid(),
+                        OrderId = orderId,
+                        WorkflowId = attr.WorkflowId,
+                        WorkIndex = attr.WorkIndex,
+                        WorkTitle = value,
+                        WorkStatus = null,
+                        WorkInstruction = null,
+                        WorkNotes = null,
+                    });
+                }
+                else
+                {
+                    existing.WorkIndex = attr.WorkIndex;
+                    existing.WorkTitle = value;
+                    existing.WorkStatus = null;
+                    existing.WorkInstruction = null;
+                    existing.WorkNotes = null;
+                }
+            }
+
+            var orphaned = await _writeContext.JobWorkflows
+                .Where(jw => jw.OrderId == orderId && jw.WorkStatus == null)
+                .ToListAsync();
+
+            var toRemove = orphaned.Where(o => o.WorkflowId.HasValue && !seenIds.Contains(o.WorkflowId.Value)).ToList();
+            if (toRemove.Count > 0)
+            {
+                _writeContext.JobWorkflows.RemoveRange(toRemove);
+            }
+
+            await _writeContext.SaveChangesAsync();
+        }
 
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
         return MapOrder(order, userDisplayNameLookup);
@@ -426,7 +513,12 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                 })
                 .ToList(),
             SONumber = job.SONumber,
-            OriginalSONumber = job.OriginalSONumber
+            OriginalSONumber = job.OriginalSONumber,
+            WorkflowAttributes = job.JobWorkflows
+                .Where(w => w.Workflow != null && w.WorkStatus == null && !string.IsNullOrWhiteSpace(w.WorkTitle))
+                .ToDictionary(
+                    w => w.Workflow!.WorkflowName ?? string.Empty,
+                    w => w.WorkTitle!)
         };
     }
 
@@ -561,5 +653,17 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .FirstOrDefaultAsync();
 
         return user;
+    }
+
+    private async Task<Dictionary<string, (Guid WorkflowId, int WorkIndex)>> BuildAttributeLookupAsync(int orderType)
+    {
+        return await _readContext.Z_OrderTypeWorkflows
+            .AsNoTracking()
+            .Where(m => m.OrderType == orderType && m.WorkflowId.HasValue)
+            .Include(m => m.Workflow)
+            .Where(m => m.Workflow != null)
+            .ToDictionaryAsync(
+                m => m.Workflow!.WorkflowName ?? string.Empty,
+                m => (m.WorkflowId!.Value, m.WorkIndex));
     }
 }

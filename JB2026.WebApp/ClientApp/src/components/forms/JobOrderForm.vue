@@ -482,7 +482,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     remarks: job.remarks ?? '',
     soNumber: job.soNumber ?? '',
     originalSONumber: job.originalSONumber ?? '',
-    workflowAttributes: {},
+    workflowAttributes: job.workflowAttributes ?? {},
   }
 }
 
@@ -567,6 +567,13 @@ async function fetchWorkflowAttributes(orderType: number) {
   workflowAttributeValues.value = {}
   try {
     workflowAttributeDefs.value = await getOrderTypeWorkflowAttributes(orderType)
+    // Restore any saved values for the fetched definitions
+    const saved = draft.value.workflowAttributes ?? {}
+    for (const attr of workflowAttributeDefs.value) {
+      if (saved[attr.workflowName] !== undefined) {
+        workflowAttributeValues.value[attr.workflowName] = saved[attr.workflowName]
+      }
+    }
   } catch {
     console.warn('Failed to fetch workflow attributes for order type', orderType)
   }

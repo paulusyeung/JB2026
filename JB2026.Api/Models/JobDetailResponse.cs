@@ -35,4 +35,6 @@ public sealed class JobDetailResponse
     public string? SONumber { get; init; }
 
     public string? OriginalSONumber { get; init; }
+
+    public Dictionary<string, string>? WorkflowAttributes { get; init; }
 }
