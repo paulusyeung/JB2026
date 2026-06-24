@@ -183,6 +183,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useSessionStore } from '@/stores/session'
 import { getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
 import { getSettings, updateSettings } from '@/services/settings'
@@ -208,6 +209,7 @@ const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
 const userMap = ref<Record<string, string>>({})
 const nextOrderNumber = ref('')
+const session = useSessionStore()
 
 const draft = ref<JobOrderFormData>(props.order ? buildDraft(props.order) : buildCreateDraft())
 
@@ -287,11 +289,6 @@ const orderedByOptions = computed(() => {
   const values = new Set<string>()
   for (const value of orderedByDynamicOptions.value) {
     if (value) values.add(value)
-  }
-  for (const row of props.allOrders) {
-    if (row.orderedBy) {
-      values.add(row.orderedBy)
-    }
   }
   if (draft.value.orderedBy) values.add(draft.value.orderedBy)
   return [...values].sort((a, b) => a.localeCompare(b))
@@ -373,7 +370,8 @@ function handleCustomerChanged(customerName: string | null) {
 async function loadOrderedByOptions() {
   try {
     const users = await getAdminUsers()
-    orderedByDynamicOptions.value = users
+    const staff = users.filter((u) => u.role !== 'Guest')
+    orderedByDynamicOptions.value = staff
       .map((user) => user.displayName || user.username)
       .filter((value): value is string => Boolean(value && value.trim()))
 
@@ -407,7 +405,7 @@ function buildCreateDraft(): JobOrderFormData {
     orderTitle: '',
     customerName: props.order?.customerName ?? '',
     customerRef: props.order?.customerRef ?? '',
-    orderedBy: props.order?.orderedBy ?? '',
+    orderedBy: session.profile?.displayName ?? props.order?.orderedBy ?? '',
     orderedOn: today,
     requiredOn: today,
     qty: 1,
