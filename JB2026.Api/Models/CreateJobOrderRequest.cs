@@ -51,5 +51,8 @@ public sealed class CreateJobOrderRequest
     [StringLength(32)]
     public string? OriginalSONumber { get; init; }
 
+    [StringLength(256)]
+    public string? ProductStyle { get; init; }
+
     public Dictionary<string, string>? WorkflowAttributes { get; init; }
 }

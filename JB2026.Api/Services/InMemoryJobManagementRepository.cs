@@ -219,6 +219,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             PaymentTerms = request.PaymentTerms,
             Remarks = request.Remarks,
             ProductDetails = string.Empty,
+            ProductStyle = request.ProductStyle,
             Status = request.Status,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
@@ -250,6 +251,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             PaymentTerms = request.PaymentTerms,
             Remarks = request.Remarks,
             ProductDetails = request.ProductDetails ?? current.ProductDetails,
+            ProductStyle = request.ProductStyle ?? current.ProductStyle,
             Status = request.Status,
             OrderType = request.OrderType,
             SONumber = request.SONumber,
@@ -304,6 +306,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             PaymentTerms = job.PaymentTerms,
             Remarks = job.Remarks,
             ProductDetails = job.ProductDetails,
+            ProductStyle = job.ProductStyle ?? string.Empty,
             StyleTitles = job.StyleTitles,
             Attachments = job.Attachments
                 .Select(attachment => new JobAttachmentResponse
@@ -332,7 +335,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             CustomerRef = job.CustomerRef,
             OrderTitle = job.OrderTitle,
             ProductCode = string.Empty,
-            ProductStyle = job.StyleTitles.FirstOrDefault() ?? string.Empty,
+            ProductStyle = job.ProductStyle ?? string.Empty,
             ProductDetails = job.ProductDetails,
             OutputRef = string.Empty,
             InvoiceRef = string.Empty,
@@ -459,6 +462,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public DateTime? ModifiedOn { get; init; }
         public string? SONumber { get; init; }
         public string? OriginalSONumber { get; init; }
+        public string? ProductStyle { get; init; }
         public Dictionary<string, string>? WorkflowAttributes { get; init; }
         public required string[] StyleTitles { get; init; }
         public required IReadOnlyList<JobAttachmentRecord> Attachments { get; init; }

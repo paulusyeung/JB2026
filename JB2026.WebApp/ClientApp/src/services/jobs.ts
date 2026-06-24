@@ -16,6 +16,7 @@ interface CreateJobRequest {
   orderType: number
   soNumber?: string
   originalSONumber?: string
+  productStyle?: string
   workflowAttributes?: Record<string, string>
 }
 
@@ -32,6 +33,7 @@ interface UpdateJobRequest {
   orderType: number
   soNumber?: string
   originalSONumber?: string
+  productStyle?: string
   workflowAttributes?: Record<string, string>
 }
 
@@ -114,6 +116,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       orderType: data.orderType,
       soNumber: data.soNumber,
       originalSONumber: data.originalSONumber,
+      productStyle: data.productStyle,
       workflowAttributes: data.workflowAttributes,
     }
 
@@ -134,6 +137,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       orderType: data.orderType,
       soNumber: data.soNumber,
       originalSONumber: data.originalSONumber,
+      productStyle: data.productStyle,
       workflowAttributes: data.workflowAttributes,
     }
 

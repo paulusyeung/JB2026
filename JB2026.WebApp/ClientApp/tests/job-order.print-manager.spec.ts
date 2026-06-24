@@ -68,6 +68,8 @@ async function mockApi(page: Page): Promise<MockApiState> {
     status: 1,
     paymentTerms: 'Net 30',
     remarks: '',
+    productDetails: '',
+    productStyle: '',
     styleTitles: ['Cover Design', 'Inner Pages'],
     attachments: [],
   }

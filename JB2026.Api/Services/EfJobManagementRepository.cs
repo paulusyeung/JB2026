@@ -280,6 +280,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             Status = request.Status,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
+            ProductStyle = request.ProductStyle,
             CreatedBy = actorId,
             CreatedOn = now,
             ModifiedBy = actorId,
@@ -343,6 +344,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         order.OrderType = request.OrderType;
         order.SONumber = request.SONumber;
         order.OriginalSONumber = request.OriginalSONumber;
+        if (request.ProductStyle is not null)
+        {
+            order.ProductStyle = request.ProductStyle;
+        }
         order.ModifiedBy = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
         order.ModifiedOn = DateTime.UtcNow;
 
@@ -495,6 +500,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             PaymentTerms = job.PaymentTerms ?? string.Empty,
             Remarks = job.Remarks ?? string.Empty,
             ProductDetails = job.ProductDetails ?? string.Empty,
+            ProductStyle = job.ProductStyle ?? string.Empty,
             StyleTitles = job.JobWorkflows
                 .OrderBy(workflow => workflow.WorkIndex)
                 .Select(workflow => workflow.WorkTitle)

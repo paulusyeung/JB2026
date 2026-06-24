@@ -164,7 +164,7 @@
             </v-select>
 
             <v-text-field
-              v-model="legacyQuotationNumber"
+              v-model="draft.productStyle"
               :label="t('jobForm.fields.quotationNumber')"
               variant="outlined"
               density="compact"
@@ -352,7 +352,6 @@ const legacyOutputRef = ref('')
 const legacyInvoiceNo = ref('')
 const legacyInvoiceAmount = ref('')
 const legacyCompletedOn = ref('')
-const legacyQuotationNumber = ref('')
 const workflowAttributeDefs = ref<OrderTypeWorkflowAttribute[]>([])
 const workflowAttributeValues = ref<Record<string, string>>({})
 const previewImageUrl = ref<string | null>(null)
@@ -459,6 +458,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       remarks: '',
       soNumber: '',
       originalSONumber: '',
+      productStyle: '',
       workflowAttributes: {},
     }
   }
@@ -482,6 +482,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     remarks: job.remarks ?? '',
     soNumber: job.soNumber ?? '',
     originalSONumber: job.originalSONumber ?? '',
+    productStyle: job.productStyle ?? '',
     workflowAttributes: job.workflowAttributes ?? {},
   }
 }
@@ -524,7 +525,7 @@ function syncLegacyFields(record: JobOrderRecord | null) {
   legacyInvoiceAmount.value =
     typeof record?.invoiceAmount === 'number' ? formatAmount(record.invoiceAmount) : ''
   legacyCompletedOn.value = formatLegacyDate(record?.completedOn ?? null)
-  legacyQuotationNumber.value = record?.productStyle ?? ''
+  draft.value.productStyle = record?.productStyle ?? ''
   if (record) {
     draft.value.orderType = record.orderType
   }

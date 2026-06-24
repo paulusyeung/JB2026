@@ -349,6 +349,7 @@ export interface JobDetail extends JobListItem {
   paymentTerms: string
   remarks: string
   productDetails: string
+  productStyle: string
   styleTitles: string[]
   attachments: JobAttachment[]
   soNumber?: string
@@ -860,6 +861,7 @@ export interface JobOrderFormData {
   productDetails?: string
   soNumber?: string
   originalSONumber?: string
+  productStyle?: string
   workflowAttributes: Record<string, string>
 }
 

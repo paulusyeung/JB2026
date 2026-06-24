@@ -28,6 +28,8 @@ public sealed class JobDetailResponse
 
     public required string ProductDetails { get; init; }
 
+    public required string ProductStyle { get; init; }
+
     public required string[] StyleTitles { get; init; }
 
     public required IReadOnlyList<JobAttachmentResponse> Attachments { get; init; }
