@@ -281,6 +281,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
             ProductStyle = request.ProductStyle,
+            ProductCode = request.ProductCode,
+            OutputRef = request.OutputRef,
+            InvoiceRef = request.InvoiceRef,
+            InvoiceAmount = request.InvoiceAmount,
             CreatedBy = actorId,
             CreatedOn = now,
             ModifiedBy = actorId,
@@ -347,6 +351,22 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         if (request.ProductStyle is not null)
         {
             order.ProductStyle = request.ProductStyle;
+        }
+        if (request.ProductCode is not null)
+        {
+            order.ProductCode = request.ProductCode;
+        }
+        if (request.OutputRef is not null)
+        {
+            order.OutputRef = request.OutputRef;
+        }
+        if (request.InvoiceRef is not null)
+        {
+            order.InvoiceRef = request.InvoiceRef;
+        }
+        if (request.InvoiceAmount is not null)
+        {
+            order.InvoiceAmount = request.InvoiceAmount;
         }
         order.ModifiedBy = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
         order.ModifiedOn = DateTime.UtcNow;
@@ -501,6 +521,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             Remarks = job.Remarks ?? string.Empty,
             ProductDetails = job.ProductDetails ?? string.Empty,
             ProductStyle = job.ProductStyle ?? string.Empty,
+            ProductCode = job.ProductCode ?? string.Empty,
+            OutputRef = job.OutputRef ?? string.Empty,
+            InvoiceRef = job.InvoiceRef ?? string.Empty,
+            InvoiceAmount = job.InvoiceAmount ?? 0m,
             StyleTitles = job.JobWorkflows
                 .OrderBy(workflow => workflow.WorkIndex)
                 .Select(workflow => workflow.WorkTitle)

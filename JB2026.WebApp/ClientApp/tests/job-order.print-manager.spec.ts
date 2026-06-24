@@ -70,6 +70,10 @@ async function mockApi(page: Page): Promise<MockApiState> {
     remarks: '',
     productDetails: '',
     productStyle: '',
+    productCode: '',
+    outputRef: '',
+    invoiceRef: '',
+    invoiceAmount: 0,
     styleTitles: ['Cover Design', 'Inner Pages'],
     attachments: [],
   }

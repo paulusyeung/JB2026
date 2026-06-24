@@ -220,6 +220,10 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Remarks = request.Remarks,
             ProductDetails = string.Empty,
             ProductStyle = request.ProductStyle,
+            ProductCode = request.ProductCode,
+            OutputRef = request.OutputRef,
+            InvoiceRef = request.InvoiceRef,
+            InvoiceAmount = request.InvoiceAmount,
             Status = request.Status,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
@@ -252,6 +256,10 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Remarks = request.Remarks,
             ProductDetails = request.ProductDetails ?? current.ProductDetails,
             ProductStyle = request.ProductStyle ?? current.ProductStyle,
+            ProductCode = request.ProductCode ?? current.ProductCode,
+            OutputRef = request.OutputRef ?? current.OutputRef,
+            InvoiceRef = request.InvoiceRef ?? current.InvoiceRef,
+            InvoiceAmount = request.InvoiceAmount ?? current.InvoiceAmount,
             Status = request.Status,
             OrderType = request.OrderType,
             SONumber = request.SONumber,
@@ -307,6 +315,10 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             Remarks = job.Remarks,
             ProductDetails = job.ProductDetails,
             ProductStyle = job.ProductStyle ?? string.Empty,
+            ProductCode = job.ProductCode ?? string.Empty,
+            OutputRef = job.OutputRef ?? string.Empty,
+            InvoiceRef = job.InvoiceRef ?? string.Empty,
+            InvoiceAmount = job.InvoiceAmount ?? 0m,
             StyleTitles = job.StyleTitles,
             Attachments = job.Attachments
                 .Select(attachment => new JobAttachmentResponse
@@ -334,12 +346,12 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             CustomerName = job.CustomerName,
             CustomerRef = job.CustomerRef,
             OrderTitle = job.OrderTitle,
-            ProductCode = string.Empty,
+            ProductCode = job.ProductCode ?? string.Empty,
             ProductStyle = job.ProductStyle ?? string.Empty,
             ProductDetails = job.ProductDetails,
-            OutputRef = string.Empty,
-            InvoiceRef = string.Empty,
-            InvoiceAmount = 0m,
+            OutputRef = job.OutputRef ?? string.Empty,
+            InvoiceRef = job.InvoiceRef ?? string.Empty,
+            InvoiceAmount = job.InvoiceAmount ?? 0m,
             AttachmentProductCount = 0,
             AttachmentCustomerCount = 0,
             OrderedBy = job.OrderedBy,
@@ -463,6 +475,10 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public string? SONumber { get; init; }
         public string? OriginalSONumber { get; init; }
         public string? ProductStyle { get; init; }
+        public string? ProductCode { get; init; }
+        public string? OutputRef { get; init; }
+        public string? InvoiceRef { get; init; }
+        public decimal? InvoiceAmount { get; init; }
         public Dictionary<string, string>? WorkflowAttributes { get; init; }
         public required string[] StyleTitles { get; init; }
         public required IReadOnlyList<JobAttachmentRecord> Attachments { get; init; }

@@ -78,7 +78,7 @@
             />
 
             <v-text-field
-              v-model="legacyProductCode"
+              v-model="draft.productCode"
               :label="t('jobForm.fields.productCode')"
               variant="outlined"
               density="compact"
@@ -205,7 +205,7 @@
             />
 
             <v-text-field
-              v-model="legacyOutputRef"
+              v-model="draft.outputRef"
               :label="t('jobForm.fields.outputReference')"
               variant="outlined"
               density="compact"
@@ -213,7 +213,7 @@
             />
 
             <v-text-field
-              v-model="legacyInvoiceNo"
+              v-model="draft.invoiceRef"
               :label="t('jobForm.fields.invoiceNumber')"
               variant="outlined"
               density="compact"
@@ -221,7 +221,7 @@
             />
 
             <v-text-field
-              v-model="legacyInvoiceAmount"
+              v-model.number="draft.invoiceAmount"
               :label="t('jobForm.fields.invoiceAmount')"
               variant="outlined"
               density="compact"
@@ -347,10 +347,6 @@ const { t } = useI18n({ useScope: 'global' })
 const { orderTypeOptions } = useOrderTypeOptions()
 const legacyRecord = ref<JobOrderRecord | null>(null)
 const legacyBrand = computed(() => draft.value.orderTitle ?? '')
-const legacyProductCode = ref('')
-const legacyOutputRef = ref('')
-const legacyInvoiceNo = ref('')
-const legacyInvoiceAmount = ref('')
 const legacyCompletedOn = ref('')
 const workflowAttributeDefs = ref<OrderTypeWorkflowAttribute[]>([])
 const workflowAttributeValues = ref<Record<string, string>>({})
@@ -459,6 +455,10 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       soNumber: '',
       originalSONumber: '',
       productStyle: '',
+      productCode: '',
+      outputRef: '',
+      invoiceRef: '',
+      invoiceAmount: undefined,
       workflowAttributes: {},
     }
   }
@@ -483,6 +483,10 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     soNumber: job.soNumber ?? '',
     originalSONumber: job.originalSONumber ?? '',
     productStyle: job.productStyle ?? '',
+    productCode: job.productCode ?? '',
+    outputRef: job.outputRef ?? '',
+    invoiceRef: job.invoiceRef ?? '',
+    invoiceAmount: job.invoiceAmount ?? undefined,
     workflowAttributes: job.workflowAttributes ?? {},
   }
 }
@@ -519,11 +523,10 @@ function formatAmount(value: number): string {
 }
 
 function syncLegacyFields(record: JobOrderRecord | null) {
-  legacyProductCode.value = record?.productCode ?? ''
-  legacyOutputRef.value = record?.outputRef ?? ''
-  legacyInvoiceNo.value = record?.invoiceRef ?? ''
-  legacyInvoiceAmount.value =
-    typeof record?.invoiceAmount === 'number' ? formatAmount(record.invoiceAmount) : ''
+  draft.value.productCode = record?.productCode ?? ''
+  draft.value.outputRef = record?.outputRef ?? ''
+  draft.value.invoiceRef = record?.invoiceRef ?? ''
+  draft.value.invoiceAmount = record?.invoiceAmount ?? undefined
   legacyCompletedOn.value = formatLegacyDate(record?.completedOn ?? null)
   draft.value.productStyle = record?.productStyle ?? ''
   if (record) {

@@ -30,6 +30,14 @@ public sealed class JobDetailResponse
 
     public required string ProductStyle { get; init; }
 
+    public required string ProductCode { get; init; }
+
+    public required string OutputRef { get; init; }
+
+    public required string InvoiceRef { get; init; }
+
+    public required decimal InvoiceAmount { get; init; }
+
     public required string[] StyleTitles { get; init; }
 
     public required IReadOnlyList<JobAttachmentResponse> Attachments { get; init; }

@@ -54,5 +54,16 @@ public sealed class CreateJobOrderRequest
     [StringLength(256)]
     public string? ProductStyle { get; init; }
 
+    [StringLength(128)]
+    public string? ProductCode { get; init; }
+
+    [StringLength(128)]
+    public string? OutputRef { get; init; }
+
+    [StringLength(128)]
+    public string? InvoiceRef { get; init; }
+
+    public decimal? InvoiceAmount { get; init; }
+
     public Dictionary<string, string>? WorkflowAttributes { get; init; }
 }
