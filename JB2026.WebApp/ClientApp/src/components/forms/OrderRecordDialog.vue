@@ -389,7 +389,10 @@ async function loadOrderedByOptions() {
 async function loadNextOrderNumber() {
   try {
     const settings = await getSettings()
-    nextOrderNumber.value = settings.nextOrderNumber
+    // nextOrderNumber.value = settings.nextOrderNumber
+    // Convert the number to a string and pad it to a length of 6 with '0'
+    nextOrderNumber.value = String(settings.nextOrderNumber).padStart(6, '0');
+
   } catch {
     // Non-critical; save will fail validation if nextOrderNumber is unavailable.
   }
