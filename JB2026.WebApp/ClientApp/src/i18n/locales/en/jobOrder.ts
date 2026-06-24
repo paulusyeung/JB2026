@@ -345,6 +345,7 @@ export const jobOrderMessages = {
         },
         fields: {
           orderNumber: 'Order Number',
+          orderNumberAuto: 'Automatic Generated',
           jobNumber: 'Job Number',
           customerName: 'Customer Name',
           brand: 'Brand',

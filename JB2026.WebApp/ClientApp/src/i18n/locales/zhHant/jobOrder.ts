@@ -345,6 +345,7 @@ export const jobOrderMessages = {
         },
         fields: {
           orderNumber: '訂單編號',
+          orderNumberAuto: '自動產生',
           jobNumber: '作業編號',
           customerName: '客戶名稱',
           brand: '品牌',

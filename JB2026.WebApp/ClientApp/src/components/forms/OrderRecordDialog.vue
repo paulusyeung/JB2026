@@ -29,9 +29,10 @@
           <v-text-field
             v-model="draft.orderNumber"
             :label="t('jobOrder.record.fields.orderNumber')"
+            :placeholder="mode === 'create' ? t('jobOrder.record.fields.orderNumberAuto') : ''"
             variant="outlined"
             density="compact"
-            :readonly="mode === 'edit'"
+            readonly
           />
         </v-col>
         <v-col cols="12" md="4">
@@ -184,6 +185,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
+import { getSettings, updateSettings } from '@/services/settings'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
 
 const props = defineProps<{
@@ -205,6 +207,7 @@ const errorMessage = ref('')
 const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
 const userMap = ref<Record<string, string>>({})
+const nextOrderNumber = ref('')
 
 const draft = ref<JobOrderFormData>(props.order ? buildDraft(props.order) : buildCreateDraft())
 
@@ -219,7 +222,10 @@ watch(
 )
 
 onMounted(async () => {
-  await loadOrderedByOptions()
+  await Promise.all([
+    loadOrderedByOptions(),
+    loadNextOrderNumber(),
+  ])
 })
 
 const orderModifiedOn = computed(() => props.order?.modifiedOn ?? null)
@@ -318,6 +324,7 @@ function buildDraft(order: JobOrderRecord): JobOrderFormData {
     orderType: order.orderType,
     paymentTerms: order.paymentTerms ?? '',
     remarks: order.remarks ?? '',
+    workflowAttributes: {},
   }
 }
 
@@ -381,6 +388,15 @@ async function loadOrderedByOptions() {
   }
 }
 
+async function loadNextOrderNumber() {
+  try {
+    const settings = await getSettings()
+    nextOrderNumber.value = settings.nextOrderNumber
+  } catch {
+    // Non-critical; save will fail validation if nextOrderNumber is unavailable.
+  }
+}
+
 function buildCreateDraft(): JobOrderFormData {
   const today = new Date().toISOString().slice(0, 10)
 
@@ -399,11 +415,12 @@ function buildCreateDraft(): JobOrderFormData {
     orderType: 0,
     paymentTerms: props.order?.paymentTerms || 'Net 30',
     remarks: '',
+    workflowAttributes: {},
   }
 }
 
 function validateDraft() {
-  if (!draft.value.orderNumber.trim()) return t('jobOrder.record.validation.orderNumber')
+  if (mode.value !== 'create' && !draft.value.orderNumber.trim()) return t('jobOrder.record.validation.orderNumber')
   if (!draft.value.jobNumber.trim()) return t('jobOrder.record.validation.jobNumber')
   if (!draft.value.customerName.trim()) return t('jobOrder.record.validation.customerName')
   if (!draft.value.orderTitle.trim()) return t('jobOrder.record.validation.orderTitle')
@@ -426,6 +443,13 @@ async function handleSave(closeAfterSave = false) {
 
   try {
     if (mode.value === 'create') {
+      if (!nextOrderNumber.value) {
+        errorMessage.value = t('jobOrder.record.saveFailed')
+        return
+      }
+
+      draft.value.orderNumber = nextOrderNumber.value
+
       const created = await createJobOrder({
         orderNumber: draft.value.orderNumber,
         jobNumber: draft.value.jobNumber,
@@ -439,6 +463,16 @@ async function handleSave(closeAfterSave = false) {
         remarks: draft.value.remarks,
         status: draft.value.status,
       })
+
+      const incremented = String(Number(nextOrderNumber.value) + 1)
+      nextOrderNumber.value = incremented
+
+      try {
+        const current = await getSettings()
+        await updateSettings({ ...current, nextOrderNumber: incremented })
+      } catch {
+        // Non-critical: local nextOrderNumber is already incremented
+      }
 
       emit('saved', created.orderId)
       if (closeAfterSave) {
