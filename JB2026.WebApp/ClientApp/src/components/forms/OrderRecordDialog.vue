@@ -41,7 +41,6 @@
             :label="t('jobOrder.record.fields.orderedOn')"
             variant="outlined"
             density="compact"
-            :readonly="mode === 'edit'"
           />
         </v-col>
         <v-col cols="12" md="4">
@@ -61,7 +60,7 @@
             :label="t('jobOrder.record.fields.customerName')"
             variant="outlined"
             density="compact"
-            :disabled="mode === 'edit'"
+            :readonly="mode === 'edit'"
             @update:model-value="handleCustomerChanged"
           />
         </v-col>
@@ -72,7 +71,7 @@
             :label="t('jobOrder.record.fields.salesRep')"
             variant="outlined"
             density="compact"
-            :disabled="mode === 'edit'"
+            :readonly="mode === 'edit'"
           />
         </v-col>
         <v-col cols="12" md="4">
@@ -81,7 +80,6 @@
             :label="t('jobOrder.record.fields.invoiceNo')"
             variant="outlined"
             density="compact"
-            readonly
           />
         </v-col>
 
@@ -100,7 +98,6 @@
             :label="t('jobOrder.record.fields.requiredOn')"
             variant="outlined"
             density="compact"
-            :readonly="mode === 'edit'"
           />
         </v-col>
         <v-col cols="12" md="4">
@@ -109,7 +106,6 @@
             :label="t('jobOrder.record.fields.invoiceAmount')"
             variant="outlined"
             density="compact"
-            readonly
           />
         </v-col>
       </v-row>
@@ -544,5 +540,15 @@ function formatAmount(value: number | null | undefined) {
 
 .order-record-grid :deep(thead th) {
   white-space: nowrap;
+}
+
+.order-record-dialog :deep(.v-input:has(input[readonly]) .v-field),
+.order-record-dialog :deep(.v-input:has(textarea[readonly]) .v-field) {
+  background: #e8e8e8;
+}
+
+:deep(.v-theme--dark) .order-record-dialog .v-input:has(input[readonly]) .v-field,
+:deep(.v-theme--dark) .order-record-dialog .v-input:has(textarea[readonly]) .v-field {
+  background: #2f3841;
 }
 </style>
