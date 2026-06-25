@@ -7,6 +7,7 @@ interface CreateJobOrderRequest {
   customerName: string
   customerRef: string
   orderTitle: string
+  orderedBy: string
   orderedOn: string
   requiredOn: string
   qty: number

@@ -24,6 +24,10 @@ public sealed class CreateJobOrderRequest
     public string OrderTitle { get; init; } = string.Empty;
 
     [Required]
+    [StringLength(64)]
+    public string OrderedBy { get; init; } = string.Empty;
+
+    [Required]
     public DateTime OrderedOn { get; init; }
 
     [Required]
@@ -40,7 +44,7 @@ public sealed class CreateJobOrderRequest
     public string Remarks { get; init; } = string.Empty;
 
     [Range(0, 99)]
-    public int Status { get; init; }
+    public int Status { get; init; } = 1;
 
     [Range(0, 3)]
     public int OrderType { get; init; }

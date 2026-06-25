@@ -271,7 +271,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             CustomerName = request.CustomerName,
             CustomerRef = request.CustomerRef,
             OrderTitle = request.OrderTitle,
-            OrderedBy = actor,
+            OrderedBy = request.OrderedBy,
             OrderedOn = request.OrderedOn,
             RequiredOn = request.RequiredOn,
             Qty = request.Qty,
@@ -289,7 +289,9 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             CreatedOn = now,
             ModifiedBy = actorId,
             ModifiedOn = now,
-            Retired = false
+            Retired = false,
+            RetiredOn = new DateTime(1900, 1, 1),
+            RetiredBy = Guid.Empty
         };
 
         _writeContext.JobOrders.Add(order);

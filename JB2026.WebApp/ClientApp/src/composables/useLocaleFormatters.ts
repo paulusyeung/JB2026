@@ -12,13 +12,24 @@ function toBcp47Locale(locale: string): string {
   }
 }
 
+function parseISODateString(value: string): Date {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) {
+    const year = Number.parseInt(match[1], 10)
+    const month = Number.parseInt(match[2], 10) - 1
+    const day = Number.parseInt(match[3], 10)
+    return new Date(year, month, day)
+  }
+  return new Date(value)
+}
+
 export function useLocaleFormatters() {
   const { locale } = useI18n({ useScope: 'global' })
 
   const activeLocale = computed(() => toBcp47Locale(locale.value))
 
   function formatDate(value: string | Date): string {
-    const date = typeof value === 'string' ? new Date(value) : value
+    const date = typeof value === 'string' ? parseISODateString(value) : value
     if (Number.isNaN(date.getTime())) {
       return ''
     }
