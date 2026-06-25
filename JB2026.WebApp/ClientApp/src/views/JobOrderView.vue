@@ -59,6 +59,7 @@
         @saved="handleSaved"
         @deleted="handleDeleted"
         @open-order="handleOpenOrder"
+        @open-job-form="handleOpenJobForm"
         @cancel="formOpen = false"
       />
     </v-dialog>
@@ -192,6 +193,10 @@ async function handleOpenOrder(orderId: string) {
   }
 }
 
+function handleOpenJobForm(_orderId: string) {
+  // JobOrderView does not have a job form dialog, so we just open the order record
+  // This is handled by the @open-order event instead
+}
 
 
 function formatQty(value: number) {

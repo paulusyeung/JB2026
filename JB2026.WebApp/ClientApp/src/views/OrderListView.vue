@@ -40,6 +40,10 @@
           {{ errorMessage }}
         </v-snackbar>
 
+        <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
+          {{ actionNoticeMessage }}
+        </v-snackbar>
+
         <div class="toolbar-bar mb-2">
           <v-menu location="bottom">
             <template #activator="{ props }">
@@ -381,7 +385,7 @@
                   </template>
 
                   <template #[`item.orderNumber`]="{ item: detail }">
-                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openJobForm(detail)">
+                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openJobForm(detail.orderId)">
                       {{ detail.orderNumber }}-{{ detail.jobNumber }}
                     </v-btn>
                   </template>
@@ -435,6 +439,7 @@
         @saved="handleSaved"
         @deleted="handleDeleted"
         @open-order="handleOpenOrder"
+        @open-job-form="handleOpenJobForm"
         @cancel="formOpen = false"
       />
     </v-dialog>
@@ -445,15 +450,26 @@
         :job="jobFormJob"
         @saved="handleJobSaved"
         @cancel="jobFormOpen = false"
+        @attachment="handleAttachment"
+        @print-order="handlePrintOrder"
+        @workflow="handleWorkflow"
         @product-details-edit="handleProductDetailsEdit"
       />
     </v-dialog>
 
     <JobOrderActionDialogs
       :job="jobFormJob"
-      :attachment-open="false"
+      v-model:attachment-open="attachmentDialogOpen"
       v-model:product-details-open="productDetailsDialogOpen"
       @updated="handleActionUpdated"
+      @error="showActionNotice"
+    />
+
+    <JobOrderPrintManagerDialog
+      v-model="printManagerOpen"
+      :order-id="printManagerJob?.orderId ?? null"
+      :order-number="printManagerJob?.orderNumber ?? ''"
+      :style-titles="printManagerJob?.styleTitles"
     />
   </section>
 </template>
@@ -461,14 +477,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
+import { getJobDetail } from '@/services/jobs'
 import { getInvoiceSummary, type InvoiceBillingSummary } from '@/services/billing'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
+import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 
 type OrderListViewMode = 'detail' | 'card'
@@ -488,6 +507,11 @@ const deleting = ref(false)
 const jobFormOpen = ref(false)
 const jobFormJob = ref<JobDetail | null>(null)
 const productDetailsDialogOpen = ref(false)
+const attachmentDialogOpen = ref(false)
+const printManagerOpen = ref(false)
+const printManagerJob = ref<JobDetail | null>(null)
+const actionNoticeOpen = ref(false)
+const actionNoticeMessage = ref('')
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const {
@@ -523,6 +547,7 @@ const {
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
+const router = useRouter()
 const display = useDisplay()
 const isPhoneLayout = computed(() => display.smAndDown.value)
 const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
@@ -761,18 +786,22 @@ function setViewMode(mode: OrderListViewMode) {
 }
 
 async function onDetailRowClick(_event: Event, payload: { item: JobOrderRecord }) {
-  await openJobForm(payload.item)
+  await openJobForm(payload.item.orderId)
 }
 
-async function openJobForm(record: JobOrderRecord) {
+async function openJobForm(orderId: string) {
   try {
-    const latest = await getJobOrder(record.orderId)
-    jobFormJob.value = latest as unknown as JobDetail
+    const latest = await getJobDetail(orderId)
+    jobFormJob.value = latest
     jobFormOpen.value = true
   } catch {
     errorMessage.value = t('jobOrder.openEditFailed')
     snackbarOpen.value = true
   }
+}
+
+function handleOpenJobForm(orderId: string) {
+  openJobForm(orderId)
 }
 
 async function handleJobSaved() {
@@ -789,11 +818,31 @@ function handleProductDetailsEdit(job: JobDetail) {
 async function handleActionUpdated() {
   if (!jobFormJob.value) return
   try {
-    const latest = await getJobOrder(jobFormJob.value.orderId!)
-    jobFormJob.value = latest as unknown as JobDetail
+    const latest = await getJobDetail(jobFormJob.value.orderId!)
+    jobFormJob.value = latest
   } catch {
     // ignore
   }
+}
+
+function handleAttachment(job: JobDetail) {
+  jobFormJob.value = job
+  attachmentDialogOpen.value = true
+}
+
+function handlePrintOrder(job: JobDetail) {
+  jobFormJob.value = job
+  printManagerJob.value = job
+  printManagerOpen.value = true
+}
+
+function handleWorkflow(job: JobDetail) {
+  void router.push({ name: 'admin-workflow', query: { orderId: job.orderId } })
+}
+
+function showActionNotice(message: string) {
+  actionNoticeMessage.value = message
+  actionNoticeOpen.value = true
 }
 
 async function openEdit(record: JobOrderRecord) {

@@ -371,6 +371,7 @@ export const jobOrderMessages = {
           save: 'Save',
           saveClose: 'Save & Close',
           importJobs: 'Import Jobs',
+          openJobForm: 'Open Job Form',
         },
         importJobsUnavailable: 'Import jobs is not available yet in the modern app.',
         deleteConfirm: 'Delete order {order}? This action cannot be undone.',
@@ -387,5 +388,11 @@ export const jobOrderMessages = {
           requiredAfterOrdered: 'Required date must be on or after ordered date.',
           qty: 'Quantity must be greater than 0.',
         },
+      },
+      status: {
+        notStarted: 'Not Started',
+        inProgress: 'In Progress',
+        paused: 'Paused',
+        completed: 'Completed',
       },
     } as const

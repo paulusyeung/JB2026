@@ -370,6 +370,7 @@ export const jobOrderMessages = {
           save: '保存',
           saveClose: '保存并关闭',
           importJobs: '导入作业',
+          openJobForm: '打开作业表单',
         },
         importJobsUnavailable: '现代化界面暂未提供导入作业功能。',
         deleteConfirm: '确定删除订单 {order}？此操作无法撤销。',
@@ -386,5 +387,11 @@ export const jobOrderMessages = {
           requiredAfterOrdered: '要求日期必须晚于或等于下单日期。',
           qty: '数量必须大于 0。',
         },
+      },
+      status: {
+        notStarted: '尚未开始',
+        inProgress: '进行中',
+        paused: '已暂停',
+        completed: '已完成',
       },
     } as const

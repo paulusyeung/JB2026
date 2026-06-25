@@ -142,14 +142,27 @@
           <v-icon size="small">mdi-paperclip</v-icon>
         </template>
         <template #[`item.indicator`]="{ item }">
-          <v-icon :color="item.orderId === orderId ? 'primary' : statusColor(item.status)" size="16">
-            {{ item.orderId === orderId ? 'mdi-circle-slice-8' : statusIcon(item.status) }}
-          </v-icon>
+          <v-tooltip :text="statusLabel(item.status)" location="top">
+            <template v-slot:activator="{ props }">
+              <v-icon
+                v-bind="props"
+                :color="item.orderId === orderId ? 'primary' : statusColor(item.status)"
+                size="16"
+              >
+                {{ item.orderId === orderId ? 'mdi-flag-checkered' : statusIcon(item.status) }}
+              </v-icon>
+            </template>
+          </v-tooltip>
         </template>
         <template #[`item.orderNumber`]="{ item }">
-          <v-btn variant="text" density="comfortable" class="px-0 text-none" @click.stop="emit('open-order', item.orderId)">
-            <v-icon color="success" size="16" class="mr-1">mdi-tag-outline</v-icon>
-            {{ item.orderNumber }}
+          <v-btn
+            variant="text"
+            color="primary"
+            density="comfortable"
+            class="px-0 text-none"
+            @click.stop="emit('open-job-form', item.orderId)"
+          >
+            {{ compositeOrderNumber(item) }}
           </v-btn>
         </template>
         <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
@@ -176,7 +189,7 @@
 
     <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
       <v-spacer />
-      <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('jobOrder.dismiss') }}</v-btn>
+      <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('common.cancel') }}</v-btn>
       <v-btn color="primary" :loading="saving" @click="handleSave">{{ t('jobOrder.record.actions.save') }}</v-btn>
       <v-btn variant="tonal" :loading="saving" @click="handleSave(true)">{{ t('jobOrder.record.actions.saveClose') }}</v-btn>
     </v-card-actions>
@@ -201,6 +214,7 @@ const emit = defineEmits<{
   (e: 'saved', orderId: string): void
   (e: 'cancel'): void
   (e: 'open-order', orderId: string): void
+  (e: 'open-job-form', orderId: string): void
   (e: 'deleted'): void
 }>()
 
@@ -236,10 +250,13 @@ onMounted(async () => {
 const orderModifiedOn = computed(() => props.order?.modifiedOn ?? null)
 const orderId = computed(() => props.order?.orderId ?? null)
 
+function compositeOrderNumber(record: JobOrderRecord): string {
+  return record.jobNumber ? `${record.orderNumber}-${record.jobNumber}` : record.orderNumber
+}
+
 const relatedHeaders = computed(() => [
-  { title: t('jobOrder.headers.order'), key: 'orderNumber', width: '130px' },
+  { title: t('jobOrder.record.fields.orderNumber'), key: 'orderNumber', width: '150px' },
   { title: '', key: 'indicator', sortable: false, width: '36px' },
-  { title: '#', key: 'jobNumber', width: '40px' },
   { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '110px' },
   { title: t('jobOrder.headers.customer'), key: 'customerName', width: '160px' },
   { title: t('jobOrder.record.fields.brand'), key: 'orderTitle', width: '200px' },
@@ -552,10 +569,17 @@ function handleImportJobs() {
 }
 
 function statusIcon(status: number) {
-  if (status >= 3) return 'mdi-check-circle-outline'
-  if (status === 2) return 'mdi-pause-circle-outline'
-  if (status === 1) return 'mdi-progress-clock'
-  return 'mdi-circle-outline'
+  if (status >= 3) return 'mdi-flag-check'
+  if (status === 2) return 'mdi-flag-outline'
+  if (status === 1) return 'mdi-flag-variant-outline'
+  return 'mdi-flag-minus-outline'
+}
+
+function statusLabel(status: number): string {
+  if (status >= 3) return t('jobOrder.status.completed')
+  if (status === 2) return t('jobOrder.status.paused')
+  if (status === 1) return t('jobOrder.status.inProgress')
+  return t('jobOrder.status.notStarted')
 }
 
 function statusColor(status: number) {
@@ -593,6 +617,13 @@ function formatUser(userId: string | null | undefined): string {
 
 .order-record-grid :deep(thead th) {
   white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.order-record-grid :deep(tbody td) {
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .order-record-dialog :deep(.v-input:has(input[readonly]) .v-field),

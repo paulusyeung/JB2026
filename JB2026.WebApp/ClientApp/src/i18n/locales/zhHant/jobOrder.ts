@@ -371,6 +371,7 @@ export const jobOrderMessages = {
           save: '儲存',
           saveClose: '儲存並關閉',
           importJobs: '匯入作業',
+          openJobForm: '開啟作業表單',
         },
         importJobsUnavailable: '現代化介面尚未提供匯入作業功能。',
         deleteConfirm: '確定刪除訂單 {order}？此操作無法復原。',
@@ -387,5 +388,11 @@ export const jobOrderMessages = {
           requiredAfterOrdered: '需求日期必須晚於或等於下單日期。',
           qty: '數量必須大於 0。',
         },
+      },
+      status: {
+        notStarted: '尚未開始',
+        inProgress: '進行中',
+        paused: '已暫停',
+        completed: '已完成',
       },
     } as const
