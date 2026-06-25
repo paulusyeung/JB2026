@@ -310,7 +310,7 @@ const orderedByOptions = computed(() => {
 const relatedOrders = computed(() => {
   if (!props.order) return []
   return props.allOrders
-    .filter((row) => row.orderNumber === props.order!.orderNumber)
+    .filter((row) => row.orderNumber === props.order!.orderNumber && Number(row.jobNumber) !== 0)
     .sort((a, b) => {
       const left = Number.parseInt(a.jobNumber, 10)
       const right = Number.parseInt(b.jobNumber, 10)
