@@ -251,6 +251,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             CustomerRef = request.CustomerRef,
             OrderTitle = request.OrderTitle,
             RequiredOn = request.RequiredOn,
+            OrderedOn = request.OrderedOn ?? current.OrderedOn,
             Qty = request.Qty,
             PaymentTerms = request.PaymentTerms,
             Remarks = request.Remarks,

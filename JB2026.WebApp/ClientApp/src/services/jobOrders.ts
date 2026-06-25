@@ -13,6 +13,8 @@ interface CreateJobOrderRequest {
   paymentTerms: string
   remarks: string
   status: number
+  invoiceRef?: string
+  invoiceAmount?: number
   soNumber?: string
   originalSONumber?: string
 }
@@ -21,11 +23,14 @@ interface UpdateJobOrderRequest {
   customerName: string
   customerRef: string
   orderTitle: string
+  orderedOn: string
   requiredOn: string
   qty: number
   paymentTerms: string
   remarks: string
   status: number
+  invoiceRef?: string
+  invoiceAmount?: number
   soNumber?: string
   originalSONumber?: string
 }

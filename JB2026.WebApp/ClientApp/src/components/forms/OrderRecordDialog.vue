@@ -77,7 +77,7 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-text-field
-            :model-value="order?.invoiceRef || '-'"
+            v-model="draft.invoiceRef"
             :label="t('jobOrder.record.fields.invoiceNo')"
             variant="outlined"
             density="compact"
@@ -103,7 +103,10 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-text-field
-            :model-value="formatAmount(order?.invoiceAmount)"
+            v-model.number="draft.invoiceAmount"
+            type="number"
+            step="0.01"
+            min="0"
             :label="t('jobOrder.record.fields.invoiceAmount')"
             variant="outlined"
             density="compact"
@@ -287,10 +290,20 @@ const customerProfiles = computed(() => {
 
 const orderedByOptions = computed(() => {
   const values = new Set<string>()
+  
+  // 1. Add all names from the server list (non-Guest users)
   for (const value of orderedByDynamicOptions.value) {
     if (value) values.add(value)
   }
+  
+  // 2. Include names from historical orders to ensure previously used sales reps are available
+  for (const order of props.allOrders) {
+    if (order.orderedBy) values.add(order.orderedBy)
+  }
+  
+  // 3. Ensure the currently selected draft value is included
   if (draft.value.orderedBy) values.add(draft.value.orderedBy)
+  
   return [...values].sort((a, b) => a.localeCompare(b))
 })
 
@@ -320,6 +333,8 @@ function buildDraft(order: JobOrderRecord): JobOrderFormData {
     status: order.status,
     orderType: order.orderType,
     paymentTerms: order.paymentTerms ?? '',
+    invoiceRef: order.invoiceRef ?? '',
+    invoiceAmount: order.invoiceAmount,
     remarks: order.remarks ?? '',
     workflowAttributes: {},
   }
@@ -415,6 +430,8 @@ function buildCreateDraft(): JobOrderFormData {
     status: 0,
     orderType: 0,
     paymentTerms: props.order?.paymentTerms || 'Net 30',
+    invoiceRef: '',
+    invoiceAmount: 0,
     remarks: '',
     workflowAttributes: {},
   }
@@ -463,6 +480,8 @@ async function handleSave(closeAfterSave = false) {
         paymentTerms: draft.value.paymentTerms || 'Net 30',
         remarks: draft.value.remarks,
         status: draft.value.status,
+        invoiceRef: draft.value.invoiceRef || '',
+        invoiceAmount: draft.value.invoiceAmount,
       })
 
       const incremented = String(Number(nextOrderNumber.value) + 1)
@@ -484,11 +503,14 @@ async function handleSave(closeAfterSave = false) {
         customerName: draft.value.customerName,
         customerRef: draft.value.customerRef,
         orderTitle: draft.value.orderTitle,
+        orderedOn: draft.value.orderedOn,
         requiredOn: draft.value.requiredOn,
         qty: draft.value.qty,
         paymentTerms: draft.value.paymentTerms || 'Net 30',
         remarks: draft.value.remarks,
         status: draft.value.status,
+        invoiceRef: draft.value.invoiceRef || '',
+        invoiceAmount: draft.value.invoiceAmount,
       })
 
       emit('saved', updated.orderId)
@@ -561,10 +583,6 @@ function formatUser(userId: string | null | undefined): string {
   return userMap.value[userId] || userId
 }
 
-function formatAmount(value: number | null | undefined) {
-  if (!value) return ''
-  return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
-}
 </script>
 
 <style scoped>

@@ -18,6 +18,8 @@ public sealed class UpdateJobOrderRequest
     [Required]
     public DateTime RequiredOn { get; init; }
 
+    public DateTime? OrderedOn { get; init; }
+
     [Range(0.01, 1000000)]
     public decimal Qty { get; init; }
 

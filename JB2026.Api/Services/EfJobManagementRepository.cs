@@ -337,6 +337,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         order.CustomerRef = request.CustomerRef;
         order.OrderTitle = request.OrderTitle;
         order.RequiredOn = request.RequiredOn;
+        if (request.OrderedOn is not null)
+        {
+            order.OrderedOn = request.OrderedOn;
+        }
         order.Qty = request.Qty;
         order.PaymentTerms = request.PaymentTerms;
         order.Remarks = request.Remarks;
