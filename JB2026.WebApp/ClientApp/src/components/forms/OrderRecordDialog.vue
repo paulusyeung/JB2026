@@ -114,85 +114,93 @@
         </v-col>
       </v-row>
 
-      <div class="d-flex flex-wrap ga-2 mt-2 mb-3">
-        <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" color="primary" @click="resetDraft">
-          {{ t('jobOrder.record.actions.addNew') }}
-        </v-btn>
-        <v-btn size="small" variant="tonal" prepend-icon="mdi-refresh" @click="refreshDraft">
-          {{ t('jobOrder.record.actions.refresh') }}
-        </v-btn>
-        <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="mode === 'create'" @click="handleDelete">
-          {{ t('jobOrder.record.actions.delete') }}
-        </v-btn>
-        <v-btn size="small" variant="outlined" prepend-icon="mdi-archive-arrow-down" @click="handleImportJobs">
-          {{ t('jobOrder.record.actions.importJobs') }}
-        </v-btn>
-      </div>
-
-      <v-data-table
-        :headers="relatedHeaders"
-        :items="relatedOrders"
-        item-value="orderId"
-        density="compact"
-        :items-per-page="10"
-        class="order-record-grid text-no-wrap"
-        @click:row="onRelatedRowClick"
+      <!-- GROUP 1: Basic Info -->
+      <!-- elevation="1" adds a subtle shadow. rounded makes corners smooth. -->
+      <v-sheet 
+        color="grey-lighten-4" 
+        elevation="1" 
+        rounded="lg" 
+        class="pa-4 mb-4 d-flex flex-column gap-2"
       >
-        <template #[`header.attachments`]>
-          <v-icon size="small">mdi-paperclip</v-icon>
-        </template>
-        <template #[`item.indicator`]="{ item }">
-          <v-tooltip :text="statusLabel(item.status)" location="top">
-            <template v-slot:activator="{ props }">
-              <v-icon
-                v-bind="props"
-                :color="item.orderId === orderId ? 'primary' : statusColor(item.status)"
-                size="16"
-              >
-                {{ item.orderId === orderId ? 'mdi-flag-checkered' : statusIcon(item.status) }}
-              </v-icon>
-            </template>
-          </v-tooltip>
-        </template>
-        <template #[`item.orderNumber`]="{ item }">
-          <v-btn
-            variant="text"
-            color="primary"
-            density="comfortable"
-            class="px-0 text-none"
-            @click.stop="emit('open-job-form', item.orderId)"
-          >
-            {{ compositeOrderNumber(item) }}
+        <div class="d-flex flex-wrap ga-2 mt-2 mb-3">
+          <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" color="primary" @click="resetDraft">
+            {{ t('jobOrder.record.actions.addNew') }}
           </v-btn>
-        </template>
-        <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
-        <template #[`item.attachments`]="{ item }">
-          <v-icon v-if="item.attachmentProductCount && item.attachmentProductCount > 0" color="success" size="16">mdi-circle</v-icon>
-        </template>
-        <template #[`header.customerAttachments`]>
-          <v-icon size="small">mdi-paperclip</v-icon>
-        </template>
-        <template #[`item.customerAttachments`]="{ item }">
-          <v-icon v-if="item.attachmentCustomerCount && item.attachmentCustomerCount > 0" color="error" size="16">mdi-circle-outline</v-icon>
-        </template>
-        <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
-        <template #[`item.modifiedOn`]="{ item }">{{ formatDateTime(item.modifiedOn) }}</template>
-        <template #[`item.modifiedBy`]="{ item }">{{ formatUser(item.modifiedBy) }}</template>
-      </v-data-table>
+          <v-btn size="small" variant="tonal" prepend-icon="mdi-refresh" @click="refreshDraft">
+            {{ t('jobOrder.record.actions.refresh') }}
+          </v-btn>
+          <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="mode === 'create'" @click="handleDelete">
+            {{ t('jobOrder.record.actions.delete') }}
+          </v-btn>
+          <v-btn size="small" variant="outlined" prepend-icon="mdi-archive-arrow-down" @click="handleImportJobs">
+            {{ t('jobOrder.record.actions.importJobs') }}
+          </v-btn>
+        </div>
 
-      <v-alert v-if="errorMessage" type="error" variant="tonal" class="mt-3">
-        {{ errorMessage }}
-      </v-alert>
+        <v-data-table
+          :headers="relatedHeaders"
+          :items="relatedOrders"
+          item-value="orderId"
+          density="compact"
+          :items-per-page="10"
+          class="order-record-grid text-no-wrap"
+          @click:row="onRelatedRowClick"
+        >
+          <template #[`header.attachments`]>
+            <v-icon size="small">mdi-paperclip</v-icon>
+          </template>
+          <template #[`item.indicator`]="{ item }">
+            <v-tooltip :text="statusLabel(item.status)" location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon
+                  v-bind="props"
+                  :color="item.orderId === orderId ? 'primary' : statusColor(item.status)"
+                  size="16"
+                >
+                  {{ item.orderId === orderId ? 'mdi-flag-checkered' : statusIcon(item.status) }}
+                </v-icon>
+              </template>
+            </v-tooltip>
+          </template>
+          <template #[`item.orderNumber`]="{ item }">
+            <v-btn
+              variant="text"
+              color="primary"
+              density="comfortable"
+              class="px-0 text-none"
+              @click.stop="emit('open-job-form', item.orderId)"
+            >
+              {{ compositeOrderNumber(item) }}
+            </v-btn>
+          </template>
+          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
+          <template #[`item.attachments`]="{ item }">
+            <v-icon v-if="item.attachmentProductCount && item.attachmentProductCount > 0" color="success" size="16">mdi-circle</v-icon>
+          </template>
+          <template #[`header.customerAttachments`]>
+            <v-icon size="small">mdi-paperclip</v-icon>
+          </template>
+          <template #[`item.customerAttachments`]="{ item }">
+            <v-icon v-if="item.attachmentCustomerCount && item.attachmentCustomerCount > 0" color="error" size="16">mdi-circle-outline</v-icon>
+          </template>
+          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
+          <template #[`item.modifiedOn`]="{ item }">{{ formatDateTime(item.modifiedOn) }}</template>
+          <template #[`item.modifiedBy`]="{ item }">{{ formatUser(item.modifiedBy) }}</template>
+        </v-data-table>
+
+        <v-alert v-if="errorMessage" type="error" variant="tonal" class="mt-3">
+          {{ errorMessage }}
+        </v-alert>
+
+        <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
+          <v-spacer />
+          <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" :loading="saving" @click="handleSave">{{ t('jobOrder.record.actions.save') }}</v-btn>
+          <v-btn variant="tonal" :loading="saving" @click="handleSave(true)">{{ t('jobOrder.record.actions.saveClose') }}</v-btn>
+        </v-card-actions>
+
+      </v-sheet>
     </v-card-text>
-
-    <v-divider />
-
-    <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
-      <v-spacer />
-      <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('common.cancel') }}</v-btn>
-      <v-btn color="primary" :loading="saving" @click="handleSave">{{ t('jobOrder.record.actions.save') }}</v-btn>
-      <v-btn variant="tonal" :loading="saving" @click="handleSave(true)">{{ t('jobOrder.record.actions.saveClose') }}</v-btn>
-    </v-card-actions>
   </v-card>
 </template>
 
