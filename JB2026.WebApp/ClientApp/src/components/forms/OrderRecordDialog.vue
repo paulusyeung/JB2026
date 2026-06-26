@@ -127,7 +127,7 @@
           <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" color="primary" @click="resetDraft">
             {{ t('jobOrder.record.actions.addNew') }}
           </v-btn>
-          <v-btn size="small" variant="tonal" prepend-icon="mdi-refresh" @click="refreshDraft">
+          <v-btn v-if="false" size="small" variant="tonal" prepend-icon="mdi-refresh" @click="refreshDraft">
             {{ t('jobOrder.record.actions.refresh') }}
           </v-btn>
           <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="mode === 'create'" @click="handleDelete">
