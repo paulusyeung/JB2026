@@ -375,6 +375,7 @@ export const jobOrderMessages = {
         },
         importJobsUnavailable: 'Import jobs is not available yet in the modern app.',
         deleteConfirm: 'Delete order {order}? This action cannot be undone.',
+        deleteSelectedConfirm: 'Delete {count} selected order(s)? This action cannot be undone.',
         deleteFailed: 'Unable to delete the selected order.',
         saveFailed: 'Unable to save order changes.',
         validation: {

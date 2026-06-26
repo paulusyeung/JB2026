@@ -374,6 +374,7 @@ export const jobOrderMessages = {
         },
         importJobsUnavailable: '现代化界面暂未提供导入作业功能。',
         deleteConfirm: '确定删除订单 {order}？此操作无法撤销。',
+        deleteSelectedConfirm: '确定删除 {count} 个所选订单？此操作无法撤销。',
         deleteFailed: '无法删除所选订单。',
         saveFailed: '无法保存订单变更。',
         validation: {

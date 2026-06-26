@@ -375,6 +375,7 @@ export const jobOrderMessages = {
         },
         importJobsUnavailable: '現代化介面尚未提供匯入作業功能。',
         deleteConfirm: '確定刪除訂單 {order}？此操作無法復原。',
+        deleteSelectedConfirm: '確定刪除 {count} 個所選訂單？此操作無法復原。',
         deleteFailed: '無法刪除所選訂單。',
         saveFailed: '無法儲存訂單變更。',
         validation: {

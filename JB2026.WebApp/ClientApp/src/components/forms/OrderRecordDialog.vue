@@ -130,7 +130,7 @@
           <v-btn v-if="false" size="small" variant="tonal" prepend-icon="mdi-refresh" @click="refreshDraft">
             {{ t('jobOrder.record.actions.refresh') }}
           </v-btn>
-          <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="mode === 'create'" @click="handleDelete">
+          <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="selectedIds.size === 0" @click="handleDeleteSelected">
             {{ t('jobOrder.record.actions.delete') }}
           </v-btn>
           <v-btn v-if="false" size="small" variant="outlined" prepend-icon="mdi-archive-arrow-down" @click="handleImportJobs">
@@ -147,6 +147,22 @@
           class="order-record-grid text-no-wrap"
           @click:row="onRelatedRowClick"
         >
+          <template #[`header.select`]>
+            <v-checkbox
+              :model-value="allSelected"
+              density="compact"
+              hide-details
+              @click.stop="toggleSelectAll"
+            />
+          </template>
+          <template #[`item.select`]="{ item }">
+            <v-checkbox
+              :model-value="selectedIds.has(item.orderId)"
+              density="compact"
+              hide-details
+              @click.stop="toggleSelect(item.orderId)"
+            />
+          </template>
           <template #[`header.attachments`]>
             <v-icon size="small">mdi-paperclip</v-icon>
           </template>
@@ -235,6 +251,7 @@ const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
 const userMap = ref<Record<string, string>>({})
 const nextOrderNumber = ref('')
+const selectedIds = ref(new Set<string>())
 const session = useSessionStore()
 
 const draft = ref<JobOrderFormData>(props.order ? buildDraft(props.order) : buildCreateDraft())
@@ -263,7 +280,27 @@ function compositeOrderNumber(record: JobOrderRecord): string {
   return record.jobNumber ? `${record.orderNumber}-${record.jobNumber}` : record.orderNumber
 }
 
+function toggleSelect(orderId: string) {
+  const s = new Set(selectedIds.value)
+  if (s.has(orderId)) s.delete(orderId)
+  else s.add(orderId)
+  selectedIds.value = s
+}
+
+function toggleSelectAll() {
+  if (selectedIds.value.size === relatedOrders.value.length) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(relatedOrders.value.map((r) => r.orderId))
+  }
+}
+
+const allSelected = computed(() =>
+  relatedOrders.value.length > 0 && selectedIds.value.size === relatedOrders.value.length,
+)
+
 const relatedHeaders = computed(() => [
+  { title: '', key: 'select', sortable: false, width: '48px' },
   { title: t('jobOrder.record.fields.orderNumber'), key: 'orderNumber', width: '150px' },
   { title: '', key: 'indicator', sortable: false, width: '36px' },
   { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '110px' },
@@ -554,7 +591,10 @@ async function handleSave(closeAfterSave = false) {
 
 async function handleDelete() {
   if (!props.order) return
-  const confirmed = window.confirm(t('jobOrder.record.deleteConfirm', { order: props.order.orderNumber }))
+  // const confirmed = window.confirm(t('jobOrder.record.deleteConfirm', { order: props.order.orderNumber }))
+  const confirmed = window.confirm(
+    `Are you sure you want to delete Order #${props.order.orderNumber} (ID: ${props.order.orderId})?`
+  )
   if (!confirmed) return
 
   deleting.value = true
@@ -565,6 +605,40 @@ async function handleDelete() {
     emit('deleted')
   } catch {
     errorMessage.value = t('jobOrder.record.deleteFailed')
+  } finally {
+    deleting.value = false
+  }
+}
+
+async function handleDeleteSelected() {
+  if (selectedIds.value.size === 0) return
+
+  // Get the specific items selected from the table
+  const selectedItems = relatedOrders.value.filter((r) => selectedIds.value.has(r.orderId))
+  
+  // Create a list string that includes both Order Number and ID
+  // Using \n for line breaks so it's readable in the confirm box
+  const itemsList = selectedItems.map(item => `Order #${item.orderNumber} (ID: ${item.orderId})`).join('\n')
+
+  const confirmed = window.confirm(
+    `Are you sure you want to delete these ${selectedIds.value.size} item(s)?\n\n${itemsList}`
+  )
+
+  if (!confirmed) return
+
+  deleting.value = true
+  errorMessage.value = ''
+
+  try {
+    const items = relatedOrders.value.filter((r) => selectedIds.value.has(r.orderId))
+    for (const item of items) {
+      await deleteJobOrder(item.orderId)
+    }
+    selectedIds.value = new Set()
+    emit('saved', props.order!.orderId)
+  } catch (err: any) {
+    const data = err?.response?.data
+    errorMessage.value = data?.detail || data?.title || data?.message || err?.message || t('jobOrder.record.deleteFailed')
   } finally {
     deleting.value = false
   }
