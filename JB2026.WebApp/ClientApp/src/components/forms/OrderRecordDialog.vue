@@ -132,7 +132,7 @@
           <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="mode === 'create'" @click="handleDelete">
             {{ t('jobOrder.record.actions.delete') }}
           </v-btn>
-          <v-btn size="small" variant="outlined" prepend-icon="mdi-archive-arrow-down" @click="handleImportJobs">
+          <v-btn v-if="false" size="small" variant="outlined" prepend-icon="mdi-archive-arrow-down" @click="handleImportJobs">
             {{ t('jobOrder.record.actions.importJobs') }}
           </v-btn>
         </div>
