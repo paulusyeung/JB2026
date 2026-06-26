@@ -114,9 +114,10 @@
         </v-col>
       </v-row>
 
-      <!-- GROUP 1: Basic Info -->
+      <!-- GROUP 1: Jobs Info -->
       <!-- elevation="1" adds a subtle shadow. rounded makes corners smooth. -->
       <v-sheet 
+        v-if="mode !== 'create'"
         color="grey-lighten-4" 
         elevation="1" 
         rounded="lg" 
