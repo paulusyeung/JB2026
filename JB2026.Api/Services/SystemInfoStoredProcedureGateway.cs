@@ -16,6 +16,27 @@ public sealed class SystemInfoStoredProcedureGateway : ISystemInfoStoredProcedur
         _writeContext = writeContext;
     }
 
+        public async Task<SystemInfoStoredProcedureRecord?> SelectFirstAsync(CancellationToken cancellationToken = default)
+    {
+        var connection = _readContext.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "spSystemInfo_SelAll";
+        command.CommandType = CommandType.StoredProcedure;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new SystemInfoStoredProcedureRecord(
+            SystemId: reader.GetGuid(reader.GetOrdinal("SystemId")),
+            OwnerName: GetNullableString(reader, "OwnerName"),
+            MetadataXml: GetNullableString(reader, "MetadataXml"));
+    }
+
     public async Task<SystemInfoStoredProcedureRecord?> SelectAsync(Guid systemId, CancellationToken cancellationToken = default)
     {
         var connection = _readContext.Database.GetDbConnection();

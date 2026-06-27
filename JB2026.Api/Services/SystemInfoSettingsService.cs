@@ -1,70 +1,93 @@
+namespace JB2026.Api.Services;
+
 using System.Xml.Linq;
 using JB2026.Api.Models;
-using JB2026.EfCore.Data;
-using Microsoft.EntityFrameworkCore;
-
-namespace JB2026.Api.Services;
 
 public sealed class SystemInfoSettingsService : ISettingsService
 {
     private const string MetadataRoot = "Metadata";
-    private const string MetadataRecordElement = "record";
-    private const string MetadataRecordIdAttribute = "id";
-    private const string MetadataDataRecordId = "data";
-    private const string DateFormatPreferenceAttribute = "dateFormatPreference";
+    private const string SettingsElement = "Settings";
+    private const string RecordElement = "record";
+    private const string RecordIdAttribute = "id";
+    private const string DataRecordId = "data";
+    private const string NextOrderNumberAttr = "NextOrderNumber";
+    private const string NextProductNumberAttr = "NextProductNumber";
+    private const string NextQuotationNumberAttr = "NextQuotationNumber";
 
-    private static readonly HashSet<string> SupportedDateFormats = new(StringComparer.Ordinal)
-    {
-        "shortDate",
-        "shortDateTime",
-        "shortTime",
-        "longDate",
-        "longDateTime",
-        "custom",
-        "isoDate",
-        "isoDateTime",
-    };
-
-    private readonly InMemorySettingsService _fallback;
     private readonly ISystemInfoStoredProcedureGateway _gateway;
-    private readonly JB5LegacyReadContext _readContext;
+    private readonly InMemorySettingsService _fallback;
 
     public SystemInfoSettingsService(
-        InMemorySettingsService fallback,
         ISystemInfoStoredProcedureGateway gateway,
-        JB5LegacyReadContext readContext)
+        InMemorySettingsService fallback)
     {
-        _fallback = fallback;
         _gateway = gateway;
-        _readContext = readContext;
+        _fallback = fallback;
     }
 
     public SettingsResponse Get()
     {
         var baseSettings = _fallback.Get();
-        var systemInfo = GetSystemInfoSnapshot();
-        if (systemInfo is null)
+        var snapshot = GetSystemInfoSnapshot();
+
+        string? persistedNextOrderNumber = null;
+        string? persistedNextProductNumber = null;
+        string? persistedNextQuotationNumber = null;
+        string? persistedDateFormat = null;
+
+        if (snapshot?.MetadataXml is not null)
         {
-            return baseSettings;
+            try
+            {
+                var doc = XDocument.Parse(snapshot.MetadataXml);
+
+                // Try new format first: <Settings .../>
+                var settingsElement = doc.Root?.Descendants(SettingsElement).FirstOrDefault();
+
+                if (settingsElement is not null)
+                {
+                    persistedNextOrderNumber = settingsElement.Attribute(NextOrderNumberAttr)?.Value;
+                    persistedNextProductNumber = settingsElement.Attribute(NextProductNumberAttr)?.Value;
+                    persistedNextQuotationNumber = settingsElement.Attribute(NextQuotationNumberAttr)?.Value;
+                    persistedDateFormat = settingsElement.Attribute("DateFormatPreference")?.Value;
+                }
+                else
+                {
+                    // Fall back to old format: <record id="data" .../>
+                    var dataRecord = doc.Root?.Elements(RecordElement)
+                        .FirstOrDefault(el => el.Attribute(RecordIdAttribute)?.Value == DataRecordId);
+
+                    if (dataRecord is not null)
+                    {
+                        persistedNextOrderNumber = dataRecord.Attribute(NextOrderNumberAttr)?.Value;
+                        persistedNextProductNumber = dataRecord.Attribute(NextProductNumberAttr)?.Value;
+                        persistedNextQuotationNumber = dataRecord.Attribute(NextQuotationNumberAttr)?.Value;
+                        persistedDateFormat = dataRecord.Attribute("dateFormatPreference")?.Value;
+                    }
+                }
+            }
+            catch
+            {
+                // If XML is malformed, fall back to in-memory defaults
+            }
         }
 
-        var persistedDateFormat = ExtractDateFormatPreference(systemInfo.MetadataXml);
         return new SettingsResponse
         {
             CompanyName = baseSettings.CompanyName,
             TimeZone = baseSettings.TimeZone,
             CurrencyCode = baseSettings.CurrencyCode,
             EnableLegacyFallback = baseSettings.EnableLegacyFallback,
-            OwnerName = string.IsNullOrWhiteSpace(systemInfo.OwnerName) ? baseSettings.OwnerName : systemInfo.OwnerName,
-            NextOrderNumber = baseSettings.NextOrderNumber,
-            NextProductNumber = baseSettings.NextProductNumber,
-            NextQuotationNumber = baseSettings.NextQuotationNumber,
+            OwnerName = string.IsNullOrWhiteSpace(snapshot?.OwnerName) ? baseSettings.OwnerName : snapshot.OwnerName,
+            NextOrderNumber = persistedNextOrderNumber ?? baseSettings.NextOrderNumber,
+            NextProductNumber = persistedNextProductNumber ?? baseSettings.NextProductNumber,
+            NextQuotationNumber = persistedNextQuotationNumber ?? baseSettings.NextQuotationNumber,
             CommonQueryIndex = baseSettings.CommonQueryIndex,
             CompletedQueryIndex = baseSettings.CompletedQueryIndex,
             ScheduleQueryRange = baseSettings.ScheduleQueryRange,
             GmailAccount = baseSettings.GmailAccount,
             GmailPassword = baseSettings.GmailPassword,
-            DateFormatPreference = persistedDateFormat,
+            DateFormatPreference = persistedDateFormat ?? baseSettings.DateFormatPreference,
         };
     }
 
@@ -72,7 +95,12 @@ public sealed class SystemInfoSettingsService : ISettingsService
     {
         var updated = _fallback.Update(request);
         var snapshot = GetSystemInfoSnapshot();
-        var metadataXml = UpsertDateFormatPreference(snapshot?.MetadataXml, updated.DateFormatPreference);
+        var metadataXml = UpsertSettingsAttributes(
+            snapshot?.MetadataXml, 
+            updated.NextOrderNumber,
+            updated.NextProductNumber,
+            updated.NextQuotationNumber,
+            updated.DateFormatPreference);
 
         if (snapshot is null)
         {
@@ -91,95 +119,89 @@ public sealed class SystemInfoSettingsService : ISettingsService
         return updated;
     }
 
-    private SystemInfoSnapshot? GetSystemInfoSnapshot()
+    private static string UpsertSettingsAttributes(
+        string? existingXml,
+        string nextOrderNumber,
+        string nextProductNumber,
+        string nextQuotationNumber,
+        string dateFormatPreference)
     {
-        return _readContext.SystemInfos
-            .AsNoTracking()
-            .OrderBy(systemInfo => systemInfo.SystemId)
-            .Select(systemInfo => new SystemInfoSnapshot(
-                systemInfo.SystemId,
-                systemInfo.OwnerName,
-                systemInfo.MetadataXml))
-            .FirstOrDefault();
+        XDocument doc;
+
+        if (string.IsNullOrWhiteSpace(existingXml))
+        {
+            doc = new XDocument(
+                new XDeclaration("1.0", "utf-8", "yes"),
+                new XElement(MetadataRoot));
+        }
+        else
+        {
+            try
+            {
+                doc = XDocument.Parse(existingXml);
+            }
+            catch
+            {
+                // If existing XML is malformed, start fresh
+                doc = new XDocument(
+                    new XDeclaration("1.0", "utf-8", "yes"),
+                    new XElement(MetadataRoot));
+            }
+        }
+
+        var root = doc.Root!;
+        
+        // Try new format first: <Settings .../>
+        var settingsElement = root.Element(SettingsElement);
+
+        if (settingsElement is null)
+        {
+            // Check for old format: <record id="data" .../>
+            var dataRecord = root.Elements(RecordElement)
+                .FirstOrDefault(el => el.Attribute(RecordIdAttribute)?.Value == DataRecordId);
+
+            if (dataRecord is not null)
+            {
+                // Update existing record element with new attributes
+                dataRecord.SetAttributeValue(NextOrderNumberAttr, nextOrderNumber);
+                dataRecord.SetAttributeValue(NextProductNumberAttr, nextProductNumber);
+                dataRecord.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
+                dataRecord.SetAttributeValue("DateFormatPreference", dateFormatPreference);
+            }
+            else
+            {
+                // Create new Settings element
+                settingsElement = new XElement(SettingsElement);
+                root.Add(settingsElement);
+                
+                settingsElement.SetAttributeValue(NextOrderNumberAttr, nextOrderNumber);
+                settingsElement.SetAttributeValue(NextProductNumberAttr, nextProductNumber);
+                settingsElement.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
+                settingsElement.SetAttributeValue("DateFormatPreference", dateFormatPreference);
+            }
+        }
+        else
+        {
+            // Update existing Settings element
+            settingsElement.SetAttributeValue(NextOrderNumberAttr, nextOrderNumber);
+            settingsElement.SetAttributeValue(NextProductNumberAttr, nextProductNumber);
+            settingsElement.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
+            settingsElement.SetAttributeValue("DateFormatPreference", dateFormatPreference);
+        }
+
+        return doc.ToString(SaveOptions.DisableFormatting);
     }
 
-    private static string ExtractDateFormatPreference(string? metadataXml)
+    private SystemInfoStoredProcedureRecord? GetSystemInfoSnapshot()
     {
-        var metadata = ParseMetadata(metadataXml);
-        if (metadata?.Root is null)
-        {
-            return SettingsResponse.DefaultDateFormatPreference;
-        }
-
-        var value = metadata.Root
-            .Elements(MetadataRecordElement)
-            .Where(element => string.Equals(
-                element.Attribute(MetadataRecordIdAttribute)?.Value,
-                MetadataDataRecordId,
-                StringComparison.OrdinalIgnoreCase))
-            .Select(element => element.Attribute(DateFormatPreferenceAttribute)?.Value)
-            .FirstOrDefault(static value => !string.IsNullOrWhiteSpace(value));
-
-        return NormalizeDateFormatPreference(value);
-    }
-
-    private static string UpsertDateFormatPreference(string? metadataXml, string dateFormatPreference)
-    {
-        var metadata = ParseMetadata(metadataXml) ?? new XDocument(new XElement(MetadataRoot));
-        var root = metadata.Root ?? new XElement(MetadataRoot);
-
-        if (metadata.Root is null)
-        {
-            metadata.Add(root);
-        }
-
-        var dataRecord = root
-            .Elements(MetadataRecordElement)
-            .FirstOrDefault(element => string.Equals(
-                element.Attribute(MetadataRecordIdAttribute)?.Value,
-                MetadataDataRecordId,
-                StringComparison.OrdinalIgnoreCase));
-
-        if (dataRecord is null)
-        {
-            dataRecord = new XElement(MetadataRecordElement);
-            dataRecord.SetAttributeValue(MetadataRecordIdAttribute, MetadataDataRecordId);
-            root.Add(dataRecord);
-        }
-
-        dataRecord.SetAttributeValue(DateFormatPreferenceAttribute, dateFormatPreference);
-        return metadata.ToString(SaveOptions.DisableFormatting);
-    }
-
-    private static XDocument? ParseMetadata(string? metadataXml)
-    {
-        if (string.IsNullOrWhiteSpace(metadataXml))
-        {
-            return null;
-        }
-
         try
         {
-            return XDocument.Parse(metadataXml);
+            return _gateway.SelectFirstAsync().GetAwaiter().GetResult();
         }
         catch
         {
+            // If lookup fails, treat as no system info record (will fall back to in-memory defaults)
             return null;
         }
     }
-
-    private static string NormalizeDateFormatPreference(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return SettingsResponse.DefaultDateFormatPreference;
-        }
-
-        var trimmed = value.Trim();
-        return SupportedDateFormats.Contains(trimmed)
-            ? trimmed
-            : SettingsResponse.DefaultDateFormatPreference;
-    }
-
-    private sealed record SystemInfoSnapshot(Guid SystemId, string? OwnerName, string? MetadataXml);
 }

@@ -209,7 +209,8 @@
           {{ errorMessage }}
         </v-alert>
 
-        <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
+        <!-- 2026-06-27 paulsu: 冇需要，暫時用 v-if 隱藏 -->
+        <v-card-actions v-if="false" class="pa-4 d-flex ga-2 responsive-dialog-actions">
           <v-spacer />
           <v-btn variant="text" :disabled="saving" @click="emit('cancel')">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" :loading="saving" @click="handleSave">{{ t('jobOrder.record.actions.save') }}</v-btn>
