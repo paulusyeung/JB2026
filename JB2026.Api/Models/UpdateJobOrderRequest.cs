@@ -58,5 +58,9 @@ public sealed class UpdateJobOrderRequest
 
     public decimal? InvoiceAmount { get; init; }
 
+    [StringLength(16)]
+    public string? JobNumber { get; init; }
+
     public Dictionary<string, string>? WorkflowAttributes { get; init; }
 }
+

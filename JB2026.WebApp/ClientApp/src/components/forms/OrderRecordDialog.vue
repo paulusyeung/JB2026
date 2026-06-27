@@ -584,6 +584,7 @@ async function handleSave(closeAfterSave = false) {
         paymentTerms: draft.value.paymentTerms || 'Net 30',
         remarks: draft.value.remarks,
         status: draft.value.status,
+        jobNumber: draft.value.jobNumber,
         invoiceRef: draft.value.invoiceRef || '',
         invoiceAmount: draft.value.invoiceAmount,
       })

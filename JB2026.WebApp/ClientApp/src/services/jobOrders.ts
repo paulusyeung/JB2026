@@ -30,6 +30,7 @@ interface UpdateJobOrderRequest {
   paymentTerms: string
   remarks: string
   status: number
+  jobNumber?: string
   invoiceRef?: string
   invoiceAmount?: number
   soNumber?: string

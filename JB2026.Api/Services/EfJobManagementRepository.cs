@@ -374,6 +374,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         {
             order.InvoiceAmount = request.InvoiceAmount;
         }
+        if (!string.IsNullOrEmpty(request.JobNumber))
+        {
+            order.JobNumber = int.TryParse(request.JobNumber, out var jobNumber) ? jobNumber : (int?)null;
+        }
         order.ModifiedBy = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
         order.ModifiedOn = DateTime.UtcNow;
 

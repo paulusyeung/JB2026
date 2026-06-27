@@ -265,6 +265,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             OrderType = request.OrderType,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,
+            JobNumber = !string.IsNullOrEmpty(request.JobNumber) ? request.JobNumber : current.JobNumber,
             WorkflowAttributes = request.WorkflowAttributes,
             ModifiedBy = actor,
             ModifiedOn = DateTime.UtcNow,
