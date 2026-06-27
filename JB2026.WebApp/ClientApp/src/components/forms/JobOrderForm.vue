@@ -354,7 +354,7 @@ const previewImageUrl = ref<string | null>(null)
 const dragOffset = ref({ x: 0, y: 0 })
 const dragPointer = ref<{ id: number; startX: number; startY: number; originX: number; originY: number } | null>(null)
 
-const isNew = computed(() => props.job === null)
+const isNew = computed(() => props.job === null || !props.job.orderId)
 const cardStyle = computed(() => ({
   transform: `translate(${dragOffset.value.x}px, ${dragOffset.value.y}px)`,
 }))
@@ -435,22 +435,23 @@ const requiredAfterOrdered = (v: string) => {
 // Actions
 // ---------------------------------------------------------------------------
 function buildDraft(job: JobDetail | null): JobOrderFormData {
-  if (!job) {
+  if (!job || !job.orderId) {
     const today = new Date().toISOString().slice(0, 10)
+    const partial = job as JobDetail & { jobNumber?: string; orderType?: number }
     return {
       orderId: null,
-      orderNumber: '',
-      jobNumber: '',
-      orderTitle: '',
-      customerName: '',
-      customerRef: '',
-      orderedBy: '',
-      orderedOn: today,
-      requiredOn: today,
-      qty: 1,
+      orderNumber: job?.orderNumber ?? '',
+      jobNumber: partial?.jobNumber ?? '',
+      orderTitle: job?.orderTitle ?? '',
+      customerName: job?.customerName ?? '',
+      customerRef: job?.customerRef ?? '',
+      orderedBy: job?.orderedBy ?? '',
+      orderedOn: job?.orderedOn?.slice(0, 10) ?? today,
+      requiredOn: job?.requiredOn?.slice(0, 10) ?? today,
+      qty: job?.qty ?? 1,
       status: 0,
-      orderType: 0,
-      paymentTerms: '',
+      orderType: partial?.orderType ?? 0,
+      paymentTerms: job?.paymentTerms ?? '',
       remarks: '',
       soNumber: '',
       originalSONumber: '',
@@ -459,6 +460,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       outputRef: '',
       invoiceRef: '',
       invoiceAmount: undefined,
+      productDetails: '',
       workflowAttributes: {},
     }
   }
@@ -487,6 +489,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     outputRef: job.outputRef ?? '',
     invoiceRef: job.invoiceRef ?? '',
     invoiceAmount: job.invoiceAmount ?? undefined,
+    productDetails: job.productDetails ?? '',
     workflowAttributes: job.workflowAttributes ?? {},
   }
 }
@@ -529,6 +532,7 @@ function syncLegacyFields(record: JobOrderRecord | null) {
   draft.value.invoiceAmount = record?.invoiceAmount ?? undefined
   legacyCompletedOn.value = formatLegacyDate(record?.completedOn ?? null)
   draft.value.productStyle = record?.productStyle ?? ''
+  draft.value.productDetails = record?.productDetails ?? ''
   if (record) {
     draft.value.orderType = record.orderType
   }

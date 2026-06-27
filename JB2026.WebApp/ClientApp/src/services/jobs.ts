@@ -7,6 +7,7 @@ interface CreateJobRequest {
   customerName: string
   customerRef: string
   orderTitle: string
+  orderedBy: string
   orderedOn: string
   requiredOn: string
   qty: number
@@ -25,6 +26,8 @@ interface CreateJobRequest {
 }
 
 interface UpdateJobRequest {
+  orderNumber: string
+  jobNumber: string
   customerName: string
   customerRef: string
   orderTitle: string
@@ -112,6 +115,8 @@ export async function deleteJobAttachments(orderId: string, attachmentIds: strin
 export async function saveJob(data: JobOrderFormData): Promise<void> {
   if (data.orderId) {
     const payload: UpdateJobRequest = {
+      orderNumber: data.orderNumber,
+      jobNumber: data.jobNumber,
       customerName: data.customerName,
       customerRef: data.customerRef,
       orderTitle: data.orderTitle,
@@ -140,6 +145,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       customerName: data.customerName,
       customerRef: data.customerRef,
       orderTitle: data.orderTitle,
+      orderedBy: data.orderedBy,
       orderedOn: data.orderedOn,
       requiredOn: data.requiredOn,
       qty: data.qty,

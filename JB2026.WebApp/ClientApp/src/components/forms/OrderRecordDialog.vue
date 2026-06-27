@@ -124,7 +124,7 @@
         class="pa-4 mb-4 d-flex flex-column gap-2"
       >
         <div class="d-flex flex-wrap ga-2 mt-2 mb-3">
-          <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" color="primary" @click="resetDraft">
+          <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" color="primary" @click="handleAddNewJob">
             {{ t('jobOrder.record.actions.addNew') }}
           </v-btn>
           <v-btn v-if="false" size="small" variant="tonal" prepend-icon="mdi-refresh" @click="refreshDraft">
@@ -241,6 +241,7 @@ const emit = defineEmits<{
   (e: 'open-order', orderId: string): void
   (e: 'open-job-form', orderId: string): void
   (e: 'deleted'): void
+  (e: 'add-new-job', orderContext: { orderId: string; orderNumber: string; customerName: string; orderedBy: string; orderTitle: string; orderedOn: string; requiredOn: string; orderType: number; customerRef: string; jobCount: number }): void
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
@@ -403,13 +404,6 @@ function buildDraft(order: JobOrderRecord): JobOrderFormData {
   }
 }
 
-function resetDraft() {
-  mode.value = 'create'
-  draft.value = buildCreateDraft()
-  handleCustomerChanged(draft.value.customerName)
-  errorMessage.value = ''
-}
-
 function refreshDraft() {
   if (mode.value === 'create') {
     draft.value = buildCreateDraft()
@@ -418,6 +412,22 @@ function refreshDraft() {
     draft.value = buildDraft(props.order)
   }
   errorMessage.value = ''
+}
+
+function handleAddNewJob() {
+  if (!props.order) return
+  emit('add-new-job', {
+    orderId: props.order.orderId,
+    orderNumber: props.order.orderNumber,
+    customerName: props.order.customerName,
+    orderedBy: session.profile?.displayName ?? props.order.orderedBy ?? '',
+    orderTitle: props.order.orderTitle,
+    orderedOn: props.order.orderedOn,
+    requiredOn: props.order.requiredOn,
+    orderType: props.order.orderType,
+    customerRef: props.order.customerRef ?? '',
+    jobCount: relatedOrders.value.length,
+  })
 }
 
 function handleCustomerChanged(customerName: string | null) {

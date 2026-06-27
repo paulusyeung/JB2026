@@ -440,6 +440,7 @@
         @deleted="handleDeleted"
         @open-order="handleOpenOrder"
         @open-job-form="handleOpenJobForm"
+        @add-new-job="handleAddNewJob"
         @cancel="formOpen = false"
       />
     </v-dialog>
@@ -449,7 +450,7 @@
         v-if="jobFormOpen"
         :job="jobFormJob"
         @saved="handleJobSaved"
-        @cancel="jobFormOpen = false"
+        @cancel="handleJobFormCancelled"
         @attachment="handleAttachment"
         @print-order="handlePrintOrder"
         @workflow="handleWorkflow"
@@ -512,6 +513,7 @@ const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
 const actionNoticeOpen = ref(false)
 const actionNoticeMessage = ref('')
+const pendingOrderIdForRefresh = ref<string | null>(null)
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const {
@@ -800,6 +802,81 @@ async function openJobForm(orderId: string) {
   }
 }
 
+function handleAddNewJob(orderContext: { orderId: string; orderNumber: string; customerName: string; orderedBy: string; orderTitle: string; orderedOn: string; requiredOn: string; orderType: number; customerRef: string; jobCount: number }) {
+  pendingOrderIdForRefresh.value = orderContext.orderId
+  formOpen.value = false
+
+  const baseJob = {
+    orderId: null,
+    orderNumber: orderContext.orderNumber,
+    customerName: orderContext.customerName,
+    customerRef: orderContext.customerRef ?? '',
+    orderTitle: orderContext.orderTitle ?? '',
+    orderedBy: orderContext.orderedBy,
+    orderedOn: orderContext.orderedOn?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    requiredOn: orderContext.requiredOn?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    qty: 1,
+    status: 0,
+    paymentTerms: '',
+    remarks: '',
+    productDetails: '',
+    productStyle: '',
+    productCode: '',
+    outputRef: '',
+    invoiceRef: '',
+    invoiceAmount: 0,
+    styleTitles: [],
+    attachments: [],
+    soNumber: '',
+    originalSONumber: '',
+  }
+
+  if (orderContext.jobCount === 0) {
+    // Case 1: Empty table - edit the existing order record, changing jobNumber from 0 to 1
+    getJobDetail(orderContext.orderId).then((detail) => {
+      jobFormJob.value = {
+        ...detail,
+        orderNumber: `${orderContext.orderNumber}-1`,
+      }
+      jobFormOpen.value = true
+    }).catch(() => {
+      // Fallback: construct a minimal JobDetail in edit mode
+      jobFormJob.value = {
+        orderId: orderContext.orderId,
+        orderNumber: `${orderContext.orderNumber}-1`,
+        customerName: orderContext.customerName,
+        customerRef: orderContext.customerRef ?? '',
+        orderTitle: orderContext.orderTitle ?? '',
+        orderedBy: orderContext.orderedBy,
+        orderedOn: orderContext.orderedOn?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+        requiredOn: orderContext.requiredOn?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+        qty: 1,
+        status: 0,
+        paymentTerms: '',
+        remarks: '',
+        productDetails: '',
+        productStyle: '',
+        productCode: '',
+        outputRef: '',
+        invoiceRef: '',
+        invoiceAmount: 0,
+        styleTitles: [],
+        attachments: [],
+        soNumber: '',
+        originalSONumber: '',
+      } as unknown as JobDetail
+      jobFormOpen.value = true
+    })
+  } else {
+    // Case 2: Non-empty - create mode with header fields pre-filled
+    jobFormJob.value = {
+      ...baseJob,
+      jobNumber: String(orderContext.jobCount + 1),
+    } as unknown as JobDetail
+    jobFormOpen.value = true
+  }
+}
+
 function handleOpenJobForm(orderId: string) {
   openJobForm(orderId)
 }
@@ -808,6 +885,19 @@ async function handleJobSaved() {
   await load()
   jobFormOpen.value = false
   jobFormJob.value = null
+  if (pendingOrderIdForRefresh.value) {
+    await handleOpenOrder(pendingOrderIdForRefresh.value)
+    pendingOrderIdForRefresh.value = null
+  }
+}
+
+async function handleJobFormCancelled() {
+  jobFormOpen.value = false
+  jobFormJob.value = null
+  if (pendingOrderIdForRefresh.value) {
+    await handleOpenOrder(pendingOrderIdForRefresh.value)
+    pendingOrderIdForRefresh.value = null
+  }
 }
 
 function handleProductDetailsEdit(job: JobDetail) {
