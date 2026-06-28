@@ -213,7 +213,11 @@
             <div class="order-mobile-card__body">
               <div class="d-flex align-center ga-2 mb-2">
                 <v-chip size="small" :color="statusColor(master.status)" variant="tonal">
-                  <v-icon start size="12" :color="statusColor(master.status)">mdi-flag</v-icon>
+                      <v-tooltip :text="statusLabel(master.status)" location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-icon v-bind="props" start size="12" :color="statusColor(master.status)">{{ statusIcon(master.status) }}</v-icon>
+                    </template>
+                  </v-tooltip>
                   {{ master.status }}
                 </v-chip>
                 <span class="text-caption">{{ master.orderTitle || '-' }}</span>
@@ -329,7 +333,11 @@
 
           <template #[`item.status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="16" :color="statusColor(item.status)">mdi-flag</v-icon>
+              <v-tooltip :text="statusLabel(item.status)" location="top">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" size="16" :color="statusColor(item.status)">{{ statusIcon(item.status) }}</v-icon>
+                </template>
+              </v-tooltip>
             </div>
           </template>
 
@@ -392,7 +400,11 @@
 
                   <template #[`item.status`]="{ item: detail }">
                     <div class="d-flex justify-center">
-                      <v-icon size="16" :color="statusColor(detail.status)">mdi-flag</v-icon>
+                      <v-tooltip :text="statusLabel(detail.status)" location="top">
+                        <template v-slot:activator="{ props }">
+                          <v-icon v-bind="props" size="16" :color="statusColor(detail.status)">{{ statusIcon(detail.status) }}</v-icon>
+                        </template>
+                      </v-tooltip>
                     </div>
                   </template>
 
@@ -490,6 +502,7 @@ import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
+import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
 
 type OrderListViewMode = 'detail' | 'card'
 
@@ -1051,12 +1064,6 @@ function billingStatusColor(row: JobOrderRecord) {
   return 'warning'
 }
 
-function statusColor(status: number) {
-  if (status <= 0) return 'grey'
-  if (status === 1) return 'amber'
-  if (status === 2) return 'success'
-  return 'error'
-}
 </script>
 
 <style scoped>

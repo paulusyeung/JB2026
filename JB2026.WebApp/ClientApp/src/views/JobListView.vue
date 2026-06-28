@@ -224,7 +224,11 @@
             <div class="job-mobile-card__body">
               <div class="d-flex align-center ga-2 mb-2">
                 <v-chip size="small" :color="statusColor(row.status)" variant="tonal">
-                  <v-icon start size="12" :color="statusColor(row.status)">mdi-flag</v-icon>
+                  <v-tooltip :text="statusLabel(row.status)" location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-icon v-bind="props" start size="12" :color="statusColor(row.status)">{{ statusIcon(row.status) }}</v-icon>
+                    </template>
+                  </v-tooltip>
                   {{ row.status }}
                 </v-chip>
                 <span class="text-caption">{{ row.orderTitle || '-' }}</span>
@@ -340,7 +344,11 @@
 
             <template #[`item.status`]="{ item }">
               <div class="d-flex justify-center">
-                <v-icon size="16" :color="statusColor(item.status)">mdi-flag</v-icon>
+                <v-tooltip :text="statusLabel(item.status)" location="top">
+                  <template v-slot:activator="{ props }">
+                    <v-icon v-bind="props" size="16" :color="statusColor(item.status)">{{ statusIcon(item.status) }}</v-icon>
+                  </template>
+                </v-tooltip>
               </div>
             </template>
 
@@ -510,6 +518,7 @@ import {
   type PreviewInvoiceResponse,
 } from '@/services/billing'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
+import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
 
 type JobListViewMode = 'detail' | 'card'
 
@@ -1026,13 +1035,6 @@ async function confirmGenerateInvoice() {
 
 function compositeOrderNumber(row: JobOrderRecord) {
   return row.jobNumber ? `${row.orderNumber}-${row.jobNumber}` : row.orderNumber
-}
-
-function statusColor(status: number) {
-  if (status <= 0) return 'grey'
-  if (status === 1) return 'amber'
-  if (status === 2) return 'success'
-  return 'error'
 }
 
 function openNew() {

@@ -258,7 +258,11 @@
 
           <template #[`item.status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="16" :color="statusColor(item.status)">mdi-flag</v-icon>
+              <v-tooltip :text="statusLabel(item.status)" location="top">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" size="16" :color="statusColor(item.status)">{{ statusIcon(item.status) }}</v-icon>
+                </template>
+              </v-tooltip>
             </div>
           </template>
 
@@ -348,6 +352,7 @@ import { getPendingSchedule, updatePendingUrgency, updatePendingWorkflow } from 
 import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getOrderTypeMeta } from '@/utils/orderType'
+import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
 
 const rows = ref<JobSchedulePendingItem[]>([])
 const loading = ref(false)
@@ -562,13 +567,6 @@ function exportToCsv() {
 }
 
 
-
-function statusColor(status: number) {
-  if (status <= 0) return 'grey'
-  if (status === 1) return 'success'
-  if (status === 2) return 'warning'
-  return 'error'
-}
 
 function workflowColor(status: number | null) {
   if (status == null) return 'grey-lighten-1'

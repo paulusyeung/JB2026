@@ -230,6 +230,7 @@ import { getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
 import { getSettings, updateSettings } from '@/services/settings'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
+import { statusIcon, statusColor } from '@/composables/useJobStatus'
 
 const props = defineProps<{
   order?: JobOrderRecord
@@ -664,25 +665,11 @@ function handleImportJobs() {
   errorMessage.value = t('jobOrder.record.importJobsUnavailable')
 }
 
-function statusIcon(status: number) {
-  if (status >= 3) return 'mdi-flag-check'
-  if (status === 2) return 'mdi-flag-outline'
-  if (status === 1) return 'mdi-flag-variant-outline'
-  return 'mdi-flag-minus-outline'
-}
-
 function statusLabel(status: number): string {
   if (status >= 3) return t('jobOrder.status.completed')
   if (status === 2) return t('jobOrder.status.paused')
   if (status === 1) return t('jobOrder.status.inProgress')
   return t('jobOrder.status.notStarted')
-}
-
-function statusColor(status: number) {
-  if (status >= 3) return 'success'
-  if (status === 2) return 'warning'
-  if (status === 1) return 'info'
-  return 'secondary'
 }
 
 function formatDate(value: string | null | undefined) {
