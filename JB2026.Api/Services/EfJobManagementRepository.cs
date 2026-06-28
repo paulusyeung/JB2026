@@ -335,6 +335,33 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             return null;
         }
 
+        _logger.LogWarning(
+            "DBG UpdateJobOrder: orderId={OrderId}, JobNumber={JobNumber}, SONumber={SONumber}, Qty={Qty}, ProductDetails={ProductDetails}, ProductStyle={ProductStyle}, Status={Status}",
+            orderId, request.JobNumber, request.SONumber, request.Qty, request.ProductDetails, request.ProductStyle, request.Status);
+
+        try
+        {
+            const string logSql = """
+INSERT INTO Log4Net ([Date], [Thread], [Level], [Logger], [Message], [Exception])
+VALUES ({0}, {1}, {2}, {3}, {4}, {5})
+""";
+            var logMessage =
+                $"UpdateJobOrder: orderId={orderId}, JobNumber={request.JobNumber}, SONumber={request.SONumber}, Qty={request.Qty}, ProductDetails={request.ProductDetails}, ProductStyle={request.ProductStyle}, Status={request.Status}";
+            await _writeContext.Database.ExecuteSqlRawAsync(
+                logSql,
+                DateTime.UtcNow,
+                Environment.CurrentManagedThreadId.ToString(),
+                "INFO",
+                "EfJobManagementRepository",
+                logMessage,
+                string.Empty);
+        }
+        catch
+        {
+            // Logging failure should not block the update
+        }
+
+        order.OrderNumber = request.OrderNumber;
         order.CustomerName = request.CustomerName;
         order.CustomerRef = request.CustomerRef;
         order.OrderTitle = request.OrderTitle;
@@ -355,8 +382,14 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         }
         order.Status = request.Status;
         order.OrderType = request.OrderType;
-        order.SONumber = request.SONumber;
-        order.OriginalSONumber = request.OriginalSONumber;
+        if (request.SONumber is not null)
+        {
+            order.SONumber = request.SONumber;
+        }
+        if (request.OriginalSONumber is not null)
+        {
+            order.OriginalSONumber = request.OriginalSONumber;
+        }
         if (request.ProductStyle is not null)
         {
             order.ProductStyle = request.ProductStyle;

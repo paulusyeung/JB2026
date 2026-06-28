@@ -470,7 +470,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
   return {
     orderId: job.orderId,
     orderNumber: parsedNumbers.orderNumber,
-    jobNumber: parsedNumbers.jobNumber,
+    jobNumber: parsedNumbers.jobNumber || job.jobNumber || '',
     orderTitle: job.orderTitle,
     customerName: job.customerName,
     customerRef: job.customerRef,

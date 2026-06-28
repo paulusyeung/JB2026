@@ -909,6 +909,10 @@ async function handleActionUpdated() {
   if (!jobFormJob.value) return
   try {
     const latest = await getJobDetail(jobFormJob.value.orderId!)
+    const currentOrderNumber = jobFormJob.value.orderNumber
+    if (currentOrderNumber?.includes('-')) {
+      latest.orderNumber = currentOrderNumber
+    }
     jobFormJob.value = latest
   } catch {
     // ignore

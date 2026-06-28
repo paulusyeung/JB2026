@@ -200,6 +200,21 @@ import { getJobPreviewBlob } from '@/services/jobOrders'
 import { deleteJobAttachments, saveJob, uploadJobAttachment } from '@/services/jobs'
 import type { JobAttachment, JobDetail, JobOrderFormData } from '@/types/api'
 
+function parseCompositeOrderNumber(orderNumber: string) {
+  const trimmed = orderNumber.trim()
+  const match = trimmed.match(/^(.*?)-(\d+)$/)
+  if (!match) {
+    return {
+      orderNumber: trimmed,
+      jobNumber: '',
+    }
+  }
+  return {
+    orderNumber: match[1] ?? trimmed,
+    jobNumber: match[2] ?? '',
+  }
+}
+
 type AttachmentSizeMode = 'small' | 'medium' | 'large' | 'x-large'
 
 const props = defineProps<{
@@ -532,10 +547,11 @@ async function saveProductDetails() {
 
   savingProductDetails.value = true
   try {
+    const parsed = parseCompositeOrderNumber(props.job.orderNumber)
     const payload: JobOrderFormData = {
       orderId: props.job.orderId,
       orderNumber: props.job.orderNumber,
-      jobNumber: '',
+      jobNumber: parsed.jobNumber || props.job.jobNumber || '',
       orderTitle: props.job.orderTitle,
       customerName: props.job.customerName,
       customerRef: props.job.customerRef,
@@ -543,11 +559,19 @@ async function saveProductDetails() {
       orderedOn: props.job.orderedOn?.slice(0, 10) ?? '',
       requiredOn: props.job.requiredOn?.slice(0, 10) ?? '',
       qty: props.job.qty,
-      status: props.job.status,
-      orderType: 0,
+      status: props.job.status ?? 1,
+      orderType: props.job.orderType ?? 0,
       paymentTerms: props.job.paymentTerms ?? '',
       remarks: props.job.remarks ?? '',
       productDetails: productDetails.value,
+      soNumber: props.job.soNumber ?? '',
+      originalSONumber: props.job.originalSONumber ?? '',
+      productStyle: props.job.productStyle ?? '',
+      productCode: props.job.productCode ?? '',
+      outputRef: props.job.outputRef ?? '',
+      invoiceRef: props.job.invoiceRef ?? '',
+      invoiceAmount: props.job.invoiceAmount ?? undefined,
+      workflowAttributes: props.job.workflowAttributes ?? {},
     }
 
     await saveJob(payload)

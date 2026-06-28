@@ -6,6 +6,10 @@ public sealed class UpdateJobOrderRequest
 {
     [Required]
     [StringLength(128)]
+    public string OrderNumber { get; init; } = string.Empty;
+
+    [Required]
+    [StringLength(128)]
     public string CustomerName { get; init; } = string.Empty;
 
     [StringLength(64)]
