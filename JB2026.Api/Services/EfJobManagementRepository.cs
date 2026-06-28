@@ -344,7 +344,10 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             order.OrderedOn = request.OrderedOn;
         }
         order.Qty = request.Qty;
-        order.PaymentTerms = request.PaymentTerms;
+        if (request.PaymentTerms is not null)
+        {
+            order.PaymentTerms = request.PaymentTerms;
+        }
         order.Remarks = request.Remarks;
         if (request.ProductDetails is not null)
         {

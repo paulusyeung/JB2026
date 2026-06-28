@@ -36,7 +36,6 @@ public sealed class CreateJobOrderRequest
     [Range(0.01, 1000000)]
     public decimal Qty { get; init; }
 
-    [Required]
     [StringLength(64)]
     public string PaymentTerms { get; init; } = string.Empty;
 

@@ -421,7 +421,7 @@ function handleAddNewJob() {
     orderId: props.order.orderId,
     orderNumber: props.order.orderNumber,
     customerName: props.order.customerName,
-    orderedBy: session.profile?.displayName ?? props.order.orderedBy ?? '',
+    orderedBy: props.order.orderedBy ?? session.profile?.displayName ?? '',
     orderTitle: props.order.orderTitle,
     orderedOn: props.order.orderedOn,
     requiredOn: props.order.requiredOn,

@@ -23,9 +23,8 @@ public sealed class UpdateJobOrderRequest
     [Range(0.01, 1000000)]
     public decimal Qty { get; init; }
 
-    [Required]
     [StringLength(64)]
-    public string PaymentTerms { get; init; } = string.Empty;
+    public string? PaymentTerms { get; init; }
 
     [StringLength(512)]
     public string Remarks { get; init; } = string.Empty;

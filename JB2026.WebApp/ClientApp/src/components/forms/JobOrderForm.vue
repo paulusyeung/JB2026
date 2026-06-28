@@ -449,7 +449,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       orderedOn: job?.orderedOn?.slice(0, 10) ?? today,
       requiredOn: job?.requiredOn?.slice(0, 10) ?? today,
       qty: job?.qty ?? 1,
-      status: 0,
+      status: 1,
       orderType: partial?.orderType ?? 0,
       paymentTerms: job?.paymentTerms ?? '',
       remarks: '',
