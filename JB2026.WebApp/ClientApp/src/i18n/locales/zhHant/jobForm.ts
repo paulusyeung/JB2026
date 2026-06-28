@@ -86,6 +86,7 @@ export const jobFormMessages = {
         maxTwoDecimals: '最多2位小數',
       },
       saveFailed: '儲存失敗，請確認 API 可連線後再試。',
+      notFound: '找不到工單記錄，可能已被刪除。',
       statuses: {
         draft: '草稿',
         inProgress: '進行中',

@@ -99,11 +99,12 @@ export const jobFormMessages = {
         maxTwoDecimals: 'Max 2 decimal places',
       },
       saveFailed: 'Save failed - verify the API is reachable and try again.',
-      statuses: {
+      notFound: 'The job order could not be found. It may have been deleted.',
+        statuses: {
         draft: 'Draft',
         inProgress: 'In Progress',
         onHold: 'On Hold',
-          productDetailsHint: 'Edit and save the Product Details HTML content.',
+        productDetailsHint: 'Edit and save the Product Details HTML content.',
         cancelled: 'Cancelled',
       },
       paymentTerms: {

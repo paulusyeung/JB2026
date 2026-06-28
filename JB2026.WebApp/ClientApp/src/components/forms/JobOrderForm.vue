@@ -548,14 +548,39 @@ async function handleSubmit() {
   errorMessage.value = ''
 
   try {
-    await saveJob(draft.value)
-    emit('saved')
-  } catch {
-    errorMessage.value = t('jobForm.saveFailed')
-  } finally {
-    saving.value = false
+      await saveJob(draft.value)
+      emit('saved')
+    } catch (err: unknown) {
+      if (import.meta.env.DEV) {
+        console.error('Job save failed:', err)
+      }
+
+      const axiosErr = err as { isAxiosError?: boolean; response?: { status?: number; data?: { title?: string; detail?: string; errors?: Record<string, string[]> } } }
+
+      if (axiosErr?.response) {
+        const status = axiosErr.response.status
+        const data = axiosErr.response.data
+
+        // 400/422: Extract validation error details from ProblemDetails / ValidationProblemDetails
+        if ((status === 400 || status === 422) && data?.errors) {
+          const messages = Object.values(data.errors).flat().filter(Boolean)
+          errorMessage.value = messages.length > 0
+            ? messages.join('. ')
+            : t('jobForm.saveFailed')
+        } else if (data?.title || data?.detail) {
+          errorMessage.value = data.title || data.detail || t('jobForm.saveFailed')
+        } else if (status === 404) {
+          errorMessage.value = t('jobForm.notFound')
+        } else {
+          errorMessage.value = t('jobForm.saveFailed')
+        }
+      } else {
+        errorMessage.value = t('jobForm.saveFailed')
+      }
+    } finally {
+      saving.value = false
+    }
   }
-}
 
 const legacyIndicatorColors = [
   'legacy-indicator-blue',
