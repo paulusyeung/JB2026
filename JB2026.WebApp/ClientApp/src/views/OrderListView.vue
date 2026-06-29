@@ -393,7 +393,7 @@
                   </template>
  -->
                   <template #[`item.orderNumber`]="{ item: detail }">
-                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openJobForm(detail.orderId)">
+                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openDetailItem(detail)">
                       {{ detail.orderNumber }}-{{ detail.jobNumber }}
                     </v-btn>
                   </template>
@@ -801,7 +801,16 @@ function setViewMode(mode: OrderListViewMode) {
 }
 
 async function onDetailRowClick(_event: Event, payload: { item: JobOrderRecord }) {
-  await openJobForm(payload.item.orderId)
+  await openDetailItem(payload.item)
+}
+
+async function openDetailItem(record: JobOrderRecord) {
+  const jobNum = parseInt(record.jobNumber, 10)
+  if (!jobNum || jobNum === 0) {
+    await openEdit(record)
+  } else {
+    await openJobForm(record.orderId)
+  }
 }
 
 async function openJobForm(orderId: string) {
