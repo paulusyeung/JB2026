@@ -117,12 +117,6 @@ const router = createRouter({
       meta: { requiresAuth: true, titleKey: 'routes.stock' },
     },
     {
-      path: '/reports',
-      name: 'reports',
-      component: () => import('@/views/ReportsView.vue'),
-      meta: { requiresAuth: true, titleKey: 'routes.reports' },
-    },
-    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/AdminView.vue'),

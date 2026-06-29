@@ -3,10 +3,19 @@
     <v-card rounded="xl" elevation="0" class="panel-card exceptional-list-card">
       <v-card-title class="reports-toolbar d-flex flex-wrap align-center ga-3">
         <v-text-field
-          v-model="selectedMonth"
-          class="reports-toolbar__month"
-          :label="t('reports.exceptional.month')"
-          type="month"
+          v-model="startOn"
+          class="reports-toolbar__date"
+          :label="t('reports.exceptional.startDate')"
+          type="date"
+          density="comfortable"
+          variant="solo-filled"
+          hide-details
+        />
+        <v-text-field
+          v-model="endOn"
+          class="reports-toolbar__date"
+          :label="t('reports.exceptional.endDate')"
+          type="date"
           density="comfortable"
           variant="solo-filled"
           hide-details
@@ -85,6 +94,11 @@
           {{ errorMessage }}
         </v-alert>
 
+        <div v-if="rows.length > 0" class="d-flex flex-wrap ga-2 mb-4">
+          <v-chip color="secondary" variant="tonal">{{ t('reports.exceptional.rows', { count: rows.length }) }}</v-chip>
+          <v-chip color="accent" variant="tonal">{{ t('reports.exceptional.totalInvoice', { amount: formatCurrency(totalInvoiceAmount) }) }}</v-chip>
+        </div>
+
         <div v-if="isCardView" class="exceptional-card-list mt-2">
           <v-card
             v-for="item in sortedRows"
@@ -157,10 +171,8 @@
           <template #[`item.invoiceAmount`]="{ item }">
             {{ invoiceAmountForRow(item) === 0 ? '' : formatCurrency(invoiceAmountForRow(item)) }}
           </template>
-          <template #[`item.invoiceStatus`]="{ item }">
-            <v-chip size="x-small" :color="billingStatusColor(item)" variant="tonal">
-              {{ billingStatusLabel(item) }}
-            </v-chip>
+          <template #[`item.invoiceNumber`]="{ item }">
+            {{ invoiceNumberForRow(item) }}
           </template>
 
           
@@ -228,7 +240,9 @@ const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
-const selectedMonth = ref(toMonthString(new Date()))
+const now = new Date()
+const startOn = ref(toDateOnly(new Date(now.getFullYear(), now.getMonth(), 1)))
+const endOn = ref(toDateOnly(new Date(now.getFullYear(), now.getMonth() + 1, 0)))
 const selectedOrderIds = ref<string[]>([])
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
@@ -250,7 +264,7 @@ const {
     'attachCustomer',
     'orderedBy',
     'invoiceAmount',
-    'invoiceStatus',
+    'invoiceNumber',
     'requiredOn',
     'modifiedOn',
     'modifiedBy',
@@ -278,7 +292,7 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.attachCustomer'), key: 'attachCustomer', width: '64px', sortable: false, align: 'center' as const },
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '110px' },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '130px', align: 'end' as const },
-  { title: t('jobOrder.jobList.headers.invoiceStatus'), key: 'invoiceStatus', width: '150px', sortable: false },
+  { title: t('jobOrder.jobList.headers.invoiceRef'), key: 'invoiceNumber', width: '130px' },
   { title: t('jobOrder.jobList.headers.requiredOn'), key: 'requiredOn', width: '120px' },
   { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '120px' },
   { title: t('jobOrder.jobList.headers.modifiedBy'), key: 'modifiedBy', width: '120px' },
@@ -325,7 +339,15 @@ const sortedRows = computed(() => {
   return result
 })
 
-watch(selectedMonth, async () => {
+const totalInvoiceAmount = computed(() => {
+  let total = 0
+  for (const row of rows.value) {
+    total += invoiceAmountForRow(row)
+  }
+  return total
+})
+
+watch([startOn, endOn], async () => {
   await load()
 })
 
@@ -430,38 +452,15 @@ function toggleColumn(columnKey: string) {
   visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
 }
 
-function getMonthBounds(value: string) {
-  const [yearText, monthText] = value.split('-')
-  if (!yearText || !monthText) {
-    const now = new Date()
-    return getMonthBounds(toMonthString(now))
-  }
-
-  const year = Number.parseInt(yearText, 10)
-  const month = Number.parseInt(monthText, 10)
-  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
-    const now = new Date()
-    return getMonthBounds(toMonthString(now))
-  }
-
-  const firstDay = new Date(year, month - 1, 1)
-  const lastDay = new Date(year, month, 0)
-  return {
-    startOn: toDateOnly(firstDay),
-    endOn: toDateOnly(lastDay),
-  }
-}
-
 async function load() {
   loading.value = true
   errorMessage.value = ''
   selectedOrderIds.value = []
 
   try {
-    const bounds = getMonthBounds(selectedMonth.value)
     rows.value = await getJobList({
-      startOn: bounds.startOn,
-      endOn: bounds.endOn,
+      startOn: startOn.value,
+      endOn: endOn.value,
       take: 500,
     })
     await hydrateInvoiceSummaries(rows.value)
@@ -479,30 +478,14 @@ function toDateOnly(value: Date) {
   return `${y}-${m}-${d}`
 }
 
-function toMonthString(value: Date) {
-  const y = value.getFullYear()
-  const m = `${value.getMonth() + 1}`.padStart(2, '0')
-  return `${y}-${m}`
-}
-
 function invoiceAmountForRow(row: JobOrderRecord) {
   const summary = invoiceSummaryByOrderId.value[row.orderId]
   return summary?.amount ?? row.invoiceAmount
 }
 
-function billingStatusLabel(row: JobOrderRecord) {
+function invoiceNumberForRow(row: JobOrderRecord) {
   const summary = invoiceSummaryByOrderId.value[row.orderId]
-  if (summary?.status) return summary.status
-  return row.invoiceRef ? t('jobOrder.jobList.actions.legacyInvoiced') : t('jobOrder.jobList.actions.notInvoiced')
-}
-
-function billingStatusColor(row: JobOrderRecord) {
-  const status = billingStatusLabel(row).toLowerCase()
-  if (status.includes('paid')) return 'success'
-  if (status.includes('overdue')) return 'error'
-  if (status.includes('sent') || status.includes('view')) return 'info'
-  if (status.includes('not invoiced')) return 'grey'
-  return 'warning'
+  return summary?.invoiceNumber ?? row.invoiceRef
 }
 </script>
 
@@ -518,8 +501,8 @@ function billingStatusColor(row: JobOrderRecord) {
   background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));
 }
 
-.reports-toolbar__month {
-  min-width: 220px;
+.reports-toolbar__date {
+  min-width: 200px;
 }
 
 .toolbar-bar {
@@ -604,7 +587,7 @@ function billingStatusColor(row: JobOrderRecord) {
 }
 
 @media (max-width: 960px) {
-  .reports-toolbar__month {
+  .reports-toolbar__date {
     width: 100%;
   }
 }

@@ -41,12 +41,12 @@ public sealed class LegacySlicesController : ControllerBase
         [
             new LegacySliceApiDependencyDefinition("List stock products", "GET", "/api/v2/stock/products", true, "Backed by StockController.GetProducts")
         ]),
-        new("reports", "Reports", "/reports", "Reports",
+        new("reports", "Reports", "/job-order/reports/exceptional", "Reports",
         [
-            new LegacySliceSampleRouteResponse("/Reports", "Legacy reporting root")
+            new LegacySliceSampleRouteResponse("/Reports", "Legacy reporting root"),
+            new LegacySliceSampleRouteResponse("/Reports/Exceptional", "Exceptional report (modern: /job-order/reports/exceptional)")
         ],
         [
-            new LegacySliceApiDependencyDefinition("Run report", "POST", "/api/v2/reports/run", true, "Backed by ReportsController.Run")
         ]),
         new("admin", "Admin", "/admin", "Admin",
         [

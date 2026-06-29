@@ -499,21 +499,6 @@ export interface StockProductAttachmentDeleteResult {
   deletedCount: number
 }
 
-export interface RunReportRequest {
-  reportName: string
-  startOn: string
-  days: number
-  take: number
-}
-
-export interface ReportRunResponse {
-  reportName: string
-  generatedAtUtc: string
-  totalRows: number
-  totalCostA: number
-  rows: QuotationListItem[]
-}
-
 export interface SmlMonthlyStat {
   year: number
   month: number

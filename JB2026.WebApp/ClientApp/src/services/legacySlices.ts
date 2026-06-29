@@ -35,10 +35,11 @@ const legacySliceCatalog: LegacySliceCatalogItem[] = [
   {
     key: 'reports',
     displayName: 'Reports',
-    modernPath: '/reports',
+    modernPath: '/job-order/reports/exceptional',
     legacyFolder: 'Reports',
     sampleRoutes: [
       { path: '/Reports', description: 'Legacy reporting root' },
+      { path: '/Reports/Exceptional', description: 'Exceptional report (modern: /job-order/reports/exceptional)' },
     ],
   },
   {
