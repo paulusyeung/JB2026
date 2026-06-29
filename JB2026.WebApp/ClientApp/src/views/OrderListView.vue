@@ -387,11 +387,11 @@
                   <template #[`header.attachProduct`]>
                     <v-icon size="16" color="grey darken-3">mdi-paperclip</v-icon>
                   </template>
-
+<!-- 
                   <template #[`header.attachCustomer`]>
                     <v-icon size="16" color="grey darken-3">mdi-paperclip</v-icon>
                   </template>
-
+ -->
                   <template #[`item.orderNumber`]="{ item: detail }">
                     <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openJobForm(detail.orderId)">
                       {{ detail.orderNumber }}-{{ detail.jobNumber }}
@@ -415,7 +415,7 @@
                       </v-icon>
                     </div>
                   </template>
-
+<!-- 
                   <template #[`item.attachCustomer`]="{ item: detail }">
                     <div class="d-flex justify-center">
                       <v-icon size="14" :color="detail.attachmentCustomerCount > 0 ? 'success' : 'error'">
@@ -423,7 +423,7 @@
                       </v-icon>
                     </div>
                   </template>
-
+ -->
                   <template #[`item.orderedOn`]="{ item: detail }">{{ format(detail.orderedOn) }}</template>
                   <template #[`item.requiredOn`]="{ item: detail }">{{ format(detail.requiredOn) }}</template>
                   <template #[`item.completedOn`]="{ item: detail }">{{ format(detail.completedOn) }}</template>
