@@ -582,7 +582,7 @@ const masterHeaders = computed(() => [
   { title: '#', key: 'ln', width: '48px', sortable: false },
   { title: t('jobOrder.record.fields.orderNumber'), key: 'orderNumber', width: '130px' },
   { title: t('jobOrder.record.fields.customerName'), key: 'customerName', minWidth: '240px' },
-  { title: t('jobOrder.record.fields.brand'), key: 'orderTitle', minWidth: '280px' },
+  { title: t('jobOrder.record.fields.orderTitle'), key: 'orderTitle', minWidth: '280px' },
   { title: t('jobOrder.record.fields.requiredOn'), key: 'requiredOn', width: '120px' },
   { title: t('jobOrder.record.fields.invoiceAmount'), key: 'invoiceAmount', align: 'end' as const, width: '120px' },
   { title: t('jobOrder.orderList.headers.salesRep'), key: 'orderedBy', width: '100px' },

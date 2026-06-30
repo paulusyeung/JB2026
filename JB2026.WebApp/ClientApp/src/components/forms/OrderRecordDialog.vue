@@ -99,7 +99,7 @@
         <v-col cols="12" md="4">
           <v-text-field
             v-model="draft.orderTitle"
-            :label="t('jobOrder.record.fields.brand')"
+            :label="t('jobOrder.record.fields.orderTitle')"
             variant="outlined"
             density="compact"
           />
@@ -337,7 +337,7 @@ const relatedHeaders = computed(() => [
   { title: '', key: 'indicator', sortable: false, width: '36px' },
   { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '110px' },
   { title: t('jobOrder.headers.customer'), key: 'customerName', width: '160px' },
-  { title: t('jobOrder.record.fields.brand'), key: 'orderTitle', width: '200px' },
+  { title: t('jobOrder.record.fields.orderTitle'), key: 'orderTitle', width: '200px' },
   { title: t('jobOrder.orderList.headers.productCode'), key: 'productCode', width: '120px' },
   { title: '', key: 'attachments', sortable: false, width: '40px' },
   { title: 'Purchase Order', key: 'customerRef', width: '140px' },
