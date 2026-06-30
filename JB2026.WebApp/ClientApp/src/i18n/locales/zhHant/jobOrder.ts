@@ -127,10 +127,11 @@ export const jobOrderMessages = {
         batchDeleteConfirm: '確定刪除所選 {count} 筆作業？此操作無法復原。',
         batchDeleteFailed: '部分作業無法刪除。',
         batchDeleteResult: '已刪除 {total} 筆中的 {succeeded} 筆，{failed} 筆無法刪除。',
-        commonQueryItems: {
-          none: '無',
-          ordered30: '最近 30 天下單',
-          ordered90: '最近 90 天下單',
+        filters: {
+          startDate: '開始日期',
+          endDate: '結束日期',
+          status: '狀態',
+          allStatuses: '全部狀態',
         },
         headers: {
           orderType: '類型',
@@ -391,7 +392,7 @@ export const jobOrderMessages = {
         },
       },
       status: {
-        notStarted: '尚未開始',
+        notStarted: '草稿',
         inProgress: '進行中',
         paused: '已暫停',
         completed: '已完成',

@@ -17,7 +17,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetAll(null, "acme", 2, "A", "job", null, null);
+        var result = controller.GetAll(null, "acme", 2, "A", "job", null, null, null);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
@@ -33,7 +33,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetAll(null, "acme", 0, null, null, null, null);
+        var result = controller.GetAll(null, "acme", 0, null, null, null, null, null);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
@@ -49,7 +49,7 @@ public sealed class JobOrdersControllerTests
         var repository = new StubRepository();
         var controller = CreateController(repository);
 
-        var result = controller.GetAll(500, null, 0, null, "order", null, null);
+        var result = controller.GetAll(500, null, 0, null, "order", null, null, null);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<JobOrderResponse>>(ok.Value);
@@ -136,7 +136,7 @@ public sealed class JobOrdersControllerTests
             return [CreateResponse("job-orders")];
         }
 
-        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
+        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null)
         {
             JobListCalled = true;
             return [CreateResponse("job-list")];

@@ -175,7 +175,7 @@ public sealed class JobsControllerTests
 
         public IReadOnlyList<JobOrderResponse> GetJobOrders(int take) => [];
 
-        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null) => [];
+        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null) => [];
 
         public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null) => [];
 

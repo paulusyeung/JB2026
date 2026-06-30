@@ -43,12 +43,14 @@ public sealed class JobOrdersController : ControllerBase
         [FromQuery] string? startsWith,
         [FromQuery] string? listType,
         [FromQuery] DateOnly? startOn,
-        [FromQuery] DateOnly? endOn)
+        [FromQuery] DateOnly? endOn,
+        [FromQuery] int? status)
     {
         var isJobList = string.Equals(listType, "job", StringComparison.OrdinalIgnoreCase);
         var isOrderList = string.Equals(listType, "order", StringComparison.OrdinalIgnoreCase);
         var hasFilters = !string.IsNullOrWhiteSpace(lookup) 
             || commonQuery.GetValueOrDefault() > 0 
+            || status.HasValue
             || !string.IsNullOrWhiteSpace(startsWith)
             || startOn.HasValue
             || endOn.HasValue;
@@ -57,7 +59,7 @@ public sealed class JobOrdersController : ControllerBase
         var requestedTake = take.GetValueOrDefault(defaultTake);
         var jobListTake = Math.Clamp(requestedTake, 1, maxTake);
         var orders = isJobList
-            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
+            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn, status)
             : isOrderList
             ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
             : hasFilters

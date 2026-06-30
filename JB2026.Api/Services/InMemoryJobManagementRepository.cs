@@ -86,7 +86,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null)
     {
         var today = DateTime.Today;
 
@@ -95,8 +95,8 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
 
         query = commonQuery switch
         {
-            1 => query.Where(j => j.Status >= 2 && j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-30)),
-            2 => query.Where(j => j.Status >= 2 && j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-90)),
+            1 => query.Where(j => j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-30)),
+            2 => query.Where(j => j.OrderedOn <= today.AddDays(1) && j.OrderedOn >= today.AddDays(-90)),
             _ => query
         };
 
@@ -110,6 +110,13 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         {
             var upper = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
             query = query.Where(j => j.OrderedOn < upper);
+        }
+
+        if (status.HasValue)
+        {
+            query = status.Value >= 3
+                ? query.Where(j => j.CompletedOn.HasValue && j.CompletedOn.Value != new DateTime(1900, 1, 1))
+                : query.Where(j => j.Status == status.Value);
         }
 
         if (!string.IsNullOrEmpty(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
@@ -359,7 +366,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             OrderedBy = job.OrderedBy,
             OrderedOn = job.OrderedOn,
             RequiredOn = job.RequiredOn,
-            CompletedOn = null,
+            CompletedOn = job.CompletedOn,
             Qty = job.Qty,
             PaymentTerms = job.PaymentTerms,
             Remarks = job.Remarks,
@@ -474,6 +481,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public required DateTime CreatedOn { get; init; }
         public string? ModifiedBy { get; init; }
         public DateTime? ModifiedOn { get; init; }
+        public DateTime? CompletedOn { get; init; }
         public string? SONumber { get; init; }
         public string? OriginalSONumber { get; init; }
         public string? ProductStyle { get; init; }

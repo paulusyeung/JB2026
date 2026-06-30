@@ -141,7 +141,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null)
     {
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
@@ -155,8 +155,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         query = commonQuery switch
         {
-            1 => query.Where(o => o.Status >= 2 && o.OrderedOn >= today.AddDays(-30) && o.OrderedOn < today.AddDays(1)),
-            2 => query.Where(o => o.Status >= 2 && o.OrderedOn >= today.AddDays(-90) && o.OrderedOn < today.AddDays(1)),
+            1 => query.Where(o => o.OrderedOn >= today.AddDays(-30) && o.OrderedOn < today.AddDays(1)),
+            2 => query.Where(o => o.OrderedOn >= today.AddDays(-90) && o.OrderedOn < today.AddDays(1)),
             _ => query
         };
 
@@ -170,6 +170,13 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         {
             var upper = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
             query = query.Where(o => o.OrderedOn.HasValue && o.OrderedOn.Value < upper);
+        }
+
+        if (status.HasValue)
+        {
+            query = status.Value >= 3
+                ? query.Where(o => o.CompletedOn.HasValue && o.CompletedOn.Value != new DateTime(1900, 1, 1))
+                : query.Where(o => o.Status == status.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))

@@ -16,5 +16,5 @@ export function statusLabel(status: number): string {
   if (status >= 3) return 'Completed'
   if (status === 2) return 'Paused'
   if (status === 1) return 'In Progress'
-  return 'Not Started'
+  return 'Draft'
 }

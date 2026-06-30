@@ -127,10 +127,11 @@ export const jobOrderMessages = {
         batchDeleteConfirm: 'Delete {count} selected job(s)? This action cannot be undone.',
         batchDeleteFailed: 'One or more jobs could not be deleted.',
         batchDeleteResult: 'Deleted {succeeded} of {total} job(s). {failed} could not be deleted.',
-        commonQueryItems: {
-          none: 'None',
-          ordered30: 'Ordered in last 30 days',
-          ordered90: 'Ordered in last 90 days',
+        filters: {
+          startDate: 'From Date',
+          endDate: 'To Date',
+          status: 'Status',
+          allStatuses: 'All Statuses',
         },
         headers: {
           orderType: 'Type',
@@ -391,7 +392,7 @@ export const jobOrderMessages = {
         },
       },
       status: {
-        notStarted: 'Not Started',
+        notStarted: 'Draft',
         inProgress: 'In Progress',
         paused: 'Paused',
         completed: 'Completed',

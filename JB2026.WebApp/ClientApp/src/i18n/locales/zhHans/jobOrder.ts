@@ -126,10 +126,11 @@ export const jobOrderMessages = {
         batchDeleteConfirm: '确定删除所选 {count} 条作业？此操作无法撤销。',
         batchDeleteFailed: '部分作业无法删除。',
         batchDeleteResult: '已删除 {total} 条中的 {succeeded} 条，{failed} 条无法删除。',
-        commonQueryItems: {
-          none: '无',
-          ordered30: '最近 30 天下单',
-          ordered90: '最近 90 天下单',
+        filters: {
+          startDate: '开始日期',
+          endDate: '结束日期',
+          status: '状态',
+          allStatuses: '全部状态',
         },
         headers: {
           orderType: '类型',
@@ -390,7 +391,7 @@ export const jobOrderMessages = {
         },
       },
       status: {
-        notStarted: '尚未开始',
+        notStarted: '草稿',
         inProgress: '进行中',
         paused: '已暂停',
         completed: '已完成',

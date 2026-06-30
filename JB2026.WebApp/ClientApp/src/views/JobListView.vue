@@ -16,12 +16,56 @@
             @keydown.enter="applyLookup"
           />
 
+          <v-menu v-model="startDatePickerOpen" :close-on-content-click="false">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="startDate ? format(startDate) : ''"
+                :label="t('jobOrder.jobList.filters.startDate')"
+                variant="solo-filled"
+                density="comfortable"
+                readonly
+                append-inner-icon="mdi-calendar"
+                v-bind="menuProps"
+                hide-details
+                clearable
+                @click:clear="startDate = ''"
+              />
+            </template>
+            <v-date-picker
+              :model-value="startDate ? new Date(startDate + 'T12:00:00') : undefined"
+              hide-header
+              @update:model-value="onStartDatePicked"
+            />
+          </v-menu>
+
+          <v-menu v-model="endDatePickerOpen" :close-on-content-click="false">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="endDate ? format(endDate) : ''"
+                :label="t('jobOrder.jobList.filters.endDate')"
+                variant="solo-filled"
+                density="comfortable"
+                readonly
+                append-inner-icon="mdi-calendar"
+                v-bind="menuProps"
+                hide-details
+                clearable
+                @click:clear="endDate = ''"
+              />
+            </template>
+            <v-date-picker
+              :model-value="endDate ? new Date(endDate + 'T12:00:00') : undefined"
+              hide-header
+              @update:model-value="onEndDatePicked"
+            />
+          </v-menu>
+
           <v-select
-            v-model="commonQuery"
-            :items="commonQueryItems"
+            v-model="statusFilter"
+            :items="statusItems"
             item-title="label"
             item-value="value"
-            :label="t('jobOrder.jobList.commonQuery')"
+            :label="t('jobOrder.jobList.filters.status')"
             variant="solo-filled"
             density="comfortable"
             hide-details
@@ -528,7 +572,11 @@ const deleting = ref(false)
 const errorMessage = ref('')
 const errorSnackbarOpen = ref(false)
 const lookup = ref('')
-const commonQuery = ref(0)
+const startDate = ref('')
+const endDate = ref('')
+const statusFilter = ref(-1)
+const startDatePickerOpen = ref(false)
+const endDatePickerOpen = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const activeOrderId = ref<string | null>(null)
 const defaultColumnKeys = [
@@ -591,6 +639,27 @@ const { formatCurrency: formatCurrencyByLocale } = useLocaleFormatters()
 function formatCurrency(value: number) {
   return value === 0 ? '' : formatCurrencyByLocale(value)
 }
+
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function onStartDatePicked(date: Date | null) {
+  if (date) {
+    startDate.value = toIsoDate(date)
+  }
+  startDatePickerOpen.value = false
+}
+
+function onEndDatePicked(date: Date | null) {
+  if (date) {
+    endDate.value = toIsoDate(date)
+  }
+  endDatePickerOpen.value = false
+}
 const display = useDisplay()
 const router = useRouter()
 const isPhoneLayout = computed(() => display.smAndDown.value)
@@ -598,10 +667,12 @@ const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
 const cardViewLabel = computed(() => t('jobOrder.jobList.actions.cardView'))
 const isCardView = computed(() => viewMode.value === 'card')
 
-const commonQueryItems = computed(() => [
-  { value: 0, label: t('jobOrder.jobList.commonQueryItems.none') },
-  { value: 1, label: t('jobOrder.jobList.commonQueryItems.ordered30') },
-  { value: 2, label: t('jobOrder.jobList.commonQueryItems.ordered90') },
+const statusItems = computed(() => [
+  { value: -1, label: t('jobOrder.jobList.filters.allStatuses') },
+  { value: 0, label: t('jobOrder.status.notStarted') },
+  { value: 1, label: t('jobOrder.status.inProgress') },
+  { value: 2, label: t('jobOrder.status.paused') },
+  { value: 3, label: t('jobOrder.status.completed') },
 ])
 
 const allHeaders = computed(() => [
@@ -678,7 +749,9 @@ async function load() {
   try {
     rows.value = await getJobList({
       lookup: lookup.value.trim() || undefined,
-      commonQuery: commonQuery.value,
+      startOn: startDate.value || undefined,
+      endOn: endDate.value || undefined,
+      status: statusFilter.value >= 0 ? statusFilter.value : undefined,
     })
     await hydrateInvoiceSummaries(rows.value)
 
@@ -720,7 +793,9 @@ async function applyLookup() {
 
 async function refreshList() {
   lookup.value = ''
-  commonQuery.value = 0
+  startDate.value = ''
+  endDate.value = ''
+  statusFilter.value = -1
   await load()
 }
 
@@ -1093,7 +1168,7 @@ async function handleActionUpdated() {
 .filter-bar {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto auto;
+  grid-template-columns: minmax(200px, 1fr) minmax(150px, 200px) minmax(150px, 200px) minmax(130px, 160px) auto auto;
   align-items: center;
   margin-bottom: 16px;
 }
