@@ -36,17 +36,29 @@
           />
         </v-col>
         <v-col cols="12" md="4">
-          <v-text-field
-            v-model="draft.orderedOn"
-            type="date"
-            :label="t('jobOrder.record.fields.orderedOn')"
-            variant="outlined"
-            density="compact"
-          />
+          <v-menu v-model="orderedOnPickerOpen" :close-on-content-click="false">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="draft.orderedOn ? globalFormat.format(draft.orderedOn) : ''"
+                :label="t('jobOrder.record.fields.orderedOn')"
+                variant="outlined"
+                density="compact"
+                readonly
+                append-inner-icon="mdi-calendar"
+                v-bind="menuProps"
+                class="date-picker-input"
+              />
+            </template>
+            <v-date-picker
+              :model-value="draft.orderedOn ? new Date(draft.orderedOn + 'T12:00:00') : undefined"
+              hide-header
+              @update:model-value="onOrderedOnPicked"
+            />
+          </v-menu>
         </v-col>
         <v-col cols="12" md="4">
           <v-text-field
-            :model-value="formatDate(mode === 'edit' ? orderModifiedOn : null)"
+            :model-value="globalFormat.format(mode === 'edit' ? orderModifiedOn : null)"
             :label="t('jobOrder.record.fields.modifiedOn')"
             variant="outlined"
             density="compact"
@@ -93,13 +105,25 @@
           />
         </v-col>
         <v-col cols="12" md="4">
-          <v-text-field
-            v-model="draft.requiredOn"
-            type="date"
-            :label="t('jobOrder.record.fields.requiredOn')"
-            variant="outlined"
-            density="compact"
-          />
+          <v-menu v-model="requiredOnPickerOpen" :close-on-content-click="false">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="draft.requiredOn ? globalFormat.format(draft.requiredOn) : ''"
+                :label="t('jobOrder.record.fields.requiredOn')"
+                variant="outlined"
+                density="compact"
+                readonly
+                append-inner-icon="mdi-calendar"
+                v-bind="menuProps"
+                class="date-picker-input"
+              />
+            </template>
+            <v-date-picker
+              :model-value="draft.requiredOn ? new Date(draft.requiredOn + 'T12:00:00') : undefined"
+              hide-header
+              @update:model-value="onRequiredOnPicked"
+            />
+          </v-menu>
         </v-col>
         <v-col cols="12" md="4">
           <v-text-field
@@ -190,7 +214,7 @@
               {{ compositeOrderNumber(item) }}
             </v-btn>
           </template>
-          <template #[`item.orderedOn`]="{ item }">{{ formatDate(item.orderedOn) }}</template>
+          <template #[`item.orderedOn`]="{ item }">{{ globalFormat.format(item.orderedOn) }}</template>
           <template #[`item.attachments`]="{ item }">
             <v-icon v-if="item.attachmentProductCount && item.attachmentProductCount > 0" color="success" size="16">mdi-circle</v-icon>
           </template>
@@ -200,8 +224,8 @@
           <template #[`item.customerAttachments`]="{ item }">
             <v-icon v-if="item.attachmentCustomerCount && item.attachmentCustomerCount > 0" color="error" size="16">mdi-circle-outline</v-icon>
           </template>
-          <template #[`item.requiredOn`]="{ item }">{{ formatDate(item.requiredOn) }}</template>
-          <template #[`item.modifiedOn`]="{ item }">{{ formatDateTime(item.modifiedOn) }}</template>
+          <template #[`item.requiredOn`]="{ item }">{{ globalFormat.format(item.requiredOn) }}</template>
+          <template #[`item.modifiedOn`]="{ item }">{{ globalFormat.format(item.modifiedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ formatUser(item.modifiedBy) }}</template>
         </v-data-table>
 
@@ -231,6 +255,8 @@ import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOr
 import { getSettings, updateSettings } from '@/services/settings'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
 import { statusIcon, statusColor } from '@/composables/useJobStatus'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { DATE_FORMATS } from '@/utils/dateFormatter'
 
 const props = defineProps<{
   order?: JobOrderRecord
@@ -256,6 +282,9 @@ const userMap = ref<Record<string, string>>({})
 const nextOrderNumber = ref('')
 const selectedIds = ref(new Set<string>())
 const session = useSessionStore()
+const globalFormat = useGlobalDateFormatter()
+const orderedOnPickerOpen = ref(false)
+const requiredOnPickerOpen = ref(false)
 
 const draft = ref<JobOrderFormData>(props.order ? buildDraft(props.order) : buildCreateDraft())
 
@@ -512,6 +541,27 @@ function buildCreateDraft(): JobOrderFormData {
   }
 }
 
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function onOrderedOnPicked(date: Date | null) {
+  if (date) {
+    draft.value.orderedOn = toIsoDate(date)
+  }
+  orderedOnPickerOpen.value = false
+}
+
+function onRequiredOnPicked(date: Date | null) {
+  if (date) {
+    draft.value.requiredOn = toIsoDate(date)
+  }
+  requiredOnPickerOpen.value = false
+}
+
 function validateDraft() {
   if (mode.value !== 'create' && !draft.value.orderNumber.trim()) return t('jobOrder.record.validation.orderNumber')
   if (!draft.value.jobNumber.trim()) return t('jobOrder.record.validation.jobNumber')
@@ -672,19 +722,6 @@ function statusLabel(status: number): string {
   return t('jobOrder.status.notStarted')
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '-'
-
-  const normalized = value.slice(0, 10)
-  if (!normalized) return '-'
-  return normalized
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return '-'
-  return value.slice(0, 16).replace('T', ' ')
-}
-
 function formatUser(userId: string | null | undefined): string {
   if (!userId) return '-'
   return userMap.value[userId] || userId
@@ -714,8 +751,16 @@ function formatUser(userId: string | null | undefined): string {
   background: #e8e8e8;
 }
 
+.order-record-dialog :deep(.v-input.date-picker-input:has(input[readonly]) .v-field) {
+  background: transparent;
+}
+
 :deep(.v-theme--dark) .order-record-dialog .v-input:has(input[readonly]) .v-field,
 :deep(.v-theme--dark) .order-record-dialog .v-input:has(textarea[readonly]) .v-field {
   background: #2f3841;
+}
+
+:deep(.v-theme--dark) .order-record-dialog .v-input.date-picker-input:has(input[readonly]) .v-field {
+  background: transparent;
 }
 </style>
