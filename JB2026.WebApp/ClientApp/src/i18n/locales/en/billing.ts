@@ -101,7 +101,7 @@ export const billingMessages = {
       newInvoice: 'New Invoice',
       markSent: 'Mark Sent',
       download: 'Download',
-      invoicePdf: 'Invoice PDF',
+      invoicePdf: 'Invoice',
       deliveryNote: 'Delivery Note',
       confirmMarkSent: 'Confirm Mark as Sent',
       cancel: 'Cancel',

@@ -101,7 +101,7 @@ export const billingMessages = {
       newInvoice: '新增發票',
       markSent: '標記為已發送',
       download: '下載',
-      invoicePdf: '發票 PDF',
+      invoicePdf: '發票',
       deliveryNote: '送貨單',
       confirmMarkSent: '確認標記為已發送',
       cancel: '取消',
