@@ -809,6 +809,48 @@ public class BillingController : ControllerBase
     }
 
     /// <summary>
+    /// Lists Invoice Ninja group settings for the admin customer dialog.
+    /// </summary>
+    [HttpGet("groups")]
+    [ProducesResponseType(typeof(ListBillingGroupsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBillingGroups()
+    {
+        try
+        {
+            var groups = await _billingService.GetBillingGroupsAsync();
+            return Ok(new ListBillingGroupsResponse { Groups = groups.ToList() });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to list billing groups: {ErrorCode}", ex.ErrorCode);
+            var statusCode = ex.InvoiceNinjaStatusCode switch
+            {
+                401 => StatusCodes.Status401Unauthorized,
+                429 => StatusCodes.Status429TooManyRequests,
+                503 => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error listing billing groups: {ErrorMessage}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "LIST_GROUPS_FAILED",
+                Message = "Failed to list billing groups.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
     /// Validates a client statement request and returns a launch URL for opening it in a new tab.
     /// </summary>
     [HttpPost("statements/client")]

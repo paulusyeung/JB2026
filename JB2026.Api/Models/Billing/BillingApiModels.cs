@@ -411,6 +411,23 @@ public class ListBillingClientsResponse
 }
 
 /// <summary>
+/// A selectable Invoice Ninja group for the admin customer dialog.
+/// </summary>
+public class BillingGroupOption
+{
+    public string ExternalGroupId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Response for the billing groups list endpoint.
+/// </summary>
+public class ListBillingGroupsResponse
+{
+    public List<BillingGroupOption> Groups { get; set; } = new();
+}
+
+/// <summary>
 /// A single line item as returned by the invoice editor detail endpoint.
 /// </summary>
 public class InvoiceEditorLineItemDto

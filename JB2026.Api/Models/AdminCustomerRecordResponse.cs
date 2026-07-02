@@ -8,6 +8,7 @@ public sealed class AdminCustomerRecordResponse
     public string LoginPassword { get; init; } = string.Empty;
     public string CustomerCode { get; init; } = string.Empty;
     public string BillTo { get; init; } = string.Empty;
+    public string Group { get; init; } = string.Empty;
     public IReadOnlyList<AdminCustomerShipToAddressResponse> ShipToAddresses { get; init; } = [];
     public DateTime CreatedOn { get; init; }
     public string CreatedBy { get; init; } = string.Empty;

@@ -152,6 +152,12 @@ public interface IBillingService
     Task<IReadOnlyList<BillingClientOption>> GetBillingClientsAsync(string? query);
 
     /// <summary>
+    /// Lists Invoice Ninja group settings for the admin customer dialog.
+    /// </summary>
+    /// <returns>Group options.</returns>
+    Task<IReadOnlyList<BillingGroupOption>> GetBillingGroupsAsync();
+
+    /// <summary>
     /// Validates and normalizes a client statement launch request.
     /// </summary>
     /// <param name="request">Raw statement request from the UI.</param>
@@ -794,6 +800,20 @@ public class BillingService : IBillingService
                 DisplayName = !string.IsNullOrWhiteSpace(c.DisplayName) ? c.DisplayName : c.Name,
                 IdNumber = c.IdNumber,
                 OutstandingBalance = c.Balance,
+            })
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<BillingGroupOption>> GetBillingGroupsAsync()
+    {
+        var groups = await _invoiceNinjaClient.GetAsync<List<InvoiceNinjaGroupResponse>>("/group_settings?per_page=200");
+        if (groups == null) return Array.Empty<BillingGroupOption>();
+
+        return groups
+            .Select(g => new BillingGroupOption
+            {
+                ExternalGroupId = g.Id,
+                Name = g.Name,
             })
             .ToList();
     }

@@ -20,6 +20,9 @@ public sealed class UpdateAdminCustomerRequest
     [StringLength(4000)]
     public string BillTo { get; init; } = string.Empty;
 
+    [StringLength(128)]
+    public string Group { get; init; } = string.Empty;
+
     [MaxLength(50)]
     public IReadOnlyList<AdminCustomerShipToAddressRequest> ShipToAddresses { get; init; } = [];
 }

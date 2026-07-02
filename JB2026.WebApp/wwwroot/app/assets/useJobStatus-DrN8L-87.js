@@ -1,0 +1,1 @@
+function n(r){return r>=3?"mdi-flag-check":r===2?"mdi-flag-outline":r===1?"mdi-flag-variant-outline":"mdi-flag-minus-outline"}function e(r){return r>=3?"success":r===2?"warning":r===1?"info":"secondary"}function i(r){return r>=3?"Completed":r===2?"Paused":r===1?"In Progress":"Draft"}export{e as a,n as b,i as s};

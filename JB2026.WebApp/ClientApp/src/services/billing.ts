@@ -331,6 +331,15 @@ export interface ListBillingClientsResponse {
   clients: BillingClientOption[]
 }
 
+export interface BillingGroupOption {
+  externalGroupId: string
+  name: string
+}
+
+export interface ListBillingGroupsResponse {
+  groups: BillingGroupOption[]
+}
+
 /**
  * A single line item as returned by the invoice editor detail endpoint.
  */
@@ -433,6 +442,11 @@ export async function listBillingClients(query?: string): Promise<BillingClientO
   const params = query ? { query } : {}
   const response = await apiClient.get<ListBillingClientsResponse>('/api/v2/billing/clients', { params })
   return response.data.clients
+}
+
+export async function listBillingGroups(): Promise<BillingGroupOption[]> {
+  const response = await apiClient.get<ListBillingGroupsResponse>('/api/v2/billing/groups')
+  return response.data.groups
 }
 
 export async function createBillingStatementLaunch(request: BillingStatementLaunchRequest): Promise<string> {

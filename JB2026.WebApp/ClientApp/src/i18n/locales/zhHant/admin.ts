@@ -131,6 +131,7 @@ export const adminMessages = {
           editTitle: '客戶',
           customerName: '客戶名稱',
           customerCode: '客戶代號',
+          group: '群組',
           billTo: 'Bill To',
           shipToName: 'Ship To 名稱',
           shipToAddress: 'Ship To 地址',

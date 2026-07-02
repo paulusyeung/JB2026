@@ -34,7 +34,7 @@
       </div>
 
       <v-row dense>
-        <v-col cols="12" md="8">
+        <v-col cols="12" md="6">
           <v-text-field
             v-model="draft.customerName"
             :label="t('admin.customer.form.customerName')"
@@ -44,13 +44,25 @@
             :rules="[requiredName]"
           />
         </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="3">
           <v-text-field
             v-model="draft.customerCode"
             :label="t('admin.customer.form.customerCode')"
             variant="outlined"
             density="compact"
             maxlength="64"
+          />
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-select
+            v-model="draft.group"
+            :items="groupOptions"
+            item-title="title"
+            item-value="value"
+            :label="t('admin.customer.form.group')"
+            variant="outlined"
+            density="compact"
+            clearable
           />
         </v-col>
       </v-row>
@@ -146,7 +158,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   createAdminCustomer,
@@ -154,6 +166,7 @@ import {
   getAdminCustomer,
   updateAdminCustomer,
 } from '@/services/admin'
+import { listBillingGroups } from '@/services/billing'
 import type { AdminCustomerRecord, CustomerShipToAddress } from '@/types/api'
 
 const props = defineProps<{
@@ -176,12 +189,15 @@ const selectedShipToName = ref<string | null>(null)
 const shipToDraftName = ref('')
 const shipToDraftAddress = ref('')
 
+const groupOptions = ref<{ title: string; value: string }[]>([])
+
 const draft = reactive({
   customerName: '',
   customerCode: '',
   loginAccount: '',
   loginPassword: '',
   billTo: '',
+  group: '',
   shipToAddresses: [] as CustomerShipToAddress[],
 })
 
@@ -190,6 +206,18 @@ const isNew = computed(() => !props.customerId)
 const shipToNameOptions = computed(() => draft.shipToAddresses.map((entry) => entry.name))
 
 const requiredName = (value: string) => value.trim().length > 0 || t('admin.customer.form.requiredCustomerName')
+
+onMounted(async () => {
+  try {
+    const groups = await listBillingGroups()
+    groupOptions.value = groups.map((group) => ({
+      title: group.name,
+      value: group.externalGroupId,
+    }))
+  } catch {
+    // Groups are optional; silently ignore fetch failures.
+  }
+})
 
 watch(
   () => props.customerId,
@@ -220,6 +248,7 @@ async function loadRecord(customerId: string | null) {
     draft.loginAccount = ''
     draft.loginPassword = ''
     draft.billTo = ''
+    draft.group = ''
     draft.shipToAddresses = []
     selectedShipToName.value = null
     shipToDraftName.value = ''
@@ -234,6 +263,7 @@ async function loadRecord(customerId: string | null) {
     draft.loginAccount = customer.loginAccount
     draft.loginPassword = customer.loginPassword
     draft.billTo = customer.billTo
+    draft.group = customer.group
     draft.shipToAddresses = (customer.shipToAddresses ?? []).map((entry) => ({ ...entry }))
 
     const firstShipToEntry = draft.shipToAddresses[0]
@@ -344,6 +374,7 @@ async function handleSave(closeAfter = false) {
       loginPassword: draft.loginPassword.trim(),
       customerCode: draft.customerCode.trim(),
       billTo: draft.billTo.trim(),
+      group: draft.group.trim(),
       shipToAddresses: draft.shipToAddresses
         .map((entry) => ({
           name: entry.name.trim(),

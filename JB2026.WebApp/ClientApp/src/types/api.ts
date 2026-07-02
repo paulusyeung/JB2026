@@ -142,6 +142,7 @@ export interface AdminCustomerRecord {
   loginPassword: string
   customerCode: string
   billTo: string
+  group: string
   shipToAddresses: CustomerShipToAddress[]
   createdOn: string
   createdBy: string
@@ -155,6 +156,7 @@ export interface CreateAdminCustomerRequest {
   loginPassword: string
   customerCode: string
   billTo: string
+  group: string
   shipToAddresses: CustomerShipToAddress[]
 }
 
@@ -164,6 +166,7 @@ export interface UpdateAdminCustomerRequest {
   loginPassword: string
   customerCode: string
   billTo: string
+  group: string
   shipToAddresses: CustomerShipToAddress[]
 }
 

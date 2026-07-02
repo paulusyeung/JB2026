@@ -60,6 +60,22 @@ public class InvoiceNinjaClientResponse
 }
 
 /// <summary>
+/// Invoice Ninja group setting representation (group_settings endpoint).
+/// </summary>
+public class InvoiceNinjaGroupResponse
+{
+    /// <summary>
+    /// Unique group ID in Invoice Ninja.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Group name.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Request to create or update an Invoice Ninja client.
 /// </summary>
 public class CreateInvoiceNinjaClientRequest

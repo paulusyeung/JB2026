@@ -738,7 +738,7 @@ public sealed class AdminController : ControllerBase
                 CustomerName: request.CustomerName.Trim(),
                 LoginAccount: request.LoginAccount.Trim(),
                 LoginPassword: request.LoginPassword.Trim(),
-                MetadataXml: BuildCustomerMetadataJson(null, request.CustomerCode, request.BillTo, request.ShipToAddresses),
+                MetadataXml: BuildCustomerMetadataJson(null, request.CustomerCode, request.BillTo, request.Group, request.ShipToAddresses),
                 CreatedOn: now,
                 CreatedBy: actorId,
                 ModifiedOn: now,
@@ -759,6 +759,7 @@ public sealed class AdminController : ControllerBase
                 LoginPassword = request.LoginPassword.Trim(),
                 CustomerCode = request.CustomerCode.Trim(),
                 BillTo = request.BillTo.Trim(),
+                Group = request.Group.Trim(),
                 ShipToAddresses = request.ShipToAddresses
                     .Where(entry => !string.IsNullOrWhiteSpace(entry.Name) || !string.IsNullOrWhiteSpace(entry.Address))
                     .Select(entry => new AdminCustomerShipToAddressResponse
@@ -811,7 +812,7 @@ public sealed class AdminController : ControllerBase
                 CustomerName: request.CustomerName.Trim(),
                 LoginAccount: request.LoginAccount.Trim(),
                 LoginPassword: request.LoginPassword.Trim(),
-                MetadataXml: BuildCustomerMetadataJson(current.MetadataXml, request.CustomerCode, request.BillTo, request.ShipToAddresses),
+                MetadataXml: BuildCustomerMetadataJson(current.MetadataXml, request.CustomerCode, request.BillTo, request.Group, request.ShipToAddresses),
                 CreatedOn: current.CreatedOn,
                 CreatedBy: current.CreatedBy,
                 ModifiedOn: DateTime.Now,
@@ -1040,6 +1041,7 @@ public sealed class AdminController : ControllerBase
             LoginPassword = customer.LoginPassword?.Trim() ?? string.Empty,
             CustomerCode = metadata.CustomerCode,
             BillTo = metadata.BillTo,
+            Group = metadata.Group,
             ShipToAddresses = metadata.ShipToAddresses,
             CreatedOn = customer.CreatedOn,
             CreatedBy = customer.CreatedBy.ToString(),
@@ -1048,11 +1050,11 @@ public sealed class AdminController : ControllerBase
         };
     }
 
-    private static (string CustomerCode, string BillTo, IReadOnlyList<AdminCustomerShipToAddressResponse> ShipToAddresses) ParseCustomerMetadata(string? metadataRaw)
+    private static (string CustomerCode, string BillTo, string Group, IReadOnlyList<AdminCustomerShipToAddressResponse> ShipToAddresses) ParseCustomerMetadata(string? metadataRaw)
     {
         if (string.IsNullOrWhiteSpace(metadataRaw))
         {
-            return (string.Empty, string.Empty, []);
+            return (string.Empty, string.Empty, string.Empty, []);
         }
 
         var trimmed = metadataRaw.Trim();
@@ -1065,8 +1067,9 @@ public sealed class AdminController : ControllerBase
                 var root = document.RootElement;
                 var customerCode = TryGetJsonString(root, "CustomerCode");
                 var billTo = TryGetJsonString(root, "BillTo");
+                var group = TryGetJsonString(root, "Group");
                 var shipToAddresses = ParseCustomerShipToAddresses(root);
-                return (customerCode, billTo, shipToAddresses);
+                return (customerCode, billTo, group, shipToAddresses);
             }
         }
         catch
@@ -1085,11 +1088,11 @@ public sealed class AdminController : ControllerBase
                 .Descendants()
                 .FirstOrDefault(element => string.Equals(element.Name.LocalName, "BillTo", StringComparison.OrdinalIgnoreCase))
                 ?.Value.Trim() ?? string.Empty;
-            return (customerCode, billTo, []);
+            return (customerCode, billTo, string.Empty, []);
         }
         catch
         {
-            return (string.Empty, string.Empty, []);
+            return (string.Empty, string.Empty, string.Empty, []);
         }
     }
 
@@ -1117,6 +1120,7 @@ public sealed class AdminController : ControllerBase
         string? existingMetadataRaw,
         string customerCode,
         string billTo,
+        string group,
         IReadOnlyList<AdminCustomerShipToAddressRequest>? shipToAddresses)
     {
         JsonObject root = new();
@@ -1139,6 +1143,7 @@ public sealed class AdminController : ControllerBase
 
         root["CustomerCode"] = customerCode.Trim();
         root["BillTo"] = billTo.Trim();
+        root["Group"] = group.Trim();
 
         var shipToArray = new JsonArray();
         foreach (var entry in shipToAddresses ?? [])

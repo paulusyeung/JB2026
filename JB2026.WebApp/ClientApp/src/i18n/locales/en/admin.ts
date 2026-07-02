@@ -133,6 +133,7 @@ export const adminMessages = {
           editTitle: 'Customer',
           customerName: 'Customer Name',
           customerCode: 'Customer Code',
+          group: 'Group',
           billTo: 'Bill To',
           shipToName: 'Ship To Name',
           shipToAddress: 'Ship To Address',
