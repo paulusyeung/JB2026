@@ -125,9 +125,10 @@ public class BillingController : ControllerBase
             if (hasMissingCoreFields)
             {
                 effectiveRequest = await _billingService.BuildSyncCustomerRequestFromCustomerIdAsync(request.CustomerId);
+                _logger.LogDebug("Loaded sync request from DB: Group=[{Group}]", effectiveRequest.Group ?? "(null)");
             }
 
-            _logger.LogInformation("Syncing customer {CustomerCode}", effectiveRequest.CustomerCode);
+            _logger.LogInformation("Syncing customer {CustomerCode} with Group=[{Group}]", effectiveRequest.CustomerCode, effectiveRequest.Group ?? "(null)");
 
             var invoiceNinjaClientId = await _billingService.SyncCustomerAsync(
                 effectiveRequest.CustomerId,

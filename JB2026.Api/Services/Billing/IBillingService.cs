@@ -275,33 +275,41 @@ public class BillingService : IBillingService
         string? existingInvoiceNinjaClientId,
         string? group = null)
     {
-        _logger.LogInformation("Syncing customer {CustomerCode} ({CustomerId}) to Invoice Ninja", customerCode, jb2026CustomerId);
+        _logger.LogInformation("Syncing customer {CustomerCode} ({CustomerId}) to Invoice Ninja with group=[{Group}]", customerCode, jb2026CustomerId, group ?? "(null)");
 
         try
         {
             // If we have an existing external ID, try to fetch and update the client
             if (!string.IsNullOrWhiteSpace(existingInvoiceNinjaClientId))
             {
+                InvoiceNinjaClientResponse? existing = null;
                 try
                 {
-                    var existing = await _invoiceNinjaClient.GetAsync<InvoiceNinjaClientResponse>($"/clients/{existingInvoiceNinjaClientId}");
-                    if (existing != null)
-                    {
-                        _logger.LogDebug("Found existing Invoice Ninja client {InvoiceNinjaClientId}, updating", existingInvoiceNinjaClientId);
-
-                        var updateRequest = BuildClientUpdatePayload(customerName, customerCode, billTo, shipToAddresses, group);
-                        var updated = await _invoiceNinjaClient.PutAsync<InvoiceNinjaClientResponse>(
-                            $"/clients/{existingInvoiceNinjaClientId}",
-                            updateRequest);
-
-                        await PersistCustomerBillingClientIdAsync(jb2026CustomerId, updated.Id);
-
-                        return updated.Id;
-                    }
+                    existing = await _invoiceNinjaClient.GetAsync<InvoiceNinjaClientResponse>($"/clients/{existingInvoiceNinjaClientId}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Could not fetch existing Invoice Ninja client {InvoiceNinjaClientId}, will create new", existingInvoiceNinjaClientId);
+                    _logger.LogWarning(ex, "Could not fetch existing Invoice Ninja client {InvoiceNinjaClientId}, will try reconcile or create new", existingInvoiceNinjaClientId);
+                }
+
+                if (existing != null)
+                {
+                    _logger.LogDebug("Found existing Invoice Ninja client {InvoiceNinjaClientId}, updating", existingInvoiceNinjaClientId);
+
+                    var updateRequest = BuildClientUpdatePayload(customerName, customerCode, billTo, shipToAddresses, group);
+                    var updated = await _invoiceNinjaClient.PutAsync<InvoiceNinjaClientResponse>(
+                        $"/clients/{existingInvoiceNinjaClientId}",
+                        updateRequest);
+
+                    await PersistCustomerBillingClientIdAsync(jb2026CustomerId, updated.Id);
+
+                    // Workaround: IN v5 PUT /clients/{id} does not reliably persist group_settings_id
+                    if (!string.IsNullOrWhiteSpace(group))
+                    {
+                        await AssignGroupBulkAsync(updated.Id, group);
+                    }
+
+                    return updated.Id;
                 }
             }
 
@@ -319,6 +327,13 @@ public class BillingService : IBillingService
                     updateRequest);
 
                 await PersistCustomerBillingClientIdAsync(jb2026CustomerId, updated.Id);
+
+                // Workaround: IN v5 PUT /clients/{id} does not reliably persist group_settings_id
+                if (!string.IsNullOrWhiteSpace(group))
+                {
+                    await AssignGroupBulkAsync(updated.Id, group);
+                }
+
                 return updated.Id;
             }
 
@@ -1538,9 +1553,15 @@ public class BillingService : IBillingService
             payload[customFields.ClientShipTo] = shipToBlock;
         }
 
-        if (!string.IsNullOrWhiteSpace(groupSettingsId))
+        if (string.IsNullOrWhiteSpace(groupSettingsId))
+        {
+            payload["group_settings_id"] = null;
+            _logger.LogDebug("Setting group_settings_id to null (clear group) in client payload");
+        }
+        else
         {
             payload["group_settings_id"] = groupSettingsId;
+            _logger.LogDebug("Added group_settings_id [{GroupId}] to client payload", groupSettingsId);
         }
 
         return payload;
@@ -1554,6 +1575,29 @@ public class BillingService : IBillingService
         string? groupSettingsId = null)
     {
         return BuildClientCreatePayload(customerName, customerCode, billTo, shipToAddresses, groupSettingsId);
+    }
+
+    /// <summary>
+    /// Workaround: IN v5 PUT /clients/{id} does not reliably persist group_settings_id.
+    /// Uses the bulk assign_group endpoint which does a direct DB update.
+    /// </summary>
+    private async Task AssignGroupBulkAsync(string clientId, string groupSettingsId)
+    {
+        try
+        {
+            var bulkPayload = new Dictionary<string, object?>
+            {
+                ["action"] = "assign_group",
+                ["ids"] = new List<string> { clientId },
+                ["group_settings_id"] = groupSettingsId
+            };
+            await _invoiceNinjaClient.PostAsync<List<InvoiceNinjaClientResponse>>("/clients/bulk", bulkPayload);
+            _logger.LogDebug("assign_group bulk action succeeded for client {ClientId}", clientId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "assign_group bulk action failed for client {ClientId} — group may not be persisted in IN", clientId);
+        }
     }
 
     private async Task<string?> TryFindInvoiceNinjaClientIdByCustomerCodeAsync(string customerCode)
