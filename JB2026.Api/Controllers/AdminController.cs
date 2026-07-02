@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
@@ -20,6 +21,11 @@ public sealed class AdminController : ControllerBase
     public AdminController()
     {
     }
+
+    private static readonly JsonSerializerOptions JsonUnescapedOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
 
     [HttpGet("users")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminUserResponse>), StatusCodes.Status200OK)]
@@ -615,7 +621,7 @@ public sealed class AdminController : ControllerBase
         }
 
         root["ShipToAddresses"] = shipToArray;
-        return root.ToJsonString();
+        return root.ToJsonString(JsonUnescapedOptions);
     }
 
     [HttpGet("customers")]
@@ -1152,7 +1158,7 @@ public sealed class AdminController : ControllerBase
         }
 
         root["ShipToAddresses"] = shipToArray;
-        return root.ToJsonString();
+        return root.ToJsonString(JsonUnescapedOptions);
     }
 
     private static string TryExtractMetadataCode(string? metadataXml, string propertyName)
