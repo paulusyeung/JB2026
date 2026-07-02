@@ -51,6 +51,11 @@ public class SyncCustomerRequest
     /// If null, a new client will be created.
     /// </summary>
     public string? ExistingInvoiceNinjaClientId { get; set; }
+
+    /// <summary>
+    /// Invoice Ninja group settings ID to assign the client to a group.
+    /// </summary>
+    public string? Group { get; set; }
 }
 
 /// <summary>

@@ -135,7 +135,8 @@ public class BillingController : ControllerBase
                 effectiveRequest.CustomerName,
                 effectiveRequest.BillTo,
                 effectiveRequest.ShipToAddresses ?? new List<string>(),
-                effectiveRequest.ExistingInvoiceNinjaClientId);
+                effectiveRequest.ExistingInvoiceNinjaClientId,
+                effectiveRequest.Group);
 
             var billingMetadata = CustomerBillingMetadataHelper.MarkSyncSuccessful(
                 null, // Caller should provide existing metadata if updating

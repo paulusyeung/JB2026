@@ -18,6 +18,7 @@ export interface SyncCustomerRequest {
   billTo?: string
   shipToAddresses?: string[]
   existingInvoiceNinjaClientId?: string
+  group?: string
 }
 
 /**

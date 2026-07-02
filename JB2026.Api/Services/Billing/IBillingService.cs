@@ -39,7 +39,8 @@ public interface IBillingService
         string customerName,
         string billTo,
         List<string> shipToAddresses,
-        string? existingInvoiceNinjaClientId);
+        string? existingInvoiceNinjaClientId,
+        string? group = null);
 
     /// <summary>
     /// Builds a sync payload from an existing JB2026 customer record.
@@ -271,7 +272,8 @@ public class BillingService : IBillingService
         string customerName,
         string billTo,
         List<string> shipToAddresses,
-        string? existingInvoiceNinjaClientId)
+        string? existingInvoiceNinjaClientId,
+        string? group = null)
     {
         _logger.LogInformation("Syncing customer {CustomerCode} ({CustomerId}) to Invoice Ninja", customerCode, jb2026CustomerId);
 
@@ -287,7 +289,7 @@ public class BillingService : IBillingService
                     {
                         _logger.LogDebug("Found existing Invoice Ninja client {InvoiceNinjaClientId}, updating", existingInvoiceNinjaClientId);
 
-                        var updateRequest = BuildClientUpdatePayload(customerName, customerCode, billTo, shipToAddresses);
+                        var updateRequest = BuildClientUpdatePayload(customerName, customerCode, billTo, shipToAddresses, group);
                         var updated = await _invoiceNinjaClient.PutAsync<InvoiceNinjaClientResponse>(
                             $"/clients/{existingInvoiceNinjaClientId}",
                             updateRequest);
@@ -311,7 +313,7 @@ public class BillingService : IBillingService
                     reconciledClientId,
                     customerCode);
 
-                var updateRequest = BuildClientUpdatePayload(customerName, customerCode, billTo, shipToAddresses);
+                var updateRequest = BuildClientUpdatePayload(customerName, customerCode, billTo, shipToAddresses, group);
                 var updated = await _invoiceNinjaClient.PutAsync<InvoiceNinjaClientResponse>(
                     $"/clients/{reconciledClientId}",
                     updateRequest);
@@ -322,7 +324,7 @@ public class BillingService : IBillingService
 
             // Create a new client
             _logger.LogDebug("Creating new Invoice Ninja client for customer {CustomerCode}", customerCode);
-            var createRequest = BuildClientCreatePayload(customerName, customerCode, billTo, shipToAddresses);
+            var createRequest = BuildClientCreatePayload(customerName, customerCode, billTo, shipToAddresses, group);
             var created = await _invoiceNinjaClient.PostAsync<InvoiceNinjaClientResponse>(
                 "/clients",
                 createRequest);
@@ -377,6 +379,7 @@ public class BillingService : IBillingService
             BillTo = metadata.BillTo,
             ShipToAddresses = metadata.ShipToAddresses,
             ExistingInvoiceNinjaClientId = metadata.InvoiceNinjaClientId,
+            Group = metadata.Group,
         };
     }
 
@@ -1436,17 +1439,18 @@ public class BillingService : IBillingService
         return (customerCode.Trim(), billTo.Trim(), shipTo.Trim(), invoiceNinjaClientId.Trim());
     }
 
-    private static (string CustomerCode, string BillTo, List<string> ShipToAddresses, string InvoiceNinjaClientId) ParseCustomerSyncMetadata(string? metadataRaw)
+    private static (string CustomerCode, string BillTo, List<string> ShipToAddresses, string InvoiceNinjaClientId, string Group) ParseCustomerSyncMetadata(string? metadataRaw)
     {
         if (string.IsNullOrWhiteSpace(metadataRaw))
         {
-            return (string.Empty, string.Empty, new List<string>(), string.Empty);
+            return (string.Empty, string.Empty, new List<string>(), string.Empty, string.Empty);
         }
 
         var invoiceNinjaClientId = CustomerBillingMetadataHelper.ExtractBillingMetadata(metadataRaw).InvoiceNinjaClientId ?? string.Empty;
         var customerCode = string.Empty;
         var billTo = string.Empty;
         var shipToAddresses = new List<string>();
+        var group = string.Empty;
 
         try
         {
@@ -1463,6 +1467,11 @@ public class BillingService : IBillingService
                 if (root.TryGetProperty("BillTo", out var billToElement) && billToElement.ValueKind == JsonValueKind.String)
                 {
                     billTo = billToElement.GetString() ?? string.Empty;
+                }
+
+                if (root.TryGetProperty("Group", out var groupElement) && groupElement.ValueKind == JsonValueKind.String)
+                {
+                    group = groupElement.GetString() ?? string.Empty;
                 }
 
                 if (root.TryGetProperty("ShipToAddresses", out var shipToArray) && shipToArray.ValueKind == JsonValueKind.Array)
@@ -1496,14 +1505,15 @@ public class BillingService : IBillingService
             // Metadata may not be JSON; keep fallback values.
         }
 
-        return (customerCode.Trim(), billTo.Trim(), shipToAddresses, invoiceNinjaClientId.Trim());
+        return (customerCode.Trim(), billTo.Trim(), shipToAddresses, invoiceNinjaClientId.Trim(), group.Trim());
     }
 
     private Dictionary<string, object?> BuildClientCreatePayload(
         string customerName,
         string customerCode,
         string billTo,
-        List<string> shipToAddresses)
+        List<string> shipToAddresses,
+        string? groupSettingsId = null)
     {
         var options = _billingOptions.Value.InvoiceNinja;
         var customFields = options.CustomFields;
@@ -1528,6 +1538,11 @@ public class BillingService : IBillingService
             payload[customFields.ClientShipTo] = shipToBlock;
         }
 
+        if (!string.IsNullOrWhiteSpace(groupSettingsId))
+        {
+            payload["group_settings_id"] = groupSettingsId;
+        }
+
         return payload;
     }
 
@@ -1535,9 +1550,10 @@ public class BillingService : IBillingService
         string customerName,
         string customerCode,
         string billTo,
-        List<string> shipToAddresses)
+        List<string> shipToAddresses,
+        string? groupSettingsId = null)
     {
-        return BuildClientCreatePayload(customerName, customerCode, billTo, shipToAddresses);
+        return BuildClientCreatePayload(customerName, customerCode, billTo, shipToAddresses, groupSettingsId);
     }
 
     private async Task<string?> TryFindInvoiceNinjaClientIdByCustomerCodeAsync(string customerCode)
