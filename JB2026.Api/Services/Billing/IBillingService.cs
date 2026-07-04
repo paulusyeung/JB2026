@@ -1687,23 +1687,23 @@ public class BillingService : IBillingService
             return "Deleted";
         }
 
-        if (!string.IsNullOrWhiteSpace(invoice.Status))
+        if (!string.IsNullOrWhiteSpace(invoice.StatusId))
         {
-            return invoice.Status;
+            return invoice.StatusId.Trim() switch
+            {
+                "1" => "Draft",
+                "2" => "Sent",
+                "3" => "Partial",
+                "4" => "Paid",
+                "5" => "Cancelled",
+                "6" => "Reversed",
+                "-1" => "Overdue",
+                "-2" => "Unpaid",
+                _ => !string.IsNullOrWhiteSpace(invoice.Status) ? invoice.Status : string.Empty
+            };
         }
 
-        return invoice.StatusId switch
-        {
-            "1" => "Draft",
-            "2" => "Sent",
-            "3" => "Viewed",
-            "4" => "Approved",
-            "5" => "Partial",
-            "6" => "Paid",
-            "7" => "Unpaid",
-            "8" => "Overdue",
-            _ => string.Empty
-        };
+        return !string.IsNullOrWhiteSpace(invoice.Status) ? invoice.Status : string.Empty;
     }
 
     private static DateTime? ParseInvoiceDueDate(string dueDate)

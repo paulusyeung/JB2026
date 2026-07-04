@@ -550,8 +550,12 @@ function statusLabel(status?: string | null) {
   if (normalized === 'draft') return t('billing.invoices.status.draft')
   if (normalized === 'sent') return t('billing.invoices.status.sent')
   if (normalized === 'viewed') return t('billing.invoices.status.viewed')
+  if (normalized === 'partial') return t('billing.invoices.status.partial')
   if (normalized === 'paid') return t('billing.invoices.status.paid')
+  if (normalized === 'cancelled') return t('billing.invoices.status.cancelled')
+  if (normalized === 'reversed') return t('billing.invoices.status.reversed')
   if (normalized === 'overdue') return t('billing.invoices.status.overdue')
+  if (normalized === 'unpaid') return t('billing.invoices.status.unpaid')
   if (normalized === 'deleted') return t('billing.invoices.status.deleted')
   return status
 }
@@ -620,7 +624,7 @@ function statusColor(status: string) {
   if (normalized.includes('paid')) return 'success'
   if (normalized.includes('overdue')) return 'error'
   if (normalized.includes('sent') || normalized.includes('view')) return 'info'
-  if (normalized.includes('deleted')) return 'default'
+  if (normalized === 'cancelled' || normalized === 'reversed' || normalized.includes('deleted')) return 'default'
   return 'warning'
 }
 </script>

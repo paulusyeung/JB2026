@@ -110,6 +110,7 @@ function statusColor(status: string) {
   if (normalized.includes('paid')) return 'success'
   if (normalized.includes('overdue')) return 'error'
   if (normalized.includes('sent') || normalized.includes('view')) return 'info'
+  if (normalized === 'cancelled' || normalized === 'reversed') return 'default'
   return 'warning'
 }
 </script>

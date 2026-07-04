@@ -128,8 +128,12 @@ export const billingMessages = {
       draft: '草稿',
       sent: '已發送',
       viewed: '已檢視',
+      partial: '部分付款',
       paid: '已付款',
+      cancelled: '已取消',
+      reversed: '已沖銷',
       overdue: '已逾期',
+      unpaid: '未付款',
       deleted: '已刪除',
     },
     messages: {

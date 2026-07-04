@@ -128,8 +128,12 @@ export const billingMessages = {
       draft: 'Draft',
       sent: 'Sent',
       viewed: 'Viewed',
+      partial: 'Partial',
       paid: 'Paid',
+      cancelled: 'Cancelled',
+      reversed: 'Reversed',
       overdue: 'Overdue',
+      unpaid: 'Unpaid',
       deleted: 'Deleted',
     },
     messages: {
