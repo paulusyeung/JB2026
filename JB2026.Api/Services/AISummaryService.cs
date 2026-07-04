@@ -107,14 +107,14 @@ public sealed class AISummaryService
     }
 
     private static async Task<string?> CollectResponseAsync(
-        IAsyncEnumerable<GenerateResponseStream> stream,
+        IAsyncEnumerable<GenerateResponseStream?> stream,
         CancellationToken cancellationToken = default)
     {
         var responseBuilder = new StringBuilder();
 
         await foreach (var chunk in stream.WithCancellation(cancellationToken))
         {
-            if (chunk.Response is not null)
+            if (chunk?.Response is not null)
             {
                 responseBuilder.Append(chunk.Response);
             }
