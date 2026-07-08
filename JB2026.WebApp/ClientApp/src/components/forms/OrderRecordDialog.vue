@@ -375,7 +375,7 @@ const allSelected = computed(() =>
 
 const relatedHeaders = computed(() => [
   { title: '', key: 'select', sortable: false, width: '48px' },
-  { title: t('jobOrder.record.fields.orderNumber'), key: 'orderNumber', width: '150px' },
+  { title: t('jobOrder.record.fields.jobNumber'), key: 'orderNumber', width: '150px' },
   { title: '', key: 'indicator', sortable: false, width: '36px' },
   { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '110px' },
   { title: t('jobOrder.headers.customer'), key: 'customerName', width: '160px' },
