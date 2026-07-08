@@ -1,14 +1,15 @@
 <template>
-  <v-card class="order-record-dialog">
-    <v-card-title class="d-flex align-center ga-3 pb-2">
-      <div>
-        <h2 class="text-h6 mb-1">{{ t('jobOrder.record.title') }}</h2>
-        <p class="text-body-2 text-medium-emphasis mb-0">
-          {{ mode === 'create' ? t('jobOrder.record.createSubtitle') : t('jobOrder.record.subtitle', { order: order?.orderNumber }) }}
-        </p>
+  <v-card class="order-record-dialog" :style="cardStyle">
+    <v-card-title class="pb-2">
+      <div class="record-title-row">
+        <div class="drag-handle" @pointerdown="startDrag">
+          <h2 class="text-h6 mb-1">{{ t('jobOrder.record.title') }}</h2>
+          <p class="text-body-2 text-medium-emphasis mb-0">
+            {{ mode === 'create' ? t('jobOrder.record.createSubtitle') : t('jobOrder.record.subtitle', { order: order?.orderNumber }) }}
+          </p>
+        </div>
+        <v-btn icon="mdi-close" size="small" variant="text" @click="emit('cancel')" />
       </div>
-      <v-spacer />
-      <v-btn variant="text" icon="mdi-close" @click="emit('cancel')" />
     </v-card-title>
 
     <v-card-text class="pt-2">
@@ -247,7 +248,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { getAdminUsers } from '@/services/admin'
@@ -285,6 +286,11 @@ const session = useSessionStore()
 const globalFormat = useGlobalDateFormatter()
 const orderedOnPickerOpen = ref(false)
 const requiredOnPickerOpen = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+const dragPointer = ref<{ id: number; startX: number; startY: number; originX: number; originY: number } | null>(null)
+const cardStyle = computed(() => ({
+  transform: `translate(${dragOffset.value.x}px, ${dragOffset.value.y}px)`,
+}))
 
 const draft = ref<JobOrderFormData>(props.order ? buildDraft(props.order) : buildCreateDraft())
 
@@ -304,6 +310,42 @@ onMounted(async () => {
     loadNextOrderNumber(),
   ])
 })
+
+onBeforeUnmount(() => {
+  stopDrag()
+})
+
+function startDrag(event: PointerEvent) {
+  if (event.button !== 0) return
+
+  dragPointer.value = {
+    id: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: dragOffset.value.x,
+    originY: dragOffset.value.y,
+  }
+
+  window.addEventListener('pointermove', handleDrag)
+  window.addEventListener('pointerup', stopDrag)
+}
+
+function handleDrag(event: PointerEvent) {
+  if (!dragPointer.value || event.pointerId !== dragPointer.value.id) return
+
+  dragOffset.value = {
+    x: dragPointer.value.originX + (event.clientX - dragPointer.value.startX),
+    y: dragPointer.value.originY + (event.clientY - dragPointer.value.startY),
+  }
+}
+
+function stopDrag(event?: PointerEvent) {
+  if (event && dragPointer.value && event.pointerId !== dragPointer.value.id) return
+
+  dragPointer.value = null
+  window.removeEventListener('pointermove', handleDrag)
+  window.removeEventListener('pointerup', stopDrag)
+}
 
 const orderModifiedOn = computed(() => props.order?.modifiedOn ?? null)
 const orderId = computed(() => props.order?.orderId ?? null)
@@ -762,5 +804,24 @@ function formatUser(userId: string | null | undefined): string {
 
 :deep(.v-theme--dark) .order-record-dialog .v-input.date-picker-input:has(input[readonly]) .v-field {
   background: transparent;
+}
+
+.order-record-dialog {
+  transition: box-shadow 0.18s ease;
+  will-change: transform;
+}
+
+.record-title-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.drag-handle {
+  flex: 1;
+  min-width: 0;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
 }
 </style>
