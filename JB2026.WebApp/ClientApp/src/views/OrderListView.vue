@@ -385,7 +385,9 @@
                   </template>
 
                   <template #[`header.attachProduct`]>
-                    <v-icon size="16" color="grey darken-3">mdi-paperclip</v-icon>
+                    <div class="d-flex justify-center">
+                      <v-icon size="14" color="grey darken-3">mdi-paperclip</v-icon>
+                    </div>
                   </template>
 <!-- 
                   <template #[`header.attachCustomer`]>
