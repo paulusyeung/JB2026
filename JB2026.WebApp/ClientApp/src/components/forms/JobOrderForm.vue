@@ -107,15 +107,27 @@
           </div>
 
           <div class="legacy-col">
-            <v-text-field
-              v-model="draft.requiredOn"
-              :label="t('jobForm.fields.requiredOn')"
-              placeholder="yyyy-MM-dd"
-              variant="outlined"
-              density="compact"
-              hide-details="auto"
-              :rules="[required, validIsoDate, requiredAfterOrdered]"
-            />
+            <v-menu v-model="requiredOnPickerOpen" :close-on-content-click="false">
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  v-model="draft.requiredOn"
+                  :label="t('jobForm.fields.requiredOn')"
+                  variant="outlined"
+                  density="compact"
+                  hide-details="auto"
+                  readonly
+                  append-inner-icon="mdi-calendar"
+                  v-bind="menuProps"
+                  class="date-picker-input"
+                  :rules="[required, requiredAfterOrdered]"
+                />
+              </template>
+              <v-date-picker
+                :model-value="draft.requiredOn ? new Date(draft.requiredOn + 'T12:00:00') : undefined"
+                hide-header
+                @update:model-value="onRequiredOnPicked"
+              />
+            </v-menu>
 
             <v-text-field
               v-model="legacyCompletedOn"
@@ -185,15 +197,27 @@
           </div>
 
           <div class="legacy-col">
-            <v-text-field
-              v-model="draft.orderedOn"
-              :label="t('jobForm.fields.orderedOn')"
-              placeholder="yyyy-MM-dd"
-              variant="outlined"
-              density="compact"
-              hide-details="auto"
-              :rules="[required, validIsoDate]"
-            />
+            <v-menu v-model="orderedOnPickerOpen" :close-on-content-click="false">
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  v-model="draft.orderedOn"
+                  :label="t('jobForm.fields.orderedOn')"
+                  variant="outlined"
+                  density="compact"
+                  hide-details="auto"
+                  readonly
+                  append-inner-icon="mdi-calendar"
+                  v-bind="menuProps"
+                  class="date-picker-input"
+                  :rules="[required]"
+                />
+              </template>
+              <v-date-picker
+                :model-value="draft.orderedOn ? new Date(draft.orderedOn + 'T12:00:00') : undefined"
+                hide-header
+                @update:model-value="onOrderedOnPicked"
+              />
+            </v-menu>
 
             <v-text-field
               v-model="legacyModifiedOn"
@@ -416,19 +440,33 @@ const maxTwoDecimals = (v: string) => {
   return /^\d+(\.\d{1,2})?$/.test(v) || t('jobForm.validation.maxTwoDecimals')
 }
 
-const validIsoDate = (v: string) => {
-  const normalized = (v ?? '').trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    return t('jobForm.validation.dateFormat')
-  }
-
-  const parsed = new Date(`${normalized}T00:00:00`)
-  return Number.isNaN(parsed.getTime()) ? t('jobForm.validation.dateFormat') : true
-}
-
 const requiredAfterOrdered = (v: string) => {
   if (!v || !draft.value.orderedOn) return true
   return v >= draft.value.orderedOn || t('jobForm.validation.requiredAfterOrdered')
+}
+
+const orderedOnPickerOpen = ref(false)
+const requiredOnPickerOpen = ref(false)
+
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function onOrderedOnPicked(date: Date | null) {
+  if (date) {
+    draft.value.orderedOn = toIsoDate(date)
+  }
+  orderedOnPickerOpen.value = false
+}
+
+function onRequiredOnPicked(date: Date | null) {
+  if (date) {
+    draft.value.requiredOn = toIsoDate(date)
+  }
+  requiredOnPickerOpen.value = false
 }
 
 // ---------------------------------------------------------------------------
@@ -758,6 +796,14 @@ async function loadPreviewImage(job: JobDetail) {
 .legacy-form-surface :deep(.v-input:has(input[readonly]) .v-field),
 .legacy-form-surface :deep(.v-input:has(textarea[readonly]) .v-field) {
   background: #e8e8e8;
+}
+
+.legacy-form-surface :deep(.v-input.date-picker-input:has(input[readonly]) .v-field) {
+  background: transparent;
+}
+
+:deep(.v-theme--dark .legacy-form-surface .v-input.date-picker-input:has(input[readonly]) .v-field) {
+  background: transparent;
 }
 
 .legacy-toolbar {
