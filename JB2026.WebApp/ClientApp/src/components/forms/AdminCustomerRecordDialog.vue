@@ -83,8 +83,8 @@
 
       <v-divider class="my-2" />
 
-      <v-row dense>
-        <v-col cols="12" md="6">
+      <v-row dense align="center">
+        <v-col cols="12" md="6" class="d-flex align-center">
           <v-select
             v-model="selectedShipToName"
             :items="shipToNameOptions"
@@ -92,6 +92,7 @@
             variant="outlined"
             density="compact"
             clearable
+            hide-details
           />
         </v-col>
         <v-col cols="12" md="6" class="d-flex align-center ga-2">
