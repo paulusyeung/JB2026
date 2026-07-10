@@ -825,10 +825,15 @@ public sealed class JobSchedulesController : ControllerBase
         [FromQuery] int orderType = 0,
         CancellationToken cancellationToken = default)
     {
-        var rows = await _readContext.vwJobSchedule_AvailableLists
+        var today = DateTime.Today;
+        var rows = await _readContext.JobOrders
             .AsNoTracking()
             .Where(item => item.OrderType == orderType)
+            .Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-91))
+            .Where(item => item.CompletedOn == null || item.CompletedOn.Value.Year == 1900)
+            .Where(item => !_readContext.JobSchedules.Any(s => s.OrderId == item.OrderId && s.Cancelled != true))
             .OrderByDescending(item => item.OrderNumber)
+            .ThenByDescending(item => item.JobNumber)
             .Take(1000)
             .ToListAsync(cancellationToken);
 
@@ -836,9 +841,10 @@ public sealed class JobSchedulesController : ControllerBase
         {
             OrderId = item.OrderId,
             OrderType = item.OrderType,
-            OrderNumber = item.OrderNumber ?? string.Empty,
+            OrderNumber = item.OrderNumber != null && item.JobNumber.HasValue ? $"{item.OrderNumber}-{item.JobNumber}" : item.OrderNumber ?? string.Empty,
             CustomerName = item.CustomerName ?? string.Empty,
             OrderTitle = item.OrderTitle ?? string.Empty,
+            RequiredOn = item.RequiredOn,
         }).ToList();
 
         return Ok(result);
@@ -890,11 +896,12 @@ public sealed class JobSchedulesController : ControllerBase
                     .AsNoTracking(),
                 order => order.OrderId,
                 orderIds)
-            .Select(o => new { o.OrderId, o.ProductDetails, o.OrderTitle, o.SONumber })
+            .Select(o => new { o.OrderId, o.ProductDetails, o.OrderTitle, o.SONumber, o.RequiredOn })
             .ToListAsync(cancellationToken);
 
         var printMap = orderDetails.ToDictionary(o => o.OrderId, o => ExtractPrintInfo(o.ProductDetails, o.OrderTitle));
         var soMap = orderDetails.Where(o => !string.IsNullOrWhiteSpace(o.SONumber)).ToDictionary(o => o.OrderId, o => o.SONumber);
+        var requiredOnMap = orderDetails.ToDictionary(o => o.OrderId, o => o.RequiredOn);
 
         var result = rows.Select(row =>
         {
@@ -920,6 +927,7 @@ public sealed class JobSchedulesController : ControllerBase
                 PrintColor = print?[1] ?? string.Empty,
                 PrintSize = print?[0] ?? string.Empty,
                 SONumber = soNumber,
+                RequiredOn = requiredOnMap.GetValueOrDefault(orderId),
             };
         }).ToList();
 

@@ -7,4 +7,5 @@ public sealed class JobScheduleAvailableItemResponse
     public string OrderNumber { get; set; } = string.Empty;
     public string CustomerName { get; set; } = string.Empty;
     public string OrderTitle { get; set; } = string.Empty;
+    public DateTime? RequiredOn { get; set; }
 }

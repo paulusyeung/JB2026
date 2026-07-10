@@ -757,6 +757,7 @@ export interface JobScheduleAvailableItem {
   orderNumber: string
   customerName: string
   orderTitle: string
+  requiredOn: string | null
 }
 
 export interface JobPackingOnAirAvailableItem {
@@ -795,6 +796,7 @@ export interface JobScheduleOnAirItem {
   printColor: string
   printSize: string
   soNumber?: string
+  requiredOn: string | null
 }
 
 export interface SaveScheduleBatchItem {

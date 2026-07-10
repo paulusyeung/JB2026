@@ -77,6 +77,7 @@
                     <col class="col-check" />
                     <col class="col-num" />
                     <col class="col-order" />
+                    <col class="col-dday" />
                     <col :style="{ width: `${availableColumnWidths.customer}px` }" />
                     <col :style="{ width: `${availableColumnWidths.title}px` }" />
                   </colgroup>
@@ -85,6 +86,7 @@
                       <th class="col-check"><v-checkbox-btn v-model="allAvailableChecked" density="compact" hide-details @click="toggleAllAvailable" /></th>
                       <th class="col-num text-center">#</th>
                       <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
+                      <th class="col-dday text-center"><v-icon size="14">mdi-calendar-clock</v-icon></th>
                       <th class="col-customer resizable-header" :style="{ width: `${availableColumnWidths.customer}px` }">
                         <div class="header-content">
                           {{ t('scheduler.schedule.columns.customer') }}
@@ -118,6 +120,9 @@
                         >
                           {{ item.orderNumber }}
                         </v-btn>
+                      </td>
+                      <td class="col-dday text-center" :class="{ 'dday-overdue': dDay(item.requiredOn) !== null && dDay(item.requiredOn) <= 0, 'dday-flash': dDay(item.requiredOn) !== null && dDay(item.requiredOn) <= 0 }">
+                        {{ dDay(item.requiredOn) !== null ? dDay(item.requiredOn) : '-' }}
                       </td>
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
@@ -242,6 +247,7 @@
                     <col class="col-check" />
                     <col class="col-num" />
                     <col class="col-order" />
+                    <col class="col-dday" />
                     <col :style="{ width: `${scheduledColumnWidths.customer}px` }" />
                     <col :style="{ width: `${scheduledColumnWidths.title}px` }" />
                     <col class="col-machine" />
@@ -258,6 +264,7 @@
                       <th class="col-check"><v-checkbox-btn v-model="allScheduledChecked" density="compact" hide-details @click="toggleAllScheduled" /></th>
                       <th class="col-num text-center">#</th>
                       <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
+                      <th class="col-dday text-center"><v-icon size="14">mdi-calendar-clock</v-icon></th>
                       <th class="col-customer resizable-header" :style="{ width: `${scheduledColumnWidths.customer}px` }">
                         <div class="header-content">
                           {{ t('scheduler.schedule.columns.customer') }}
@@ -318,6 +325,9 @@
                         >
                           {{ item.orderNumber }}
                         </v-btn>
+                      </td>
+                      <td class="col-dday text-center" :class="{ 'dday-overdue': dDay(item.requiredOn) !== null && dDay(item.requiredOn) <= 0, 'dday-flash': dDay(item.requiredOn) !== null && dDay(item.requiredOn) <= 0 }">
+                        {{ dDay(item.requiredOn) !== null ? dDay(item.requiredOn) : '-' }}
                       </td>
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
@@ -666,10 +676,21 @@ function formatPrintTime(value: string | undefined | null): string {
   return num.toFixed(1)
 }
 
+function dDay(requiredOn: string | null | undefined): number | null {
+  if (!requiredOn) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const req = new Date(requiredOn)
+  req.setHours(0, 0, 0, 0)
+  const diff = Math.floor((req.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  return diff
+}
+
 // ─── field mappers for adaptive rows ──────────────────────────────────────────
 function getAvailableFields(item: JobScheduleAvailableItem) {
   return [
     { key: 'order', label: t('scheduler.schedule.columns.order'), value: item.orderNumber },
+    { key: 'dday', label: 'D-Day', value: dDay(item.requiredOn) !== null ? String(dDay(item.requiredOn)) : '-' },
     { key: 'customer', label: t('scheduler.schedule.columns.customer'), value: item.customerName },
     { key: 'title', label: t('scheduler.schedule.columns.title'), value: item.orderTitle },
   ]
@@ -678,6 +699,7 @@ function getAvailableFields(item: JobScheduleAvailableItem) {
 function getScheduledFields(item: ScheduledItemState) {
   return [
     { key: 'order', label: t('scheduler.schedule.columns.order'), value: item.orderNumber },
+    { key: 'dday', label: 'D-Day', value: dDay(item.requiredOn) !== null ? String(dDay(item.requiredOn)) : '-' },
     { key: 'customer', label: t('scheduler.schedule.columns.customer'), value: item.customerName },
     { key: 'title', label: t('scheduler.schedule.columns.title'), value: item.orderTitle },
     { key: 'printTime', label: 'Print Time', value: formatPrintTime(item.soNumber) },
@@ -1255,6 +1277,8 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .col-title    { min-width: 140px; }
 .col-machine  { width: 34px; min-width: 34px; text-align: center; }
 .col-light    { width: 34px; min-width: 34px; text-align: center; }
+.col-dday { width: 38px; min-width: 38px; text-align: center; }
+.col-dday.text-center { text-align: center; }
 .col-print-time { width: 34px; min-width: 34px; text-align: right; }
 .col-print-qty { width: 88px; min-width: 88px; }
 .col-print-color { width: 110px; min-width: 110px; }
@@ -1263,6 +1287,19 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .light-toolbar {
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+.dday-overdue {
+  color: rgb(var(--v-theme-error)) !important;
+}
+
+@keyframes dday-flash {
+  0%, 100% { color: rgb(var(--v-theme-error)); }
+  50% { color: transparent; }
+}
+
+.dday-flash {
+  animation: dday-flash 1s infinite;
 }
 
 .schedule-layout--phone {

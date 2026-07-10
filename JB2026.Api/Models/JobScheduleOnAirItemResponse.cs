@@ -17,4 +17,5 @@ public sealed class JobScheduleOnAirItemResponse
     public string PrintColor { get; set; } = string.Empty;
     public string PrintSize { get; set; } = string.Empty;
     public string? SONumber { get; set; }
+    public DateTime? RequiredOn { get; set; }
 }
