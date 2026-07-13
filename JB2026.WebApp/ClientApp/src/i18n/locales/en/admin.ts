@@ -17,6 +17,7 @@ export const adminMessages = {
           username: 'User Name',
           userAlias: 'Nickname',
           userPassword: 'Password',
+          email: 'Email',
           userRole: 'User Role',
           createdOn: 'Created On',
           createdBy: 'Created By',

@@ -13,6 +13,7 @@ export interface AdminUser {
   primaryRec: boolean
   userAlias: string
   userPassword: string
+  email: string
   createdOn: string
   createdBy: string
   modifiedOn: string

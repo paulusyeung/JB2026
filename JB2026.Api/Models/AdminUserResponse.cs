@@ -23,4 +23,6 @@ public sealed class AdminUserResponse
     public required DateTime ModifiedOn { get; init; }
 
     public required string ModifiedBy { get; init; }
+
+    public string Email { get; set; } = string.Empty;
 }

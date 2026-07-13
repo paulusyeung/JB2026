@@ -143,6 +143,14 @@
             class="user-card"
             @click="openPopup(row.userId)"
           >
+            <v-checkbox-btn
+              v-if="checkboxMode"
+              :model-value="selectedUserIds.includes(row.userId)"
+              density="compact"
+              hide-details
+              class="user-card__checkbox"
+              @click.stop="handleCardCheckbox(row.userId)"
+            />
             <div class="user-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" :color="row.primaryRec ? 'warning' : 'secondary'">
@@ -153,13 +161,6 @@
                   <div class="text-caption text-medium-emphasis">{{ row.username }}</div>
                 </div>
               </div>
-              <v-checkbox-btn
-                v-if="checkboxMode"
-                :model-value="selectedUserIds.includes(row.userId)"
-                density="compact"
-                hide-details
-                @click.stop="handleCardCheckbox(row.userId)"
-              />
             </div>
             <div class="user-card__body">
               <span class="text-caption">{{ t('admin.user.headers.userRole') }}: {{ row.role || '-' }}</span>
@@ -243,7 +244,7 @@ const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
 const viewSettings = useViewSettings('staff-members', {
-  visibleColumns: ['icon', 'username', 'ln', 'userAlias', 'userPassword', 'role', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+  visibleColumns: ['icon', 'username', 'ln', 'userAlias', 'email', 'role', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
   sortKey: 'userAlias',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -270,7 +271,7 @@ const allHeaders = computed(() => [
   { title: t('admin.user.headers.username'), key: 'username', minWidth: '140px' },
   { title: '#', key: 'ln', width: '54px', sortable: false },
   { title: t('admin.user.headers.userAlias'), key: 'userAlias', minWidth: '160px' },
-  { title: t('admin.user.headers.userPassword'), key: 'userPassword', minWidth: '110px' },
+  { title: t('admin.user.headers.email'), key: 'email', minWidth: '200px' },
   { title: t('admin.user.headers.userRole'), key: 'role', minWidth: '110px' },
   { title: t('admin.user.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
   { title: t('admin.user.headers.createdBy'), key: 'createdBy', minWidth: '100px' },
@@ -282,8 +283,8 @@ const headers = computed(() =>
   allHeaders.value.filter((h) =>
     visibleColumnKeys.value.includes(String(h.key)) &&
     isColumnVisible(String(h.key), {
-      hideOnPhone: ['userPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
-      hideOnTablet: ['userPassword'],
+      hideOnPhone: ['email', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+      hideOnTablet: [],
     }),
   ),
 )
@@ -518,6 +519,7 @@ function formatDateCell(value: string): string {
 
 .user-card {
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
@@ -527,6 +529,23 @@ function formatDateCell(value: string): string {
 
 .user-card:active {
   background: rgba(255, 255, 255, 0.92);
+}
+
+.user-card__checkbox {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.user-card__header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.user-card__body,
+.user-card__footer {
+  grid-column: 1 / -1;
 }
 
 .user-card__header,

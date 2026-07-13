@@ -60,24 +60,32 @@ public sealed class AdminController : ControllerBase
                 (user.UserAlias ?? string.Empty).Contains(normalizedLookup));
         }
 
-        var users = await query
+        var rawData = await query
             .OrderBy(user => user.UserAlias)
             .Take(take)
-            .Select(user => new AdminUserResponse
-            {
-                UserId = user.UserId,
-                Username = (user.UserName ?? string.Empty).Trim(),
-                DisplayName = string.IsNullOrWhiteSpace(user.UserAlias) ? (user.UserName ?? string.Empty).Trim() : user.UserAlias,
-                Role = MapUserRole(user.UserRole),
-                PrimaryRec = user.PrimaryRec,
-                UserAlias = user.UserAlias ?? string.Empty,
-                UserPassword = user.UserPassword ?? string.Empty,
-                CreatedOn = user.CreatedOn,
-                CreatedBy = user.CreatedBy ?? string.Empty,
-                ModifiedOn = user.ModifiedOn,
-                ModifiedBy = user.ModifiedBy ?? string.Empty,
-            })
+            .SelectMany(
+                v => readContext.UserInfos
+                    .AsNoTracking()
+                    .Where(u => u.UserId == v.UserId)
+                    .DefaultIfEmpty(),
+                (v, u) => new { v, MetadataXml = u != null ? u.MetadataXml : null })
             .ToListAsync(cancellationToken);
+
+        var users = rawData.Select(x => new AdminUserResponse
+        {
+            UserId = x.v.UserId,
+            Username = (x.v.UserName ?? string.Empty).Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(x.v.UserAlias) ? (x.v.UserName ?? string.Empty).Trim() : x.v.UserAlias,
+            Role = MapUserRole(x.v.UserRole),
+            PrimaryRec = x.v.PrimaryRec,
+            UserAlias = x.v.UserAlias ?? string.Empty,
+            UserPassword = x.v.UserPassword ?? string.Empty,
+            CreatedOn = x.v.CreatedOn,
+            CreatedBy = x.v.CreatedBy ?? string.Empty,
+            ModifiedOn = x.v.ModifiedOn,
+            ModifiedBy = x.v.ModifiedBy ?? string.Empty,
+            Email = ExtractEmailFromMetadata(x.MetadataXml),
+        }).ToList();
 
         return Ok(users);
     }

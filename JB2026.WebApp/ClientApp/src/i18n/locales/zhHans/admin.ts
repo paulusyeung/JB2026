@@ -17,6 +17,7 @@ export const adminMessages = {
           username: '用户名',
           userAlias: '昵称',
           userPassword: '密码',
+          email: '邮箱',
           userRole: '用户角色',
           createdOn: '创建时间',
           createdBy: '创建者',
