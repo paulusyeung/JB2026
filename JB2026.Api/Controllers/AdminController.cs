@@ -34,6 +34,7 @@ public sealed class AdminController : ControllerBase
         [FromServices] JB5LegacyReadContext readContext,
         [FromQuery] string? lookup,
         [FromQuery] int take = 500,
+        [FromQuery] bool excludeGuest = false,
         CancellationToken cancellationToken = default)
     {
         if (take is <= 0 or > 1000)
@@ -46,6 +47,11 @@ public sealed class AdminController : ControllerBase
 
         var normalizedLookup = lookup?.Trim();
         var query = readContext.vwUserList_Actives.AsNoTracking();
+
+        if (excludeGuest)
+        {
+            query = query.Where(user => user.UserRole != 0);
+        }
 
         if (!string.IsNullOrWhiteSpace(normalizedLookup))
         {

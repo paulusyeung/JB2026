@@ -42,6 +42,7 @@ export interface AdminWorkflowsQuery {
 export interface AdminUsersQuery {
   lookup?: string
   take?: number
+  excludeGuest?: boolean
 }
 
 export async function getAdminUsers(query: AdminUsersQuery = {}): Promise<AdminUser[]> {
@@ -49,6 +50,7 @@ export async function getAdminUsers(query: AdminUsersQuery = {}): Promise<AdminU
     params: {
       lookup: query.lookup ?? '',
       take: query.take ?? 500,
+      excludeGuest: query.excludeGuest ?? false,
     },
   })
   return response.data

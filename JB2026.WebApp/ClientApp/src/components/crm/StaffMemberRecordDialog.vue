@@ -152,7 +152,11 @@ const userRoleOptions = computed(() => [
 ])
 
 const requiredUsername = (value: string) => value.trim().length > 0 || t('admin.user.form.requiredUsername')
-const requiredEmail = (value: string) => value.trim().length > 0 || t('admin.user.form.requiredEmail')
+const requiredEmail = (value: string) => {
+  if (!value.trim().length) return t('admin.user.form.requiredEmail')
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(value.trim()) || t('crm.staffMember.form.invalidEmail')
+}
 
 watch(
   () => props.userId,

@@ -4,6 +4,7 @@ export const crmMessages = {
       newTitle: 'New Staff Member',
       editTitle: 'Staff Member',
       email: 'Email',
+      invalidEmail: 'Invalid email format',
     },
     actions: {
       new: 'New Staff Member',

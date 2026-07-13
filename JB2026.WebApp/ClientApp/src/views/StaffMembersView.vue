@@ -238,7 +238,7 @@ type StaffMembersDisplayItem = AdminUser & {
   ln: number
 }
 
-const allRows = ref<AdminUser[]>([])
+const rows = ref<AdminUser[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
@@ -264,8 +264,6 @@ const { t } = useI18n({ useScope: 'global' })
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const isCardView = computed(() => viewMode.value === 'card')
-
-const rows = computed(() => allRows.value.filter((u) => u.role !== 'Guest'))
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -339,9 +337,10 @@ async function load() {
   errorMessage.value = ''
 
   try {
-    allRows.value = await getAdminUsers({
+    rows.value = await getAdminUsers({
       lookup: lookup.value.trim(),
       take: 500,
+      excludeGuest: true,
     })
   } catch {
     errorMessage.value = t('admin.user.messages.loadFailed')
