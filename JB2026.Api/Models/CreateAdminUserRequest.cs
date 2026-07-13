@@ -16,4 +16,8 @@ public sealed class CreateAdminUserRequest
 
     [Range(0, 4)]
     public int UserRole { get; init; } = 0;
+
+    [Required]
+    [StringLength(254)]
+    public string Email { get; init; } = string.Empty;
 }

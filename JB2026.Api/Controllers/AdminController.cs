@@ -125,6 +125,7 @@ public sealed class AdminController : ControllerBase
             UserAlias = request.UserAlias.Trim(),
             UserPassword = request.UserPassword.Trim(),
             UserRole = request.UserRole,
+            MetadataXml = SetEmailInMetadata(null, request.Email),
             CreatedOn = now,
             CreatedBy = actorId,
             ModifiedOn = now,
@@ -174,6 +175,7 @@ public sealed class AdminController : ControllerBase
         user.UserAlias = request.UserAlias.Trim();
         user.UserPassword = request.UserPassword.Trim();
         user.UserRole = request.UserRole;
+        user.MetadataXml = SetEmailInMetadata(user.MetadataXml, request.Email);
         user.ModifiedOn = DateTime.Now;
         user.ModifiedBy = actorId;
         user.Retired = false;
@@ -238,7 +240,53 @@ public sealed class AdminController : ControllerBase
             CreatedBy = user.CreatedBy.ToString(),
             ModifiedOn = user.ModifiedOn,
             ModifiedBy = user.ModifiedBy.ToString(),
+            Email = ExtractEmailFromMetadata(user.MetadataXml),
         };
+    }
+
+    private static string ExtractEmailFromMetadata(string? metadataXml)
+    {
+        if (string.IsNullOrWhiteSpace(metadataXml))
+            return string.Empty;
+        try
+        {
+            var xml = XElement.Parse(metadataXml);
+            return xml.Element("Email")?.Value?.Trim() ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string SetEmailInMetadata(string? metadataXml, string email)
+    {
+        XElement xml;
+        if (string.IsNullOrWhiteSpace(metadataXml))
+        {
+            xml = new XElement("Metadata");
+        }
+        else
+        {
+            try
+            {
+                xml = XElement.Parse(metadataXml);
+            }
+            catch
+            {
+                xml = new XElement("Metadata");
+            }
+        }
+        var emailEl = xml.Element("Email");
+        if (emailEl is null)
+        {
+            xml.Add(new XElement("Email", email));
+        }
+        else
+        {
+            emailEl.Value = email;
+        }
+        return xml.ToString();
     }
 
     private static string MapUserRole(int role)

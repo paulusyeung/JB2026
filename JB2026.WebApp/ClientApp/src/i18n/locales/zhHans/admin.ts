@@ -55,6 +55,8 @@ export const adminMessages = {
           userAlias: '昵称',
           userPassword: '密码',
           userRole: '用户角色',
+          email: '邮箱',
+          requiredEmail: '必须输入邮箱',
           save: '保存',
           saveClose: '保存并关闭',
           delete: '删除',

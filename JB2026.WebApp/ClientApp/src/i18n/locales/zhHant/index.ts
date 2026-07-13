@@ -22,6 +22,7 @@ import { jobFormMessages } from './jobForm'
 import { legacySliceMessages } from './legacySlice'
 import { orderTypesMessages } from './orderTypes'
 import { themeMessages } from './theme'
+import { crmMessages } from './crm'
 
 export const zhHantMessages = {
   app: appMessages,
@@ -48,4 +49,5 @@ export const zhHantMessages = {
   legacySlice: legacySliceMessages,
   orderTypes: orderTypesMessages,
   theme: themeMessages,
+  crm: crmMessages,
 } as const

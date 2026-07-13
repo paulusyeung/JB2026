@@ -27,6 +27,7 @@ export interface AdminUserRecord {
   userRole: number
   role: string
   primaryRec: boolean
+  email: string
   createdOn: string
   createdBy: string
   modifiedOn: string
@@ -38,6 +39,7 @@ export interface CreateAdminUserRequest {
   userAlias: string
   userPassword: string
   userRole: number
+  email: string
 }
 
 export interface UpdateAdminUserRequest {
@@ -45,6 +47,7 @@ export interface UpdateAdminUserRequest {
   userAlias: string
   userPassword: string
   userRole: number
+  email: string
 }
 
 export interface AdminWorkflowListItem {

@@ -66,6 +66,17 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       ],
     },
     {
+      title: t('routes.crm'),
+      icon: 'mdi-account-group-outline',
+      children: [
+        { title: t('routes.crmCompanies'), to: '/crm/companies', icon: 'mdi-domain' },
+        { title: t('routes.crmPeople'), to: '/crm/people', icon: 'mdi-account-multiple-outline' },
+        { title: t('routes.crmOpportunities'), to: '/crm/opportunities', icon: 'mdi-trending-up' },
+        { title: t('routes.crmTasks'), to: '/crm/tasks', icon: 'mdi-format-list-checks' },
+        { title: t('routes.crmStaffMembers'), to: '/crm/staff-members', icon: 'mdi-account-tie' },
+      ],
+    },
+    {
       title: t('routes.admin'),
       icon: 'mdi-shield-account-outline',
       roles: ['Admin'],

@@ -1,7 +1,6 @@
 <template>
-  <section class="page-section admin-user-page">
-    <v-card rounded="xl" elevation="0" class="panel-card admin-user-card">
-
+  <section class="page-section staff-members-page">
+    <v-card rounded="xl" elevation="0" class="panel-card staff-members-card">
 
       <v-card-text>
         <div class="filter-bar">
@@ -183,7 +182,7 @@
           density="compact"
           fixed-header
           height="62vh"
-          class="admin-user-table"
+          class="staff-members-table"
         >
           <template #[`item.icon`]='{ item }'>
             <v-icon size="14" :color="item.primaryRec ? 'warning' : 'secondary'">
@@ -205,7 +204,7 @@
     </v-card>
 
     <v-dialog v-model="dialogOpen" max-width="min(100%, 760px)" scrollable>
-      <AdminUserRecordDialog
+      <StaffMemberRecordDialog
         :user-id="editingUserId"
         @saved="handleSaved"
         @deleted="handleDeleted"
@@ -228,22 +227,22 @@ import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
-import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
+import StaffMemberRecordDialog from '@/components/crm/StaffMemberRecordDialog.vue'
 import { getAdminUsers } from '@/services/admin'
 import type { AdminUser, AdminUserRecord } from '@/types/api'
 
-type AdminUserViewMode = 'detail' | 'card'
+type StaffMembersViewMode = 'detail' | 'card'
 
-type AdminUserDisplayItem = AdminUser & {
+type StaffMembersDisplayItem = AdminUser & {
   icon: string
   ln: number
 }
 
-const rows = ref<AdminUser[]>([])
+const allRows = ref<AdminUser[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
-const viewSettings = useViewSettings('admin-user', {
+const viewSettings = useViewSettings('staff-members', {
   visibleColumns: ['icon', 'username', 'ln', 'userAlias', 'userPassword', 'role', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
   sortKey: 'userAlias',
   sortDirection: 'asc',
@@ -265,6 +264,8 @@ const { t } = useI18n({ useScope: 'global' })
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
 
 const isCardView = computed(() => viewMode.value === 'card')
+
+const rows = computed(() => allRows.value.filter((u) => u.role !== 'Guest'))
 
 const allHeaders = computed(() => [
   { title: '', key: 'icon', width: '32px', sortable: false },
@@ -289,7 +290,7 @@ const headers = computed(() =>
   ),
 )
 
-const mobileColumns = computed<ListMobileCardColumn<AdminUserDisplayItem>[]>(() => [
+const mobileColumns = computed<ListMobileCardColumn<StaffMembersDisplayItem>[]>(() => [
   { key: 'userAlias', label: t('admin.user.headers.userAlias'), section: 'header', emphasis: true },
   { key: 'username', label: t('admin.user.headers.username'), section: 'header' },
   { key: 'role', label: t('admin.user.headers.userRole'), section: 'body' },
@@ -310,7 +311,7 @@ const sortableColumns = computed(() =>
 
 const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
-const displayedRows = computed<AdminUserDisplayItem[]>(() => {
+const displayedRows = computed<StaffMembersDisplayItem[]>(() => {
   const key = sortKey.value as keyof AdminUser
   const result = [...rows.value]
 
@@ -338,7 +339,7 @@ async function load() {
   errorMessage.value = ''
 
   try {
-    rows.value = await getAdminUsers({
+    allRows.value = await getAdminUsers({
       lookup: lookup.value.trim(),
       take: 500,
     })
@@ -369,7 +370,7 @@ function toggleColumn(columnKey: string) {
   visibleColumnKeys.value = [...visibleColumnKeys.value, columnKey]
 }
 
-function onMobileCardClick(item: AdminUserDisplayItem) {
+function onMobileCardClick(item: StaffMembersDisplayItem) {
   if (checkboxMode.value) {
     selectedUserIds.value = [item.userId]
     return
@@ -408,7 +409,7 @@ function openNewUser() {
   errorMessage.value = ''
 }
 
-function setViewMode(mode: AdminUserViewMode) {
+function setViewMode(mode: StaffMembersViewMode) {
   viewMode.value = mode
 }
 
@@ -443,13 +444,13 @@ function formatDateCell(value: string): string {
 </script>
 
 <style scoped>
-.admin-user-page {
+.staff-members-page {
   min-height: 0;
   --admin-user-header-bg: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%);
   --admin-user-header-fg: rgb(var(--v-theme-on-surface-variant));
 }
 
-.admin-user-card {
+.staff-members-card {
   border: 1px solid rgba(var(--v-theme-primary), 0.15);
   background: linear-gradient(180deg, rgba(224, 237, 255, 0.92), rgba(241, 247, 255, 0.96));
 }
@@ -474,26 +475,26 @@ function formatDateCell(value: string): string {
   overflow: auto;
 }
 
-.admin-user-table {
+.staff-members-table {
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   overflow: hidden;
 }
 
-.admin-user-table :deep(.v-table__wrapper > table > thead > tr > th),
-.admin-user-table :deep(.v-data-table__th) {
+.staff-members-table :deep(.v-table__wrapper > table > thead > tr > th),
+.staff-members-table :deep(.v-data-table__th) {
   white-space: nowrap;
   background-color: var(--admin-user-header-bg) !important;
   color: var(--admin-user-header-fg) !important;
 }
 
-.admin-user-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
-.admin-user-table :deep(.v-data-table__th:first-child) {
+.staff-members-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.staff-members-table :deep(.v-data-table__th:first-child) {
   border-top-left-radius: 8px;
 }
 
-.admin-user-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
-.admin-user-table :deep(.v-data-table__th:last-child) {
+.staff-members-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.staff-members-table :deep(.v-data-table__th:last-child) {
   border-top-right-radius: 8px;
 }
 

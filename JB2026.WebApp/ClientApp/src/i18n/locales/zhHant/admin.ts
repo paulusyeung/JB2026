@@ -55,6 +55,8 @@ export const adminMessages = {
           userAlias: '暱稱',
           userPassword: '密碼',
           userRole: '使用者角色',
+          email: '電子郵件',
+          requiredEmail: '必須輸入電子郵件',
           save: '儲存',
           saveClose: '儲存並關閉',
           delete: '刪除',
