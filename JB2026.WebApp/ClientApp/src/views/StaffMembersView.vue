@@ -90,8 +90,8 @@
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
-              {{ t('admin.user.actions.newUser') }}
+            <v-btn variant="outlined" size="small" color="primary" :disabled="!canSyncToCrm" prepend-icon="mdi-cloud-sync" @click="syncToCrm">
+              {{ t('admin.user.actions.syncCrm') }}
             </v-btn>
           </template>
 
@@ -112,8 +112,8 @@
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
                 <v-list-item-title>{{ t('admin.user.actions.cardView') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-account-plus" @click="openNewUser">
-                <v-list-item-title>{{ t('admin.user.actions.newUser') }}</v-list-item-title>
+              <v-list-item prepend-icon="mdi-cloud-sync" :disabled="!canSyncToCrm" @click="syncToCrm">
+                <v-list-item-title>{{ t('admin.user.actions.syncCrm') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -328,6 +328,21 @@ const displayedRows = computed<StaffMembersDisplayItem[]>(() => {
 })
 
 const selectedUserId = computed(() => selectedUserIds.value[0] ?? null)
+
+const selectedRecord = computed(() =>
+  rows.value.find((r) => r.userId === selectedUserId.value) ?? null,
+)
+
+const canSyncToCrm = computed(() => {
+  if (selectedUserIds.value.length !== 1) return false
+  const rec = selectedRecord.value
+  return rec !== null && rec.email.trim().length > 0
+})
+
+function syncToCrm() {
+  if (!canSyncToCrm.value) return
+  console.log('sync to crm', selectedRecord.value)
+}
 
 onMounted(async () => {
   await load()

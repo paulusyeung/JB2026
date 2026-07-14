@@ -34,6 +34,7 @@ export const adminMessages = {
           refresh: 'Refresh',
           preference: 'Preference',
           newUser: 'New User',
+          syncCrm: 'Sync to CRM',
           popup: 'Popup',
           sortBy: 'Sort By',
           asc: 'Asc',

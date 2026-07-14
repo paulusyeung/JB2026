@@ -32,6 +32,7 @@ export const adminMessages = {
           cardView: '卡片檢視',          refresh: '重新整理',
           preference: '偏好設定',
           newUser: '新增使用者',
+          syncCrm: '同步到CRM',
           popup: '彈出視窗',
           sortBy: '排序欄位',
           asc: '升冪',
