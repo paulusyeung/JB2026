@@ -153,8 +153,8 @@
             />
             <div class="user-card__header">
               <div class="d-flex align-center ga-2">
-                <v-icon size="18" :color="row.primaryRec ? 'warning' : 'secondary'">
-                  {{ row.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
+                <v-icon size="18" :color="row.crmSynced ? 'pink' : row.primaryRec ? 'warning' : 'secondary'">
+                  {{ row.crmSynced ? 'mdi-account-sync' : row.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
                 </v-icon>
                 <div>
                   <div class="text-subtitle-2 font-weight-bold">{{ row.userAlias }}</div>
@@ -186,8 +186,8 @@
           class="staff-members-table"
         >
           <template #[`item.icon`]='{ item }'>
-            <v-icon size="14" :color="item.primaryRec ? 'warning' : 'secondary'">
-              {{ item.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
+            <v-icon size="14" :color="item.crmSynced ? 'pink' : item.primaryRec ? 'warning' : 'secondary'">
+              {{ item.crmSynced ? 'mdi-account-sync' : item.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
             </v-icon>
           </template>
 
@@ -213,6 +213,15 @@
       />
     </v-dialog>
 
+    <v-dialog v-model="crmDialogOpen" max-width="520px">
+      <SyncCrmDialog
+        :user-id="crmSyncingUserId"
+        :user-email="crmSyncingUserEmail"
+        @cancel="crmDialogOpen = false"
+        @done="crmDialogOpen = false; load()"
+      />
+    </v-dialog>
+
     <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
       {{ successMessage }}
       <template #actions>
@@ -229,6 +238,7 @@ import { useViewSettings } from '@/composables/useColumnPersistence'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import StaffMemberRecordDialog from '@/components/crm/StaffMemberRecordDialog.vue'
+import SyncCrmDialog from '@/components/crm/SyncCrmDialog.vue'
 import { getAdminUsers } from '@/services/admin'
 import type { AdminUser, AdminUserRecord } from '@/types/api'
 
@@ -260,6 +270,9 @@ const dialogOpen = ref(false)
 const editingUserId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
+const crmDialogOpen = ref(false)
+const crmSyncingUserId = ref('')
+const crmSyncingUserEmail = ref('')
 
 const { t } = useI18n({ useScope: 'global' })
 const { isPhoneLayout, isColumnVisible } = useResponsiveList()
@@ -322,7 +335,7 @@ const displayedRows = computed<StaffMembersDisplayItem[]>(() => {
 
   return result.map((item, index) => ({
     ...item,
-    icon: item.primaryRec ? 'mdi-account-key' : 'mdi-account',
+    icon: item.crmSynced ? 'mdi-account-sync' : item.primaryRec ? 'mdi-account-key' : 'mdi-account',
     ln: index + 1,
   }))
 })
@@ -341,7 +354,11 @@ const canSyncToCrm = computed(() => {
 
 function syncToCrm() {
   if (!canSyncToCrm.value) return
-  console.log('sync to crm', selectedRecord.value)
+  const rec = selectedRecord.value
+  if (!rec) return
+  crmSyncingUserId.value = rec.userId
+  crmSyncingUserEmail.value = rec.email
+  crmDialogOpen.value = true
 }
 
 onMounted(async () => {

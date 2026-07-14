@@ -14,6 +14,7 @@ export interface AdminUser {
   userAlias: string
   userPassword: string
   email: string
+  crmSynced: boolean
   createdOn: string
   createdBy: string
   modifiedOn: string

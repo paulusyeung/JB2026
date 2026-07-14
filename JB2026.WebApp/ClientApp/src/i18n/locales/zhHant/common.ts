@@ -13,4 +13,5 @@ export const commonMessages = {
       save: '儲存',
       cancel: '取消',
       confirmation: '確認',
+      close: '關閉',
     } as const

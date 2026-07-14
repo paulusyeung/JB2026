@@ -1,6 +1,7 @@
 using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.Api.Services.Billing;
+using JB2026.Api.Services.TwentyCrm;
 using JB2026.EfCore.Data;
 using JB2026.Infrastructure.Extensions;
 using JB2026.Reporting;
@@ -59,6 +60,7 @@ builder.Services.Configure<LegacyIdentityOptions>(builder.Configuration.GetSecti
 builder.Services.Configure<JobListOptions>(builder.Configuration.GetSection(JobListOptions.SectionName));
 builder.Services.Configure<LegacyFilesOptions>(builder.Configuration.GetSection(LegacyFilesOptions.SectionName));
 builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection(BillingOptions.SectionName));
+builder.Services.Configure<TwentyCrmOptions>(builder.Configuration.GetSection(TwentyCrmOptions.SectionName));
 builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection(OllamaOptions.SectionName));
 
 var ollamaBaseUrl = builder.Configuration.GetValue<string>("Ollama:BaseUrl") ?? "http://localhost:11434";
@@ -68,6 +70,7 @@ builder.Services.AddSingleton<IOllamaApiClient>(_ => new OllamaApiClient(ollamaB
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IInvoiceNinjaHttpClient, InvoiceNinjaHttpClient>();
 builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<ITwentyCrmSyncService, TwentyCrmSyncService>();
 builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
 builder.Services.AddSingleton<InMemorySettingsService>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();

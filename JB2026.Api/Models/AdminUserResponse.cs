@@ -25,4 +25,6 @@ public sealed class AdminUserResponse
     public required string ModifiedBy { get; init; }
 
     public string Email { get; set; } = string.Empty;
+
+    public bool CrmSynced { get; set; }
 }

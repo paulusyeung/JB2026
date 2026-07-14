@@ -75,6 +75,17 @@ export async function deleteAdminUser(id: string): Promise<void> {
   await apiClient.delete(`/api/v2/admin/users/${id}`)
 }
 
+export interface SyncCrmResponse {
+  success: boolean
+  message: string
+  crmUserId: string | null
+}
+
+export async function syncAdminUserToCrm(id: string): Promise<SyncCrmResponse> {
+  const response = await apiClient.post<SyncCrmResponse>(`/api/v2/admin/users/${id}/sync-crm`)
+  return response.data
+}
+
 export async function getAdminWorkflows(query: AdminWorkflowsQuery = {}): Promise<AdminWorkflowListItem[]> {
   const response = await apiClient.get<AdminWorkflowListItem[]>('/api/v2/admin/workflows', {
     params: {

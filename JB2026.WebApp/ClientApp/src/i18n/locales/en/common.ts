@@ -13,4 +13,5 @@ export const commonMessages = {
       save: 'Save',
       cancel: 'Cancel',
       confirmation: 'Confirmation',
+      close: 'Close',
     } as const
