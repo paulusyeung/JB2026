@@ -20,7 +20,7 @@ public sealed class CrmCompanyResponse
 
     public string UpdatedBy { get; set; } = string.Empty;
 
-    public int PeopleCount { get; set; }
+    public string People { get; set; } = string.Empty;
 
-    public int OpportunitiesCount { get; set; }
+    public string Opportunities { get; set; } = string.Empty;
 }

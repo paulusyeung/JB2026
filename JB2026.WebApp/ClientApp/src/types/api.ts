@@ -15,8 +15,8 @@ export interface CrmCompany {
   createdBy: string
   updatedOn: string
   updatedBy: string
-  peopleCount: number
-  opportunitiesCount: number
+  people: string
+  opportunities: string
 }
 
 export interface AdminUser {

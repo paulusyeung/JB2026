@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using JB2026.Api.Models;
 using JB2026.Api.Options;
 using Microsoft.Extensions.Options;
@@ -10,11 +11,6 @@ public class TwentyCrmService : ITwentyCrmService
     private readonly IOptions<TwentyCrmOptions> _options;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TwentyCrmService> _logger;
-
-    private static readonly JsonSerializerOptions JsonUnescapedOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
 
     public TwentyCrmService(
         IOptions<TwentyCrmOptions> options,
@@ -39,41 +35,28 @@ public class TwentyCrmService : ITwentyCrmService
             return false;
         }
 
-        using var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
-        client.Timeout = TimeSpan.FromSeconds(options.HttpClientTimeoutSeconds);
-
-        var baseUrl = options.BaseUrl.TrimEnd('/');
-        var url = $"{baseUrl}/rest/workspaceMembers?limit=100";
-
         try
         {
-            var response = await client.GetAsync(url, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Twenty CRM REST returned {StatusCode} for {Email}. Body: {Body}",
-                    (int)response.StatusCode, email, Truncate(body));
-                return false;
-            }
-
-            using var doc = JsonDocument.Parse(body);
-            var members = doc.RootElement
-                .GetProperty("data")
-                .GetProperty("workspaceMembers");
-
-            foreach (var member in members.EnumerateArray())
-            {
-                if (member.TryGetProperty("userEmail", out var userEmailEl)
-                    && userEmailEl.ValueKind == JsonValueKind.String
-                    && string.Equals(userEmailEl.GetString(), email, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
+            const string query = """
+                query EmailExists($email: String!) {
+                  workspaceMembers(filter: { userEmail: { eq: $email } }) {
+                    totalCount
+                  }
                 }
-            }
+                """;
 
-            return false;
+            var variables = new Dictionary<string, object?> { ["email"] = email };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("workspaceMembers", out var members))
+                return false;
+
+            var totalCount = members.TryGetProperty("totalCount", out var tc) && tc.ValueKind == JsonValueKind.Number
+                ? tc.GetInt32()
+                : 0;
+
+            return totalCount > 0;
         }
         catch (Exception ex)
         {
@@ -95,298 +78,293 @@ public class TwentyCrmService : ITwentyCrmService
             return [];
         }
 
+        try
+        {
+            var hasLookup = !string.IsNullOrWhiteSpace(lookup);
+            var hasEmail = !string.IsNullOrWhiteSpace(currentUserEmail);
+
+            var filterClauses = new List<string>();
+            filterClauses.Add(
+                hasEmail
+                    ? "{ or: [ { accountOwnerId: { is: NULL } }, { accountOwner: { userEmail: { eq: $email } } } ] }"
+                    : "{ accountOwnerId: { is: NULL } }");
+
+            if (hasLookup)
+                filterClauses.Add("{ name: { ilike: $lookup } }");
+
+            var filterBlock = filterClauses.Count == 1
+                ? filterClauses[0]
+                : $"{{ and: [ {string.Join(", ", filterClauses)} ] }}";
+
+            var query = $$"""
+                query Companies($email: String, $lookup: String, $first: Int) {
+                  companies(filter: {{filterBlock}}) {
+                    edges {
+                      node {
+                        id
+                        name
+                        domainName {
+                          primaryLinkUrl
+                        }
+                        address {
+                          addressStreet1
+                          addressStreet2
+                          addressCity
+                          addressState
+                          addressPostcode
+                          addressCountry
+                        }
+                        accountOwner {
+                          name {
+                            firstName
+                            lastName
+                          }
+                          userEmail
+                        }
+                        people {
+                          edges {
+                            node {
+                              name {
+                                firstName
+                                lastName
+                              }
+                            }
+                          }
+                        }
+                        opportunities {
+                          edges {
+                            node {
+                              name
+                            }
+                          }
+                        }
+                        createdAt
+                        createdBy {
+                          name
+                        }
+                        updatedAt
+                        updatedBy {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["email"] = currentUserEmail,
+                ["lookup"] = hasLookup ? $"%{lookup}%" : null,
+                ["first"] = 200,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("companies", out var companiesEl)
+                || !companiesEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<CrmCompanyResponse>();
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var companyId = GetStringProp(node, "id");
+                if (string.IsNullOrWhiteSpace(companyId))
+                    continue;
+
+                result.Add(new CrmCompanyResponse
+                {
+                    Id = companyId,
+                    Name = GetStringProp(node, "name"),
+                    AccountOwner = ResolveAccountOwnerName(node),
+                    DomainName = ResolveDomainName(node),
+                    Address = FormatAddress(node),
+                    CreatedOn = GetStringProp(node, "createdAt"),
+                    CreatedBy = ResolveActorName(node, "createdBy"),
+                    UpdatedOn = GetStringProp(node, "updatedAt"),
+                    UpdatedBy = ResolveActorName(node, "updatedBy"),
+                    People = ResolveRelationNames(node, "people", FormatPersonName),
+                    Opportunities = ResolveRelationNames(node, "opportunities", n => GetStringProp(n, "name")),
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch companies from Twenty CRM");
+            return [];
+        }
+    }
+
+    private async Task<JsonElement> PostGraphQLAsync(
+        string query,
+        Dictionary<string, object?> variables,
+        CancellationToken cancellationToken)
+    {
+        var options = _options.Value;
+
         using var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
         client.Timeout = TimeSpan.FromSeconds(options.HttpClientTimeoutSeconds);
 
         var baseUrl = options.BaseUrl.TrimEnd('/');
+        var url = $"{baseUrl}/graphql";
 
-        var workspaceMembers = await FetchAllWorkspaceMembersAsync(client, baseUrl, cancellationToken);
-        var companies = await FetchAllCompaniesAsync(client, baseUrl, cancellationToken);
-
-        var emailToMember = workspaceMembers
-            .Where(m => m.TryGetValue("userEmail", out var e) && e.ValueKind == JsonValueKind.String)
-            .ToDictionary(
-                m => m["userEmail"].GetString()!,
-                m => m,
-                StringComparer.OrdinalIgnoreCase);
-
-        var idToMember = workspaceMembers
-            .Where(m => m.TryGetValue("id", out var e) && e.ValueKind == JsonValueKind.String)
-            .ToDictionary(
-                m => m["id"].GetString()!,
-                m => m,
-                StringComparer.OrdinalIgnoreCase);
-
-        var result = new List<CrmCompanyResponse>(companies.Count);
-
-        foreach (var company in companies)
+        var payload = new JsonObject
         {
-            var companyId = GetStringProp(company, "id");
-            if (string.IsNullOrWhiteSpace(companyId))
-                continue;
+            ["query"] = query,
+            ["variables"] = JsonSerializer.SerializeToNode(variables),
+        };
 
-            var accountOwnerId = GetStringProp(company, "accountOwnerId");
+        using var httpContent = new StringContent(
+            payload.ToJsonString(),
+            System.Text.Encoding.UTF8,
+            "application/json");
 
-            var (accountOwnerEmail, ownerName) = ResolveAccountOwner(accountOwnerId, idToMember, emailToMember);
+        var response = await client.PostAsync(url, httpContent, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            if (!ShouldIncludeCompany(accountOwnerEmail, currentUserEmail))
-                continue;
-
-            if (!string.IsNullOrWhiteSpace(lookup))
-            {
-                var name = GetStringProp(company, "name");
-                var domain = GetStringProp(company, "domainName");
-                if (!ContainsIgnoreCase(name, lookup) && !ContainsIgnoreCase(domain, lookup))
-                    continue;
-            }
-
-            result.Add(new CrmCompanyResponse
-            {
-                Id = companyId,
-                Name = GetStringProp(company, "name"),
-                AccountOwner = ownerName,
-                DomainName = GetStringProp(company, "domainName"),
-                Address = FormatAddress(company),
-                CreatedOn = FormatTimestamp(GetStringProp(company, "createdAt")),
-                CreatedBy = ResolveMemberName(GetStringProp(company, "createdBy"), idToMember),
-                UpdatedOn = FormatTimestamp(GetStringProp(company, "updatedAt")),
-                UpdatedBy = ResolveMemberName(GetStringProp(company, "updatedBy"), idToMember),
-                PeopleCount = CountArray(company, "people"),
-                OpportunitiesCount = CountArray(company, "opportunities"),
-            });
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Twenty CRM GraphQL returned {StatusCode}. Body: {Body}",
+                (int)response.StatusCode,
+                Truncate(body));
+            throw new InvalidOperationException($"Twenty CRM GraphQL error: {response.StatusCode}");
         }
 
-        return result;
-    }
+        using var doc = JsonDocument.Parse(body);
 
-    private async Task<List<Dictionary<string, JsonElement>>> FetchAllWorkspaceMembersAsync(
-        HttpClient client, string baseUrl, CancellationToken cancellationToken)
-    {
-        var members = new List<Dictionary<string, JsonElement>>();
-
-        try
+        if (doc.RootElement.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
         {
-            var url = $"{baseUrl}/rest/workspaceMembers?limit=100";
-            var response = await client.GetAsync(url, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Twenty CRM returned {StatusCode} for workspaceMembers", (int)response.StatusCode);
-                return members;
-            }
-
-            using var doc = JsonDocument.Parse(body);
-            var data = doc.RootElement.GetProperty("data");
-            var rawMembers = ResolveProperty(data, "workspaceMembers");
-
-            members.AddRange(ParseObjectArray(rawMembers));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fetch workspace members from Twenty CRM");
+            _logger.LogWarning("Twenty CRM GraphQL returned errors: {Errors}", Truncate(errors.GetRawText()));
+            throw new InvalidOperationException("Twenty CRM GraphQL returned errors");
         }
 
-        return members;
-    }
-
-    private async Task<List<Dictionary<string, JsonElement>>> FetchAllCompaniesAsync(
-        HttpClient client, string baseUrl, CancellationToken cancellationToken)
-    {
-        var allCompanies = new List<Dictionary<string, JsonElement>>();
-
-        try
-        {
-            var url = $"{baseUrl}/rest/companies?limit=100";
-            var response = await client.GetAsync(url, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Twenty CRM returned {StatusCode} for companies", (int)response.StatusCode);
-                return allCompanies;
-            }
-
-            using var doc = JsonDocument.Parse(body);
-            var data = doc.RootElement.GetProperty("data");
-            var rawCompanies = ResolveProperty(data, "companies");
-
-            allCompanies.AddRange(ParseObjectArray(rawCompanies));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fetch companies from Twenty CRM");
-        }
-
-        return allCompanies;
-    }
-
-    private static JsonElement ResolveProperty(JsonElement data, string propertyName)
-    {
-        if (!data.TryGetProperty(propertyName, out var prop))
+        if (!doc.RootElement.TryGetProperty("data", out var data))
             return default;
 
-        if (prop.ValueKind == JsonValueKind.Object && prop.TryGetProperty("edges", out var edges))
-        {
-            return edges;
-        }
-
-        return prop;
+        return data.Clone();
     }
 
-    private static List<Dictionary<string, JsonElement>> ParseObjectArray(JsonElement element)
+    private static string ResolveAccountOwnerName(JsonElement company)
     {
-        var result = new List<Dictionary<string, JsonElement>>();
+        if (!company.TryGetProperty("accountOwner", out var owner) || owner.ValueKind != JsonValueKind.Object)
+            return string.Empty;
 
-        if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.Object)
-                {
-                    if (item.TryGetProperty("node", out var node))
-                    {
-                        result.Add(FlattenObject(node));
-                    }
-                    else
-                    {
-                        result.Add(FlattenObject(item));
-                    }
-                }
-            }
-        }
+        var name = GetCompositeName(owner, "name");
+        if (!string.IsNullOrWhiteSpace(name))
+            return name;
 
-        return result;
+        return GetStringProp(owner, "userEmail");
     }
 
-    private static Dictionary<string, JsonElement> FlattenObject(JsonElement obj)
+    private static string ResolveActorName(JsonElement parent, string field)
     {
-        var dict = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-        foreach (var prop in obj.EnumerateObject())
-        {
-            dict[prop.Name] = prop.Value.Clone();
-        }
-        return dict;
+        if (!parent.TryGetProperty(field, out var actor) || actor.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        return GetStringProp(actor, "name");
     }
 
-    private static string GetStringProp(Dictionary<string, JsonElement> obj, string key)
+    private static string ResolveRelationNames(
+        JsonElement company,
+        string relationField,
+        Func<JsonElement, string> selector)
     {
-        return obj.TryGetValue(key, out var el) && el.ValueKind == JsonValueKind.String
+        if (!company.TryGetProperty(relationField, out var relation) || relation.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        if (!relation.TryGetProperty("edges", out var edges) || edges.ValueKind != JsonValueKind.Array)
+            return string.Empty;
+
+        var names = new List<string>();
+        foreach (var edge in edges.EnumerateArray())
+        {
+            if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var name = selector(node);
+            if (!string.IsNullOrWhiteSpace(name))
+                names.Add(name);
+        }
+
+        if (names.Count == 0)
+            return string.Empty;
+
+        if (names.Count == 1)
+            return names[0];
+
+        return $"{names[0]}...";
+    }
+
+    private static string FormatPersonName(JsonElement person)
+    {
+        var firstName = GetStringProp(person, "firstName");
+        var lastName = GetStringProp(person, "lastName");
+        return string.Join(" ", new[] { firstName, lastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    }
+
+    private static string GetCompositeName(JsonElement parent, string field)
+    {
+        if (!parent.TryGetProperty(field, out var nameEl) || nameEl.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        var firstName = GetStringProp(nameEl, "firstName");
+        var lastName = GetStringProp(nameEl, "lastName");
+        return string.Join(" ", new[] { firstName, lastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    }
+
+    private static string GetStringProp(JsonElement obj, string key)
+    {
+        return obj.TryGetProperty(key, out var el) && el.ValueKind == JsonValueKind.String
             ? el.GetString() ?? string.Empty
             : string.Empty;
     }
 
-    private static string FormatAddress(Dictionary<string, JsonElement> company)
+    private static string ResolveDomainName(JsonElement company)
     {
-        if (!company.TryGetValue("address", out var addressEl) || addressEl.ValueKind != JsonValueKind.Object)
-        {
-            if (addressEl.ValueKind == JsonValueKind.String)
-                return addressEl.GetString() ?? string.Empty;
+        if (!company.TryGetProperty("domainName", out var domainEl) || domainEl.ValueKind != JsonValueKind.Object)
             return string.Empty;
-        }
+
+        var url = GetStringProp(domainEl, "primaryLinkUrl");
+        if (string.IsNullOrWhiteSpace(url))
+            return string.Empty;
+
+        if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return url["https://".Length..];
+
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            return url["http://".Length..];
+
+        return url;
+    }
+
+    private static string FormatAddress(JsonElement company)
+    {
+        if (!company.TryGetProperty("address", out var addressEl))
+            return string.Empty;
+
+        if (addressEl.ValueKind != JsonValueKind.Object)
+            return string.Empty;
 
         var parts = new List<string>();
         foreach (var field in new[] { "addressStreet1", "addressStreet2", "addressCity", "addressState", "addressPostcode", "addressCountry" })
         {
-            if (addressEl.TryGetProperty(field, out var val) && val.ValueKind == JsonValueKind.String)
-            {
-                var s = val.GetString()?.Trim();
-                if (!string.IsNullOrWhiteSpace(s))
-                    parts.Add(s);
-            }
+            var s = GetStringProp(addressEl, field).Trim();
+            if (!string.IsNullOrWhiteSpace(s))
+                parts.Add(s);
         }
 
         return string.Join(", ", parts);
-    }
-
-    private static string FormatTimestamp(string timestamp)
-    {
-        return timestamp;
-    }
-
-    private static (string Email, string Name) ResolveAccountOwner(
-        string? accountOwnerId,
-        Dictionary<string, Dictionary<string, JsonElement>> idToMember,
-        Dictionary<string, Dictionary<string, JsonElement>> emailToMember)
-    {
-        if (string.IsNullOrWhiteSpace(accountOwnerId))
-            return (string.Empty, string.Empty);
-
-        if (!idToMember.TryGetValue(accountOwnerId, out var member))
-            return (string.Empty, string.Empty);
-
-        var email = GetStringProp(member, "userEmail");
-        var name = GetDisplayName(member, "name");
-        if (string.IsNullOrWhiteSpace(name))
-            name = email;
-        return (email, name);
-    }
-
-    private static string ResolveMemberName(
-        string? memberId,
-        Dictionary<string, Dictionary<string, JsonElement>> idToMember)
-    {
-        if (string.IsNullOrWhiteSpace(memberId))
-            return string.Empty;
-
-        return idToMember.TryGetValue(memberId, out var member)
-            ? GetDisplayName(member, "name")
-            : string.Empty;
-    }
-
-    private static string GetDisplayName(Dictionary<string, JsonElement> obj, string key)
-    {
-        if (!obj.TryGetValue(key, out var el))
-            return string.Empty;
-
-        if (el.ValueKind == JsonValueKind.String)
-            return el.GetString() ?? string.Empty;
-
-        if (el.ValueKind == JsonValueKind.Object)
-        {
-            var firstName = GetJsonPropertyString(el, "firstName");
-            var lastName = GetJsonPropertyString(el, "lastName");
-            return string.Join(" ", new[] { firstName, lastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
-        }
-
-        return string.Empty;
-    }
-
-    private static string GetJsonPropertyString(JsonElement obj, string propertyName)
-    {
-        return obj.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.String
-            ? prop.GetString() ?? string.Empty
-            : string.Empty;
-    }
-
-    private static bool ShouldIncludeCompany(string accountOwnerEmail, string? currentUserEmail)
-    {
-        if (string.IsNullOrWhiteSpace(accountOwnerEmail))
-            return true;
-
-        if (!string.IsNullOrWhiteSpace(currentUserEmail))
-            return string.Equals(accountOwnerEmail, currentUserEmail, StringComparison.OrdinalIgnoreCase);
-
-        return false;
-    }
-
-    private static int CountArray(Dictionary<string, JsonElement> obj, string key)
-    {
-        if (!obj.TryGetValue(key, out var el))
-            return 0;
-
-        if (el.ValueKind == JsonValueKind.Array)
-            return el.GetArrayLength();
-
-        return 0;
-    }
-
-    private static bool ContainsIgnoreCase(string? value, string? search)
-    {
-        if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(search))
-            return false;
-        return value.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Truncate(string value, int max = 2000)

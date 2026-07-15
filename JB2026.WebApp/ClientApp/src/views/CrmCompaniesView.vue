@@ -178,13 +178,13 @@
             <a class="text-body-2 text-primary text-left text-decoration-none cursor-pointer" @click.stop="openPopup(item.id)">{{ item.name }}</a>
           </template>
 
-          <template #[`item.peopleCount`]='{ item }'>
-            <span v-if="item.peopleCount > 0">{{ item.peopleCount }}<template v-if="item.peopleCount > 1">...</template></span>
+          <template #[`item.people`]='{ item }'>
+            <span v-if="item.people">{{ item.people }}</span>
             <span v-else class="text-medium-emphasis">-</span>
           </template>
 
-          <template #[`item.opportunitiesCount`]='{ item }'>
-            <span v-if="item.opportunitiesCount > 0">{{ item.opportunitiesCount }}<template v-if="item.opportunitiesCount > 1">...</template></span>
+          <template #[`item.opportunities`]='{ item }'>
+            <span v-if="item.opportunities">{{ item.opportunities }}</span>
             <span v-else class="text-medium-emphasis">-</span>
           </template>
 
@@ -225,7 +225,7 @@ const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
 const viewSettings = useViewSettings('crm-companies', {
-  visibleColumns: ['name', 'accountOwner', 'domainName', 'address', 'peopleCount', 'opportunitiesCount', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+  visibleColumns: ['name', 'accountOwner', 'domainName', 'address', 'people', 'opportunities', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
   sortKey: 'name',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -251,8 +251,8 @@ const allHeaders = computed(() => [
   { title: t('crm.companies.headers.accountOwner'), key: 'accountOwner', minWidth: '140px' },
   { title: t('crm.companies.headers.domainName'), key: 'domainName', minWidth: '160px' },
   { title: t('crm.companies.headers.address'), key: 'address', minWidth: '200px' },
-  { title: t('crm.companies.headers.peopleCount'), key: 'peopleCount', width: '80px', sortable: true },
-  { title: t('crm.companies.headers.opportunitiesCount'), key: 'opportunitiesCount', width: '100px', sortable: true },
+  { title: t('crm.companies.headers.people'), key: 'people', minWidth: '140px' },
+  { title: t('crm.companies.headers.opportunities'), key: 'opportunities', minWidth: '160px' },
   { title: t('crm.companies.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
   { title: t('crm.companies.headers.createdBy'), key: 'createdBy', minWidth: '100px' },
   { title: t('crm.companies.headers.updatedOn'), key: 'updatedOn', minWidth: '135px' },
