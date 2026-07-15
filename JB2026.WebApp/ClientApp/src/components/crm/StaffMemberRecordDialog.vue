@@ -87,7 +87,7 @@
             density="compact"
             maxlength="254"
             type="email"
-            :rules="[requiredEmail]"
+            :rules="[requiredEmail, uniqueEmail]"
           />
         </v-col>
       </v-row>
@@ -153,9 +153,30 @@ const userRoleOptions = computed(() => [
 
 const requiredUsername = (value: string) => value.trim().length > 0 || t('admin.user.form.requiredUsername')
 const requiredEmail = (value: string) => {
-  if (!value.trim().length) return t('admin.user.form.requiredEmail')
+  if (!value.trim().length) return true
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(value.trim()) || t('crm.staffMember.form.invalidEmail')
+}
+
+let allUsersCache: { userId: string; email: string }[] = []
+async function loadAllUsers() {
+  try {
+    const { getAdminUsers } = await import('@/services/admin')
+    const users = await getAdminUsers({ take: 1000 })
+    allUsersCache = users.map(u => ({ userId: u.userId, email: (u.email ?? '').trim().toLowerCase() }))
+  } catch {
+    allUsersCache = []
+  }
+}
+
+const uniqueEmail = async (value: string) => {
+  if (!value.trim().length) return true
+  const trimmed = value.trim().toLowerCase()
+  if (allUsersCache.length === 0) await loadAllUsers()
+  const dup = allUsersCache.find(u =>
+    u.email === trimmed && u.userId !== props.userId
+  )
+  return dup ? t('crm.staffMember.form.emailInUse') : true
 }
 
 watch(
@@ -193,11 +214,6 @@ async function loadRecord(userId: string | null) {
 async function handleSave(closeAfter = false) {
   if (!draft.username.trim()) {
     errorMessage.value = t('admin.user.form.requiredUsername')
-    return
-  }
-
-  if (!draft.email.trim()) {
-    errorMessage.value = t('admin.user.form.requiredEmail')
     return
   }
 
