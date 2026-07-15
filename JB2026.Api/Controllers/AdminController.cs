@@ -33,6 +33,7 @@ public sealed class AdminController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<AdminUserResponse>>> GetUsers(
         [FromServices] JB5LegacyReadContext readContext,
+        [FromServices] ITwentyCrmService twentyCrmService,
         [FromQuery] string? lookup,
         [FromQuery] int take = 500,
         [FromQuery] bool excludeGuest = false,
@@ -86,8 +87,30 @@ public sealed class AdminController : ControllerBase
             ModifiedOn = x.v.ModifiedOn,
             ModifiedBy = x.v.ModifiedBy ?? string.Empty,
             Email = ExtractEmailFromMetadata(x.MetadataXml),
-            CrmSynced = ExtractCrmSyncedFromMetadata(x.MetadataXml),
         }).ToList();
+
+        var emailCheckTasks = users
+            .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+            .Select(u => twentyCrmService.EmailExistsAsync(u.Email, cancellationToken)
+                .ContinueWith(t => (Email: u.Email, Exists: t.IsCompletedSuccessfully && t.Result), cancellationToken))
+            .ToArray();
+
+        if (emailCheckTasks.Length > 0)
+        {
+            var results = await Task.WhenAll(emailCheckTasks);
+            var emailExistsMap = results
+                .Where(r => r.Exists)
+                .Select(r => r.Email)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var user in users)
+            {
+                if (!string.IsNullOrWhiteSpace(user.Email) && emailExistsMap.Contains(user.Email))
+                {
+                    user.CrmSynced = true;
+                }
+            }
+        }
 
         return Ok(users);
     }
@@ -273,64 +296,6 @@ public sealed class AdminController : ControllerBase
         {
             return string.Empty;
         }
-    }
-
-    private static bool ExtractCrmSyncedFromMetadata(string? metadataXml)
-    {
-        if (string.IsNullOrWhiteSpace(metadataXml))
-            return false;
-        try
-        {
-            var xml = XElement.Parse(metadataXml);
-            var el = xml.Element("CrmSynced");
-            return el is not null && string.Equals(el.Value, "true", StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static string SetCrmSyncInMetadata(string? metadataXml, bool synced, string? crmUserId)
-    {
-        XElement xml;
-        if (string.IsNullOrWhiteSpace(metadataXml))
-        {
-            xml = new XElement("Metadata");
-        }
-        else
-        {
-            try
-            {
-                xml = XElement.Parse(metadataXml);
-            }
-            catch
-            {
-                xml = new XElement("Metadata");
-            }
-        }
-
-        var syncedEl = xml.Element("CrmSynced");
-        if (syncedEl is null)
-        {
-            xml.Add(new XElement("CrmSynced", synced ? "true" : "false"));
-        }
-        else
-        {
-            syncedEl.Value = synced ? "true" : "false";
-        }
-
-        var userIdEl = xml.Element("CrmUserId");
-        if (userIdEl is null)
-        {
-            xml.Add(new XElement("CrmUserId", crmUserId ?? ""));
-        }
-        else
-        {
-            userIdEl.Value = crmUserId ?? "";
-        }
-
-        return xml.ToString();
     }
 
     private static string SetEmailInMetadata(string? metadataXml, string email)
@@ -2494,79 +2459,4 @@ public sealed class AdminController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("users/{id:guid}/sync-crm")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<object>> SyncUserToCrm(
-        Guid id,
-        [FromServices] JB5LegacyReadContext readContext,
-        [FromServices] JB5LegacyWriteContext writeContext,
-        [FromServices] ITwentyCrmSyncService crmSyncService,
-        [FromServices] ILogger<AdminController> logger,
-        CancellationToken cancellationToken = default)
-    {
-        var user = await readContext.UserInfos
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.UserId == id && !u.Retired, cancellationToken);
-
-        if (user is null)
-        {
-            return NotFound(new ProblemDetails
-            {
-                Title = "User not found",
-                Detail = $"No user exists for id '{id}'.",
-                Status = StatusCodes.Status404NotFound,
-            });
-        }
-
-        logger.LogInformation("CRM sync requested for user {UserId} ({UserName})", id, user.UserName);
-
-        var email = ExtractEmailFromMetadata(user.MetadataXml);
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            logger.LogWarning("CRM sync rejected for user {UserId}: no email in metadata", id);
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Email required",
-                Detail = "The selected user has no email address. Please set an email before syncing to CRM.",
-                Status = StatusCodes.Status400BadRequest,
-            });
-        }
-
-        var (success, message, crmUserId) = await crmSyncService.SyncMemberAsync(
-            email,
-            user.UserAlias?.Trim() ?? user.UserName?.Trim() ?? "",
-            "");
-
-        if (!success)
-        {
-            logger.LogError("CRM sync failed for {Email}: {Message}", email, message);
-            return BadRequest(new ProblemDetails
-            {
-                Title = "CRM sync failed",
-                Detail = message,
-                Status = StatusCodes.Status400BadRequest,
-            });
-        }
-
-        var writeUser = await writeContext.UserInfos
-            .FirstOrDefaultAsync(u => u.UserId == id && !u.Retired, cancellationToken);
-
-        if (writeUser is not null)
-        {
-            writeUser.MetadataXml = SetCrmSyncInMetadata(writeUser.MetadataXml, true, crmUserId?.ToString());
-            writeUser.ModifiedOn = DateTime.Now;
-            writeUser.ModifiedBy = ResolveActorId();
-            await writeContext.SaveChangesAsync(cancellationToken);
-        }
-
-        logger.LogInformation("CRM sync succeeded for {Email} (crmUserId={CrmUserId})", email, crmUserId);
-        return Ok(new
-        {
-            success = true,
-            message,
-            crmUserId,
-        });
-    }
 }

@@ -69,8 +69,8 @@ builder.Services.AddSingleton<IOllamaApiClient>(_ => new OllamaApiClient(ollamaB
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IInvoiceNinjaHttpClient, InvoiceNinjaHttpClient>();
+builder.Services.AddScoped<ITwentyCrmService, TwentyCrmService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
-builder.Services.AddScoped<ITwentyCrmSyncService, TwentyCrmSyncService>();
 builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
 builder.Services.AddSingleton<InMemorySettingsService>();
 builder.Services.AddSingleton<IPublicContentService, InMemoryPublicContentService>();

@@ -25,7 +25,7 @@
       <v-btn v-if="!resultMessage" variant="text" :disabled="syncing" @click="emit('cancel')">
         {{ t('common.cancel') }}
       </v-btn>
-      <v-btn v-if="!resultMessage" color="primary" variant="flat" prepend-icon="mdi-check" :loading="syncing" @click="handleProceed">
+      <v-btn v-if="!resultMessage" color="primary" variant="flat" prepend-icon="mdi-check" disabled>
         {{ t('admin.user.actions.syncCrmProceed') }}
       </v-btn>
       <v-btn v-else variant="text" @click="emitDone">
@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { syncAdminUserToCrm } from '@/services/admin'
+
 
 const props = defineProps<{ userId: string; userEmail: string }>()
 
@@ -52,24 +52,6 @@ const { t } = useI18n({ useScope: 'global' })
 const syncing = ref(false)
 const resultMessage = ref('')
 const resultSuccess = ref(false)
-
-async function handleProceed() {
-  syncing.value = true
-  resultMessage.value = ''
-  resultSuccess.value = false
-
-  try {
-    const result = await syncAdminUserToCrm(props.userId)
-    resultMessage.value = result.message
-    resultSuccess.value = result.success
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Unknown error'
-    resultMessage.value = msg
-    resultSuccess.value = false
-  } finally {
-    syncing.value = false
-  }
-}
 
 function emitDone() {
   emit('done')
