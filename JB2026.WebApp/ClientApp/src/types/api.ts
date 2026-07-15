@@ -5,6 +5,20 @@ export interface UserProfile {
   role: string
 }
 
+export interface CrmCompany {
+  id: string
+  name: string
+  accountOwner: string
+  domainName: string
+  address: string
+  createdOn: string
+  createdBy: string
+  updatedOn: string
+  updatedBy: string
+  peopleCount: number
+  opportunitiesCount: number
+}
+
 export interface AdminUser {
   userId: string
   username: string

@@ -6,6 +6,7 @@ const VIEW_OBJECT_IDS: Record<string, string> = {
   orderlist: 'c5e7a2d1-4f6b-47e9-8a3c-2b1d9f8e6c5a',
   stock: '4e86c95f-1db7-45b4-a3c1-d82c49648d0f',
   smlrtflist: 'b7c4f8a9-3e5d-4b2c-9f1e-7d6c8a3b5e2f',
+  'crm-companies': 'a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
 }
 
 export function getViewObjectId(viewId: string): string | null {

@@ -34,6 +34,7 @@ const legacyLeafRoutes = [
   { path: '/billing/invoices/:externalInvoiceId', name: 'billing-invoice-detail', titleKey: 'routes.billingInvoiceDetail' },
   { path: '/billing/settings', name: 'billing-settings', titleKey: 'routes.billingSettings' },
   { path: '/crm/staff-members', name: 'crm-staff-members', titleKey: 'routes.crmStaffMembers' },
+  { path: '/crm/companies', name: 'crm-companies', titleKey: 'routes.crmCompanies' },
 ] as const
 
 function resolveTitle(titleKey?: string): string {
@@ -201,7 +202,9 @@ const router = createRouter({
         : route.path === '/billing/settings'
           ? () => import('@/views/BillingSettingsView.vue')
         : route.path === '/crm/staff-members'
-          ? () => import('@/views/StaffMembersView.vue')
+          ? () => import('@/views/CrmStaffMembersView.vue')
+        : route.path === '/crm/companies'
+          ? () => import('@/views/CrmCompaniesView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { 
         requiresAuth: true, 
