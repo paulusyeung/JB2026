@@ -179,12 +179,30 @@
           </template>
 
           <template #[`item.people`]='{ item }'>
-            <span v-if="item.people">{{ item.people }}</span>
+            <template v-if="item.people && item.people.length">
+              <v-chip
+                v-for="(person, idx) in item.people"
+                :key="idx"
+                size="small"
+                label
+                class="ma-1"
+              >{{ person }}</v-chip>
+            </template>
             <span v-else class="text-medium-emphasis">-</span>
           </template>
 
           <template #[`item.opportunities`]='{ item }'>
-            <span v-if="item.opportunities">{{ item.opportunities }}</span>
+            <template v-if="item.opportunities && item.opportunities.length">
+              <v-chip
+                v-for="(opp, idx) in item.opportunities"
+                :key="idx"
+                size="small"
+                label
+                color="primary"
+                variant="tonal"
+                class="ma-1"
+              >{{ opp }}</v-chip>
+            </template>
             <span v-else class="text-medium-emphasis">-</span>
           </template>
 

@@ -20,7 +20,7 @@ public sealed class CrmCompanyResponse
 
     public string UpdatedBy { get; set; } = string.Empty;
 
-    public string People { get; set; } = string.Empty;
+    public List<string> People { get; set; } = new();
 
-    public string Opportunities { get; set; } = string.Empty;
+    public List<string> Opportunities { get; set; } = new();
 }

@@ -15,8 +15,8 @@ export interface CrmCompany {
   createdBy: string
   updatedOn: string
   updatedBy: string
-  people: string
-  opportunities: string
+  people: string[]
+  opportunities: string[]
 }
 
 export interface AdminUser {

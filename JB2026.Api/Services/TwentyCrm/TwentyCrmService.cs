@@ -190,7 +190,7 @@ public class TwentyCrmService : ITwentyCrmService
                     CreatedBy = ResolveActorName(node, "createdBy"),
                     UpdatedOn = GetStringProp(node, "updatedAt"),
                     UpdatedBy = ResolveActorName(node, "updatedBy"),
-                    People = ResolveRelationNames(node, "people", FormatPersonName),
+                    People = ResolveRelationNames(node, "people", n => GetCompositeName(n, "name")),
                     Opportunities = ResolveRelationNames(node, "opportunities", n => GetStringProp(n, "name")),
                 });
             }
@@ -275,18 +275,19 @@ public class TwentyCrmService : ITwentyCrmService
         return GetStringProp(actor, "name");
     }
 
-    private static string ResolveRelationNames(
+    private static List<string> ResolveRelationNames(
         JsonElement company,
         string relationField,
         Func<JsonElement, string> selector)
     {
+        var names = new List<string>();
+
         if (!company.TryGetProperty(relationField, out var relation) || relation.ValueKind != JsonValueKind.Object)
-            return string.Empty;
+            return names;
 
         if (!relation.TryGetProperty("edges", out var edges) || edges.ValueKind != JsonValueKind.Array)
-            return string.Empty;
+            return names;
 
-        var names = new List<string>();
         foreach (var edge in edges.EnumerateArray())
         {
             if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
@@ -297,20 +298,7 @@ public class TwentyCrmService : ITwentyCrmService
                 names.Add(name);
         }
 
-        if (names.Count == 0)
-            return string.Empty;
-
-        if (names.Count == 1)
-            return names[0];
-
-        return $"{names[0]}...";
-    }
-
-    private static string FormatPersonName(JsonElement person)
-    {
-        var firstName = GetStringProp(person, "firstName");
-        var lastName = GetStringProp(person, "lastName");
-        return string.Join(" ", new[] { firstName, lastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        return names;
     }
 
     private static string GetCompositeName(JsonElement parent, string field)
