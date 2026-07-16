@@ -80,6 +80,28 @@ public sealed class CrmController : ControllerBase
         return Ok(members);
     }
 
+    [HttpGet("people")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmCatalogItem>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmCatalogItem>>> GetPeople(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        [FromQuery] string? lookup,
+        CancellationToken cancellationToken = default)
+    {
+        var people = await twentyCrmService.GetPeopleAsync(lookup, cancellationToken);
+        return Ok(people);
+    }
+
+    [HttpGet("opportunities")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmCatalogItem>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmCatalogItem>>> GetOpportunities(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        [FromQuery] string? lookup,
+        CancellationToken cancellationToken = default)
+    {
+        var opportunities = await twentyCrmService.GetOpportunitiesAsync(lookup, cancellationToken);
+        return Ok(opportunities);
+    }
+
     private async Task<string?> ResolveCurrentUserEmailAsync(JB5LegacyReadContext readContext, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -10,13 +10,23 @@ export interface CrmRelationItem {
   name: string
 }
 
+export interface CrmAddress {
+  street1: string
+  street2: string
+  city: string
+  state: string
+  postcode: string
+  country: string
+}
+
 export interface CrmCompany {
   id: string
   name: string
   accountOwner: string
   accountOwnerId: string
   domainName: string
-  address: string
+  address: CrmAddress
+  formattedAddress: string
   createdOn: string
   createdBy: string
   updatedOn: string
@@ -39,7 +49,7 @@ export interface CrmCatalogItem {
 export interface UpdateCrmCompanyRequest {
   name: string
   domainName: string
-  address: string
+  address: CrmAddress
   accountOwnerId: string | null
   peopleIds: string[] | null
   opportunityIds: string[] | null

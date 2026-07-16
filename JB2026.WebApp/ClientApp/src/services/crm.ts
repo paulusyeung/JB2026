@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { CrmCompany, CrmMember, UpdateCrmCompanyRequest } from '@/types/api'
+import type { CrmCatalogItem, CrmCompany, CrmMember, UpdateCrmCompanyRequest } from '@/types/api'
 
 export interface CrmCompaniesQuery {
   lookup?: string
@@ -26,5 +26,19 @@ export async function updateCrmCompany(id: string, request: UpdateCrmCompanyRequ
 
 export async function getCrmMembers(): Promise<CrmMember[]> {
   const response = await apiClient.get<CrmMember[]>('/api/v2/crm/members')
+  return response.data
+}
+
+export async function getCrmPeople(lookup = ''): Promise<CrmCatalogItem[]> {
+  const response = await apiClient.get<CrmCatalogItem[]>('/api/v2/crm/people', {
+    params: { lookup },
+  })
+  return response.data
+}
+
+export async function getCrmOpportunities(lookup = ''): Promise<CrmCatalogItem[]> {
+  const response = await apiClient.get<CrmCatalogItem[]>('/api/v2/crm/opportunities', {
+    params: { lookup },
+  })
   return response.data
 }

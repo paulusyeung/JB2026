@@ -6,6 +6,16 @@ public sealed class CrmRelationItem
     public string Name { get; set; } = string.Empty;
 }
 
+public sealed class CrmAddress
+{
+    public string Street1 { get; set; } = string.Empty;
+    public string Street2 { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string Postcode { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
+}
+
 public sealed class CrmCompanyResponse
 {
     public required string Id { get; init; }
@@ -18,7 +28,9 @@ public sealed class CrmCompanyResponse
 
     public string DomainName { get; set; } = string.Empty;
 
-    public string Address { get; set; } = string.Empty;
+    public CrmAddress Address { get; set; } = new();
+
+    public string FormattedAddress { get; set; } = string.Empty;
 
     public string CreatedOn { get; set; } = string.Empty;
 
@@ -50,7 +62,7 @@ public sealed class UpdateCrmCompanyRequest
 {
     public string Name { get; set; } = string.Empty;
     public string DomainName { get; set; } = string.Empty;
-    public string Address { get; set; } = string.Empty;
+    public CrmAddress Address { get; set; } = new();
     public string? AccountOwnerId { get; set; }
     public List<string>? PeopleIds { get; set; }
     public List<string>? OpportunityIds { get; set; }

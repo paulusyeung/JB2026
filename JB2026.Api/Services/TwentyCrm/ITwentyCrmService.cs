@@ -13,4 +13,8 @@ public interface ITwentyCrmService
     Task<CrmCompanyResponse?> UpdateCompanyAsync(string id, UpdateCrmCompanyRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CrmMemberResponse>> GetWorkspaceMembersAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CrmCatalogItem>> GetPeopleAsync(string? lookup = null, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CrmCatalogItem>> GetOpportunitiesAsync(string? lookup = null, CancellationToken cancellationToken = default);
 }

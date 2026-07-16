@@ -311,17 +311,59 @@ public class TwentyCrmService : ITwentyCrmService
                 };
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Address))
+            updateData["address"] = new Dictionary<string, object?>
             {
-                updateData["address"] = new Dictionary<string, object?>
-                {
-                    ["addressStreet1"] = request.Address.Trim(),
-                };
-            }
+                ["addressStreet1"] = string.IsNullOrWhiteSpace(request.Address.Street1) ? null : request.Address.Street1.Trim(),
+                ["addressStreet2"] = string.IsNullOrWhiteSpace(request.Address.Street2) ? null : request.Address.Street2.Trim(),
+                ["addressCity"] = string.IsNullOrWhiteSpace(request.Address.City) ? null : request.Address.City.Trim(),
+                ["addressState"] = string.IsNullOrWhiteSpace(request.Address.State) ? null : request.Address.State.Trim(),
+                ["addressPostcode"] = string.IsNullOrWhiteSpace(request.Address.Postcode) ? null : request.Address.Postcode.Trim(),
+                ["addressCountry"] = string.IsNullOrWhiteSpace(request.Address.Country) ? null : request.Address.Country.Trim(),
+            };
 
             updateData["accountOwnerId"] = string.IsNullOrWhiteSpace(request.AccountOwnerId) ? null : request.AccountOwnerId;
 
             var query = """
+                query GetCurrentRelations($id: ID!) {
+                  companies(filter: { id: { eq: $id } }) {
+                    edges {
+                      node {
+                        id
+                        people {
+                          edges { node { id } }
+                        }
+                        opportunities {
+                          edges { node { id } }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var currentVars = new Dictionary<string, object?> { ["id"] = id };
+            var currentData = await PostGraphQLAsync(query, currentVars, cancellationToken);
+
+            var currentPeopleIds = new List<string>();
+            var currentOpportunityIds = new List<string>();
+
+            if (currentData.TryGetProperty("companies", out var companiesEl)
+                && companiesEl.TryGetProperty("edges", out var curEdges)
+                && curEdges.ValueKind == JsonValueKind.Array
+                && curEdges.GetArrayLength() > 0
+                && curEdges[0].TryGetProperty("node", out var curNode))
+            {
+                currentPeopleIds = ExtractRelationIds(curNode, "people");
+                currentOpportunityIds = ExtractRelationIds(curNode, "opportunities");
+            }
+
+            if (request.PeopleIds is not null)
+                await SyncCompanyRelationAsync(id, "person", currentPeopleIds, request.PeopleIds, cancellationToken);
+
+            if (request.OpportunityIds is not null)
+                await SyncCompanyRelationAsync(id, "opportunity", currentOpportunityIds, request.OpportunityIds, cancellationToken);
+
+            query = """
                 mutation UpdateCompany($id: ID!, $data: CompanyUpdateInput!) {
                   updateCompany(id: $id, data: $data) {
                     id
@@ -467,6 +509,176 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
+    public async Task<IReadOnlyList<CrmCatalogItem>> GetPeopleAsync(string? lookup = null, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning empty people list");
+            return [];
+        }
+
+        try
+        {
+            var hasLookup = !string.IsNullOrWhiteSpace(lookup);
+
+            var query = $$"""
+                query People($lookup: String, $first: Int) {
+                  people(filter: {{(hasLookup ? "{ name: { ilike: $lookup } }" : "{}")}}) {
+                    edges {
+                      node {
+                        id
+                        name {
+                          firstName
+                          lastName
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["lookup"] = hasLookup ? $"%{lookup}%" : null,
+                ["first"] = 200,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            return ExtractCatalogItems(data, "people", node => GetCompositeName(node, "name"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch people from Twenty CRM");
+            return [];
+        }
+    }
+
+    public async Task<IReadOnlyList<CrmCatalogItem>> GetOpportunitiesAsync(string? lookup = null, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning empty opportunities list");
+            return [];
+        }
+
+        try
+        {
+            var hasLookup = !string.IsNullOrWhiteSpace(lookup);
+
+            var query = $$"""
+                query Opportunities($lookup: String, $first: Int) {
+                  opportunities(filter: {{(hasLookup ? "{ name: { ilike: $lookup } }" : "{}")}}) {
+                    edges {
+                      node {
+                        id
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["lookup"] = hasLookup ? $"%{lookup}%" : null,
+                ["first"] = 200,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            return ExtractCatalogItems(data, "opportunities", node => GetStringProp(node, "name"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch opportunities from Twenty CRM");
+            return [];
+        }
+    }
+
+    private static List<string> ExtractRelationIds(JsonElement node, string relationField)
+    {
+        var ids = new List<string>();
+
+        if (!node.TryGetProperty(relationField, out var relation) || relation.ValueKind != JsonValueKind.Object)
+            return ids;
+
+        if (!relation.TryGetProperty("edges", out var edges) || edges.ValueKind != JsonValueKind.Array)
+            return ids;
+
+        foreach (var edge in edges.EnumerateArray())
+        {
+            if (!edge.TryGetProperty("node", out var child) || child.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var id = GetStringProp(child, "id");
+            if (!string.IsNullOrWhiteSpace(id))
+                ids.Add(id);
+        }
+
+        return ids;
+    }
+
+    private async Task SyncCompanyRelationAsync(
+        string companyId,
+        string objectType,
+        IReadOnlyList<string> currentIds,
+        IReadOnlyList<string> desiredIds,
+        CancellationToken cancellationToken)
+    {
+        var desiredSet = new HashSet<string>(desiredIds, StringComparer.OrdinalIgnoreCase);
+        var currentSet = new HashSet<string>(currentIds, StringComparer.OrdinalIgnoreCase);
+
+        var toConnect = desiredIds.Where(id => !currentSet.Contains(id)).ToList();
+        var toDisconnect = currentIds.Where(id => !desiredSet.Contains(id)).ToList();
+
+        foreach (var id in toConnect)
+        {
+            await SetObjectCompanyAsync(objectType, id, companyId, cancellationToken);
+        }
+
+        foreach (var id in toDisconnect)
+        {
+            await SetObjectCompanyAsync(objectType, id, null, cancellationToken);
+        }
+    }
+
+    private async Task SetObjectCompanyAsync(string objectType, string objectId, string? companyId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var mutationName = objectType == "person" ? "updatePerson" : "updateOpportunity";
+            var inputType = objectType == "person" ? "PersonUpdateInput" : "OpportunityUpdateInput";
+
+            var query = $$"""
+                mutation SetCompany($id: ID!, $data: {{inputType}}!) {
+                  {{mutationName}}(id: $id, data: $data) {
+                    id
+                  }
+                }
+                """;
+
+            var updateData = new Dictionary<string, object?> { ["companyId"] = companyId };
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["id"] = objectId,
+                ["data"] = updateData,
+            };
+
+            await PostGraphQLAsync(query, variables, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set company {CompanyId} on {Type} {ObjectId}", companyId, objectType, objectId);
+            throw;
+        }
+    }
+
     private static IReadOnlyList<CrmCatalogItem> ExtractCatalogItems(JsonElement data, string field, Func<JsonElement, string> nameSelector)
     {
         if (!data.TryGetProperty(field, out var itemsEl)
@@ -524,7 +736,8 @@ public class TwentyCrmService : ITwentyCrmService
             AccountOwner = ResolveAccountOwnerName(node),
             AccountOwnerId = GetStringProp(node, "accountOwnerId"),
             DomainName = ResolveDomainName(node),
-            Address = FormatAddress(node),
+            Address = ParseAddress(node),
+            FormattedAddress = FormatAddress(ParseAddress(node)),
             CreatedOn = GetStringProp(node, "createdAt"),
             CreatedBy = ResolveActorName(node, "createdBy"),
             UpdatedOn = GetStringProp(node, "updatedAt"),
@@ -708,21 +921,39 @@ public class TwentyCrmService : ITwentyCrmService
         return url;
     }
 
-    private static string FormatAddress(JsonElement company)
+    private static CrmAddress ParseAddress(JsonElement company)
     {
-        if (!company.TryGetProperty("address", out var addressEl))
-            return string.Empty;
+        var address = new CrmAddress();
 
-        if (addressEl.ValueKind != JsonValueKind.Object)
-            return string.Empty;
+        if (!company.TryGetProperty("address", out var addressEl) || addressEl.ValueKind != JsonValueKind.Object)
+            return address;
 
+        address.Street1 = GetStringProp(addressEl, "addressStreet1").Trim();
+        address.Street2 = GetStringProp(addressEl, "addressStreet2").Trim();
+        address.City = GetStringProp(addressEl, "addressCity").Trim();
+        address.State = GetStringProp(addressEl, "addressState").Trim();
+        address.Postcode = GetStringProp(addressEl, "addressPostcode").Trim();
+        address.Country = GetStringProp(addressEl, "addressCountry").Trim();
+
+        return address;
+    }
+
+    private static string FormatAddress(CrmAddress address)
+    {
         var parts = new List<string>();
-        foreach (var field in new[] { "addressStreet1", "addressStreet2", "addressCity", "addressState", "addressPostcode", "addressCountry" })
-        {
-            var s = GetStringProp(addressEl, field).Trim();
-            if (!string.IsNullOrWhiteSpace(s))
-                parts.Add(s);
-        }
+
+        if (!string.IsNullOrWhiteSpace(address.Street1))
+            parts.Add(address.Street1);
+        if (!string.IsNullOrWhiteSpace(address.Street2))
+            parts.Add(address.Street2);
+
+        var cityLine = string.Join(" ", new[] { address.City, address.State, address.Postcode }
+            .Where(s => !string.IsNullOrWhiteSpace(s)));
+        if (!string.IsNullOrWhiteSpace(cityLine))
+            parts.Add(cityLine);
+
+        if (!string.IsNullOrWhiteSpace(address.Country))
+            parts.Add(address.Country);
 
         return string.Join(", ", parts);
     }

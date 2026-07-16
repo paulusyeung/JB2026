@@ -279,7 +279,7 @@ const allHeaders = computed(() => [
   { title: t('crm.companies.headers.name'), key: 'name', minWidth: '180px' },
   { title: t('crm.companies.headers.accountOwner'), key: 'accountOwner', minWidth: '140px' },
   { title: t('crm.companies.headers.domainName'), key: 'domainName', minWidth: '160px' },
-  { title: t('crm.companies.headers.address'), key: 'address', minWidth: '200px' },
+  { title: t('crm.companies.headers.address'), key: 'formattedAddress', minWidth: '200px' },
   { title: t('crm.companies.headers.people'), key: 'people', minWidth: '140px' },
   { title: t('crm.companies.headers.opportunities'), key: 'opportunities', minWidth: '160px' },
   { title: t('crm.companies.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
