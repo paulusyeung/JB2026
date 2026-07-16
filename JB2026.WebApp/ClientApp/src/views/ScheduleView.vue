@@ -86,7 +86,7 @@
                       <th class="col-check"><v-checkbox-btn v-model="allAvailableChecked" density="compact" hide-details @click="toggleAllAvailable" /></th>
                       <th class="col-num text-center">#</th>
                       <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
-                      <th class="col-dday text-center"><v-icon size="14">mdi-calendar-clock</v-icon></th>
+                      <th class="col-dday text-center"><v-icon size="16">mdi-calendar-clock</v-icon></th>
                       <th class="col-customer resizable-header" :style="{ width: `${availableColumnWidths.customer}px` }">
                         <div class="header-content">
                           {{ t('scheduler.schedule.columns.customer') }}
@@ -209,14 +209,14 @@
               </div>
               <div class="d-flex align-center ga-1 light-toolbar" style="flex: 1; justify-content: center;">
 
-                <span class="text-body-small text-medium-emphasis">@1:</span>
+                <span class="text-body-small text-high-emphasis">@1:</span>
                 <v-btn v-for="c in lightColors1" :key="`a1-${c.value}`"
                   icon size="small" density="compact" :color="c.color" variant="tonal"
                   @click="setStep1Status(c.value)">
                   <v-icon size="16">mdi-circle</v-icon>
                 </v-btn>
                 <v-divider vertical class="mx-1" />
-                <span class="text-body-small text-medium-emphasis">@2:</span>
+                <span class="text-body-small text-high-emphasis">@2:</span>
                 <v-btn v-for="c in lightColors2" :key="`a2-${c.value}`"
                   icon size="small" density="compact" :color="c.color" variant="tonal"
                   @click="setStep2Status(c.value)">
@@ -265,7 +265,7 @@
                       <th class="col-check"><v-checkbox-btn v-model="allScheduledChecked" density="compact" hide-details @click="toggleAllScheduled" /></th>
                       <th class="col-num text-center">#</th>
                       <th class="col-order">{{ t('scheduler.schedule.columns.order') }}</th>
-                      <th class="col-dday text-center"><v-icon size="14">mdi-calendar-clock</v-icon></th>
+                      <th class="col-dday text-center"><v-icon size="16">mdi-calendar-clock</v-icon></th>
                       <th class="col-customer resizable-header" :style="{ width: `${scheduledColumnWidths.customer}px` }">
                         <div class="header-content">
                           {{ t('scheduler.schedule.columns.customer') }}
@@ -282,10 +282,10 @@
                       <th class="col-light text-center">@1</th>
                       <th class="col-light text-center">@2</th>
                       <th class="col-light text-center">
-                        <v-icon size="14">mdi-bell</v-icon>
+                        <v-icon size="16">mdi-bell</v-icon>
                       </th>
                       <th class="col-print-time text-center">
-                        <v-icon size="14">mdi-clock-outline</v-icon>
+                        <v-icon size="16">mdi-clock-outline</v-icon>
                       </th>
                       <th v-if="!isPhoneLayout" class="col-print-qty resizable-header" :style="{ width: `${scheduledColumnWidths.printQty}px` }">
                         <div class="header-content">
@@ -333,7 +333,7 @@
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
                       <td class="col-machine text-center">
-                        <v-chip size="x-small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
+                        <v-chip size="small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
                       </td>
                       <td class="col-light text-center">
                         <v-icon size="16" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
@@ -1276,8 +1276,8 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .col-order { width: 92px; min-width: 92px; }
 .col-customer { width: 150px; min-width: 150px; }
 .col-title    { min-width: 140px; }
-.col-machine  { width: 34px; min-width: 34px; text-align: center; }
-.col-light    { width: 34px; min-width: 34px; text-align: center; }
+.col-machine  { width: 34px; min-width: 34px; text-align: center; font-size: 0.9rem !important; }
+.col-light    { width: 34px; min-width: 34px; text-align: center; font-size: 0.9rem !important; }
 .col-dday { width: 38px; min-width: 38px; text-align: center; }
 .col-dday.text-center { text-align: center; }
 .col-print-time { width: 34px; min-width: 34px; text-align: right; }
