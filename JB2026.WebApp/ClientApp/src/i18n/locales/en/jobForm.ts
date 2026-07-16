@@ -30,6 +30,7 @@ export const jobFormMessages = {
         packagingRequirement: 'Packaging Requirement',
         preview: 'Preview',
         remarks: 'Remarks',
+        emptyRemarks: 'Cost Analyze',
         salesOrderNumber: 'Printing Time (hr)',
         originalSalesOrderNumber: 'COGS',
       },
@@ -42,6 +43,7 @@ export const jobFormMessages = {
         workflow: 'Workflow',
         edit: 'Edit',
         editProductDetails: 'Edit Product Details',
+        editRemarks: 'Edit Remarks',
         open: 'Open',
         download: 'Download',
         deleteSelected: 'Delete Selected',
@@ -61,6 +63,8 @@ export const jobFormMessages = {
         },
         productDetailsTitle: 'Edit Product Details',
         productDetailsHint: 'Edit and save the Product Details HTML content.',
+        remarksTitle: 'Edit Remarks',
+        remarksHint: 'Edit and save the Remarks HTML content. Use the table tools to insert a cost breakdown.',
         printManager: {
           title: 'Print Order',
           orderNumber: 'Order Number',
@@ -89,6 +93,7 @@ export const jobFormMessages = {
         attachmentUploadFailed: 'Unable to upload attachment right now.',
         confirmDeleteAttachments: 'Delete {count} selected attachment(s)?',
         productDetailsSaveFailed: 'Unable to save product details right now.',
+        remarksSaveFailed: 'Unable to save remarks right now.',
       },
       validation: {
         required: 'Required',

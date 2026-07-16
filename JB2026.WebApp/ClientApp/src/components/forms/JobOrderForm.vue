@@ -292,15 +292,25 @@
           </div>
 
           <div class="legacy-right-column">
-            <v-textarea
-              v-model="draft.remarks"
-              :label="t('jobForm.fields.remarks')"
-              variant="outlined"
-              rows="5"
-              density="compact"
-              class="legacy-notes-box"
-              hide-details="auto" 
-            />
+            <div class="legacy-remarks-wrap">
+              <div class="legacy-remarks-actions">
+                <v-tooltip location="left">
+                  <template #activator="{ props: tooltipProps }">
+                    <v-btn
+                      v-bind="tooltipProps"
+                      icon="mdi-pencil-outline"
+                      size="small"
+                      variant="tonal"
+                      color="primary"
+                      :disabled="isNew"
+                      @click="handleRemarksEdit"
+                    />
+                  </template>
+                  <span>{{ t('jobForm.actions.editRemarks') }}</span>
+                </v-tooltip>
+              </div>
+              <div class="legacy-remarks-html" v-html="legacyRemarks" />
+            </div>
 
             <div class="legacy-preview mt-3">
               <div class="legacy-preview-header">{{ t('jobForm.fields.preview') }}</div>
@@ -359,6 +369,7 @@ const emit = defineEmits<{
   (e: 'print-order', job: JobDetail): void
   (e: 'workflow', job: JobDetail): void
   (e: 'product-details-edit', job: JobDetail): void
+  (e: 'remarks-edit', job: JobDetail): void
 }>()
 
 // ---------------------------------------------------------------------------
@@ -421,6 +432,11 @@ const legacyProductDetails = computed(() => {
   if (legacyRecord.value?.productStyle?.trim()) return legacyRecord.value.productStyle
   if (props.job?.styleTitles?.length) return props.job.styleTitles.join('<br>')
   return draft.value.orderTitle
+})
+
+const legacyRemarks = computed(() => {
+  if (draft.value.remarks?.trim()) return draft.value.remarks
+  return '<em class="legacy-empty-hint">' + t('jobForm.fields.emptyRemarks') + '</em>'
 })
 
 // ---------------------------------------------------------------------------
@@ -674,6 +690,11 @@ function handleProductDetailsEdit() {
   emit('product-details-edit', props.job)
 }
 
+function handleRemarksEdit() {
+  if (!props.job) return
+  emit('remarks-edit', props.job)
+}
+
 function clearPreviewImage() {
   if (previewImageUrl.value) {
     URL.revokeObjectURL(previewImageUrl.value)
@@ -862,6 +883,47 @@ async function loadPreviewImage(job: JobDetail) {
   overflow-y: auto;
 }
 
+.legacy-remarks-wrap {
+  width: calc(100% - 26px);
+  position: relative;
+}
+
+.legacy-remarks-html {
+  min-height: var(--legacy-notes-height);
+  max-height: var(--legacy-notes-height);
+  overflow-y: auto;
+  border: 1px solid #9a9a9a;
+  border-radius: 4px;
+  background: #f3f3f3;
+  padding: 12px 14px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.legacy-remarks-html :deep(table td:nth-child(2)),
+.legacy-remarks-html :deep(table th:nth-child(2)) {
+  text-align: right;
+}
+
+:deep(.v-theme--dark) .legacy-remarks-html :deep(table td:nth-child(2)),
+:deep(.v-theme--dark) .legacy-remarks-html :deep(table th:nth-child(2)) {
+  text-align: right;
+}
+
+.legacy-remarks-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.legacy-empty-hint {
+  color: #8a8a8a;
+  font-style: italic;
+}
+
 .legacy-product-details-wrap {
   width: calc(100% - 26px);
   position: relative;
@@ -1011,6 +1073,16 @@ async function loadPreviewImage(job: JobDetail) {
   border-color: #5d6672;
   background: #2b333c;
   color: #edf2f7;
+}
+
+:deep(.v-theme--dark) .legacy-remarks-html {
+  border-color: #5d6672;
+  background: #2b333c;
+  color: #edf2f7;
+}
+
+:deep(.v-theme--dark) .legacy-empty-hint {
+  color: #8b96a3;
 }
 
 :deep(.v-theme--dark) .legacy-preview-header {

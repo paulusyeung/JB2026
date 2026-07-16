@@ -172,6 +172,36 @@
     </v-card>
   </v-dialog>
 
+  <v-dialog v-model="remarksModel" max-width="min(100%, 760px)" scrollable>
+    <v-card>
+      <v-card-title>{{ t('jobForm.dialogs.remarksTitle') }}</v-card-title>
+      <v-card-text>
+        <v-alert type="info" variant="tonal" class="mb-3">
+          {{ t('jobForm.dialogs.remarksHint') }}
+        </v-alert>
+
+        <div class="remarks-editor" :class="{ 'remarks-editor--disabled': savingRemarks || !job }">
+          <Ckeditor :editor="htmlEditor" v-model="remarks" :config="remarksEditorConfig" />
+        </div>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" :disabled="savingRemarks" @click="remarksModel = false">
+          {{ t('jobForm.actions.cancel') }}
+        </v-btn>
+        <v-btn
+          color="primary"
+          :loading="savingRemarks"
+          :disabled="!job"
+          @click="saveRemarks"
+        >
+          {{ t('jobForm.actions.save') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-dialog v-model="showDeleteConfirm" max-width="460">
     <v-card>
       <v-card-title>{{ t('jobForm.actions.deleteSelected') }}</v-card-title>
@@ -221,11 +251,13 @@ const props = defineProps<{
   job: JobDetail | null
   attachmentOpen: boolean
   productDetailsOpen: boolean
+  remarksOpen: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:attachmentOpen', value: boolean): void
   (e: 'update:productDetailsOpen', value: boolean): void
+  (e: 'update:remarksOpen', value: boolean): void
   (e: 'updated'): void
   (e: 'error', message: string): void
 }>()
@@ -261,6 +293,34 @@ const editorConfig = {
   },
 }
 
+const remarksEditorConfig = {
+  licenseKey: 'GPL',
+  toolbar: {
+    items: [
+      'undo',
+      'redo',
+      '|',
+      'heading',
+      '|',
+      'bold',
+      'italic',
+      'link',
+      '|',
+      'bulletedList',
+      'numberedList',
+      '|',
+      'outdent',
+      'indent',
+      '|',
+      'blockQuote',
+      'insertTable',
+      'tableColumn',
+      'tableRow',
+    ],
+    shouldNotGroupWhenFull: true,
+  },
+}
+
 const uploading = ref(false)
 const openingSelection = ref(false)
 const downloading = ref(false)
@@ -273,6 +333,8 @@ const selectedKeys = ref<string[]>([])
 const sizeMode = ref<AttachmentSizeMode>('medium')
 const productDetails = ref('')
 const previewUrls = ref<Record<string, string>>({})
+const remarks = ref('')
+const savingRemarks = ref(false)
 const showDeleteConfirm = ref(false)
 
 const tileSizeMap: Record<AttachmentSizeMode, number> = {
@@ -303,6 +365,11 @@ const productDetailsModel = computed({
   set: (value: boolean) => emit('update:productDetailsOpen', value),
 })
 
+const remarksModel = computed({
+  get: () => props.remarksOpen,
+  set: (value: boolean) => emit('update:remarksOpen', value),
+})
+
 watch(
   () => [props.productDetailsOpen, props.job?.orderId],
   () => {
@@ -311,6 +378,40 @@ watch(
   },
   { immediate: true },
 )
+
+watch(
+  () => [props.remarksOpen, props.job?.orderId],
+  () => {
+    if (!props.remarksOpen) return
+    remarks.value = props.job?.remarks && props.job.remarks.trim()
+      ? props.job.remarks
+      : defaultRemarksTable()
+  },
+  { immediate: true },
+)
+
+function defaultRemarksTable(): string {
+  const rows = Array.from({ length: 4 })
+    .map(() => '<tr><td>&nbsp;</td><td style="text-align: right;">&nbsp;</td></tr>')
+    .join('')
+  return (
+    '<table><thead><tr><th>成本分析</th><th style="text-align: right;">金額</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table>'
+  )
+}
+
+function sumRemarksAmount(html: string): number {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const cells = doc.querySelectorAll('table td:nth-child(2)')
+  let total = 0
+  cells.forEach((cell) => {
+    const text = (cell.textContent ?? '').replace(/[^0-9.\-]/g, '')
+    if (text.trim() === '') return
+    const value = Number(text)
+    if (!Number.isNaN(value)) total += value
+  })
+  return total
+}
 
 watch(
   () => [props.attachmentOpen, props.job?.orderId],
@@ -550,7 +651,7 @@ async function saveProductDetails() {
     const parsed = parseCompositeOrderNumber(props.job.orderNumber)
     const payload: JobOrderFormData = {
       orderId: props.job.orderId,
-      orderNumber: props.job.orderNumber,
+      orderNumber: parsed.orderNumber,
       jobNumber: parsed.jobNumber || props.job.jobNumber || '',
       orderTitle: props.job.orderTitle,
       customerName: props.job.customerName,
@@ -581,6 +682,48 @@ async function saveProductDetails() {
     emit('error', t('jobForm.messages.productDetailsSaveFailed'))
   } finally {
     savingProductDetails.value = false
+  }
+}
+
+async function saveRemarks() {
+  if (!props.job) return
+
+  savingRemarks.value = true
+  try {
+    const parsed = parseCompositeOrderNumber(props.job.orderNumber)
+    const payload: JobOrderFormData = {
+      orderId: props.job.orderId,
+      orderNumber: parsed.orderNumber,
+      jobNumber: parsed.jobNumber || props.job.jobNumber || '',
+      orderTitle: props.job.orderTitle,
+      customerName: props.job.customerName,
+      customerRef: props.job.customerRef,
+      orderedBy: props.job.orderedBy,
+      orderedOn: props.job.orderedOn?.slice(0, 10) ?? '',
+      requiredOn: props.job.requiredOn?.slice(0, 10) ?? '',
+      qty: props.job.qty,
+      status: props.job.status ?? 1,
+      orderType: props.job.orderType ?? 0,
+      paymentTerms: props.job.paymentTerms ?? '',
+      remarks: remarks.value,
+      productDetails: props.job.productDetails ?? '',
+      soNumber: props.job.soNumber ?? '',
+      originalSONumber: String(sumRemarksAmount(remarks.value)),
+      productStyle: props.job.productStyle ?? '',
+      productCode: props.job.productCode ?? '',
+      outputRef: props.job.outputRef ?? '',
+      invoiceRef: props.job.invoiceRef ?? '',
+      invoiceAmount: props.job.invoiceAmount ?? undefined,
+      workflowAttributes: props.job.workflowAttributes ?? {},
+    }
+
+    await saveJob(payload)
+    emit('updated')
+    remarksModel.value = false
+  } catch {
+    emit('error', t('jobForm.messages.remarksSaveFailed'))
+  } finally {
+    savingRemarks.value = false
   }
 }
 
@@ -690,6 +833,27 @@ onBeforeUnmount(() => {
 }
 
 .product-details-editor--disabled {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.remarks-editor {
+  border: 1px solid rgba(var(--v-theme-outline), 0.45);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.remarks-editor :deep(.ck-editor__editable_inline) {
+  min-height: 320px;
+  max-height: 60vh;
+}
+
+.remarks-editor :deep(.ck-editor__editable_inline table td:nth-child(2)),
+.remarks-editor :deep(.ck-editor__editable_inline table th:nth-child(2)) {
+  text-align: right;
+}
+
+.remarks-editor--disabled {
   opacity: 0.72;
   pointer-events: none;
 }

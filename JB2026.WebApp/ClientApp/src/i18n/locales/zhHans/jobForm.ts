@@ -30,6 +30,7 @@ export const jobFormMessages = {
         packagingRequirement: '包装要求',
         preview: '预览',
         remarks: '备注',
+        emptyRemarks: '成本分析',
         salesOrderNumber: '印刷时间（小时）',
         originalSalesOrderNumber: 'COGS',
       },
@@ -42,6 +43,7 @@ export const jobFormMessages = {
         workflow: '流程',
         edit: '编辑',
         editProductDetails: '编辑产品内容',
+        editRemarks: '编辑备注',
         open: '打开',
         download: '下载',
         deleteSelected: '删除所选',
@@ -61,6 +63,8 @@ export const jobFormMessages = {
         },
         productDetailsTitle: '编辑产品内容',
         productDetailsHint: '可在此编辑并保存产品内容的 HTML。',
+        remarksTitle: '编辑备注',
+        remarksHint: '可在此编辑并保存备注的 HTML 内容。使用表格工具插入费用明细。',
         printManager: {
           title: '打印工单',
           orderNumber: '订单号',
@@ -89,6 +93,7 @@ export const jobFormMessages = {
         attachmentUploadFailed: '当前无法上传附件。',
         confirmDeleteAttachments: '要删除已选择的 {count} 个附件吗？',
         productDetailsSaveFailed: '当前无法保存产品内容。',
+        remarksSaveFailed: '当前无法保存备注。',
       },
       validation: {
         required: '必填',

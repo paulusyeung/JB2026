@@ -85,6 +85,7 @@
       @print-order="handlePrintOrder"
       @workflow="handleWorkflow"
       @product-details-edit="handleProductDetailsEdit"
+      @remarks-edit="handleRemarksEdit"
     />
   </v-dialog>
 
@@ -92,6 +93,7 @@
     :job="formJob"
     v-model:attachment-open="attachmentDialogOpen"
     v-model:product-details-open="productDetailsDialogOpen"
+    v-model:remarks-open="remarksDialogOpen"
     @updated="handleActionUpdated"
     @error="showActionNotice"
   />
@@ -139,6 +141,7 @@ const actionNoticeOpen = ref(false)
 const actionNoticeMessage = ref('')
 const attachmentDialogOpen = ref(false)
 const productDetailsDialogOpen = ref(false)
+const remarksDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
 const router = useRouter()
@@ -177,6 +180,11 @@ function handleAttachment(job: JobDetail) {
 function handleProductDetailsEdit(job: JobDetail) {
   formJob.value = job
   productDetailsDialogOpen.value = true
+}
+
+function handleRemarksEdit(job: JobDetail) {
+  formJob.value = job
+  remarksDialogOpen.value = true
 }
 
 function handlePrintOrder(job: JobDetail) {

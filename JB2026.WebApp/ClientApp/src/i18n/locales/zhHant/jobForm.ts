@@ -30,6 +30,7 @@ export const jobFormMessages = {
         packagingRequirement: '包裝要求',
         preview: '預覽',
         remarks: '備註',
+        emptyRemarks: '成本分析',
         salesOrderNumber: '印刷時間（小時）',
         originalSalesOrderNumber: 'COGS',
       },
@@ -42,6 +43,7 @@ export const jobFormMessages = {
         workflow: '流程',
         edit: '編輯',
         editProductDetails: '編輯產品內容',
+        editRemarks: '編輯備註',
         open: '開啟',
         download: '下載',
         deleteSelected: '刪除所選',
@@ -61,6 +63,8 @@ export const jobFormMessages = {
         },
         productDetailsTitle: '編輯產品內容',
         productDetailsHint: '可在此編輯並儲存產品內容的 HTML。',
+        remarksTitle: '編輯備註',
+        remarksHint: '可在此編輯並儲存備註的 HTML 內容。使用表格工具插入費用明細。',
       },
       messages: {
         attachmentUnavailable: '{order} 的附件管理尚未在此切片提供。',
@@ -76,6 +80,7 @@ export const jobFormMessages = {
         attachmentUploadFailed: '目前無法上傳附件。',
         confirmDeleteAttachments: '要刪除已選取的 {count} 個附件嗎？',
         productDetailsSaveFailed: '目前無法儲存產品內容。',
+        remarksSaveFailed: '目前無法儲存備註。',
       },
       validation: {
         required: '必填',

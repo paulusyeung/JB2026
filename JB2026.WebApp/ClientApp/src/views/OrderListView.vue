@@ -469,6 +469,7 @@
         @print-order="handlePrintOrder"
         @workflow="handleWorkflow"
         @product-details-edit="handleProductDetailsEdit"
+        @remarks-edit="handleRemarksEdit"
       />
     </v-dialog>
 
@@ -476,6 +477,7 @@
       :job="jobFormJob"
       v-model:attachment-open="attachmentDialogOpen"
       v-model:product-details-open="productDetailsDialogOpen"
+      v-model:remarks-open="remarksDialogOpen"
       @updated="handleActionUpdated"
       @error="showActionNotice"
     />
@@ -523,6 +525,7 @@ const deleting = ref(false)
 const jobFormOpen = ref(false)
 const jobFormJob = ref<JobDetail | null>(null)
 const productDetailsDialogOpen = ref(false)
+const remarksDialogOpen = ref(false)
 const attachmentDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
@@ -927,6 +930,11 @@ async function handleJobFormCancelled() {
 function handleProductDetailsEdit(job: JobDetail) {
   jobFormJob.value = job
   productDetailsDialogOpen.value = true
+}
+
+function handleRemarksEdit(job: JobDetail) {
+  jobFormJob.value = job
+  remarksDialogOpen.value = true
 }
 
 async function handleActionUpdated() {
