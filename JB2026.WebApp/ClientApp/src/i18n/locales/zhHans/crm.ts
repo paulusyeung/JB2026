@@ -25,6 +25,17 @@ export const crmMessages = {
       updatedOn: '更新时间',
       updatedBy: '更新人',
     },
+    form: {
+      editTitle: '编辑公司',
+      name: '公司名称',
+      domainName: '域名',
+      address: '地址',
+      save: '保存',
+      saveClose: '保存并关闭',
+      cancel: '取消',
+      delete: '删除',
+      requiredName: '公司名称不能为空',
+    },
     actions: {
       columns: '列',
       sorting: '排序',
@@ -39,6 +50,9 @@ export const crmMessages = {
     },
     messages: {
       loadFailed: '加载公司列表失败',
+      loadRecordFailed: '加载公司详情失败',
+      saveSuccess: '公司保存成功',
+      saveFailed: '保存公司失败',
     },
   },
 } as const

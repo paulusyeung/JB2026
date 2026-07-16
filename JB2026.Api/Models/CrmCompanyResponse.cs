@@ -1,5 +1,11 @@
 namespace JB2026.Api.Models;
 
+public sealed class CrmRelationItem
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
 public sealed class CrmCompanyResponse
 {
     public required string Id { get; init; }
@@ -7,6 +13,8 @@ public sealed class CrmCompanyResponse
     public required string Name { get; init; }
 
     public string AccountOwner { get; set; } = string.Empty;
+
+    public string AccountOwnerId { get; set; } = string.Empty;
 
     public string DomainName { get; set; } = string.Empty;
 
@@ -20,7 +28,30 @@ public sealed class CrmCompanyResponse
 
     public string UpdatedBy { get; set; } = string.Empty;
 
-    public List<string> People { get; set; } = new();
+    public List<CrmRelationItem> People { get; set; } = new();
 
-    public List<string> Opportunities { get; set; } = new();
+    public List<CrmRelationItem> Opportunities { get; set; } = new();
+}
+
+public sealed class CrmMemberResponse
+{
+    public required string Id { get; init; }
+    public string DisplayName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+}
+
+public sealed class CrmCatalogItem
+{
+    public required string Id { get; init; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class UpdateCrmCompanyRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string DomainName { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string? AccountOwnerId { get; set; }
+    public List<string>? PeopleIds { get; set; }
+    public List<string>? OpportunityIds { get; set; }
 }

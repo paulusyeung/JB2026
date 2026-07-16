@@ -5,18 +5,44 @@ export interface UserProfile {
   role: string
 }
 
+export interface CrmRelationItem {
+  id: string
+  name: string
+}
+
 export interface CrmCompany {
   id: string
   name: string
   accountOwner: string
+  accountOwnerId: string
   domainName: string
   address: string
   createdOn: string
   createdBy: string
   updatedOn: string
   updatedBy: string
-  people: string[]
-  opportunities: string[]
+  people: CrmRelationItem[]
+  opportunities: CrmRelationItem[]
+}
+
+export interface CrmMember {
+  id: string
+  displayName: string
+  email: string
+}
+
+export interface CrmCatalogItem {
+  id: string
+  name: string
+}
+
+export interface UpdateCrmCompanyRequest {
+  name: string
+  domainName: string
+  address: string
+  accountOwnerId: string | null
+  peopleIds: string[] | null
+  opportunityIds: string[] | null
 }
 
 export interface AdminUser {

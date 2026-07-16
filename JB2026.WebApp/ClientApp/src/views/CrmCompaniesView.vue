@@ -186,7 +186,7 @@
                 size="small"
                 label
                 class="ma-1"
-              >{{ person }}</v-chip>
+              >{{ person.name }}</v-chip>
             </template>
             <span v-else class="text-medium-emphasis">-</span>
           </template>
@@ -201,7 +201,7 @@
                 color="primary"
                 variant="tonal"
                 class="ma-1"
-              >{{ opp }}</v-chip>
+              >{{ opp.name }}</v-chip>
             </template>
             <span v-else class="text-medium-emphasis">-</span>
           </template>
@@ -219,6 +219,14 @@
         <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
       </template>
     </v-snackbar>
+
+    <v-dialog v-model="dialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmCompanyRecordDialog
+        :company-id="editingCompanyId"
+        @saved="handleSaved"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
@@ -227,6 +235,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getCrmCompanies } from '@/services/crm'
@@ -255,6 +264,8 @@ const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
 const selectedCompanyIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const editingCompanyId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
 
@@ -385,7 +396,17 @@ function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
 }
 
 function openPopup(id: string) {
-  selectedCompanyIds.value = [id]
+  editingCompanyId.value = id
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(company: CrmCompany) {
+  await load()
+  selectedCompanyIds.value = [company.id]
+  editingCompanyId.value = company.id
+  successMessage.value = t('crm.companies.messages.saveSuccess')
+  saveSuccess.value = true
 }
 
 function setViewMode(mode: CompaniesViewMode) {

@@ -103,6 +103,7 @@ public class TwentyCrmService : ITwentyCrmService
                       node {
                         id
                         name
+                        accountOwnerId
                         domainName {
                           primaryLinkUrl
                         }
@@ -124,6 +125,7 @@ public class TwentyCrmService : ITwentyCrmService
                         people {
                           edges {
                             node {
+                              id
                               name {
                                 firstName
                                 lastName
@@ -134,6 +136,7 @@ public class TwentyCrmService : ITwentyCrmService
                         opportunities {
                           edges {
                             node {
+                              id
                               name
                             }
                           }
@@ -175,24 +178,9 @@ public class TwentyCrmService : ITwentyCrmService
                 if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
                     continue;
 
-                var companyId = GetStringProp(node, "id");
-                if (string.IsNullOrWhiteSpace(companyId))
-                    continue;
-
-                result.Add(new CrmCompanyResponse
-                {
-                    Id = companyId,
-                    Name = GetStringProp(node, "name"),
-                    AccountOwner = ResolveAccountOwnerName(node),
-                    DomainName = ResolveDomainName(node),
-                    Address = FormatAddress(node),
-                    CreatedOn = GetStringProp(node, "createdAt"),
-                    CreatedBy = ResolveActorName(node, "createdBy"),
-                    UpdatedOn = GetStringProp(node, "updatedAt"),
-                    UpdatedBy = ResolveActorName(node, "updatedBy"),
-                    People = ResolveRelationNames(node, "people", n => GetCompositeName(n, "name")),
-                    Opportunities = ResolveRelationNames(node, "opportunities", n => GetStringProp(n, "name")),
-                });
+                var parsed = ParseCompany(node);
+                if (parsed is not null)
+                    result.Add(parsed);
             }
 
             return result;
@@ -202,6 +190,348 @@ public class TwentyCrmService : ITwentyCrmService
             _logger.LogError(ex, "Failed to fetch companies from Twenty CRM");
             return [];
         }
+    }
+
+    public async Task<CrmCompanyResponse?> GetCompanyByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning null for company {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            const string query = """
+                query GetCompany($id: ID!) {
+                  companies(filter: { id: { eq: $id } }) {
+                    edges {
+                      node {
+                        id
+                        name
+                        accountOwnerId
+                        domainName {
+                          primaryLinkUrl
+                        }
+                        address {
+                          addressStreet1
+                          addressStreet2
+                          addressCity
+                          addressState
+                          addressPostcode
+                          addressCountry
+                        }
+                        accountOwner {
+                          name {
+                            firstName
+                            lastName
+                          }
+                          userEmail
+                        }
+                        people {
+                          edges {
+                            node {
+                              id
+                              name {
+                                firstName
+                                lastName
+                              }
+                            }
+                          }
+                        }
+                        opportunities {
+                          edges {
+                            node {
+                              id
+                              name
+                            }
+                          }
+                        }
+                        createdAt
+                        createdBy {
+                          name
+                        }
+                        updatedAt
+                        updatedBy {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?> { ["id"] = id };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("companies", out var companiesEl)
+                || !companiesEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array
+                || edges.GetArrayLength() == 0)
+                return null;
+
+            var firstEdge = edges[0];
+            if (!firstEdge.TryGetProperty("node", out var companyEl) || companyEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseCompany(companyEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch company {Id} from Twenty CRM", id);
+            return null;
+        }
+    }
+
+    public async Task<CrmCompanyResponse?> UpdateCompanyAsync(string id, UpdateCrmCompanyRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — skipping update for company {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            var updateData = new Dictionary<string, object?>
+            {
+                ["name"] = string.IsNullOrWhiteSpace(request.Name) ? null : request.Name.Trim(),
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.DomainName))
+            {
+                updateData["domainName"] = new Dictionary<string, object?>
+                {
+                    ["primaryLinkUrl"] = NormalizeDomainUrl(request.DomainName.Trim()),
+                };
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Address))
+            {
+                updateData["address"] = new Dictionary<string, object?>
+                {
+                    ["addressStreet1"] = request.Address.Trim(),
+                };
+            }
+
+            updateData["accountOwnerId"] = string.IsNullOrWhiteSpace(request.AccountOwnerId) ? null : request.AccountOwnerId;
+
+            var query = """
+                mutation UpdateCompany($id: ID!, $data: CompanyUpdateInput!) {
+                  updateCompany(id: $id, data: $data) {
+                    id
+                    name
+                    accountOwnerId
+                    domainName {
+                      primaryLinkUrl
+                    }
+                    address {
+                      addressStreet1
+                      addressStreet2
+                      addressCity
+                      addressState
+                      addressPostcode
+                      addressCountry
+                    }
+                    accountOwner {
+                      name {
+                        firstName
+                        lastName
+                      }
+                      userEmail
+                    }
+                    people {
+                      edges {
+                        node {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                        }
+                      }
+                    }
+                    opportunities {
+                      edges {
+                        node {
+                          id
+                          name
+                        }
+                      }
+                    }
+                    createdAt
+                    createdBy {
+                      name
+                    }
+                    updatedAt
+                    updatedBy {
+                      name
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["id"] = id,
+                ["data"] = updateData,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("updateCompany", out var companyEl) || companyEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseCompany(companyEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update company {Id} in Twenty CRM", id);
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<CrmMemberResponse>> GetWorkspaceMembersAsync(CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning empty member list");
+            return [];
+        }
+
+        try
+        {
+            const string query = """
+                query GetMembers {
+                  workspaceMembers {
+                    edges {
+                      node {
+                        id
+                        userEmail
+                        name {
+                          firstName
+                          lastName
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var data = await PostGraphQLAsync(query, [], cancellationToken);
+
+            if (!data.TryGetProperty("workspaceMembers", out var membersEl)
+                || !membersEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<CrmMemberResponse>();
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var id = GetStringProp(node, "id");
+                if (string.IsNullOrWhiteSpace(id))
+                    continue;
+
+                var email = GetStringProp(node, "userEmail");
+                var displayName = GetCompositeName(node, "name");
+                if (string.IsNullOrWhiteSpace(displayName))
+                    displayName = email;
+
+                result.Add(new CrmMemberResponse
+                {
+                    Id = id,
+                    DisplayName = string.IsNullOrWhiteSpace(displayName) ? id : displayName,
+                    Email = email,
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch workspace members from Twenty CRM");
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<CrmCatalogItem> ExtractCatalogItems(JsonElement data, string field, Func<JsonElement, string> nameSelector)
+    {
+        if (!data.TryGetProperty(field, out var itemsEl)
+            || !itemsEl.TryGetProperty("edges", out var edges)
+            || edges.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var result = new List<CrmCatalogItem>();
+
+        foreach (var edge in edges.EnumerateArray())
+        {
+            if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var id = GetStringProp(node, "id");
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            var name = nameSelector(node);
+            if (string.IsNullOrWhiteSpace(name))
+                name = id;
+
+            result.Add(new CrmCatalogItem { Id = id, Name = name });
+        }
+
+        return result;
+    }
+
+    private static string NormalizeDomainUrl(string domain)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+            return string.Empty;
+
+        domain = domain.Trim();
+
+        if (domain.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            domain.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            return domain;
+
+        return $"https://{domain}";
+    }
+
+    private CrmCompanyResponse? ParseCompany(JsonElement node)
+    {
+        var companyId = GetStringProp(node, "id");
+        if (string.IsNullOrWhiteSpace(companyId))
+            return null;
+
+        return new CrmCompanyResponse
+        {
+            Id = companyId,
+            Name = GetStringProp(node, "name"),
+            AccountOwner = ResolveAccountOwnerName(node),
+            AccountOwnerId = GetStringProp(node, "accountOwnerId"),
+            DomainName = ResolveDomainName(node),
+            Address = FormatAddress(node),
+            CreatedOn = GetStringProp(node, "createdAt"),
+            CreatedBy = ResolveActorName(node, "createdBy"),
+            UpdatedOn = GetStringProp(node, "updatedAt"),
+            UpdatedBy = ResolveActorName(node, "updatedBy"),
+            People = ResolveRelationItems(node, "people"),
+            Opportunities = ResolveRelationItems(node, "opportunities"),
+        };
     }
 
     private async Task<JsonElement> PostGraphQLAsync(
@@ -245,8 +575,16 @@ public class TwentyCrmService : ITwentyCrmService
 
         if (doc.RootElement.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
         {
+            var firstError = errors.EnumerateArray().FirstOrDefault();
+            var errorMessage = firstError.ValueKind == JsonValueKind.Object
+                ? GetStringProp(firstError, "message")
+                : errors.GetRawText();
+
+            if (string.IsNullOrWhiteSpace(errorMessage))
+                errorMessage = "Unknown GraphQL error";
+
             _logger.LogWarning("Twenty CRM GraphQL returned errors: {Errors}", Truncate(errors.GetRawText()));
-            throw new InvalidOperationException("Twenty CRM GraphQL returned errors");
+            throw new InvalidOperationException($"Twenty CRM GraphQL error: {errorMessage}");
         }
 
         if (!doc.RootElement.TryGetProperty("data", out var data))
@@ -299,6 +637,40 @@ public class TwentyCrmService : ITwentyCrmService
         }
 
         return names;
+    }
+
+    private static List<CrmRelationItem> ResolveRelationItems(JsonElement company, string relationField)
+    {
+        var items = new List<CrmRelationItem>();
+
+        if (!company.TryGetProperty(relationField, out var relation) || relation.ValueKind != JsonValueKind.Object)
+            return items;
+
+        if (!relation.TryGetProperty("edges", out var edges) || edges.ValueKind != JsonValueKind.Array)
+            return items;
+
+        foreach (var edge in edges.EnumerateArray())
+        {
+            if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var id = GetStringProp(node, "id");
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            string name;
+            if (relationField == "people")
+                name = GetCompositeName(node, "name");
+            else
+                name = GetStringProp(node, "name");
+
+            if (string.IsNullOrWhiteSpace(name))
+                name = id;
+
+            items.Add(new CrmRelationItem { Id = id, Name = name });
+        }
+
+        return items;
     }
 
     private static string GetCompositeName(JsonElement parent, string field)

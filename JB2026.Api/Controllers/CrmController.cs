@@ -30,6 +30,56 @@ public sealed class CrmController : ControllerBase
         return Ok(companies);
     }
 
+    [HttpGet("companies/{id}")]
+    [ProducesResponseType(typeof(CrmCompanyResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CrmCompanyResponse>> GetCompany(
+        string id,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var company = await twentyCrmService.GetCompanyByIdAsync(id, cancellationToken);
+
+        if (company is null)
+            return NotFound();
+
+        return Ok(company);
+    }
+
+    [HttpPut("companies/{id}")]
+    [ProducesResponseType(typeof(CrmCompanyResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmCompanyResponse>> UpdateCompany(
+        string id,
+        [FromBody] UpdateCrmCompanyRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var company = await twentyCrmService.UpdateCompanyAsync(id, request, cancellationToken);
+
+            if (company is null)
+                return NotFound();
+
+            return Ok(company);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("members")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmMemberResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmMemberResponse>>> GetMembers(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var members = await twentyCrmService.GetWorkspaceMembersAsync(cancellationToken);
+        return Ok(members);
+    }
+
     private async Task<string?> ResolveCurrentUserEmailAsync(JB5LegacyReadContext readContext, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

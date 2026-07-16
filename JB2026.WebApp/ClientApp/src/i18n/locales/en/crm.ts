@@ -25,6 +25,17 @@ export const crmMessages = {
       updatedOn: 'Updated on',
       updatedBy: 'Updated by',
     },
+    form: {
+      editTitle: 'Edit Company',
+      name: 'Company Name',
+      domainName: 'Domain Name',
+      address: 'Address',
+      save: 'Save',
+      saveClose: 'Save & Close',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      requiredName: 'Company name is required',
+    },
     actions: {
       columns: 'Columns',
       sorting: 'Sorting',
@@ -39,6 +50,9 @@ export const crmMessages = {
     },
     messages: {
       loadFailed: 'Failed to load companies',
+      loadRecordFailed: 'Failed to load company details',
+      saveSuccess: 'Company saved successfully',
+      saveFailed: 'Failed to save company',
     },
   },
 } as const
