@@ -208,33 +208,34 @@
                 {{ t('scheduler.schedule.scheduled.title') }} ({{ scheduledDisplay.length }})
               </div>
               <div class="d-flex align-center ga-1 light-toolbar" style="flex: 1; justify-content: center;">
-                <span class="text-caption text-medium-emphasis">@1:</span>
+
+                <span class="text-body-small text-medium-emphasis">@1:</span>
                 <v-btn v-for="c in lightColors1" :key="`a1-${c.value}`"
-                  icon size="x-small" density="compact" :color="c.color" variant="tonal"
+                  icon size="small" density="compact" :color="c.color" variant="tonal"
                   @click="setStep1Status(c.value)">
-                  <v-icon size="12">mdi-circle</v-icon>
+                  <v-icon size="16">mdi-circle</v-icon>
                 </v-btn>
                 <v-divider vertical class="mx-1" />
-                <span class="text-caption text-medium-emphasis">@2:</span>
+                <span class="text-body-small text-medium-emphasis">@2:</span>
                 <v-btn v-for="c in lightColors2" :key="`a2-${c.value}`"
-                  icon size="x-small" density="compact" :color="c.color" variant="tonal"
+                  icon size="small" density="compact" :color="c.color" variant="tonal"
                   @click="setStep2Status(c.value)">
-                  <v-icon size="12">mdi-circle</v-icon>
+                  <v-icon size="16">mdi-circle</v-icon>
                 </v-btn>
                 <v-divider vertical class="mx-1" />
                 <v-tooltip :text="t('scheduler.schedule.urgency.red')" location="bottom">
                   <template #activator="{ props }">
-                    <v-btn v-bind="props" icon size="x-small" density="compact" color="error" variant="tonal"
+                    <v-btn v-bind="props" icon size="small" density="compact" color="error" variant="tonal"
                       @click="toggleUrgency(4)">
-                      <v-icon size="12">mdi-bell-alert</v-icon>
+                      <v-icon size="16">mdi-bell-alert</v-icon>
                     </v-btn>
                   </template>
                 </v-tooltip>
                 <v-tooltip :text="t('scheduler.schedule.urgency.yellow')" location="bottom">
                   <template #activator="{ props }">
-                    <v-btn v-bind="props" icon size="x-small" density="compact" color="warning" variant="tonal"
+                    <v-btn v-bind="props" icon size="small" density="compact" color="warning" variant="tonal"
                       @click="toggleUrgency(2)">
-                      <v-icon size="12">mdi-bell</v-icon>
+                      <v-icon size="16">mdi-bell</v-icon>
                     </v-btn>
                   </template>
                 </v-tooltip>
@@ -335,13 +336,13 @@
                         <v-chip size="x-small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
                       </td>
                       <td class="col-light text-center">
-                        <v-icon size="14" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
+                        <v-icon size="16" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
                       </td>
                       <td class="col-light text-center">
-                        <v-icon size="14" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
+                        <v-icon size="16" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
                       </td>
                       <td class="col-light text-center">
-                        <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
+                        <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="16" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
                         <span v-else>-</span>
                       </td>
                       <td class="col-print-time">{{ formatPrintTime(item.soNumber) }}</td>
