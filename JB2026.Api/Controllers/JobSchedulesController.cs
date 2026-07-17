@@ -1305,7 +1305,7 @@ public sealed class JobSchedulesController : ControllerBase
             if (dotIndex > 0 && int.TryParse(line[..dotIndex].Trim(), out _))
             {
                 var headerTitle = line[(dotIndex + 1)..].Trim().TrimEnd(':', '：').Trim();
-                if (headerTitle == title)
+                if (IsSectionTitle(headerTitle, title))
                 {
                     inSection = true;
                     continue;
@@ -1324,6 +1324,34 @@ public sealed class JobSchedulesController : ControllerBase
         }
 
         return buffer.ToString();
+    }
+
+    /// <summary>
+    /// Determines whether a detected section header matches the requested title.
+    /// Matches on exact equality, or when the title is a prefix followed by a word
+    /// boundary (a colon, whitespace, or the end of the header) so that headings like
+    /// "印刷內容" do not wrongly match the title "印刷".
+    /// </summary>
+    private static bool IsSectionTitle(string headerTitle, string title)
+    {
+        if (headerTitle == title)
+        {
+            return true;
+        }
+
+        if (!headerTitle.StartsWith(title, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var nextCharIndex = title.Length;
+        if (nextCharIndex >= headerTitle.Length)
+        {
+            return true;
+        }
+
+        var nextChar = headerTitle[nextCharIndex];
+        return nextChar is ':' or '：' or ' ' or '　';
     }
 
     private static string StripHtml(string? input)
