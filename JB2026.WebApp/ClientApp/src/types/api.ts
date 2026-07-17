@@ -866,6 +866,7 @@ export interface SaveScheduleBatchRequest {
   orderType: number
   scheduledItems: SaveScheduleBatchItem[]
   cancelledOrderIds: string[]
+  completedOrderIds: string[]
 }
 
 export interface SavePackingOnAirBatchItem {

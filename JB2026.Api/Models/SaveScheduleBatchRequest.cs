@@ -5,6 +5,7 @@ public sealed class SaveScheduleBatchRequest
     public int OrderType { get; set; }
     public List<SaveScheduleBatchItem> ScheduledItems { get; set; } = [];
     public List<Guid> CancelledOrderIds { get; set; } = [];
+    public List<Guid> CompletedOrderIds { get; set; } = [];
 }
 
 public sealed class SaveScheduleBatchItem

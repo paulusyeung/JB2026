@@ -1036,7 +1036,35 @@ public sealed class JobSchedulesController : ControllerBase
             }
         }
 
-        return Ok(new { saved = request.ScheduledItems.Count, cancelled = request.CancelledOrderIds.Count });
+        // Mark completed items
+        foreach (var orderId in request.CompletedOrderIds)
+        {
+            var completeSchedule = await _readContext.JobSchedules
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.OrderId == orderId && s.Cancelled != true, cancellationToken);
+
+            if (completeSchedule is not null)
+            {
+                await _gateway.UpdateAsync(new UpdateJobScheduleStoredProcedureRequest(
+                    ScheduleId: completeSchedule.ScheduleId,
+                    OrderId: orderId,
+                    ScheduledOn: completeSchedule.ScheduledOn,
+                    Status: 1,
+                    Priority: completeSchedule.Priority,
+                    MachineNumber: completeSchedule.MachineNumber,
+                    CompletedOn: now,
+                    ShouldReview: completeSchedule.ShouldReview,
+                    UrgencyLevel: completeSchedule.UrgencyLevel,
+                    Cancelled: false,
+                    CancelledOn: completeSchedule.CancelledOn,
+                    CancelledBy: completeSchedule.CancelledBy,
+                    RescheduledCount: completeSchedule.RescheduledCount,
+                    RescheduledBy: completeSchedule.RescheduledBy,
+                    RescheduledOn: completeSchedule.RescheduledOn), cancellationToken);
+            }
+        }
+
+        return Ok(new { saved = request.ScheduledItems.Count, cancelled = request.CancelledOrderIds.Count, completed = request.CompletedOrderIds.Count });
     }
 
     [HttpPatch("pending/{orderId:guid}/workflow")]

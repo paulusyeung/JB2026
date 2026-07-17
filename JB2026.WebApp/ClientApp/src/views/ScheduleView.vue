@@ -955,10 +955,31 @@ function unresolveSelected() {
 }
 
 // ─── mark completed ───────────────────────────────────────────────────────────
-function markCompleted() {
+async function markCompleted() {
   const ids = [...checkedScheduled.value]
-  scheduledItems.value = scheduledItems.value.filter((item) => !ids.includes(item.orderId))
+  if (ids.length === 0) return
+
+  const removed = new Set(ids)
+  scheduledItems.value = scheduledItems.value.filter((item) => !removed.has(item.orderId))
   checkedScheduled.value = []
+
+  try {
+    await saveScheduleBatch({
+      orderType: 0,
+      scheduledItems: scheduledItems.value.map((item) => ({
+        orderId: item.orderId,
+        machineNumber: item.machineNumber,
+        step1Status: item.step1Status ?? 0,
+        step2Status: item.step2Status ?? 0,
+        urgencyLevel: item.urgencyLevel,
+      })),
+      cancelledOrderIds: [...cancelledOrderIds.value],
+      completedOrderIds: ids,
+    })
+  } catch {
+    errorMessage.value = t('scheduler.schedule.completeFailed')
+    await load()
+  }
 }
 
 // ─── save ─────────────────────────────────────────────────────────────────────
