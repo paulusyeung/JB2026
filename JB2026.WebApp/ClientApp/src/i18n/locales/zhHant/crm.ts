@@ -52,6 +52,7 @@ export const crmMessages = {
       desc: 'Z-A',
       checkbox: '複選框',
       views: '檢視',
+      newCompany: '新建公司',
       detailView: '詳細檢視',
       cardView: '卡片檢視',
       selected: '已選擇 {count} 項',

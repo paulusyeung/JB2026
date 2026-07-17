@@ -109,6 +109,12 @@
             </v-list>
           </v-menu>
 
+          <v-divider vertical class="mx-1" />
+
+          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewCompany">
+            {{ t('crm.companies.actions.newCompany') }}
+          </v-btn>
+
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('crm.companies.actions.selected', { count: selectedCompanyIds.length }) }}
           </span>
@@ -397,6 +403,12 @@ function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
 
 function openPopup(id: string) {
   editingCompanyId.value = id
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+function openNewCompany() {
+  editingCompanyId.value = null
   dialogOpen.value = true
   errorMessage.value = ''
 }
