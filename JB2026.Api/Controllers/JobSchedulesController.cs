@@ -1237,15 +1237,93 @@ public sealed class JobSchedulesController : ControllerBase
     private static string[] ExtractPrintInfo(string? productDetails, string? orderTitle)
     {
         var plainText = StripHtml(productDetails);
-        var info0 = GetLabeledValue(plainText, ["印張尺寸", "尺寸", "size"]);
-        var info1 = GetLabeledValue(plainText, ["顏色", "color"]);
-        var info2 = GetLabeledValue(plainText, ["石數", "數量", "qty", "quantity", "名稱", "name"]);
+
+        // Legacy (JB2015) ProductDetails comes in two shapes:
+        //   _2016   : numbered sections, e.g. "3. 印刷" / "石數：12500石"
+        //   _BF2016 : flat lines, e.g. "石數：12500石" anywhere in the text
+        // 石數 belongs to the "印刷" section in the sectioned format.
+        string paperScope = plainText;
+        string printScope = plainText;
+        if (HasNumberedSections(plainText))
+        {
+            paperScope = GetSection(plainText, "用紙");
+            printScope = GetSection(plainText, "印刷");
+        }
+
+        var info0 = GetLabeledValue(paperScope, ["印張尺寸", "尺寸", "size"]);
+        var info1 = GetLabeledValue(printScope, ["顏色", "color"]);
+        var info2 = GetLabeledValue(printScope, ["石數", "石数", "數量", "数量", "qty", "quantity"]);
         if (string.IsNullOrWhiteSpace(info2))
         {
             info2 = orderTitle ?? string.Empty;
         }
 
         return [info0, info1, info2];
+    }
+
+    private static bool HasNumberedSections(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        foreach (var rawLine in text.Split(new[] { '\r', '\n' }, StringSplitOptions.None))
+        {
+            var line = rawLine.Trim();
+            var dotIndex = line.IndexOf('.');
+            if (dotIndex > 0 && int.TryParse(line[..dotIndex].Trim(), out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetSection(string text, string title)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.None);
+        var buffer = new System.Text.StringBuilder();
+        var inSection = false;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            // A section header is a numeric prefix followed by a dot, e.g. "3. 印刷".
+            var dotIndex = line.IndexOf('.');
+            if (dotIndex > 0 && int.TryParse(line[..dotIndex].Trim(), out _))
+            {
+                var headerTitle = line[(dotIndex + 1)..].Trim().TrimEnd(':', '：').Trim();
+                if (headerTitle == title)
+                {
+                    inSection = true;
+                    continue;
+                }
+
+                if (inSection)
+                {
+                    break;
+                }
+            }
+
+            if (inSection)
+            {
+                buffer.AppendLine(line);
+            }
+        }
+
+        return buffer.ToString();
     }
 
     private static string StripHtml(string? input)
