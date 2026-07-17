@@ -1,5 +1,5 @@
 <template>
-  <v-card class="company-record-dialog">
+  <v-card v-draggable-dialog class="company-record-dialog">
     <v-card-title class="d-flex align-center ga-3 pb-2">
       <div>
         <h2 class="text-h6 mb-1">
