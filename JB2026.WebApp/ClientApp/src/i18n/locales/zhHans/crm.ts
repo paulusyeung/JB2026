@@ -15,6 +15,7 @@ export const crmMessages = {
     lookup: '搜索公司...',
     headers: {
       name: '公司名称',
+      synced: '已同步',
       accountOwner: '客户经理',
       domainName: '域名',
       address: '地址',
@@ -43,6 +44,8 @@ export const crmMessages = {
       requiredName: '公司名称不能为空',
       addPerson: '新增人员',
       addOpportunity: '新增商机',
+      migrateCustomer: '迁移客户',
+      migrateCustomerSelect: '选择 JB2026 客户',
     },
     actions: {
       columns: '列',
@@ -62,6 +65,7 @@ export const crmMessages = {
       loadRecordFailed: '加载公司详情失败',
       saveSuccess: '公司保存成功',
       saveFailed: '保存公司失败',
+      syncedTooltip: '已同步至 Twenty CRM',
     },
   },
 } as const

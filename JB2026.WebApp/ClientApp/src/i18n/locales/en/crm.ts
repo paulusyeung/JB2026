@@ -15,6 +15,7 @@ export const crmMessages = {
     lookup: 'Search companies...',
     headers: {
       name: 'Company Name',
+      synced: 'Synced',
       accountOwner: 'Account Owner',
       domainName: 'Domain Name',
       address: 'Address',
@@ -43,6 +44,8 @@ export const crmMessages = {
       requiredName: 'Company name is required',
       addPerson: 'Add person',
       addOpportunity: 'Add opportunity',
+      migrateCustomer: 'Migrate Customer',
+      migrateCustomerSelect: 'Select JB2026 Customer',
     },
     actions: {
       columns: 'Columns',
@@ -62,6 +65,7 @@ export const crmMessages = {
       loadRecordFailed: 'Failed to load company details',
       saveSuccess: 'Company saved successfully',
       saveFailed: 'Failed to save company',
+      syncedTooltip: 'Synced to Twenty CRM',
     },
   },
 } as const

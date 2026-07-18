@@ -23,6 +23,39 @@
         </v-btn>
       </div>
 
+      <v-sheet v-if="isNewCompany" rounded="lg" border class="pa-4 mb-4 migrate-sheet">
+        <div class="text-subtitle-2 font-weight-bold mb-3">
+          {{ t('crm.companies.form.migrateCustomer') }}
+        </div>
+        <v-row dense>
+          <v-col cols="12" md="8">
+            <v-autocomplete
+              v-model="selectedMigrateCustomerId"
+              :items="migratableCustomers"
+              item-title="customerName"
+              item-value="customerId"
+              :label="t('crm.companies.form.migrateCustomerSelect')"
+              variant="outlined"
+              density="compact"
+              clearable
+              :loading="loadingMigrate"
+              @update:model-value="onMigrateCustomerSelected"
+            >
+              <template #item="{ props: itemProps, item }">
+                <v-list-item v-bind="itemProps">
+                  <template #prepend>
+                    <v-icon
+                      size="16"
+                      :style="{ color: item.raw.billingSynced ? 'rgb(var(--v-theme-primary))' : 'rgb(var(--v-theme-on-surface-variant))' }"
+                    >mdi-connection</v-icon>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+          </v-col>
+        </v-row>
+      </v-sheet>
+
       <v-row dense>
         <v-col cols="12" md="6">
           <v-text-field
@@ -195,8 +228,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getCrmCompany, getCrmMembers, getCrmOpportunities, getCrmPeople, updateCrmCompany } from '@/services/crm'
-import type { CrmAddress, CrmCatalogItem, CrmCompany, CrmMember, CrmRelationItem } from '@/types/api'
+import { getCrmCompany, getCrmMembers, getCrmMigratableCustomers, getCrmOpportunities, getCrmPeople, createCrmCompany, updateCrmCompany } from '@/services/crm'
+import { getAdminCustomer } from '@/services/admin'
+import { parseBillToAddress } from '@/utils/addressParser'
+import type { AdminCustomerRecord, CrmAddress, CrmCatalogItem, CrmCompany, CrmMember, CrmMigratableCustomer, CrmRelationItem } from '@/types/api'
 
 const props = defineProps<{
   companyId: string | null
@@ -219,6 +254,11 @@ const loadingPeople = ref(false)
 const loadingOpportunities = ref(false)
 const selectedPersonId = ref<string | null>(null)
 const selectedOpportunityId = ref<string | null>(null)
+
+const isNewCompany = computed(() => props.companyId === null)
+const migratableCustomers = ref<CrmMigratableCustomer[]>([])
+const loadingMigrate = ref(false)
+const selectedMigrateCustomerId = ref<string | null>(null)
 
 const memberOptions = computed(() =>
   [...members.value].sort((a, b) => a.displayName.localeCompare(b.displayName)),
@@ -272,6 +312,10 @@ watch(
     await loadMembers()
     await loadCatalogs()
     await loadRecord(companyId)
+    if (companyId === null)
+      await loadMigratableCustomers()
+    else
+      migratableCustomers.value = []
   },
   { immediate: true },
 )
@@ -304,6 +348,49 @@ async function loadCatalogs() {
     loadingPeople.value = false
     loadingOpportunities.value = false
   }
+}
+
+async function loadMigratableCustomers() {
+  loadingMigrate.value = true
+  try {
+    migratableCustomers.value = await getCrmMigratableCustomers()
+  } catch {
+    migratableCustomers.value = []
+  } finally {
+    loadingMigrate.value = false
+  }
+}
+
+async function onMigrateCustomerSelected(customerId: string | null) {
+  if (!customerId) {
+    clearMigratedFields()
+    return
+  }
+
+  const customer = migratableCustomers.value.find(c => c.customerId === customerId)
+  if (!customer)
+    return
+
+  draft.name = customer.customerName
+
+  try {
+    const record = await getAdminCustomer(customerId)
+    draft.name = record.customerName
+    // Extract country from the customer data when available; otherwise the
+    // parser defaults to 'Hong Kong'.
+    applyCustomerAddress(record)
+  } catch {
+    errorMessage.value = t('crm.companies.messages.loadRecordFailed')
+  }
+}
+
+function clearMigratedFields() {
+  draft.name = ''
+  draft.address = emptyAddress()
+}
+
+function applyCustomerAddress(record: AdminCustomerRecord) {
+  draft.address = parseBillToAddress(record.billTo)
 }
 
 function addPerson(id: string | null) {
@@ -369,6 +456,7 @@ async function handleSave(closeAfter = false) {
   }
 
   if (!props.companyId) {
+    await createNewCompany(closeAfter)
     return
   }
 
@@ -393,6 +481,54 @@ async function handleSave(closeAfter = false) {
     })
 
     emit('saved', result)
+
+    if (closeAfter) {
+      emit('cancel')
+    }
+  } catch (err) {
+    const axiosErr = err as { response?: { data?: { message?: string } } }
+    const serverMsg = axiosErr.response?.data?.message
+    errorMessage.value = serverMsg || t('crm.companies.messages.saveFailed')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function createNewCompany(closeAfter: boolean) {
+  saving.value = true
+  errorMessage.value = ''
+
+  try {
+    const created = await createCrmCompany({
+      name: draft.name.trim(),
+      domainName: draft.domainName.trim(),
+      address: {
+        street1: draft.address.street1.trim(),
+        street2: draft.address.street2.trim(),
+        city: draft.address.city.trim(),
+        state: draft.address.state.trim(),
+        postcode: draft.address.postcode.trim(),
+        country: draft.address.country.trim(),
+      },
+      accountOwnerId: draft.accountOwnerId,
+      customerId: selectedMigrateCustomerId.value,
+    })
+
+    emit('saved', {
+      id: created.id,
+      name: created.name,
+      accountOwner: '',
+      accountOwnerId: draft.accountOwnerId ?? '',
+      domainName: draft.domainName.trim(),
+      address: { ...draft.address },
+      formattedAddress: '',
+      createdOn: '',
+      createdBy: '',
+      updatedOn: '',
+      updatedBy: '',
+      people: draft.peopleItems,
+      opportunities: draft.opportunityItems,
+    } as CrmCompany)
 
     if (closeAfter) {
       emit('cancel')

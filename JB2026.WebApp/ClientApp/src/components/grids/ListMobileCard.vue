@@ -20,13 +20,21 @@
           </div>
         </div>
 
-        <v-checkbox-btn
-          v-if="checkboxMode"
-          :model-value="isSelected(item)"
-          density="compact"
-          hide-details
-          @click.stop="toggleSelection(item)"
-        />
+        <div class="d-flex align-center">
+          <v-icon
+            v-if="syncedKey && asRecord(item)[syncedKey]"
+            size="16"
+            color="success"
+            :title="t('crm.companies.messages.syncedTooltip')"
+          >mdi-link-variant</v-icon>
+          <v-checkbox-btn
+            v-if="checkboxMode"
+            :model-value="isSelected(item)"
+            density="compact"
+            hide-details
+            @click.stop="toggleSelection(item)"
+          />
+        </div>
       </div>
 
       <div v-if="bodyColumns.length > 0" class="list-mobile-card__body">
@@ -49,6 +57,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n({ useScope: 'global' })
 
 type ListMobileCardItem = any
 
@@ -69,6 +80,7 @@ const props = withDefaults(
     selectedIds?: string[]
     onSelect?: (item: any, selected: boolean) => void
     onCardClick?: (item: any) => void
+    syncedKey?: string
   }>(),
   {
     itemKey: 'id',

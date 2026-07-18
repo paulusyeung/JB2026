@@ -43,6 +43,8 @@ public sealed class CrmCompanyResponse
     public List<CrmRelationItem> People { get; set; } = new();
 
     public List<CrmRelationItem> Opportunities { get; set; } = new();
+
+    public bool SyncedToCrm { get; set; }
 }
 
 public sealed class CrmMemberResponse
@@ -66,4 +68,24 @@ public sealed class UpdateCrmCompanyRequest
     public string? AccountOwnerId { get; set; }
     public List<string>? PeopleIds { get; set; }
     public List<string>? OpportunityIds { get; set; }
+}
+
+public sealed class CreateCrmCompanyRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string DomainName { get; set; } = string.Empty;
+    public CrmAddress Address { get; set; } = new();
+    public string? AccountOwnerId { get; set; }
+
+    /// <summary>
+    /// Optional JB2026 customer id. When provided, the customer's metadata is
+    /// flagged as synced to Twenty CRM after the company is created.
+    /// </summary>
+    public Guid? CustomerId { get; set; }
+}
+
+public sealed class CrmCompanyCreatedResponse
+{
+    public required string Id { get; init; }
+    public required string Name { get; init; }
 }

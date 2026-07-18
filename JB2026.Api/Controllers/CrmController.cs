@@ -1,4 +1,7 @@
+using System;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using JB2026.Api.Models;
 using JB2026.Api.Services;
@@ -25,7 +28,7 @@ public sealed class CrmController : ControllerBase
     {
         var currentUserEmail = await ResolveCurrentUserEmailAsync(readContext, cancellationToken);
 
-        var companies = await twentyCrmService.GetCompaniesAsync(currentUserEmail, lookup, cancellationToken);
+        var companies = await twentyCrmService.GetCompaniesAsync(currentUserEmail, lookup, readContext, cancellationToken);
 
         return Ok(companies);
     }
@@ -36,14 +39,69 @@ public sealed class CrmController : ControllerBase
     public async Task<ActionResult<CrmCompanyResponse>> GetCompany(
         string id,
         [FromServices] ITwentyCrmService twentyCrmService,
+        [FromServices] JB5LegacyReadContext readContext,
         CancellationToken cancellationToken = default)
     {
-        var company = await twentyCrmService.GetCompanyByIdAsync(id, cancellationToken);
+        var company = await twentyCrmService.GetCompanyByIdAsync(id, readContext, cancellationToken);
 
         if (company is null)
             return NotFound();
 
         return Ok(company);
+    }
+
+    [HttpGet("migratable-customers")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmMigratableCustomerResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmMigratableCustomerResponse>>> GetMigratableCustomers(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        [FromServices] JB5LegacyReadContext readContext,
+        [FromQuery] int? take = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is <= 0 or > 5000)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(take)] = ["Take must be between 1 and 5000."]
+            }));
+        }
+
+        var existingCompanyNames = await twentyCrmService.GetAllCompanyNamesAsync(cancellationToken);
+
+        var rawQuery = readContext.vwCustomerList_Actives
+            .AsNoTracking()
+            .GroupJoin(
+                readContext.Customers.AsNoTracking(),
+                customerView => customerView.CustomerId,
+                customer => customer.CustomerId,
+                (customerView, customerGroup) => new { customerView, customerGroup })
+            .SelectMany(
+                x => x.customerGroup.DefaultIfEmpty(),
+                (x, customer) => new
+                {
+                    x.customerView.CustomerId,
+                    x.customerView.CustomerName,
+                    MetadataXml = customer != null ? customer.MetadataXml : null,
+                });
+
+        var rows = await rawQuery
+            .OrderBy(row => row.CustomerName)
+            .ToListAsync(cancellationToken);
+
+        var result = rows
+            .Where(row => !string.IsNullOrWhiteSpace(row.CustomerName))
+            .Where(row => existingCompanyNames.Count == 0 || !existingCompanyNames.Contains(row.CustomerName!))
+            .Take(take ?? int.MaxValue)
+            .Select(row => new CrmMigratableCustomerResponse
+            {
+                CustomerId = row.CustomerId,
+                CustomerName = row.CustomerName!,
+                BillingSynced = !string.IsNullOrWhiteSpace(TryExtractMetadataCode(row.MetadataXml, "invoiceNinjaClientId")),
+                BillingSyncStatus = TryExtractMetadataCode(row.MetadataXml, "invoiceNinjaClientSyncStatus"),
+            })
+            .ToArray();
+
+        return Ok(result);
     }
 
     [HttpPut("companies/{id}")]
@@ -68,6 +126,92 @@ public sealed class CrmController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpPost("companies")]
+    [ProducesResponseType(typeof(CrmCompanyCreatedResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmCompanyCreatedResponse>> CreateCompany(
+        [FromBody] CreateCrmCompanyRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        [FromServices] ICustomerStoredProcedureGateway customerGateway,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest(new { message = "Company name is required." });
+        }
+
+        try
+        {
+            var created = await twentyCrmService.CreateCompanyAsync(request, cancellationToken);
+
+            if (created is null)
+                return BadRequest(new { message = "Failed to create company in Twenty CRM." });
+
+            if (request.CustomerId is { } customerId)
+            {
+                await FlagCustomerSyncedToCrmAsync(customerId, customerGateway, cancellationToken);
+            }
+
+            return Ok(created);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    private async Task FlagCustomerSyncedToCrmAsync(
+        Guid customerId,
+        ICustomerStoredProcedureGateway customerGateway,
+        CancellationToken cancellationToken)
+    {
+        var current = await customerGateway.SelectAsync(customerId, cancellationToken);
+        if (current is null)
+            return;
+
+        var metadata = MergeMetadataCode(current.MetadataXml, "SyncedToCRM", "1");
+
+        var actorId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : Guid.Empty;
+
+        await customerGateway.UpdateAsync(
+            new UpdateCustomerStoredProcedureRequest(
+                CustomerId: current.CustomerId,
+                CustomerName: current.CustomerName,
+                LoginAccount: current.LoginAccount,
+                LoginPassword: current.LoginPassword,
+                MetadataXml: metadata,
+                CreatedOn: current.CreatedOn,
+                CreatedBy: current.CreatedBy,
+                ModifiedOn: DateTime.Now,
+                ModifiedBy: actorId,
+                Retired: current.Retired,
+                RetiredOn: current.RetiredOn,
+                RetiredBy: current.RetiredBy),
+            cancellationToken);
+    }
+
+    private static string MergeMetadataCode(string? metadataXml, string key, string value)
+    {
+        JsonObject root = new();
+
+        if (!string.IsNullOrWhiteSpace(metadataXml))
+        {
+            try
+            {
+                var parsed = JsonNode.Parse(metadataXml.Trim()) as JsonObject;
+                if (parsed is not null)
+                    root = parsed;
+            }
+            catch
+            {
+                // Ignore unparseable metadata and rebuild from scratch.
+            }
+        }
+
+        root[key] = value;
+        return root.ToJsonString();
     }
 
     [HttpGet("members")]
@@ -132,5 +276,28 @@ public sealed class CrmController : ControllerBase
         {
             return string.Empty;
         }
+    }
+
+    private static string TryExtractMetadataCode(string? metadataXml, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(metadataXml))
+            return string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataXml.Trim());
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty(propertyName, out var value)
+                && value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString() ?? string.Empty;
+            }
+        }
+        catch
+        {
+            // Fall back to empty when metadata is not valid JSON.
+        }
+
+        return string.Empty;
     }
 }

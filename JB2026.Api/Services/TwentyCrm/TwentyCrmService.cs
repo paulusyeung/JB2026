@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using JB2026.Api.Models;
 using JB2026.Api.Options;
+using JB2026.EfCore.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Services.TwentyCrm;
@@ -68,6 +70,7 @@ public class TwentyCrmService : ITwentyCrmService
     public async Task<IReadOnlyList<CrmCompanyResponse>> GetCompaniesAsync(
         string? currentUserEmail = null,
         string? lookup = null,
+        JB5LegacyReadContext? readContext = null,
         CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
@@ -173,6 +176,10 @@ public class TwentyCrmService : ITwentyCrmService
 
             var result = new List<CrmCompanyResponse>();
 
+            var syncedNames = readContext is not null
+                ? await GetSyncedToCrmCompanyNamesAsync(readContext, cancellationToken)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var edge in edges.EnumerateArray())
             {
                 if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
@@ -180,7 +187,10 @@ public class TwentyCrmService : ITwentyCrmService
 
                 var parsed = ParseCompany(node);
                 if (parsed is not null)
+                {
+                    parsed.SyncedToCrm = syncedNames.Contains(parsed.Name);
                     result.Add(parsed);
+                }
             }
 
             return result;
@@ -192,7 +202,131 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
-    public async Task<CrmCompanyResponse?> GetCompanyByIdAsync(string id, CancellationToken cancellationToken = default)
+    private async Task<HashSet<string>> GetSyncedToCrmCompanyNamesAsync(
+        JB5LegacyReadContext readContext,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var customers = await readContext.vwCustomerList_Actives
+                .AsNoTracking()
+                .GroupJoin(
+                    readContext.Customers.AsNoTracking(),
+                    view => view.CustomerId,
+                    customer => customer.CustomerId,
+                    (view, customerGroup) => new { view, customerGroup })
+                .SelectMany(
+                    x => x.customerGroup.DefaultIfEmpty(),
+                    (x, customer) => new
+                    {
+                        x.view.CustomerName,
+                        MetadataXml = customer != null ? customer.MetadataXml : null,
+                    })
+                .Where(row => !string.IsNullOrWhiteSpace(row.CustomerName))
+                .ToListAsync(cancellationToken);
+
+            var syncedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var customer in customers)
+            {
+                if (TryGetMetadataCode(customer.MetadataXml, "SyncedToCRM") == "1"
+                    && !string.IsNullOrWhiteSpace(customer.CustomerName))
+                {
+                    syncedNames.Add(customer.CustomerName!);
+                }
+            }
+
+            return syncedNames;
+        }
+        catch
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static string TryGetMetadataCode(string? metadataXml, string key)
+    {
+        if (string.IsNullOrWhiteSpace(metadataXml))
+            return string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataXml.Trim());
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty(key, out var value)
+                && value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString() ?? string.Empty;
+            }
+        }
+        catch
+        {
+            // Fall back to empty when metadata is not valid JSON.
+        }
+
+        return string.Empty;
+    }
+
+    public async Task<HashSet<string>> GetAllCompanyNamesAsync(CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning empty company name set");
+            return [];
+        }
+
+        try
+        {
+            const string query = """
+                query AllCompanyNames($first: Int) {
+                  companies {
+                    edges {
+                      node {
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?> { ["first"] = 5000 };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("companies", out var companiesEl)
+                || !companiesEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var name = GetStringProp(node, "name");
+                if (!string.IsNullOrWhiteSpace(name))
+                    names.Add(name);
+            }
+
+            return names;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch company names from Twenty CRM");
+            return [];
+        }
+    }
+
+    public async Task<CrmCompanyResponse?> GetCompanyByIdAsync(
+        string id,
+        JB5LegacyReadContext? readContext = null,
+        CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
 
@@ -277,7 +411,14 @@ public class TwentyCrmService : ITwentyCrmService
             if (!firstEdge.TryGetProperty("node", out var companyEl) || companyEl.ValueKind != JsonValueKind.Object)
                 return null;
 
-            return ParseCompany(companyEl);
+            var company = ParseCompany(companyEl);
+            if (company is not null && readContext is not null)
+            {
+                var syncedNames = await GetSyncedToCrmCompanyNamesAsync(readContext, cancellationToken);
+                company.SyncedToCrm = syncedNames.Contains(company.Name);
+            }
+
+            return company;
         }
         catch (Exception ex)
         {
@@ -434,6 +575,80 @@ public class TwentyCrmService : ITwentyCrmService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update company {Id} in Twenty CRM", id);
+            throw;
+        }
+    }
+
+    public async Task<CrmCompanyCreatedResponse?> CreateCompanyAsync(CreateCrmCompanyRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — skipping create company");
+            return null;
+        }
+
+        try
+        {
+            var createData = new Dictionary<string, object?>
+            {
+                ["name"] = string.IsNullOrWhiteSpace(request.Name) ? null : request.Name.Trim(),
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.DomainName))
+            {
+                createData["domainName"] = new Dictionary<string, object?>
+                {
+                    ["primaryLinkUrl"] = NormalizeDomainUrl(request.DomainName.Trim()),
+                };
+            }
+
+            createData["address"] = new Dictionary<string, object?>
+            {
+                ["addressStreet1"] = string.IsNullOrWhiteSpace(request.Address.Street1) ? null : request.Address.Street1.Trim(),
+                ["addressStreet2"] = string.IsNullOrWhiteSpace(request.Address.Street2) ? null : request.Address.Street2.Trim(),
+                ["addressCity"] = string.IsNullOrWhiteSpace(request.Address.City) ? null : request.Address.City.Trim(),
+                ["addressState"] = string.IsNullOrWhiteSpace(request.Address.State) ? null : request.Address.State.Trim(),
+                ["addressPostcode"] = string.IsNullOrWhiteSpace(request.Address.Postcode) ? null : request.Address.Postcode.Trim(),
+                ["addressCountry"] = string.IsNullOrWhiteSpace(request.Address.Country) ? null : request.Address.Country.Trim(),
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.AccountOwnerId))
+                createData["accountOwnerId"] = request.AccountOwnerId;
+
+            const string query = """
+                mutation CreateCompany($data: CompanyCreateInput!) {
+                  createCompany(data: $data) {
+                    id
+                    name
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["data"] = createData,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("createCompany", out var companyEl) || companyEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            var id = GetStringProp(companyEl, "id");
+            if (string.IsNullOrWhiteSpace(id))
+                return null;
+
+            return new CrmCompanyCreatedResponse
+            {
+                Id = id,
+                Name = GetStringProp(companyEl, "name"),
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create company in Twenty CRM");
             throw;
         }
     }

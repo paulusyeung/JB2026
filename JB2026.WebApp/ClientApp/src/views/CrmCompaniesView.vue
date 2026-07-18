@@ -127,6 +127,7 @@
           item-key="id"
           :checkbox-mode="checkboxMode"
           :selected-ids="selectedCompanyIds"
+          synced-key="syncedToCrm"
           :on-select="handleMobileSelect"
           :on-card-click="(item) => onMobileCardClick(item)"
         />
@@ -152,7 +153,15 @@
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" color="primary">mdi-domain</v-icon>
                 <div>
-                  <div class="text-subtitle-2 font-weight-bold">{{ row.name }}</div>
+                  <div class="d-flex align-center ga-1">
+                    <span class="text-subtitle-2 font-weight-bold">{{ row.name }}</span>
+                    <v-icon
+                      v-if="row.syncedToCrm"
+                      size="14"
+                      color="success"
+                      :title="t('crm.companies.messages.syncedTooltip')"
+                    >mdi-link-variant</v-icon>
+                  </div>
                   <div v-if="row.domainName" class="text-caption text-medium-emphasis">{{ row.domainName }}</div>
                 </div>
               </div>
@@ -180,6 +189,22 @@
           height="62vh"
           class="companies-table"
         >
+          <template #[`header.synced`]>
+            <v-icon
+              size="18"
+              :title="t('crm.companies.messages.syncedTooltip')"
+            >mdi-link-variant</v-icon>
+          </template>
+
+          <template #[`item.synced`]='{ item }'>
+            <v-icon
+              v-if="item.syncedToCrm"
+              size="18"
+              color="success"
+              :title="t('crm.companies.messages.syncedTooltip')"
+            >mdi-link-variant</v-icon>
+          </template>
+
           <template #[`item.name`]='{ item }'>
             <a class="text-body-2 text-primary text-left text-decoration-none cursor-pointer" @click.stop="openPopup(item.id)">{{ item.name }}</a>
           </template>
@@ -282,6 +307,7 @@ const { format } = useGlobalDateFormatter()
 const isCardView = computed(() => viewMode.value === 'card')
 
 const allHeaders = computed(() => [
+  { title: t('crm.companies.headers.synced'), key: 'synced', minWidth: '44px', width: '44px', sortable: false },
   { title: t('crm.companies.headers.name'), key: 'name', minWidth: '180px' },
   { title: t('crm.companies.headers.accountOwner'), key: 'accountOwner', minWidth: '140px' },
   { title: t('crm.companies.headers.domainName'), key: 'domainName', minWidth: '160px' },
@@ -296,7 +322,7 @@ const allHeaders = computed(() => [
 
 const headers = computed(() =>
   allHeaders.value.filter((h) =>
-    visibleColumnKeys.value.includes(String(h.key)) &&
+    (h.key === 'synced' || visibleColumnKeys.value.includes(String(h.key))) &&
     isColumnVisible(String(h.key), {
       hideOnPhone: ['address', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
       hideOnTablet: [],

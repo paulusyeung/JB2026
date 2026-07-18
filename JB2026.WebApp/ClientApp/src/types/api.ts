@@ -33,6 +33,7 @@ export interface CrmCompany {
   updatedBy: string
   people: CrmRelationItem[]
   opportunities: CrmRelationItem[]
+  syncedToCrm: boolean
 }
 
 export interface CrmMember {
@@ -53,6 +54,26 @@ export interface UpdateCrmCompanyRequest {
   accountOwnerId: string | null
   peopleIds: string[] | null
   opportunityIds: string[] | null
+}
+
+export interface CrmMigratableCustomer {
+  customerId: string
+  customerName: string
+  billingSynced: boolean
+  billingSyncStatus: string
+}
+
+export interface CreateCrmCompanyRequest {
+  name: string
+  domainName: string
+  address: CrmAddress
+  accountOwnerId: string | null
+  customerId?: string | null
+}
+
+export interface CrmCompanyCreated {
+  id: string
+  name: string
 }
 
 export interface AdminUser {
