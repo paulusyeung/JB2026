@@ -47,6 +47,28 @@ export interface CrmCatalogItem {
   name: string
 }
 
+export interface CrmPerson {
+  id: string
+  name: string
+  emails: string[]
+  phones: string[]
+  companies: string[]
+  jobTitle: string
+  createdOn: string
+  createdBy: string
+  updatedOn: string
+  updatedBy: string
+  syncedToCrm: boolean
+}
+
+export interface UpdateCrmPersonRequest {
+  name: string
+  jobTitle: string
+  emails: string[]
+  phones: string[]
+  companyId: string | null
+}
+
 export interface UpdateCrmCompanyRequest {
   name: string
   domainName: string

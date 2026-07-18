@@ -146,11 +146,21 @@ public class TwentyCrmService : ITwentyCrmService
                         }
                         createdAt
                         createdBy {
-                          name
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
                         }
                         updatedAt
                         updatedBy {
-                          name
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
                         }
                       }
                     }
@@ -385,11 +395,21 @@ public class TwentyCrmService : ITwentyCrmService
                         }
                         createdAt
                         createdBy {
-                          name
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
                         }
                         updatedAt
                         updatedBy {
-                          name
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
                         }
                       }
                     }
@@ -724,7 +744,7 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
-    public async Task<IReadOnlyList<CrmCatalogItem>> GetPeopleAsync(string? lookup = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CrmPersonResponse>> GetPeopleAsync(string? lookup = null, CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
 
@@ -748,6 +768,38 @@ public class TwentyCrmService : ITwentyCrmService
                           firstName
                           lastName
                         }
+                        emails {
+                          primaryEmail
+                          additionalEmails
+                        }
+                        phones {
+                          primaryPhoneNumber
+                          primaryPhoneCallingCode
+                          additionalPhones
+                        }
+                        jobTitle
+                        company {
+                          id
+                          name
+                        }
+                        createdAt
+                        createdBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                        updatedAt
+                        updatedBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
                       }
                     }
                   }
@@ -762,12 +814,337 @@ public class TwentyCrmService : ITwentyCrmService
 
             var data = await PostGraphQLAsync(query, variables, cancellationToken);
 
-            return ExtractCatalogItems(data, "people", node => GetCompositeName(node, "name"));
+            if (!data.TryGetProperty("people", out var peopleEl)
+                || !peopleEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<CrmPersonResponse>();
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var person = ParsePerson(node);
+                if (person is not null)
+                    result.Add(person);
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch people from Twenty CRM");
             return [];
+        }
+    }
+
+    private CrmPersonResponse? ParsePerson(JsonElement node)
+    {
+        var personId = GetStringProp(node, "id");
+        if (string.IsNullOrWhiteSpace(personId))
+            return null;
+
+        return new CrmPersonResponse
+        {
+            Id = personId,
+            Name = GetCompositeName(node, "name"),
+            Emails = ResolveEmails(node),
+            Phones = ResolvePhones(node),
+            Companies = ResolveCompanies(node),
+            JobTitle = GetStringProp(node, "jobTitle"),
+            CreatedOn = GetStringProp(node, "createdAt"),
+            CreatedBy = ResolveActorName(node, "createdBy"),
+            UpdatedOn = GetStringProp(node, "updatedAt"),
+            UpdatedBy = ResolveActorName(node, "updatedBy"),
+        };
+    }
+
+    private static List<string> ResolveEmails(JsonElement person)
+    {
+        var emails = new List<string>();
+
+        if (!person.TryGetProperty("emails", out var emailsEl) || emailsEl.ValueKind != JsonValueKind.Object)
+            return emails;
+
+        var primary = GetStringProp(emailsEl, "primaryEmail");
+        if (!string.IsNullOrWhiteSpace(primary))
+            emails.Add(primary);
+
+        if (emailsEl.TryGetProperty("additionalEmails", out var additional) && additional.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in additional.EnumerateArray())
+            {
+                var value = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(value) && !emails.Contains(value))
+                    emails.Add(value);
+            }
+        }
+
+        return emails;
+    }
+
+    private static List<string> ResolvePhones(JsonElement person)
+    {
+        var phones = new List<string>();
+
+        if (!person.TryGetProperty("phones", out var phonesEl) || phonesEl.ValueKind != JsonValueKind.Object)
+            return phones;
+
+        var callingCode = GetStringProp(phonesEl, "primaryPhoneCallingCode");
+
+        var primary = GetStringProp(phonesEl, "primaryPhoneNumber");
+        var primaryCombined = CombinePhone(callingCode, primary);
+        if (!string.IsNullOrWhiteSpace(primaryCombined))
+            phones.Add(primaryCombined);
+
+        if (phonesEl.TryGetProperty("additionalPhones", out var additional) && additional.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in additional.EnumerateArray())
+            {
+                string? number = null;
+                string? itemCallingCode = callingCode;
+
+                if (item.ValueKind == JsonValueKind.String)
+                    number = item.GetString();
+                else if (item.ValueKind == JsonValueKind.Object)
+                {
+                    number = GetStringProp(item, "number") ?? GetStringProp(item, "phoneNumber");
+                    var itemCode = GetStringProp(item, "callingCode") ?? GetStringProp(item, "primaryPhoneCallingCode");
+                    if (!string.IsNullOrWhiteSpace(itemCode))
+                        itemCallingCode = itemCode;
+                }
+
+                var combined = CombinePhone(itemCallingCode, number);
+                if (!string.IsNullOrWhiteSpace(combined) && !phones.Contains(combined))
+                    phones.Add(combined);
+            }
+        }
+
+        return phones;
+    }
+
+    private static string CombinePhone(string callingCode, string? number)
+    {
+        if (string.IsNullOrWhiteSpace(number))
+            return string.Empty;
+
+        // Number already carries an explicit E.164 calling code — return as-is
+        // to avoid doubling it with the separate callingCode field.
+        if (number!.StartsWith("+", StringComparison.Ordinal))
+            return number;
+
+        if (string.IsNullOrWhiteSpace(callingCode))
+            return number;
+
+        return $"{callingCode} {number}";
+    }
+
+    // Supported international calling codes (digits), longest first, used to
+    // split an E.164 number into its calling code and national number so the
+    // value can be stored in Twenty's native separate fields.
+    private static readonly string[] CallingCodePrefixes =
+    [
+        "852", "886", "65", "81", "61", "44", "86", "1",
+    ];
+
+    private static (string callingCode, string nationalNumber) SplitE164(string e164)
+    {
+        var trimmed = (e164 ?? string.Empty).Trim();
+        if (!trimmed.StartsWith("+", StringComparison.Ordinal))
+            return (string.Empty, trimmed);
+
+        var digits = trimmed[1..];
+        foreach (var prefix in CallingCodePrefixes)
+        {
+            if (digits.StartsWith(prefix, StringComparison.Ordinal))
+                return ($"+{prefix}", digits[prefix.Length..]);
+        }
+
+        return (string.Empty, trimmed);
+    }
+
+    private static (string firstName, string lastName) SplitPersonName(string? fullName)
+    {
+        var trimmed = (fullName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return (string.Empty, string.Empty);
+
+        var parts = trimmed.Split(' ', 2);
+        if (parts.Length == 1)
+            return (parts[0], string.Empty);
+
+        return (parts[0], parts[1].Trim());
+    }
+
+    private static string ToE164(string? rawPhone)
+    {
+        var trimmed = (rawPhone ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return string.Empty;
+
+        // Already in E.164 form (e.g. +1123456789) — return as-is.
+        if (trimmed.StartsWith("+", StringComparison.Ordinal) && !trimmed.Contains(' '))
+            return trimmed;
+
+        var spaceIndex = trimmed.IndexOf(' ');
+        if (spaceIndex > 0 && trimmed[0] == '+')
+        {
+            var code = trimmed[..spaceIndex].Trim();
+            var number = trimmed[(spaceIndex + 1)..].Trim();
+            if (!string.IsNullOrWhiteSpace(number))
+                return $"{code}{number}";
+        }
+
+        return trimmed;
+    }
+
+    private static List<string> ResolveCompanies(JsonElement person)
+    {
+        var companies = new List<string>();
+
+        if (person.TryGetProperty("company", out var company) && company.ValueKind == JsonValueKind.Object)
+        {
+            var name = GetStringProp(company, "name");
+            if (!string.IsNullOrWhiteSpace(name))
+                companies.Add(name);
+        }
+
+        if (person.TryGetProperty("companies", out var companiesEl) && companiesEl.ValueKind == JsonValueKind.Object)
+        {
+            if (companiesEl.TryGetProperty("edges", out var edges) && edges.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var edge in edges.EnumerateArray())
+                {
+                    if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                        continue;
+
+                    var name = GetStringProp(node, "name");
+                    if (!string.IsNullOrWhiteSpace(name) && !companies.Contains(name))
+                        companies.Add(name);
+                }
+            }
+        }
+
+        return companies;
+    }
+
+    public async Task<CrmPersonResponse?> UpdatePersonAsync(string id, UpdateCrmPersonRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — skipping update for person {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            var primaryEmail = request.Emails.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e))?.Trim();
+            var additionalEmails = request.Emails
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Skip(primaryEmail is null ? 0 : 1)
+                .Select(e => e!.Trim())
+                .ToList();
+
+            var primaryPhoneRaw = request.Phones.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p))?.Trim();
+            var primaryE164 = ToE164(primaryPhoneRaw);
+            var (primaryCallingCode, primaryNationalNumber) = SplitE164(primaryE164);
+            var additionalPhones = request.Phones
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Skip(primaryPhoneRaw is null ? 0 : 1)
+                .Select(p => ToE164(p!.Trim()))
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(e164 =>
+                {
+                    var (code, national) = SplitE164(e164);
+                    return (object)new Dictionary<string, object?>
+                    {
+                        ["callingCode"] = string.IsNullOrWhiteSpace(code) ? primaryCallingCode : code,
+                        ["number"] = national,
+                    };
+                })
+                .ToList();
+
+            var (firstName, lastName) = SplitPersonName(request.Name);
+
+            var updateData = new Dictionary<string, object?>
+            {
+                ["name"] = new Dictionary<string, object?>
+                {
+                    ["firstName"] = firstName,
+                    ["lastName"] = lastName,
+                },
+                ["jobTitle"] = string.IsNullOrWhiteSpace(request.JobTitle) ? null : request.JobTitle.Trim(),
+                ["emails"] = new Dictionary<string, object?>
+                {
+                    ["primaryEmail"] = primaryEmail,
+                    ["additionalEmails"] = additionalEmails,
+                },
+                ["phones"] = new Dictionary<string, object?>
+                {
+                    ["primaryPhoneNumber"] = primaryNationalNumber,
+                    ["primaryPhoneCallingCode"] = primaryCallingCode,
+                    ["additionalPhones"] = additionalPhones,
+                },
+                ["companyId"] = string.IsNullOrWhiteSpace(request.CompanyId) ? null : request.CompanyId,
+            };
+
+            const string query = """
+                mutation UpdatePerson($id: ID!, $data: PersonUpdateInput!) {
+                  updatePerson(id: $id, data: $data) {
+                    id
+                    name {
+                      firstName
+                      lastName
+                    }
+                    emails {
+                      primaryEmail
+                      additionalEmails
+                    }
+                    phones {
+                      primaryPhoneNumber
+                      primaryPhoneCallingCode
+                      additionalPhones
+                    }
+                    jobTitle
+                    company {
+                      id
+                      name
+                    }
+                    createdAt
+                    createdBy {
+                      name
+                    }
+                    updatedAt
+                    updatedBy {
+                      name
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["id"] = id,
+                ["data"] = updateData,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("updatePerson", out var personEl) || personEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParsePerson(personEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update person {Id} in Twenty CRM", id);
+            throw;
         }
     }
 

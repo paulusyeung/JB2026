@@ -60,6 +60,44 @@ public sealed class CrmCatalogItem
     public string Name { get; set; } = string.Empty;
 }
 
+public sealed class CrmPersonResponse
+{
+    public required string Id { get; init; }
+
+    public required string Name { get; init; }
+
+    public List<string> Emails { get; set; } = new();
+
+    public List<string> Phones { get; set; } = new();
+
+    public List<string> Companies { get; set; } = new();
+
+    public string JobTitle { get; set; } = string.Empty;
+
+    public string CreatedOn { get; set; } = string.Empty;
+
+    public string CreatedBy { get; set; } = string.Empty;
+
+    public string UpdatedOn { get; set; } = string.Empty;
+
+    public string UpdatedBy { get; set; } = string.Empty;
+
+    public bool SyncedToCrm { get; set; }
+}
+
+public sealed class UpdateCrmPersonRequest
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string JobTitle { get; set; } = string.Empty;
+
+    public List<string> Emails { get; set; } = new();
+
+    public List<string> Phones { get; set; } = new();
+
+    public string? CompanyId { get; set; }
+}
+
 public sealed class UpdateCrmCompanyRequest
 {
     public string Name { get; set; } = string.Empty;

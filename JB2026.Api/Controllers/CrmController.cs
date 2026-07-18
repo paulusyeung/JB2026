@@ -225,14 +225,39 @@ public sealed class CrmController : ControllerBase
     }
 
     [HttpGet("people")]
-    [ProducesResponseType(typeof(IReadOnlyList<CrmCatalogItem>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<CrmCatalogItem>>> GetPeople(
+    [ProducesResponseType(typeof(IReadOnlyList<CrmPersonResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmPersonResponse>>> GetPeople(
         [FromServices] ITwentyCrmService twentyCrmService,
         [FromQuery] string? lookup,
         CancellationToken cancellationToken = default)
     {
         var people = await twentyCrmService.GetPeopleAsync(lookup, cancellationToken);
         return Ok(people);
+    }
+
+    [HttpPut("people/{id}")]
+    [ProducesResponseType(typeof(CrmPersonResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CrmPersonResponse>> UpdatePerson(
+        string id,
+        [FromBody] UpdateCrmPersonRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var person = await twentyCrmService.UpdatePersonAsync(id, request, cancellationToken);
+
+            if (person is null)
+                return NotFound();
+
+            return Ok(person);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpGet("opportunities")]
