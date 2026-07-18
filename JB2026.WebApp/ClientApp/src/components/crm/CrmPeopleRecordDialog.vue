@@ -132,7 +132,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getCrmCompanies, getCrmPeople, updateCrmPerson } from '@/services/crm'
+import { getCrmCompanies, getCrmPeople, updateCrmPerson, createCrmPerson } from '@/services/crm'
 import { countryFromCallingCodePrefix, formatPartialNumber, parsePhoneNumberFromString, toDigits, validateNationalNumber } from '@/utils/phoneParser'
 import type { CrmCompany, CrmPerson } from '@/types/api'
 
@@ -290,11 +290,6 @@ async function loadRecord(personId: string | null) {
 }
 
 async function handleSave(closeAfter = false) {
-  if (!props.personId) {
-    errorMessage.value = t('crm.people.messages.saveFailed')
-    return
-  }
-
   if (!draft.name.trim()) {
     errorMessage.value = t('crm.people.form.requiredName')
     return
@@ -308,13 +303,17 @@ async function handleSave(closeAfter = false) {
   addPhone()
 
   try {
-    const result = await updateCrmPerson(props.personId, {
+    const payload = {
       name: draft.name.trim(),
       jobTitle: draft.jobTitle.trim(),
       emails: draft.emails.map(e => e.trim()).filter(Boolean),
       phones: draft.phones.map(p => p.trim()).filter(Boolean),
       companyId: draft.companyId,
-    })
+    }
+
+    const result = props.personId
+      ? await updateCrmPerson(props.personId, payload)
+      : await createCrmPerson(payload)
 
     emit('saved', result)
 
@@ -322,9 +321,16 @@ async function handleSave(closeAfter = false) {
       emit('cancel')
     }
   } catch (err) {
-    const axiosErr = err as { response?: { data?: { message?: string } } }
-    const serverMsg = axiosErr.response?.data?.message
-    errorMessage.value = serverMsg || t('crm.people.messages.saveFailed')
+    const axiosErr = err as {
+      response?: { status?: number; data?: { message?: string } | string }
+      message?: string
+    }
+    const data = axiosErr.response?.data
+    const serverMsg =
+      (typeof data === 'string' ? data : data?.message) ||
+      axiosErr.message ||
+      t('crm.people.messages.saveFailed')
+    errorMessage.value = serverMsg
   } finally {
     saving.value = false
   }

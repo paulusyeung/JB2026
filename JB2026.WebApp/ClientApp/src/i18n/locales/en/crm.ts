@@ -90,6 +90,7 @@ export const crmMessages = {
       desc: 'Z-A',
       checkbox: 'Checkbox',
       views: 'Views',
+      newPerson: 'New People',
       detailView: 'Detail View',
       cardView: 'Card View',
       selected: '{count} selected',

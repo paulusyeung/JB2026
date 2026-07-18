@@ -90,6 +90,7 @@ export const crmMessages = {
       desc: 'Z-A',
       checkbox: '复选框',
       views: '视图',
+      newPerson: '新增联系人',
       detailView: '详细视图',
       cardView: '卡片视图',
       selected: '已选择 {count} 项',

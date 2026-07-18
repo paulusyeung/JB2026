@@ -111,6 +111,10 @@
 
           <v-divider vertical class="mx-1" />
 
+          <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewPerson">
+            {{ t('crm.people.actions.newPerson') }}
+          </v-btn>
+
           <span v-if="checkboxMode" class="text-caption text-medium-emphasis">
             {{ t('crm.people.actions.selected', { count: selectedIds.length }) }}
           </span>
@@ -476,6 +480,12 @@ const successMessage = ref('')
 
 function openPopup(id: string) {
   editingPersonId.value = id
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+function openNewPerson() {
+  editingPersonId.value = null
   dialogOpen.value = true
   errorMessage.value = ''
 }

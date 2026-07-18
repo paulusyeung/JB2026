@@ -51,6 +51,11 @@ export async function updateCrmPerson(id: string, request: UpdateCrmPersonReques
   return response.data
 }
 
+export async function createCrmPerson(request: UpdateCrmPersonRequest): Promise<CrmPerson> {
+  const response = await apiClient.post<CrmPerson>('/api/v2/crm/people', request)
+  return response.data
+}
+
 export async function getCrmOpportunities(lookup = ''): Promise<CrmCatalogItem[]> {
   const response = await apiClient.get<CrmCatalogItem[]>('/api/v2/crm/opportunities', {
     params: { lookup },

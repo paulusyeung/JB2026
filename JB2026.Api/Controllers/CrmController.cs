@@ -260,6 +260,29 @@ public sealed class CrmController : ControllerBase
         }
     }
 
+    [HttpPost("people")]
+    [ProducesResponseType(typeof(CrmPersonResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmPersonResponse>> CreatePerson(
+        [FromBody] UpdateCrmPersonRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var person = await twentyCrmService.CreatePersonAsync(request, cancellationToken);
+
+            if (person is null)
+                return BadRequest(new { message = "Failed to create person in Twenty CRM." });
+
+            return Ok(person);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("opportunities")]
     [ProducesResponseType(typeof(IReadOnlyList<CrmCatalogItem>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CrmCatalogItem>>> GetOpportunities(

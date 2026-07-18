@@ -23,5 +23,7 @@ public interface ITwentyCrmService
 
     Task<CrmPersonResponse?> UpdatePersonAsync(string id, UpdateCrmPersonRequest request, CancellationToken cancellationToken = default);
 
+    Task<CrmPersonResponse?> CreatePersonAsync(UpdateCrmPersonRequest request, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<CrmCatalogItem>> GetOpportunitiesAsync(string? lookup = null, CancellationToken cancellationToken = default);
 }

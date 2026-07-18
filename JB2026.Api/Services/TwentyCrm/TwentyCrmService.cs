@@ -1148,6 +1148,131 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
+    public async Task<CrmPersonResponse?> CreatePersonAsync(UpdateCrmPersonRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — skipping create person");
+            return null;
+        }
+
+        try
+        {
+            var primaryEmail = request.Emails.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e))?.Trim();
+            var additionalEmails = request.Emails
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Skip(primaryEmail is null ? 0 : 1)
+                .Select(e => e!.Trim())
+                .ToList();
+
+            var primaryPhoneRaw = request.Phones.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p))?.Trim();
+            var primaryE164 = ToE164(primaryPhoneRaw);
+            var (primaryCallingCode, primaryNationalNumber) = SplitE164(primaryE164);
+            var additionalPhones = request.Phones
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Skip(primaryPhoneRaw is null ? 0 : 1)
+                .Select(p => ToE164(p!.Trim()))
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(e164 =>
+                {
+                    var (code, national) = SplitE164(e164);
+                    return (object)new Dictionary<string, object?>
+                    {
+                        ["callingCode"] = string.IsNullOrWhiteSpace(code) ? primaryCallingCode : code,
+                        ["number"] = national,
+                    };
+                })
+                .ToList();
+
+            var (firstName, lastName) = SplitPersonName(request.Name);
+
+            var createData = new Dictionary<string, object?>
+            {
+                ["name"] = new Dictionary<string, object?>
+                {
+                    ["firstName"] = firstName,
+                    ["lastName"] = lastName,
+                },
+                ["jobTitle"] = string.IsNullOrWhiteSpace(request.JobTitle) ? null : request.JobTitle.Trim(),
+                ["emails"] = new Dictionary<string, object?>
+                {
+                    ["primaryEmail"] = primaryEmail,
+                    ["additionalEmails"] = additionalEmails,
+                },
+                ["phones"] = new Dictionary<string, object?>
+                {
+                    ["primaryPhoneNumber"] = primaryNationalNumber,
+                    ["primaryPhoneCallingCode"] = primaryCallingCode,
+                    ["additionalPhones"] = additionalPhones,
+                },
+                ["companyId"] = string.IsNullOrWhiteSpace(request.CompanyId) ? null : request.CompanyId,
+            };
+
+            const string query = """
+                mutation CreatePerson($data: PersonCreateInput!) {
+                  createPerson(data: $data) {
+                    id
+                    name {
+                      firstName
+                      lastName
+                    }
+                    emails {
+                      primaryEmail
+                      additionalEmails
+                    }
+                    phones {
+                      primaryPhoneNumber
+                      primaryPhoneCallingCode
+                      additionalPhones
+                    }
+                    jobTitle
+                    company {
+                      id
+                      name
+                    }
+                    createdAt
+                    createdBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                    updatedAt
+                    updatedBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["data"] = createData,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("createPerson", out var personEl) || personEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParsePerson(personEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create person in Twenty CRM");
+            throw;
+        }
+    }
+
     public async Task<IReadOnlyList<CrmCatalogItem>> GetOpportunitiesAsync(string? lookup = null, CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
