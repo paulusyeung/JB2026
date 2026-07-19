@@ -284,14 +284,87 @@ public sealed class CrmController : ControllerBase
     }
 
     [HttpGet("opportunities")]
-    [ProducesResponseType(typeof(IReadOnlyList<CrmCatalogItem>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<CrmCatalogItem>>> GetOpportunities(
+    [ProducesResponseType(typeof(IReadOnlyList<CrmOpportunityResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmOpportunityResponse>>> GetOpportunities(
         [FromServices] ITwentyCrmService twentyCrmService,
         [FromQuery] string? lookup,
         CancellationToken cancellationToken = default)
     {
         var opportunities = await twentyCrmService.GetOpportunitiesAsync(lookup, cancellationToken);
         return Ok(opportunities);
+    }
+
+    [HttpGet("opportunities/stage-options")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmStageOption>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmStageOption>>> GetOpportunityStageOptions(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var options = await twentyCrmService.GetOpportunityStageOptionsAsync(cancellationToken);
+        return Ok(options);
+    }
+
+    [HttpGet("opportunities/{id}")]
+    [ProducesResponseType(typeof(CrmOpportunityResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CrmOpportunityResponse>> GetOpportunity(
+        string id,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var opportunity = await twentyCrmService.GetOpportunityByIdAsync(id, cancellationToken);
+
+        if (opportunity is null)
+            return NotFound();
+
+        return Ok(opportunity);
+    }
+
+    [HttpPut("opportunities/{id}")]
+    [ProducesResponseType(typeof(CrmOpportunityResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmOpportunityResponse>> UpdateOpportunity(
+        string id,
+        [FromBody] UpdateCrmOpportunityRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var opportunity = await twentyCrmService.UpdateOpportunityAsync(id, request, cancellationToken);
+
+            if (opportunity is null)
+                return NotFound();
+
+            return Ok(opportunity);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("opportunities")]
+    [ProducesResponseType(typeof(CrmOpportunityResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmOpportunityResponse>> CreateOpportunity(
+        [FromBody] UpdateCrmOpportunityRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var opportunity = await twentyCrmService.CreateOpportunityAsync(request, cancellationToken);
+
+            if (opportunity is null)
+                return BadRequest(new { message = "Failed to create opportunity" });
+
+            return Ok(opportunity);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     private async Task<string?> ResolveCurrentUserEmailAsync(JB5LegacyReadContext readContext, CancellationToken cancellationToken)

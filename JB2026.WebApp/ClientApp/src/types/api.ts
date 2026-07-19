@@ -47,6 +47,30 @@ export interface CrmCatalogItem {
   name: string
 }
 
+export interface CrmStageOption {
+  value: string
+  label: string
+}
+
+export interface CrmOpportunity {
+  id: string
+  name: string
+  stage: string
+  closeDate: string
+  amount: string
+  currencyCode: string
+  company: string
+  companyId: string
+  pointOfContact: string
+  pointOfContactId: string
+  owner: string
+  ownerId: string
+  createdOn: string
+  createdBy: string
+  updatedOn: string
+  updatedBy: string
+}
+
 export interface CrmPerson {
   id: string
   name: string

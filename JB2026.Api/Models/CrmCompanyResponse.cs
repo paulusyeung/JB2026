@@ -127,3 +127,56 @@ public sealed class CrmCompanyCreatedResponse
     public required string Id { get; init; }
     public required string Name { get; init; }
 }
+
+public sealed class UpdateCrmOpportunityRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string Stage { get; set; } = string.Empty;
+    public string? CloseDate { get; set; }
+    public double? Amount { get; set; }
+    public string? CurrencyCode { get; set; }
+    public string? CompanyId { get; set; }
+    public string? PointOfContactId { get; set; }
+    public string? OwnerId { get; set; }
+}
+
+public sealed class CrmStageOption
+{
+    public required string Value { get; init; }
+    public required string Label { get; init; }
+}
+
+public sealed class CrmOpportunityResponse
+{
+    public required string Id { get; init; }
+
+    public required string Name { get; init; }
+
+    public string Stage { get; set; } = string.Empty;
+
+    public string CloseDate { get; set; } = string.Empty;
+
+    public string Amount { get; set; } = string.Empty;
+
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    public string Company { get; set; } = string.Empty;
+
+    public string CompanyId { get; set; } = string.Empty;
+
+    public string PointOfContact { get; set; } = string.Empty;
+
+    public string PointOfContactId { get; set; } = string.Empty;
+
+    public string Owner { get; set; } = string.Empty;
+
+    public string OwnerId { get; set; } = string.Empty;
+
+    public string CreatedOn { get; set; } = string.Empty;
+
+    public string CreatedBy { get; set; } = string.Empty;
+
+    public string UpdatedOn { get; set; } = string.Empty;
+
+    public string UpdatedBy { get; set; } = string.Empty;
+}

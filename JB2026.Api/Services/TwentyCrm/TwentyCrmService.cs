@@ -13,6 +13,7 @@ public class TwentyCrmService : ITwentyCrmService
     private readonly IOptions<TwentyCrmOptions> _options;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TwentyCrmService> _logger;
+    private static bool _opportunityFieldsDiscovered;
 
     public TwentyCrmService(
         IOptions<TwentyCrmOptions> options,
@@ -1273,7 +1274,7 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
-    public async Task<IReadOnlyList<CrmCatalogItem>> GetOpportunitiesAsync(string? lookup = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CrmOpportunityResponse>> GetOpportunitiesAsync(string? lookup = null, CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
 
@@ -1285,6 +1286,9 @@ public class TwentyCrmService : ITwentyCrmService
 
         try
         {
+            // Discover Opportunity type fields once to find custom field names
+            await DiscoverOpportunityFieldsAsync(cancellationToken);
+
             var hasLookup = !string.IsNullOrWhiteSpace(lookup);
 
             var query = $$"""
@@ -1294,6 +1298,49 @@ public class TwentyCrmService : ITwentyCrmService
                       node {
                         id
                         name
+                        stage
+                        closeDate
+                        amount {
+                          amountMicros
+                          currencyCode
+                        }
+                        company {
+                          id
+                          name
+                        }
+                        pointOfContact {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                        }
+                        owner {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                          userEmail
+                        }
+                        createdAt
+                        createdBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                        updatedAt
+                        updatedBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
                       }
                     }
                   }
@@ -1308,12 +1355,621 @@ public class TwentyCrmService : ITwentyCrmService
 
             var data = await PostGraphQLAsync(query, variables, cancellationToken);
 
-            return ExtractCatalogItems(data, "opportunities", node => GetStringProp(node, "name"));
+            if (!data.TryGetProperty("opportunities", out var opportunitiesEl)
+                || !opportunitiesEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogWarning("No opportunities data returned from Twenty CRM GraphQL");
+                return [];
+            }
+
+            var result = new List<CrmOpportunityResponse>();
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var parsed = ParseOpportunity(node);
+                if (parsed is not null)
+                {
+                    if (string.IsNullOrWhiteSpace(parsed.Amount) && !string.IsNullOrWhiteSpace(parsed.Name))
+                    {
+                        var keys = string.Join(", ", node.EnumerateObject().Select(p => $"{p.Name}({p.Value.ValueKind})"));
+                        _logger.LogWarning(
+                            "Opportunity '{Name}' ({Id}) has empty amount. Available fields: {Keys}",
+                            parsed.Name, parsed.Id, keys);
+                    }
+
+                    result.Add(parsed);
+                }
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch opportunities from Twenty CRM");
+            _logger.LogError(ex, "Failed to fetch opportunities from Twenty CRM (lookup: {Lookup})", lookup);
             return [];
+        }
+    }
+
+    private CrmOpportunityResponse? ParseOpportunity(JsonElement node)
+    {
+        var oppId = GetStringProp(node, "id");
+        if (string.IsNullOrWhiteSpace(oppId))
+            return null;
+
+        var amount = ResolveAmount(node);
+        var currencyCode = ResolveCurrencyCode(node);
+
+        var company = string.Empty;
+        var companyId = string.Empty;
+        if (node.TryGetProperty("company", out var companyEl) && companyEl.ValueKind == JsonValueKind.Object)
+        {
+            company = GetStringProp(companyEl, "name");
+            companyId = GetStringProp(companyEl, "id");
+        }
+
+        return new CrmOpportunityResponse
+        {
+            Id = oppId,
+            Name = GetStringProp(node, "name"),
+            Stage = GetStringProp(node, "stage"),
+            CloseDate = GetStringProp(node, "closeDate"),
+            Amount = amount,
+            CurrencyCode = currencyCode,
+            Company = company,
+            CompanyId = companyId,
+            PointOfContact = ResolveOpportunityContact(node),
+            PointOfContactId = ResolveOpportunityContactId(node),
+            Owner = ResolveOpportunityOwner(node),
+            OwnerId = ResolveOpportunityOwnerId(node),
+            CreatedOn = GetStringProp(node, "createdAt"),
+            CreatedBy = ResolveActorName(node, "createdBy"),
+            UpdatedOn = GetStringProp(node, "updatedAt"),
+            UpdatedBy = ResolveActorName(node, "updatedBy"),
+        };
+    }
+
+    private static string ResolveAmount(JsonElement node)
+    {
+        if (!node.TryGetProperty("amount", out var amtEl) || amtEl.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        var micros = amtEl.TryGetProperty("amountMicros", out var microsEl) && microsEl.ValueKind == JsonValueKind.Number
+            ? microsEl.GetRawText()
+            : null;
+
+        var currency = GetStringProp(amtEl, "currencyCode");
+
+        if (micros is null)
+            return string.Empty;
+
+        if (string.IsNullOrWhiteSpace(currency))
+            return FormatAmountFromMicros(micros);
+
+        return $"{currency} {FormatAmountFromMicros(micros)}";
+    }
+
+    private static string ResolveCurrencyCode(JsonElement node)
+    {
+        if (!node.TryGetProperty("amount", out var amtEl) || amtEl.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        return GetStringProp(amtEl, "currencyCode") ?? string.Empty;
+    }
+
+    private static string FormatAmountFromMicros(string microsRaw)
+    {
+        if (string.IsNullOrWhiteSpace(microsRaw))
+            return string.Empty;
+
+        if (decimal.TryParse(microsRaw, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var value))
+        {
+            var mainUnit = value / 1_000_000m;
+            return mainUnit.ToString("#,##0.##", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        return microsRaw;
+    }
+
+
+
+    private static string ResolveOpportunityContact(JsonElement opportunity)
+    {
+        if (!opportunity.TryGetProperty("pointOfContact", out var contact) || contact.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        return GetCompositeName(contact, "name");
+    }
+
+    private static string ResolveOpportunityOwner(JsonElement opportunity)
+    {
+        if (!opportunity.TryGetProperty("owner", out var owner) || owner.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        var name = GetCompositeName(owner, "name");
+        if (!string.IsNullOrWhiteSpace(name))
+            return name;
+
+        return GetStringProp(owner, "userEmail");
+    }
+
+    private static string ResolveOpportunityContactId(JsonElement opportunity)
+    {
+        if (!opportunity.TryGetProperty("pointOfContact", out var contact) || contact.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        return GetStringProp(contact, "id") ?? string.Empty;
+    }
+
+    private static string ResolveOpportunityOwnerId(JsonElement opportunity)
+    {
+        if (!opportunity.TryGetProperty("owner", out var owner) || owner.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        return GetStringProp(owner, "id") ?? string.Empty;
+    }
+
+    public async Task<IReadOnlyList<CrmStageOption>> GetOpportunityStageOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            const string query = """
+                {
+                  __type(name: "OpportunityStageEnum") {
+                    enumValues {
+                      name
+                      description
+                    }
+                  }
+                }
+                """;
+
+            var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+            if (data.TryGetProperty("__type", out var typeEl)
+                && typeEl.TryGetProperty("enumValues", out var vals)
+                && vals.ValueKind == JsonValueKind.Array)
+            {
+                return vals.EnumerateArray()
+                    .Select(v => new CrmStageOption
+                    {
+                        Value = GetStringProp(v, "name"),
+                        Label = GetStringProp(v, "description") ?? HumanizeEnumName(GetStringProp(v, "name")),
+                    })
+                    .Where(o => !string.IsNullOrWhiteSpace(o.Value))
+                    .ToList();
+            }
+
+            return Array.Empty<CrmStageOption>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch OpportunityStageEnum values");
+            return Array.Empty<CrmStageOption>();
+        }
+    }
+
+    private static string HumanizeEnumName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return name;
+
+        return string.Join(" ", name.Split('_')
+            .Select(word => word.Length > 0
+                ? char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant()
+                : word));
+    }
+
+    private async Task DiscoverOpportunityFieldsAsync(CancellationToken cancellationToken)
+    {
+        if (_opportunityFieldsDiscovered)
+            return;
+
+        _opportunityFieldsDiscovered = true;
+
+        try
+        {
+            const string query = """
+                {
+                  __type(name: "Opportunity") {
+                    fields {
+                      name
+                      type {
+                        name
+                        kind
+                        ofType {
+                          name
+                          kind
+                          enumValues {
+                            name
+                          }
+                        }
+                        fields {
+                          name
+                          type {
+                            name
+                            kind
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+            if (data.TryGetProperty("__type", out var typeEl)
+                && typeEl.TryGetProperty("fields", out var fieldsEl)
+                && fieldsEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var f in fieldsEl.EnumerateArray())
+                {
+                    var fName = GetStringProp(f, "name");
+                    if (fName != "stage" && fName != "amount" && fName != "company" && fName != "pointOfContact" && fName != "owner")
+                        continue;
+
+                    if (!f.TryGetProperty("type", out var t) || t.ValueKind != JsonValueKind.Object)
+                        continue;
+
+                    var typeName = GetStringProp(t, "name");
+                    var typeKind = GetStringProp(t, "kind");
+
+                    // Check for enum values via ofType
+                    if (t.TryGetProperty("ofType", out var ofType) && ofType.ValueKind == JsonValueKind.Object)
+                    {
+                        var innerName = GetStringProp(ofType, "name");
+                        var innerKind = GetStringProp(ofType, "kind");
+                        if (ofType.TryGetProperty("enumValues", out var enumVals) && enumVals.ValueKind == JsonValueKind.Array)
+                        {
+                            var vals = enumVals.EnumerateArray()
+                                .Select(v => GetStringProp(v, "name"))
+                                .Where(v => !string.IsNullOrWhiteSpace(v))
+                                .ToList();
+                            _logger.LogWarning("Twenty CRM {Field} enum values ({InnerKind}: {InnerName}): {Values}",
+                                fName, innerKind, innerName, string.Join(", ", vals));
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Twenty CRM {Field}({TypeKind}: {TypeName}) -> ofType({InnerKind}: {InnerName})",
+                                fName, typeKind, typeName, innerKind, innerName);
+                        }
+                    }
+
+                    if (t.TryGetProperty("fields", out var subFields) && subFields.ValueKind == JsonValueKind.Array)
+                    {
+                        var subFieldList = subFields.EnumerateArray()
+                            .Select(sf =>
+                            {
+                                var sfName = GetStringProp(sf, "name");
+                                var sfType = sf.TryGetProperty("type", out var sft) ? GetStringProp(sft, "name") : "?";
+                                return $"{sfName}: {sfType}";
+                            })
+                            .ToList();
+
+                        _logger.LogWarning("Twenty CRM {Field}({TypeKind}: {TypeName}) sub-fields: {SubFields}",
+                            fName, typeKind, typeName, string.Join(", ", subFieldList));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to discover Opportunity type fields via introspection");
+        }
+    }
+
+    public async Task<CrmOpportunityResponse?> GetOpportunityByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning null for opportunity {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            const string query = """
+                query GetOpportunity($id: ID!) {
+                  opportunities(filter: { id: { eq: $id } }) {
+                    edges {
+                      node {
+                        id
+                        name
+                        stage
+                        closeDate
+                        amount {
+                          amountMicros
+                          currencyCode
+                        }
+                        company {
+                          id
+                          name
+                        }
+                        pointOfContact {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                        }
+                        owner {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                          userEmail
+                        }
+                        createdAt
+                        createdBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                        updatedAt
+                        updatedBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?> { ["id"] = id };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("opportunities", out var opportunitiesEl)
+                || !opportunitiesEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array
+                || edges.GetArrayLength() == 0)
+                return null;
+
+            var firstEdge = edges[0];
+            if (!firstEdge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseOpportunity(node);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch opportunity {Id} from Twenty CRM", id);
+            return null;
+        }
+    }
+
+    public async Task<CrmOpportunityResponse?> UpdateOpportunityAsync(string id, UpdateCrmOpportunityRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — cannot update opportunity {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            var input = new Dictionary<string, object?> { };
+
+            if (!string.IsNullOrWhiteSpace(request.Name))
+                input["name"] = request.Name;
+
+            if (!string.IsNullOrWhiteSpace(request.Stage))
+                input["stage"] = request.Stage;
+
+            if (request.CloseDate is not null)
+                input["closeDate"] = request.CloseDate;
+
+            if (request.Amount.HasValue || !string.IsNullOrWhiteSpace(request.CurrencyCode))
+            {
+                var amtInput = new Dictionary<string, object?>();
+                if (request.Amount.HasValue)
+                    amtInput["amountMicros"] = (long)(request.Amount.Value * 1_000_000);
+                if (!string.IsNullOrWhiteSpace(request.CurrencyCode))
+                    amtInput["currencyCode"] = request.CurrencyCode;
+                input["amount"] = amtInput;
+            }
+
+            input["companyId"] = request.CompanyId;
+            input["pointOfContactId"] = request.PointOfContactId;
+            input["ownerId"] = request.OwnerId;
+
+            const string mutation = """
+                mutation UpdateOpportunity($id: ID!, $input: OpportunityUpdateInput!) {
+                  updateOpportunity(id: $id, data: $input) {
+                    id
+                    name
+                    stage
+                        closeDate
+                        amount {
+                          amountMicros
+                          currencyCode
+                        }
+                    company {
+                      id
+                      name
+                    }
+                    pointOfContact {
+                      id
+                      name {
+                        firstName
+                        lastName
+                      }
+                    }
+                    owner {
+                      id
+                      name {
+                        firstName
+                        lastName
+                      }
+                      userEmail
+                    }
+                    createdAt
+                    createdBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                    updatedAt
+                    updatedBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["id"] = id,
+                ["input"] = input,
+            };
+
+            var data = await PostGraphQLAsync(mutation, variables, cancellationToken);
+
+            if (!data.TryGetProperty("updateOpportunity", out var resultEl)
+                || resultEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseOpportunity(resultEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update opportunity {Id} in Twenty CRM", id);
+            return null;
+        }
+    }
+
+    public async Task<CrmOpportunityResponse?> CreateOpportunityAsync(UpdateCrmOpportunityRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — cannot create opportunity");
+            return null;
+        }
+
+        try
+        {
+            var input = new Dictionary<string, object?> { };
+
+            if (!string.IsNullOrWhiteSpace(request.Name))
+                input["name"] = request.Name;
+
+            if (!string.IsNullOrWhiteSpace(request.Stage))
+                input["stage"] = request.Stage;
+
+            if (request.CloseDate is not null)
+                input["closeDate"] = request.CloseDate;
+
+            if (request.Amount.HasValue || !string.IsNullOrWhiteSpace(request.CurrencyCode))
+            {
+                var amtInput = new Dictionary<string, object?>();
+                if (request.Amount.HasValue)
+                    amtInput["amountMicros"] = (long)(request.Amount.Value * 1_000_000);
+                if (!string.IsNullOrWhiteSpace(request.CurrencyCode))
+                    amtInput["currencyCode"] = request.CurrencyCode;
+                input["amount"] = amtInput;
+            }
+
+            input["companyId"] = request.CompanyId;
+            input["pointOfContactId"] = request.PointOfContactId;
+            input["ownerId"] = request.OwnerId;
+
+            const string mutation = """
+                mutation CreateOpportunity($data: OpportunityCreateInput!) {
+                  createOpportunity(data: $data) {
+                    id
+                    name
+                    stage
+                    closeDate
+                    amount {
+                      amountMicros
+                      currencyCode
+                    }
+                    company {
+                      id
+                      name
+                    }
+                    pointOfContact {
+                      id
+                      name {
+                        firstName
+                        lastName
+                      }
+                    }
+                    owner {
+                      id
+                      name {
+                        firstName
+                        lastName
+                      }
+                      userEmail
+                    }
+                    createdAt
+                    createdBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                    updatedAt
+                    updatedBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["data"] = input,
+            };
+
+            var data = await PostGraphQLAsync(mutation, variables, cancellationToken);
+
+            if (!data.TryGetProperty("createOpportunity", out var resultEl)
+                || resultEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseOpportunity(resultEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create opportunity in Twenty CRM");
+            return null;
         }
     }
 

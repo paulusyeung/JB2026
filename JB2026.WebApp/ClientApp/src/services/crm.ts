@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { CreateCrmCompanyRequest, CrmCatalogItem, CrmCompany, CrmCompanyCreated, CrmMember, CrmMigratableCustomer, CrmPerson, UpdateCrmCompanyRequest, UpdateCrmPersonRequest } from '@/types/api'
+import type { CreateCrmCompanyRequest, CrmCompany, CrmCompanyCreated, CrmMember, CrmMigratableCustomer, CrmOpportunity, CrmPerson, CrmStageOption, UpdateCrmCompanyRequest, UpdateCrmPersonRequest } from '@/types/api'
 
 export interface CrmCompaniesQuery {
   lookup?: string
@@ -56,9 +56,47 @@ export async function createCrmPerson(request: UpdateCrmPersonRequest): Promise<
   return response.data
 }
 
-export async function getCrmOpportunities(lookup = ''): Promise<CrmCatalogItem[]> {
-  const response = await apiClient.get<CrmCatalogItem[]>('/api/v2/crm/opportunities', {
+export async function getCrmOpportunities(lookup = ''): Promise<CrmOpportunity[]> {
+  const response = await apiClient.get<CrmOpportunity[]>('/api/v2/crm/opportunities', {
     params: { lookup },
   })
+  return response.data
+}
+
+export async function getCrmOpportunity(id: string): Promise<CrmOpportunity> {
+  const response = await apiClient.get<CrmOpportunity>(`/api/v2/crm/opportunities/${id}`)
+  return response.data
+}
+
+export async function getCrmOpportunityStageOptions(): Promise<CrmStageOption[]> {
+  const response = await apiClient.get<CrmStageOption[]>('/api/v2/crm/opportunities/stage-options')
+  return response.data
+}
+
+export async function createCrmOpportunity(request: {
+  name: string
+  stage: string
+  closeDate: string | null
+  amount: number | null
+  currencyCode: string
+  companyId?: string | null
+  pointOfContactId?: string | null
+  ownerId?: string | null
+}): Promise<CrmOpportunity> {
+  const response = await apiClient.post<CrmOpportunity>('/api/v2/crm/opportunities', request)
+  return response.data
+}
+
+export async function updateCrmOpportunity(id: string, request: {
+  name: string
+  stage: string
+  closeDate: string | null
+  amount: number | null
+  currencyCode: string
+  companyId?: string | null
+  pointOfContactId?: string | null
+  ownerId?: string | null
+}): Promise<CrmOpportunity> {
+  const response = await apiClient.put<CrmOpportunity>(`/api/v2/crm/opportunities/${id}`, request)
   return response.data
 }
