@@ -1973,6 +1973,713 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
+    public async Task<IReadOnlyList<CrmTaskResponse>> GetTasksAsync(string? lookup = null, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning empty tasks list");
+            return [];
+        }
+
+        try
+        {
+            var hasLookup = !string.IsNullOrWhiteSpace(lookup);
+
+            var query = $$"""
+                query Tasks($lookup: String, $first: Int) {
+                  tasks(filter: {{(hasLookup ? "{ title: { ilike: $lookup } }" : "{}")}}) {
+                    edges {
+                      node {
+                        id
+                        title
+                        bodyV2 {
+                          markdown
+                        }
+                        status
+                        dueAt
+                        assignee {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                          userEmail
+                        }
+                        taskTargets {
+                          edges {
+                            node {
+                              id
+                              targetCompany {
+                                id
+                                name
+                              }
+                              targetPerson {
+                                id
+                                name {
+                                  firstName
+                                  lastName
+                                }
+                              }
+                              targetOpportunity {
+                                id
+                                name
+                              }
+                            }
+                          }
+                        }
+                        createdAt
+                        createdBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                        updatedAt
+                        updatedBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["lookup"] = hasLookup ? $"%{lookup}%" : null,
+                ["first"] = 200,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("tasks", out var tasksEl)
+                || !tasksEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogWarning("No tasks data returned from Twenty CRM GraphQL");
+                return [];
+            }
+
+            var result = new List<CrmTaskResponse>();
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var parsed = ParseTask(node);
+                if (parsed is not null)
+                    result.Add(parsed);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch tasks from Twenty CRM (lookup: {Lookup})", lookup);
+            return [];
+        }
+    }
+
+    public async Task<CrmTaskResponse?> GetTaskByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning null for task {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            const string query = """
+                query GetTask($id: ID!) {
+                  tasks(filter: { id: { eq: $id } }) {
+                    edges {
+                      node {
+                        id
+                        title
+                        bodyV2 {
+                          markdown
+                        }
+                        status
+                        dueAt
+                        assignee {
+                          id
+                          name {
+                            firstName
+                            lastName
+                          }
+                          userEmail
+                        }
+                        taskTargets {
+                          edges {
+                            node {
+                              id
+                              targetCompany {
+                                id
+                                name
+                              }
+                              targetPerson {
+                                id
+                                name {
+                                  firstName
+                                  lastName
+                                }
+                              }
+                              targetOpportunity {
+                                id
+                                name
+                              }
+                            }
+                          }
+                        }
+                        createdAt
+                        createdBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                        updatedAt
+                        updatedBy {
+                          ... on WorkspaceMember {
+                            name
+                          }
+                          ... on User {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?> { ["id"] = id };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("tasks", out var tasksEl)
+                || !tasksEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array
+                || edges.GetArrayLength() == 0)
+                return null;
+
+            var firstEdge = edges[0];
+            if (!firstEdge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseTask(node);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch task {Id} from Twenty CRM", id);
+            return null;
+        }
+    }
+
+    public async Task<CrmTaskResponse?> UpdateTaskAsync(string id, UpdateCrmTaskRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — cannot update task {Id}", id);
+            return null;
+        }
+
+        try
+        {
+            var input = new Dictionary<string, object?> { };
+
+            if (!string.IsNullOrWhiteSpace(request.Title))
+                input["title"] = request.Title;
+
+            if (!string.IsNullOrWhiteSpace(request.Body))
+                input["bodyV2"] = new Dictionary<string, object?>
+                {
+                    ["markdown"] = request.Body,
+                };
+
+            if (!string.IsNullOrWhiteSpace(request.Status))
+                input["status"] = request.Status;
+
+            if (request.DueDate is not null)
+                input["dueAt"] = request.DueDate;
+
+            if (request.AssigneeId is not null)
+                input["assigneeId"] = request.AssigneeId;
+
+            const string mutation = """
+                mutation UpdateTask($id: ID!, $input: TaskUpdateInput!) {
+                  updateTask(id: $id, data: $input) {
+                    id
+                    title
+                    bodyV2 {
+                      markdown
+                    }
+                    status
+                    dueAt
+                    assignee {
+                      id
+                      name {
+                        firstName
+                        lastName
+                      }
+                      userEmail
+                    }
+                    taskTargets {
+                      edges {
+                        node {
+                          id
+                          targetCompany {
+                            id
+                            name
+                          }
+                          targetPerson {
+                            id
+                            name {
+                              firstName
+                              lastName
+                            }
+                          }
+                          targetOpportunity {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                    createdAt
+                    createdBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                    updatedAt
+                    updatedBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["id"] = id,
+                ["input"] = input,
+            };
+
+            var data = await PostGraphQLAsync(mutation, variables, cancellationToken);
+
+            if (!data.TryGetProperty("updateTask", out var resultEl)
+                || resultEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseTask(resultEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update task {Id} in Twenty CRM", id);
+            return null;
+        }
+    }
+
+    public async Task<CrmTaskResponse?> CreateTaskAsync(UpdateCrmTaskRequest request, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — cannot create task");
+            return null;
+        }
+
+        try
+        {
+            var input = new Dictionary<string, object?> { };
+
+            if (!string.IsNullOrWhiteSpace(request.Title))
+                input["title"] = request.Title;
+
+            if (!string.IsNullOrWhiteSpace(request.Body))
+                input["bodyV2"] = new Dictionary<string, object?>
+                {
+                    ["markdown"] = request.Body,
+                };
+
+            if (!string.IsNullOrWhiteSpace(request.Status))
+                input["status"] = request.Status;
+
+            if (request.DueDate is not null)
+                input["dueAt"] = request.DueDate;
+
+            if (request.AssigneeId is not null)
+                input["assigneeId"] = request.AssigneeId;
+
+            const string mutation = """
+                mutation CreateTask($data: TaskCreateInput!) {
+                  createTask(data: $data) {
+                    id
+                    title
+                    bodyV2 {
+                      markdown
+                    }
+                    status
+                    dueAt
+                    assignee {
+                      id
+                      name {
+                        firstName
+                        lastName
+                      }
+                      userEmail
+                    }
+                    taskTargets {
+                      edges {
+                        node {
+                          id
+                          targetCompany {
+                            id
+                            name
+                          }
+                          targetPerson {
+                            id
+                            name {
+                              firstName
+                              lastName
+                            }
+                          }
+                          targetOpportunity {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                    createdAt
+                    createdBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                    updatedAt
+                    updatedBy {
+                      ... on WorkspaceMember {
+                        name
+                      }
+                      ... on User {
+                        name
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["data"] = input,
+            };
+
+            var data = await PostGraphQLAsync(mutation, variables, cancellationToken);
+
+            if (!data.TryGetProperty("createTask", out var resultEl)
+                || resultEl.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return ParseTask(resultEl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create task in Twenty CRM");
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<CrmStageOption>> GetTaskStatusOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Step 1: Introspect the Task type to discover the status field's type info
+            var enumTypeName = await DiscoverTaskStatusEnumTypeNameAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(enumTypeName))
+            {
+                // Step 2: Query enum values from the discovered type
+                var result = await QueryEnumValuesAsync(enumTypeName, cancellationToken);
+                if (result.Count > 0)
+                    return result;
+            }
+
+            // Step 3: Try common type name patterns as fallback
+            var candidates = new[] { "TaskStatus", "TaskStatusType", "TaskStatusEnum", "StatusType" };
+            foreach (var candidate in candidates)
+            {
+                var result = await QueryEnumValuesAsync(candidate, cancellationToken);
+                if (result.Count > 0)
+                    return result;
+            }
+
+            _logger.LogWarning("All introspection attempts failed for Task status options");
+            return Array.Empty<CrmStageOption>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch Task status options");
+            return Array.Empty<CrmStageOption>();
+        }
+    }
+
+    private async Task<string?> DiscoverTaskStatusEnumTypeNameAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            const string discoverQuery = """
+                {
+                  __type(name: "Task") {
+                    fields {
+                      name
+                      type {
+                        name
+                        kind
+                        ofType {
+                          name
+                          kind
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var data = await PostGraphQLAsync(discoverQuery, new Dictionary<string, object?>(), cancellationToken);
+
+            if (!data.TryGetProperty("__type", out var typeEl)
+                || !typeEl.TryGetProperty("fields", out var fields)
+                || fields.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogWarning("__type(name: 'Task') introspection returned no fields");
+                return null;
+            }
+
+            foreach (var f in fields.EnumerateArray())
+            {
+                if (GetStringProp(f, "name") != "status")
+                    continue;
+
+                if (!f.TryGetProperty("type", out var t) || t.ValueKind != JsonValueKind.Object)
+                    break;
+
+                var kind = GetStringProp(t, "kind");
+                var name = GetStringProp(t, "name");
+
+                _logger.LogWarning("Task.status field type: kind={Kind}, name={Name}", kind, name);
+
+                // Direct enum type (nullable)
+                if (kind == "ENUM" && !string.IsNullOrWhiteSpace(name))
+                    return name;
+
+                // Wrapped enum (non-null: NON_NULL -> ENUM)
+                if (t.TryGetProperty("ofType", out var ofType) && ofType.ValueKind == JsonValueKind.Object)
+                {
+                    var ofKind = GetStringProp(ofType, "kind");
+                    var ofName = GetStringProp(ofType, "name");
+                    _logger.LogWarning("Task.status field ofType: kind={Kind}, name={Name}", ofKind, ofName);
+
+                    if (ofKind == "ENUM" && !string.IsNullOrWhiteSpace(ofName))
+                        return ofName;
+                }
+
+                break;
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to discover Task status enum type name");
+            return null;
+        }
+    }
+
+    private async Task<IReadOnlyList<CrmStageOption>> QueryEnumValuesAsync(string typeName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var query = string.Concat(
+                "{ __type(name: \"", typeName, "\") { enumValues { name description } } }");
+
+            var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+            if (data.TryGetProperty("__type", out var typeEl)
+                && typeEl.ValueKind == JsonValueKind.Object)
+            {
+                if (typeEl.TryGetProperty("enumValues", out var vals)
+                    && vals.ValueKind == JsonValueKind.Array)
+                {
+                    var list = vals.EnumerateArray()
+                        .Select(v => new CrmStageOption
+                        {
+                            Value = GetStringProp(v, "name"),
+                            Label = GetStringProp(v, "description") ?? HumanizeEnumName(GetStringProp(v, "name")),
+                        })
+                        .Where(o => !string.IsNullOrWhiteSpace(o.Value))
+                        .ToList();
+
+                    if (list.Count > 0)
+                    {
+                        list.Insert(0, new CrmStageOption { Value = "", Label = "No Status" });
+                    }
+
+                    return list;
+                }
+
+                // __type found but has no enumValues — log the kind
+                var kind = GetStringProp(typeEl, "kind");
+                _logger.LogWarning("__type(name: '{Type}') found with kind={Kind} but no enumValues", typeName, kind);
+            }
+
+            return Array.Empty<CrmStageOption>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QueryEnumValuesAsync failed for type '{Type}'", typeName);
+            return Array.Empty<CrmStageOption>();
+        }
+    }
+
+    private static string ResolveTaskBody(JsonElement node)
+    {
+        if (!node.TryGetProperty("bodyV2", out var bodyEl) || bodyEl.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        return GetStringProp(bodyEl, "markdown");
+    }
+
+    private static CrmTaskResponse? ParseTask(JsonElement node)
+    {
+        var taskId = GetStringProp(node, "id");
+        if (string.IsNullOrWhiteSpace(taskId))
+            return null;
+
+        var assignee = string.Empty;
+        var assigneeId = string.Empty;
+        if (node.TryGetProperty("assignee", out var assigneeEl) && assigneeEl.ValueKind == JsonValueKind.Object)
+        {
+            assigneeId = GetStringProp(assigneeEl, "id");
+            var name = GetCompositeName(assigneeEl, "name");
+            var email = GetStringProp(assigneeEl, "userEmail");
+            assignee = !string.IsNullOrWhiteSpace(name) ? name : email;
+        }
+
+        return new CrmTaskResponse
+        {
+            Id = taskId,
+            Title = GetStringProp(node, "title"),
+            Body = ResolveTaskBody(node),
+            Status = GetStringProp(node, "status"),
+            DueDate = GetStringProp(node, "dueAt"),
+            Assignee = assignee,
+            AssigneeId = assigneeId,
+            Relations = ResolveTaskTargets(node),
+            CreatedOn = GetStringProp(node, "createdAt"),
+            CreatedBy = ResolveActorName(node, "createdBy"),
+            UpdatedOn = GetStringProp(node, "updatedAt"),
+            UpdatedBy = ResolveActorName(node, "updatedBy"),
+        };
+    }
+
+    private static List<CrmTaskRelationResponse> ResolveTaskTargets(JsonElement node)
+    {
+        var items = new List<CrmTaskRelationResponse>();
+
+        if (!node.TryGetProperty("taskTargets", out var targetsEl)
+            || !targetsEl.TryGetProperty("edges", out var edges)
+            || edges.ValueKind != JsonValueKind.Array)
+            return items;
+
+        foreach (var edge in edges.EnumerateArray())
+        {
+            if (!edge.TryGetProperty("node", out var targetNode) || targetNode.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var id = GetStringProp(targetNode, "id");
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            if (targetNode.TryGetProperty("targetCompany", out var company)
+                && company.ValueKind == JsonValueKind.Object)
+            {
+                var name = GetStringProp(company, "name");
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    items.Add(new CrmTaskRelationResponse
+                    {
+                        Id = GetStringProp(company, "id"),
+                        Name = name,
+                        Type = "Company",
+                    });
+                }
+            }
+
+            if (targetNode.TryGetProperty("targetPerson", out var person)
+                && person.ValueKind == JsonValueKind.Object)
+            {
+                var name = GetCompositeName(person, "name");
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    items.Add(new CrmTaskRelationResponse
+                    {
+                        Id = GetStringProp(person, "id"),
+                        Name = name,
+                        Type = "Person",
+                    });
+                }
+            }
+
+            if (targetNode.TryGetProperty("targetOpportunity", out var opp)
+                && opp.ValueKind == JsonValueKind.Object)
+            {
+                var name = GetStringProp(opp, "name");
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    items.Add(new CrmTaskRelationResponse
+                    {
+                        Id = GetStringProp(opp, "id"),
+                        Name = name,
+                        Type = "Opportunity",
+                    });
+                }
+            }
+        }
+
+        return items;
+    }
+
     private static List<string> ExtractRelationIds(JsonElement node, string relationField)
     {
         var ids = new List<string>();

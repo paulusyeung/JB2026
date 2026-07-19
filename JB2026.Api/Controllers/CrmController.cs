@@ -283,6 +283,90 @@ public sealed class CrmController : ControllerBase
         }
     }
 
+    [HttpGet("tasks/status-options")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmStageOption>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmStageOption>>> GetTaskStatusOptions(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var options = await twentyCrmService.GetTaskStatusOptionsAsync(cancellationToken);
+        return Ok(options);
+    }
+
+    [HttpGet("tasks")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmTaskResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmTaskResponse>>> GetTasks(
+        [FromServices] ITwentyCrmService twentyCrmService,
+        [FromQuery] string? lookup,
+        CancellationToken cancellationToken = default)
+    {
+        var tasks = await twentyCrmService.GetTasksAsync(lookup, cancellationToken);
+        return Ok(tasks);
+    }
+
+    [HttpGet("tasks/{id}")]
+    [ProducesResponseType(typeof(CrmTaskResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CrmTaskResponse>> GetTask(
+        string id,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var task = await twentyCrmService.GetTaskByIdAsync(id, cancellationToken);
+
+        if (task is null)
+            return NotFound();
+
+        return Ok(task);
+    }
+
+    [HttpPut("tasks/{id}")]
+    [ProducesResponseType(typeof(CrmTaskResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmTaskResponse>> UpdateTask(
+        string id,
+        [FromBody] UpdateCrmTaskRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var task = await twentyCrmService.UpdateTaskAsync(id, request, cancellationToken);
+
+            if (task is null)
+                return NotFound();
+
+            return Ok(task);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("tasks")]
+    [ProducesResponseType(typeof(CrmTaskResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CrmTaskResponse>> CreateTask(
+        [FromBody] UpdateCrmTaskRequest request,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var task = await twentyCrmService.CreateTaskAsync(request, cancellationToken);
+
+            if (task is null)
+                return BadRequest(new { message = "Failed to create task in Twenty CRM." });
+
+            return Ok(task);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("opportunities")]
     [ProducesResponseType(typeof(IReadOnlyList<CrmOpportunityResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CrmOpportunityResponse>>> GetOpportunities(

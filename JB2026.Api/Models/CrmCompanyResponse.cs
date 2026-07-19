@@ -146,6 +146,50 @@ public sealed class CrmStageOption
     public required string Label { get; init; }
 }
 
+public sealed class CrmTaskRelationResponse
+{
+    public required string Id { get; init; }
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+}
+
+public sealed class UpdateCrmTaskRequest
+{
+    public string Title { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string? DueDate { get; set; }
+    public string? AssigneeId { get; set; }
+    public List<string>? RelationIds { get; set; }
+}
+
+public sealed class CrmTaskResponse
+{
+    public required string Id { get; init; }
+
+    public required string Title { get; init; }
+
+    public string Body { get; set; } = string.Empty;
+
+    public string Status { get; set; } = string.Empty;
+
+    public string DueDate { get; set; } = string.Empty;
+
+    public string Assignee { get; set; } = string.Empty;
+
+    public string AssigneeId { get; set; } = string.Empty;
+
+    public List<CrmTaskRelationResponse> Relations { get; set; } = new();
+
+    public string CreatedOn { get; set; } = string.Empty;
+
+    public string CreatedBy { get; set; } = string.Empty;
+
+    public string UpdatedOn { get; set; } = string.Empty;
+
+    public string UpdatedBy { get; set; } = string.Empty;
+}
+
 public sealed class CrmOpportunityResponse
 {
     public required string Id { get; init; }

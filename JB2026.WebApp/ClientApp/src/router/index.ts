@@ -37,6 +37,7 @@ const legacyLeafRoutes = [
   { path: '/crm/companies', name: 'crm-companies', titleKey: 'routes.crmCompanies' },
   { path: '/crm/people', name: 'crm-people', titleKey: 'routes.crmPeople' },
   { path: '/crm/opportunities', name: 'crm-opportunities', titleKey: 'routes.crmOpportunities' },
+  { path: '/crm/tasks', name: 'crm-tasks', titleKey: 'routes.crmTasks' },
 ] as const
 
 function resolveTitle(titleKey?: string): string {
@@ -211,6 +212,8 @@ const router = createRouter({
           ? () => import('@/views/CrmPeopleView.vue')
         : route.path === '/crm/opportunities'
           ? () => import('@/views/CrmOpportunitiesView.vue')
+        : route.path === '/crm/tasks'
+          ? () => import('@/views/CrmTasksView.vue')
         : () => import('@/views/LegacyMenuPlaceholderView.vue'),
       meta: { 
         requiresAuth: true, 

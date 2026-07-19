@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { CreateCrmCompanyRequest, CrmCompany, CrmCompanyCreated, CrmMember, CrmMigratableCustomer, CrmOpportunity, CrmPerson, CrmStageOption, UpdateCrmCompanyRequest, UpdateCrmPersonRequest } from '@/types/api'
+import type { CreateCrmCompanyRequest, CrmCompany, CrmCompanyCreated, CrmMember, CrmMigratableCustomer, CrmOpportunity, CrmPerson, CrmStageOption, CrmTask, UpdateCrmCompanyRequest, UpdateCrmPersonRequest } from '@/types/api'
 
 export interface CrmCompaniesQuery {
   lookup?: string
@@ -73,6 +73,11 @@ export async function getCrmOpportunityStageOptions(): Promise<CrmStageOption[]>
   return response.data
 }
 
+export async function getCrmTaskStatusOptions(): Promise<CrmStageOption[]> {
+  const response = await apiClient.get<CrmStageOption[]>('/api/v2/crm/tasks/status-options')
+  return response.data
+}
+
 export async function createCrmOpportunity(request: {
   name: string
   stage: string
@@ -98,5 +103,41 @@ export async function updateCrmOpportunity(id: string, request: {
   ownerId?: string | null
 }): Promise<CrmOpportunity> {
   const response = await apiClient.put<CrmOpportunity>(`/api/v2/crm/opportunities/${id}`, request)
+  return response.data
+}
+
+export async function getCrmTasks(lookup = ''): Promise<CrmTask[]> {
+  const response = await apiClient.get<CrmTask[]>('/api/v2/crm/tasks', {
+    params: { lookup },
+  })
+  return response.data
+}
+
+export async function getCrmTask(id: string): Promise<CrmTask> {
+  const response = await apiClient.get<CrmTask>(`/api/v2/crm/tasks/${id}`)
+  return response.data
+}
+
+export async function createCrmTask(request: {
+  title: string
+  body: string
+  status: string
+  dueDate: string | null
+  assigneeId?: string | null
+  relationIds?: string[] | null
+}): Promise<CrmTask> {
+  const response = await apiClient.post<CrmTask>('/api/v2/crm/tasks', request)
+  return response.data
+}
+
+export async function updateCrmTask(id: string, request: {
+  title: string
+  body: string
+  status: string
+  dueDate: string | null
+  assigneeId?: string | null
+  relationIds?: string[] | null
+}): Promise<CrmTask> {
+  const response = await apiClient.put<CrmTask>(`/api/v2/crm/tasks/${id}`, request)
   return response.data
 }

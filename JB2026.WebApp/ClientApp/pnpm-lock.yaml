@@ -8,8 +8,38 @@ importers:
 
   .:
     dependencies:
+      '@ckeditor/ckeditor5-basic-styles':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-block-quote':
+        specifier: 44.3.0
+        version: 44.3.0
       '@ckeditor/ckeditor5-build-classic':
         specifier: ^44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-editor-classic':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-essentials':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-font':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-link':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-list':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-paragraph':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-theme-lark':
+        specifier: 44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-undo':
+        specifier: 44.3.0
         version: 44.3.0
       '@ckeditor/ckeditor5-vue':
         specifier: ^7.4.0

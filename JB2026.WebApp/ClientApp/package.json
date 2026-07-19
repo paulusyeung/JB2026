@@ -12,7 +12,17 @@
     "test:smoke": "playwright test"
   },
   "dependencies": {
+    "@ckeditor/ckeditor5-basic-styles": "44.3.0",
+    "@ckeditor/ckeditor5-block-quote": "44.3.0",
     "@ckeditor/ckeditor5-build-classic": "^44.3.0",
+    "@ckeditor/ckeditor5-editor-classic": "44.3.0",
+    "@ckeditor/ckeditor5-essentials": "44.3.0",
+    "@ckeditor/ckeditor5-font": "44.3.0",
+    "@ckeditor/ckeditor5-link": "44.3.0",
+    "@ckeditor/ckeditor5-list": "44.3.0",
+    "@ckeditor/ckeditor5-paragraph": "44.3.0",
+    "@ckeditor/ckeditor5-theme-lark": "44.3.0",
+    "@ckeditor/ckeditor5-undo": "44.3.0",
     "@ckeditor/ckeditor5-vue": "^7.4.0",
     "@fullcalendar/core": "^6.1.19",
     "@fullcalendar/daygrid": "^6.1.19",

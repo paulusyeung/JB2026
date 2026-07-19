@@ -71,6 +71,27 @@ export interface CrmOpportunity {
   updatedBy: string
 }
 
+export interface CrmTaskRelation {
+  id: string
+  name: string
+  type: string
+}
+
+export interface CrmTask {
+  id: string
+  title: string
+  body: string
+  status: string
+  dueDate: string
+  assignee: string
+  assigneeId: string
+  relations: CrmTaskRelation[]
+  createdOn: string
+  createdBy: string
+  updatedOn: string
+  updatedBy: string
+}
+
 export interface CrmPerson {
   id: string
   name: string

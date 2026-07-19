@@ -34,4 +34,14 @@ public interface ITwentyCrmService
     Task<CrmOpportunityResponse?> CreateOpportunityAsync(UpdateCrmOpportunityRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CrmStageOption>> GetOpportunityStageOptionsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CrmStageOption>> GetTaskStatusOptionsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CrmTaskResponse>> GetTasksAsync(string? lookup = null, CancellationToken cancellationToken = default);
+
+    Task<CrmTaskResponse?> GetTaskByIdAsync(string id, CancellationToken cancellationToken = default);
+
+    Task<CrmTaskResponse?> UpdateTaskAsync(string id, UpdateCrmTaskRequest request, CancellationToken cancellationToken = default);
+
+    Task<CrmTaskResponse?> CreateTaskAsync(UpdateCrmTaskRequest request, CancellationToken cancellationToken = default);
 }
