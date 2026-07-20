@@ -1,5 +1,6 @@
 <template>
-  <section class="customer-360-page">
+  <section class="customer-360-page" :class="{ 'is-dragging': isDragging }">
+    <div class="resize-overlay" v-if="isDragging" @mousemove="onMouseMove" @mouseup="stopResize" />
     <div class="left-pane">
       <v-card rounded="xl" elevation="0" class="panel-card company-select-card">
         <v-card-text>
@@ -69,6 +70,7 @@
       </v-card>
     </div>
 
+    <div class="splitter" @mousedown="startResize" />
     <div class="right-pane">
       <v-card rounded="xl" elevation="0" class="panel-card detail-tabs-card">
         <v-tabs v-model="activeTab" fixed-tabs bg-color="transparent" color="primary">
@@ -156,10 +158,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getCrmCompanies, getCrmCompany } from '@/services/crm'
 import type { CrmCompany } from '@/types/api'
+
+const STORAGE_KEY = 'customer-360-left-pane-width'
+const MIN_WIDTH_PX = 280
+const MAX_WIDTH_PX = 600
+
+const leftPaneWidth = ref(loadStoredWidth())
+const isDragging = ref(false)
+
+function loadStoredWidth(): number {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored) {
+    const parsed = parseFloat(stored)
+    if (!isNaN(parsed)) return Math.max(MIN_WIDTH_PX, Math.min(MAX_WIDTH_PX, parsed))
+  }
+  return 400
+}
+
+onMounted(() => {
+  document.documentElement.style.setProperty('--left-pane-width-fallback', leftPaneWidth.value + 'px')
+})
+
+function startResize(e: MouseEvent) {
+  e.preventDefault()
+  isDragging.value = true
+}
+
+function onMouseMove(e: MouseEvent) {
+  const clamped = Math.max(MIN_WIDTH_PX, Math.min(MAX_WIDTH_PX, e.clientX))
+  leftPaneWidth.value = clamped
+  document.documentElement.style.setProperty('--left-pane-width-fallback', clamped + 'px')
+}
+
+function stopResize() {
+  isDragging.value = false
+  localStorage.setItem(STORAGE_KEY, String(leftPaneWidth.value))
+}
 
 const { t } = useI18n({ useScope: 'global' })
 
@@ -174,7 +212,8 @@ const activeTab = ref('job-orders')
 async function loadCompanies(lookup?: string) {
   loadingCompanies.value = true
   try {
-    companies.value = await getCrmCompanies({ lookup })
+    const data = await getCrmCompanies({ lookup })
+    companies.value = data.sort((a, b) => a.name.localeCompare(b.name))
   } finally {
     loadingCompanies.value = false
   }
@@ -213,15 +252,42 @@ function formatDate(dateStr: string): string {
 <style scoped>
 .customer-360-page {
   display: flex;
-  gap: 1rem;
   height: calc(100vh - 7rem);
+  position: relative;
+}
+
+.customer-360-page.is-dragging {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.resize-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  cursor: col-resize;
 }
 
 .left-pane {
-  width: 25rem;
-  min-width: 18rem;
+  width: var(--left-pane-width-fallback, 400px);
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+}
+
+.splitter {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  margin: 0 2px;
+  border-radius: 2px;
+}
+
+.splitter:hover,
+.is-dragging .splitter {
+  background: rgb(var(--v-theme-primary));
 }
 
 .right-pane {
