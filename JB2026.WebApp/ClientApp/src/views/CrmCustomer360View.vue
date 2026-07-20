@@ -29,7 +29,10 @@
 
           <template v-else-if="company">
             <div class="company-info">
-              <h4 class="text-h6 mb-2">{{ company.name }}</h4>
+              <div class="company-info-header">
+                <h4 class="text-h6 mb-0">{{ company.name }}</h4>
+                <v-btn icon="mdi-pencil" variant="flat" size="small" color="default" class="edit-btn" @click="openEditDialog" />
+              </div>
 
               <div class="info-row">
                 <v-icon size="small" class="mr-1">mdi-account-tie</v-icon>
@@ -154,6 +157,13 @@
         </v-tabs-window>
       </v-card>
     </div>
+    <v-dialog v-model="dialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmCompanyRecordDialog
+        :company-id="editingCompanyId"
+        @saved="handleSaved"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
@@ -161,6 +171,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getCrmCompanies, getCrmCompany } from '@/services/crm'
+import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import type { CrmCompany } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
@@ -197,6 +208,19 @@ function onMouseMove(e: MouseEvent) {
 function stopResize() {
   isDragging.value = false
   localStorage.setItem(STORAGE_KEY, String(leftPaneWidth.value))
+}
+
+const dialogOpen = ref(false)
+const editingCompanyId = ref<string | null>(null)
+
+function openEditDialog() {
+  editingCompanyId.value = company.value?.id ?? null
+  dialogOpen.value = true
+}
+
+function handleSaved(saved: CrmCompany) {
+  company.value = saved
+  dialogOpen.value = false
 }
 
 const { t } = useI18n({ useScope: 'global' })
@@ -317,6 +341,22 @@ function formatDate(dateStr: string): string {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.company-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.edit-btn:hover {
+  opacity: 1;
 }
 
 .info-row {
