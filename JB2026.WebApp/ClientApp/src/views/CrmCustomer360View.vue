@@ -153,8 +153,235 @@
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="opportunities">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.opportunities') }}</p>
+            <div class="tab-content opportunities-tab-content">
+              <div class="filter-bar">
+                <v-text-field
+                  v-model="oppLookup"
+                  density="comfortable"
+                  :label="t('crm.opportunities.lookup')"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyOppLookup"
+                />
+                <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingOpportunities" @click="applyOppLookup">
+                  {{ t('common.search') }}
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loadingOpportunities" @click="refreshOppList">
+                  {{ t('common.refresh') }}
+                </v-btn>
+              </div>
+
+              <v-alert v-if="oppErrorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ oppErrorMessage }}</v-alert>
+
+              <div class="toolbar-bar mb-2">
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                      {{ t('crm.opportunities.actions.columns') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item v-for="column in oppColumnOptions" :key="column.key" @click="toggleOppColumn(column.key)">
+                      <template #prepend>
+                        <v-checkbox-btn :model-value="oppVisibleColumnKeys.includes(column.key)" />
+                      </template>
+                      <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                      {{ t('crm.opportunities.actions.sorting') }}
+                    </v-btn>
+                  </template>
+                  <v-card min-width="280" class="pa-3">
+                    <v-select
+                      v-model="oppSortKey"
+                      :items="oppSortableColumns"
+                      item-title="title"
+                      item-value="key"
+                      density="compact"
+                      variant="outlined"
+                      :label="t('crm.opportunities.actions.sortBy')"
+                      hide-details
+                    />
+                    <v-btn-toggle v-model="oppSortDirection" mandatory divided class="mt-3" density="compact">
+                      <v-btn value="asc">{{ t('crm.opportunities.actions.asc') }}</v-btn>
+                      <v-btn value="desc">{{ t('crm.opportunities.actions.desc') }}</v-btn>
+                    </v-btn-toggle>
+                  </v-card>
+                </v-menu>
+
+                <template v-if="!isPhoneLayout">
+                  <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="oppCheckboxMode = !oppCheckboxMode">
+                    {{ t('crm.opportunities.actions.checkbox') }}
+                  </v-btn>
+
+                  <v-menu location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                        {{ t('crm.opportunities.actions.views') }}
+                      </v-btn>
+                    </template>
+                    <v-list density="compact" class="toolbar-menu-list">
+                      <v-list-item prepend-icon="mdi-table" :active="oppViewMode === 'detail'" @click="setOppViewMode('detail')">
+                        <v-list-item-title>{{ t('crm.opportunities.actions.detailView') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-view-grid-outline" :active="oppViewMode === 'card'" @click="setOppViewMode('card')">
+                        <v-list-item-title>{{ t('crm.opportunities.actions.cardView') }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </template>
+
+                <v-menu v-else location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                      {{ t('crm.opportunities.actions.views') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="oppCheckboxMode = !oppCheckboxMode">
+                      <v-list-item-title>{{ t('crm.opportunities.actions.checkbox') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-table" :active="oppViewMode === 'detail'" @click="setOppViewMode('detail')">
+                      <v-list-item-title>{{ t('crm.opportunities.actions.detailView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-view-grid-outline" :active="oppViewMode === 'card'" @click="setOppViewMode('card')">
+                      <v-list-item-title>{{ t('crm.opportunities.actions.cardView') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-divider vertical class="mx-1" />
+
+                <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewOpportunity">
+                  {{ t('crm.opportunities.actions.newOpportunity') }}
+                </v-btn>
+
+                <span v-if="oppCheckboxMode" class="text-caption text-medium-emphasis">
+                  {{ t('crm.opportunities.actions.selected', { count: oppSelectedIds.length }) }}
+                </span>
+              </div>
+
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <template v-else-if="company.opportunities.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('crm.opportunities.messages.noOpportunities') }}
+                </div>
+              </template>
+
+              <template v-else>
+                <ListMobileCard
+                  v-if="isPhoneLayout"
+                  :items="oppDisplayedRows"
+                  :columns="oppMobileColumns"
+                  item-key="id"
+                  :checkbox-mode="oppCheckboxMode"
+                  :selected-ids="oppSelectedIds"
+                  :on-select="handleOppMobileSelect"
+                  :on-card-click="(item) => onOppMobileCardClick(item)"
+                />
+
+                <div v-else-if="isOppCardView" class="opportunity-card-list">
+                  <v-card
+                    v-for="row in oppDisplayedRows"
+                    :key="row.id"
+                    rounded="lg"
+                    elevation="0"
+                    class="opportunity-card"
+                  >
+                    <v-checkbox-btn
+                      v-if="oppCheckboxMode"
+                      :model-value="oppSelectedIds.includes(row.id)"
+                      density="compact"
+                      hide-details
+                      class="opportunity-card__checkbox"
+                      @click="handleOppCardCheckbox(row.id)"
+                    />
+                    <div class="opportunity-card__header">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon size="18" color="primary">mdi-trending-up</v-icon>
+                        <div>
+                          <span class="text-subtitle-2 font-weight-bold">{{ row.name }}</span>
+                          <v-chip v-if="row.stage" size="x-small" label color="primary" variant="tonal" class="ml-1">
+                            {{ oppStageLabel(row.stage) }}
+                          </v-chip>
+                          <div v-if="row.company" class="text-caption text-medium-emphasis">{{ row.company }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="opportunity-card__body">
+                      <span class="text-caption">
+                        {{ t('crm.opportunities.headers.amount') }}: {{ row.amount || '-' }}
+                      </span>
+                      <span class="text-caption">
+                        {{ t('crm.opportunities.headers.owner') }}: {{ row.owner || '-' }}
+                      </span>
+                    </div>
+                    <div class="opportunity-card__footer text-caption text-medium-emphasis">
+                      <span>{{ t('crm.opportunities.headers.updatedBy') }}: {{ row.updatedBy || '-' }}</span>
+                      <span>{{ t('crm.opportunities.headers.updatedOn') }}: {{ oppFormat(row.updatedOn) }}</span>
+                    </div>
+                  </v-card>
+                </div>
+
+                <v-data-table
+                  v-else
+                  :headers="oppHeaders"
+                  :items="oppDisplayedRows"
+                  :loading="loadingOpportunities"
+                  item-value="id"
+                  v-model="oppSelectedIds"
+                  :show-select="oppCheckboxMode"
+                  density="compact"
+                  fixed-header
+                  height="45vh"
+                  class="opportunities-table"
+                >
+                  <template #[`item.name`]='{ item }'>
+                    <a class="text-body-2 text-primary text-decoration-none cursor-pointer" @click.stop="openOpportunityPopup(item.id)">{{ item.name }}</a>
+                  </template>
+
+                  <template #[`item.stage`]='{ item }'>
+                    <v-chip v-if="item.stage" size="x-small" label color="primary" variant="tonal">{{ oppStageLabel(item.stage) }}</v-chip>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.closeDate`]='{ item }'>
+                    <template v-if="item.closeDate">{{ oppFormat(item.closeDate) }}</template>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.amount`]='{ item }'>
+                    <span class="text-right" style="display:block">{{ item.amount || '-' }}</span>
+                  </template>
+
+                  <template #[`item.company`]='{ item }'>
+                    <v-chip v-if="item.company" size="small" label color="primary" variant="tonal">{{ item.company }}</v-chip>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.pointOfContact`]='{ item }'>
+                    <v-chip v-if="item.pointOfContact" size="small" label>{{ item.pointOfContact }}</v-chip>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.owner`]='{ item }'>
+                    {{ item.owner || '-' }}
+                  </template>
+
+                  <template #[`item.createdOn`]='{ item }'>{{ oppFormat(item.createdOn) }}</template>
+                  <template #[`item.updatedOn`]='{ item }'>{{ oppFormat(item.updatedOn) }}</template>
+                </v-data-table>
+              </template>
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="tasks">
@@ -200,16 +427,37 @@
         @cancel="personDialogOpen = false"
       />
     </v-dialog>
+
+    <v-dialog v-model="oppDialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmOpportunityRecordDialog
+        :opportunity-id="editingOpportunityId"
+        :initial-company-id="company?.id ?? null"
+        @saved="handleOppSaved"
+        @cancel="oppDialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="oppSaveSuccess" color="success" timeout="3000">
+      {{ oppSuccessMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="oppSaveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getCrmCompanies, getCrmCompany, getCrmPeople } from '@/services/crm'
+import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions } from '@/services/crm'
 import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
-import type { CrmCompany, CrmPerson } from '@/types/api'
+import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
+import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import { useViewSettings } from '@/composables/useColumnPersistence'
+import { useResponsiveList } from '@/composables/useResponsiveList'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import type { CrmCompany, CrmPerson, CrmOpportunity } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -331,6 +579,199 @@ function formatDate(dateStr: string): string {
 
 function getPerson(id: string): CrmPerson | undefined {
   return people.value.find(p => p.id === id)
+}
+
+// --- Opportunities tab ---
+
+type OppDisplayItem = CrmOpportunity & {
+  ln: number
+}
+
+const oppRows = ref<CrmOpportunity[]>([])
+const loadingOpportunities = ref(false)
+const oppLookup = ref('')
+const oppErrorMessage = ref('')
+const oppStageLabelMap = ref<Record<string, string>>({})
+const oppDialogOpen = ref(false)
+const editingOpportunityId = ref<string | null>(null)
+const oppSaveSuccess = ref(false)
+const oppSuccessMessage = ref('')
+const oppSelectedIds = ref<string[]>([])
+
+const oppViewSettings = useViewSettings('crm-customer360-opportunities', {
+  visibleColumns: ['name', 'stage', 'closeDate', 'amount', 'company', 'pointOfContact', 'owner', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+  sortKey: 'name',
+  sortDirection: 'asc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const oppVisibleColumnKeys = oppViewSettings.visibleColumns
+const oppSortKey = oppViewSettings.sortKey
+const oppSortDirection = oppViewSettings.sortDirection
+const oppCheckboxMode = oppViewSettings.checkboxMode
+const oppViewMode = oppViewSettings.viewMode
+
+const { isPhoneLayout, isColumnVisible: oppIsColumnVisible } = useResponsiveList()
+const { format: oppFormat } = useGlobalDateFormatter()
+
+getCrmOpportunityStageOptions().then(opts => {
+  oppStageLabelMap.value = Object.fromEntries(opts.map(o => [o.value, o.label]))
+}).catch(() => {})
+
+function oppStageLabel(value: string): string {
+  return oppStageLabelMap.value[value] || value
+}
+
+const isOppCardView = computed(() => oppViewMode.value === 'card')
+
+const allOppHeaders = computed(() => [
+  { title: t('crm.opportunities.headers.name'), key: 'name', minWidth: '180px' },
+  { title: t('crm.opportunities.headers.stage'), key: 'stage', minWidth: '100px' },
+  { title: t('crm.opportunities.headers.closeDate'), key: 'closeDate', minWidth: '135px' },
+  { title: t('crm.opportunities.headers.amount'), key: 'amount', minWidth: '120px' },
+  { title: t('crm.opportunities.headers.company'), key: 'company', minWidth: '160px' },
+  { title: t('crm.opportunities.headers.pointOfContact'), key: 'pointOfContact', minWidth: '160px' },
+  { title: t('crm.opportunities.headers.owner'), key: 'owner', minWidth: '140px' },
+  { title: t('crm.opportunities.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
+  { title: t('crm.opportunities.headers.createdBy'), key: 'createdBy', minWidth: '120px' },
+  { title: t('crm.opportunities.headers.updatedOn'), key: 'updatedOn', minWidth: '135px' },
+  { title: t('crm.opportunities.headers.updatedBy'), key: 'updatedBy', minWidth: '120px' },
+])
+
+const oppHeaders = computed(() =>
+  allOppHeaders.value.filter((h) =>
+    oppVisibleColumnKeys.value.includes(String(h.key)) &&
+    oppIsColumnVisible(String(h.key), {
+      hideOnPhone: ['closeDate', 'amount', 'company', 'pointOfContact', 'owner', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+      hideOnTablet: [],
+    }),
+  ),
+)
+
+const oppMobileColumns = computed<ListMobileCardColumn<OppDisplayItem>[]>(() => [
+  { key: 'name', label: t('crm.opportunities.headers.name'), section: 'header', emphasis: true },
+  { key: 'stage', label: t('crm.opportunities.headers.stage'), section: 'header' },
+  { key: 'company', label: t('crm.opportunities.headers.company'), section: 'body' },
+  { key: 'owner', label: t('crm.opportunities.headers.owner'), section: 'body' },
+  { key: 'createdBy', label: t('crm.opportunities.headers.createdBy'), section: 'footer' },
+  {
+    key: 'updatedOn',
+    label: t('crm.opportunities.headers.updatedOn'),
+    section: 'footer',
+    formatter: (item) => oppFormat(item.updatedOn),
+  },
+])
+
+const oppSortableColumns = computed(() =>
+  allOppHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
+)
+
+const oppColumnOptions = computed(() => allOppHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+
+const oppDisplayedRows = computed<OppDisplayItem[]>(() => {
+  const key = oppSortKey.value as keyof CrmOpportunity
+  const result = [...oppRows.value]
+
+  result.sort((lhs, rhs) => {
+    const left = String(lhs[key] ?? '')
+    const right = String(rhs[key] ?? '')
+    return oppSortDirection.value === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+  })
+
+  return result.map((item, index) => ({
+    ...item,
+    ln: index + 1,
+  }))
+})
+
+async function loadOpportunities() {
+  if (!company.value) {
+    oppRows.value = []
+    return
+  }
+  loadingOpportunities.value = true
+  oppErrorMessage.value = ''
+  try {
+    const all = await getCrmOpportunities(oppLookup.value.trim())
+    oppRows.value = all.filter(o => o.companyId === company.value!.id)
+  } catch {
+    oppErrorMessage.value = t('crm.opportunities.messages.loadFailed')
+  } finally {
+    loadingOpportunities.value = false
+  }
+}
+
+watch(company, () => {
+  loadOpportunities()
+})
+
+async function applyOppLookup() {
+  await loadOpportunities()
+}
+
+async function refreshOppList() {
+  oppLookup.value = ''
+  await loadOpportunities()
+}
+
+function toggleOppColumn(columnKey: string) {
+  if (oppVisibleColumnKeys.value.includes(columnKey)) {
+    if (oppVisibleColumnKeys.value.length > 1) {
+      oppVisibleColumnKeys.value = oppVisibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+  oppVisibleColumnKeys.value = [...oppVisibleColumnKeys.value, columnKey]
+}
+
+function setOppViewMode(mode: 'detail' | 'card') {
+  oppViewMode.value = mode
+}
+
+function handleOppCardCheckbox(id: string) {
+  if (oppSelectedIds.value.includes(id)) {
+    oppSelectedIds.value = oppSelectedIds.value.filter((pid) => pid !== id)
+    return
+  }
+  oppSelectedIds.value = [...oppSelectedIds.value, id]
+}
+
+function onOppMobileCardClick(item: OppDisplayItem) {
+  if (oppCheckboxMode.value) {
+    handleOppMobileSelect(item, !oppSelectedIds.value.includes(item.id))
+    return
+  }
+  openOpportunityPopup(item.id)
+}
+
+function handleOppMobileSelect(item: OppDisplayItem | Record<string, unknown>, selected: boolean) {
+  const id = String(item.id ?? '')
+  if (!id) return
+  if (selected) {
+    oppSelectedIds.value = [...new Set([...oppSelectedIds.value, id])]
+    return
+  }
+  oppSelectedIds.value = oppSelectedIds.value.filter((pid) => pid !== id)
+}
+
+function openOpportunityPopup(id: string) {
+  editingOpportunityId.value = id
+  oppDialogOpen.value = true
+  oppErrorMessage.value = ''
+}
+
+function openNewOpportunity() {
+  editingOpportunityId.value = null
+  oppDialogOpen.value = true
+  oppErrorMessage.value = ''
+}
+
+async function handleOppSaved(opportunity: CrmOpportunity) {
+  await loadOpportunities()
+  oppSelectedIds.value = [opportunity.id]
+  editingOpportunityId.value = opportunity.id
+  oppSuccessMessage.value = t('crm.opportunities.messages.saveSuccess')
+  oppSaveSuccess.value = true
 }
 </script>
 
@@ -472,5 +913,111 @@ function getPerson(id: string): CrmPerson | undefined {
 
 .tab-content {
   padding: 1.5rem;
+}
+
+.opportunities-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.opportunities-tab-content .filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
+  align-items: center;
+}
+
+.opportunities-tab-content .toolbar-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.opportunities-tab-content .toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.opportunities-tab-content .opportunities-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.opportunities-tab-content .opportunities-table :deep(.v-table__wrapper > table > thead > tr > th),
+.opportunities-tab-content .opportunities-table :deep(.v-data-table__th) {
+  white-space: nowrap;
+  background-color: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.opportunities-tab-content .opportunities-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.opportunities-tab-content .opportunities-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.opportunities-tab-content .opportunities-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.opportunities-tab-content .opportunities-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+}
+
+.opportunity-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .opportunity-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+.opportunity-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.opportunity-card__checkbox {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.opportunity-card__header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.opportunity-card__body,
+.opportunity-card__footer {
+  grid-column: 1 / -1;
+}
+
+.opportunity-card__header,
+.opportunity-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.opportunity-card__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+@media (max-width: 960px) {
+  .opportunities-tab-content .filter-bar {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

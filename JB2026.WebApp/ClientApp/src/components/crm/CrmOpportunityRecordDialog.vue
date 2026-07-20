@@ -156,6 +156,7 @@ import type { CrmOpportunity, CrmStageOption } from '@/types/api'
 
 const props = defineProps<{
   opportunityId: string | null
+  initialCompanyId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -394,7 +395,7 @@ async function loadRecord(opportunityId: string | null) {
     draft.closeDate = ''
     draft.amount = null
     draft.currencyCode = 'USD'
-    draft.companyId = null
+    draft.companyId = props.initialCompanyId ?? null
     draft.pointOfContactId = null
     draft.ownerId = null
     return
