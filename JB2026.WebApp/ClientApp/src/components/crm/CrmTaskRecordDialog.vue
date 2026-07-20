@@ -57,6 +57,36 @@
       </v-row>
 
       <v-row dense>
+        <v-col cols="12">
+          <label class="text-body-2 text-medium-emphasis mb-1 d-block">{{ t('crm.tasks.headers.relations') }}</label>
+          <div v-if="draft.relationItems.length" class="mb-2">
+            <v-chip
+              v-for="rel in draft.relationItems"
+              :key="rel.id"
+              size="small"
+              label
+              closable
+              class="ma-1"
+              @click:close="removeRelation(rel.id)"
+            >{{ rel.name }}</v-chip>
+          </div>
+          <v-autocomplete
+            v-model="selectedRelationId"
+            :items="availableRelations"
+            item-title="label"
+            item-value="id"
+            :label="t('crm.tasks.headers.relations')"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-no-data
+            :loading="loadingRelations"
+            @update:model-value="addRelation"
+          />
+        </v-col>
+      </v-row>
+
+      <v-row dense>
         <v-col cols="12" md="6">
           <v-menu v-model="dueDatePickerOpen" :close-on-content-click="false">
             <template #activator="{ props: menuProps }">
@@ -106,14 +136,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch, onMounted } from 'vue'
+import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Ckeditor } from '@ckeditor/ckeditor5-vue'
 
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
-import { getCrmTask, updateCrmTask, createCrmTask, getCrmMembers, getCrmTaskStatusOptions } from '@/services/crm'
+import { getCrmTask, updateCrmTask, createCrmTask, getCrmMembers, getCrmTaskStatusOptions, getCrmPeople, getCrmCompanies, getCrmOpportunities } from '@/services/crm'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import type { CrmTask, CrmStageOption } from '@/types/api'
+import type { CrmRelationItem, CrmTask, CrmStageOption } from '@/types/api'
 
 const props = defineProps<{
   taskId: string | null
@@ -133,6 +163,35 @@ const dueDatePickerOpen = ref(false)
 const assigneeOptions = ref<{ id: string; displayName: string }[]>([])
 
 const statusOptions = ref<CrmStageOption[]>([])
+
+const selectedRelationId = ref<string | null>(null)
+const loadingRelations = ref(false)
+const allPeople = ref<CrmRelationItem[]>([])
+const allCompanies = ref<CrmRelationItem[]>([])
+const allOpportunities = ref<CrmRelationItem[]>([])
+
+interface RelationCandidate {
+  id: string
+  label: string
+  type: string
+}
+
+const allRelationCandidates = computed<RelationCandidate[]>(() => {
+  const people = allPeople.value
+    .map(p => ({ id: p.id, label: p.name, type: 'Person' }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+  const companies = allCompanies.value
+    .map(c => ({ id: c.id, label: `${c.name} (Company)`, type: 'Company' }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+  const opportunities = allOpportunities.value
+    .map(o => ({ id: o.id, label: `${o.name} (Opportunity)`, type: 'Opportunity' }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+  return [...people, ...companies, ...opportunities]
+})
+
+const availableRelations = computed(() =>
+  allRelationCandidates.value.filter(c => !draft.relationItems.some(r => r.id === c.id)),
+)
 
 const ckeditor = Ckeditor
 const editor = ClassicEditor
@@ -162,6 +221,24 @@ onMounted(async () => {
   } catch {
     statusOptions.value = []
   }
+
+  loadingRelations.value = true
+  try {
+    const [people, companies, opportunities] = await Promise.all([
+      getCrmPeople(),
+      getCrmCompanies(),
+      getCrmOpportunities(),
+    ])
+    allPeople.value = people.map(p => ({ id: p.id, name: p.name }))
+    allCompanies.value = companies.map(c => ({ id: c.id, name: c.name }))
+    allOpportunities.value = opportunities.map(o => ({ id: o.id, name: o.name }))
+  } catch {
+    allPeople.value = []
+    allCompanies.value = []
+    allOpportunities.value = []
+  } finally {
+    loadingRelations.value = false
+  }
 })
 
 const draft = reactive({
@@ -170,6 +247,7 @@ const draft = reactive({
   status: '',
   dueDate: '',
   assigneeId: null as string | null,
+  relationItems: [] as { id: string; name: string; type: string }[],
 })
 
 const requiredTitle = (value: string) => value.trim().length > 0 || t('crm.tasks.form.requiredTitle')
@@ -191,6 +269,7 @@ async function loadRecord(taskId: string | null) {
     draft.status = ''
     draft.dueDate = ''
     draft.assigneeId = null
+    draft.relationItems = []
     return
   }
 
@@ -201,6 +280,7 @@ async function loadRecord(taskId: string | null) {
     draft.status = task.status
     draft.dueDate = task.dueDate ? task.dueDate.slice(0, 10) : ''
     draft.assigneeId = task.assigneeId || null
+    draft.relationItems = (task.relations || []).map(r => ({ id: r.id, name: r.name, type: r.type }))
   } catch {
     errorMessage.value = t('crm.tasks.messages.loadRecordFailed')
   }
@@ -231,6 +311,7 @@ async function handleSave(closeAfter = false) {
     status: draft.status,
     dueDate: draft.dueDate.trim() || null,
     assigneeId: draft.assigneeId,
+    relations: draft.relationItems.map(r => ({ id: r.id, type: r.type })),
   }
 
   try {
@@ -250,6 +331,19 @@ async function handleSave(closeAfter = false) {
   } finally {
     saving.value = false
   }
+}
+
+function addRelation(id: string | null) {
+  if (!id) return
+  const candidate = allRelationCandidates.value.find(c => c.id === id)
+  if (candidate && !draft.relationItems.some(r => r.id === id)) {
+    draft.relationItems.push({ id: candidate.id, name: candidate.label.replace(/\s*\(.*\)$/, ''), type: candidate.type })
+  }
+  selectedRelationId.value = null
+}
+
+function removeRelation(id: string) {
+  draft.relationItems = draft.relationItems.filter(r => r.id !== id)
 }
 </script>
 

@@ -118,13 +118,18 @@ export async function getCrmTask(id: string): Promise<CrmTask> {
   return response.data
 }
 
+export interface CrmTaskRelationRequest {
+  id: string
+  type: string
+}
+
 export async function createCrmTask(request: {
   title: string
   body: string
   status: string
   dueDate: string | null
   assigneeId?: string | null
-  relationIds?: string[] | null
+  relations?: CrmTaskRelationRequest[] | null
 }): Promise<CrmTask> {
   const response = await apiClient.post<CrmTask>('/api/v2/crm/tasks', request)
   return response.data
@@ -136,7 +141,7 @@ export async function updateCrmTask(id: string, request: {
   status: string
   dueDate: string | null
   assigneeId?: string | null
-  relationIds?: string[] | null
+  relations?: CrmTaskRelationRequest[] | null
 }): Promise<CrmTask> {
   const response = await apiClient.put<CrmTask>(`/api/v2/crm/tasks/${id}`, request)
   return response.data

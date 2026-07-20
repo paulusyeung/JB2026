@@ -2223,6 +2223,9 @@ public class TwentyCrmService : ITwentyCrmService
             if (request.AssigneeId is not null)
                 input["assigneeId"] = request.AssigneeId;
 
+            if (request.Relations is not null)
+                await SyncTaskTargetsAsync(id, request.Relations, cancellationToken);
+
             const string mutation = """
                 mutation UpdateTask($id: ID!, $input: TaskUpdateInput!) {
                   updateTask(id: $id, data: $input) {
@@ -2410,6 +2413,10 @@ public class TwentyCrmService : ITwentyCrmService
             if (!data.TryGetProperty("createTask", out var resultEl)
                 || resultEl.ValueKind != JsonValueKind.Object)
                 return null;
+
+            var createdTaskId = GetStringProp(resultEl, "id");
+            if (!string.IsNullOrWhiteSpace(createdTaskId) && request.Relations is not null)
+                await SyncTaskTargetsAsync(createdTaskId, request.Relations, cancellationToken);
 
             return ParseTask(resultEl);
         }
@@ -3041,5 +3048,134 @@ public class TwentyCrmService : ITwentyCrmService
     private static string Truncate(string value, int max = 2000)
     {
         return value.Length <= max ? value : value[..max] + "...<truncated>";
+    }
+
+    private async Task SyncTaskTargetsAsync(
+        string taskId,
+        IReadOnlyList<CrmTaskRelationRequest>? desiredRelations,
+        CancellationToken cancellationToken)
+    {
+        if (desiredRelations is null)
+            return;
+
+        // Fetch current task targets
+        var currentTargets = new List<(string targetId, string entityId, string entityType)>();
+        var query = """
+            query GetCurrentTaskTargets($id: ID!) {
+              tasks(filter: { id: { eq: $id } }) {
+                edges {
+                  node {
+                    id
+                    taskTargets {
+                      edges {
+                        node {
+                          id
+                          targetCompany { id }
+                          targetPerson { id }
+                          targetOpportunity { id }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        var vars = new Dictionary<string, object?> { ["id"] = taskId };
+        var data = await PostGraphQLAsync(query, vars, cancellationToken);
+
+        if (data.TryGetProperty("tasks", out var tasksEl)
+            && tasksEl.TryGetProperty("edges", out var curEdges)
+            && curEdges.ValueKind == JsonValueKind.Array
+            && curEdges.GetArrayLength() > 0
+            && curEdges[0].TryGetProperty("node", out var curNode)
+            && curNode.TryGetProperty("taskTargets", out var targetsEl)
+            && targetsEl.TryGetProperty("edges", out var targetEdges)
+            && targetEdges.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var edge in targetEdges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var targetId = GetStringProp(node, "id");
+                if (string.IsNullOrWhiteSpace(targetId))
+                    continue;
+
+                if (node.TryGetProperty("targetCompany", out var c) && c.ValueKind == JsonValueKind.Object)
+                    currentTargets.Add((targetId, GetStringProp(c, "id"), "Company"));
+                if (node.TryGetProperty("targetPerson", out var p) && p.ValueKind == JsonValueKind.Object)
+                    currentTargets.Add((targetId, GetStringProp(p, "id"), "Person"));
+                if (node.TryGetProperty("targetOpportunity", out var o) && o.ValueKind == JsonValueKind.Object)
+                    currentTargets.Add((targetId, GetStringProp(o, "id"), "Opportunity"));
+            }
+        }
+
+        var desiredSet = new HashSet<string>(desiredRelations.Select(r => r.Id), StringComparer.OrdinalIgnoreCase);
+        var currentSet = new HashSet<string>(currentTargets.Select(t => t.entityId), StringComparer.OrdinalIgnoreCase);
+
+        var toCreate = desiredRelations.Where(r => !currentSet.Contains(r.Id)).ToList();
+        var toDelete = currentTargets.Where(t => !desiredSet.Contains(t.entityId)).ToList();
+
+        foreach (var target in toDelete)
+        {
+            await DeleteTaskTargetAsync(target.targetId, cancellationToken);
+        }
+
+        foreach (var rel in toCreate)
+        {
+            await CreateTaskTargetAsync(taskId, rel.Id, rel.Type, cancellationToken);
+        }
+    }
+
+    private async Task CreateTaskTargetAsync(string taskId, string entityId, string entityType, CancellationToken cancellationToken)
+    {
+        var field = entityType switch
+        {
+            "Company" => "targetCompanyId",
+            "Person" => "targetPersonId",
+            "Opportunity" => "targetOpportunityId",
+            _ => throw new InvalidOperationException($"Unknown relation type: {entityType}"),
+        };
+
+        var mutation = """
+            mutation CreateTaskTarget($data: TaskTargetCreateInput!) {
+              createTaskTarget(data: $data) {
+                id
+              }
+            }
+            """;
+
+        var input = new Dictionary<string, object?>
+        {
+            ["taskId"] = taskId,
+            [field] = entityId,
+        };
+
+        var variables = new Dictionary<string, object?>
+        {
+            ["data"] = input,
+        };
+
+        await PostGraphQLAsync(mutation, variables, cancellationToken);
+    }
+
+    private async Task DeleteTaskTargetAsync(string targetId, CancellationToken cancellationToken)
+    {
+        var mutation = """
+            mutation DeleteTaskTarget($id: ID!) {
+              deleteTaskTarget(id: $id) {
+                id
+              }
+            }
+            """;
+
+        var variables = new Dictionary<string, object?>
+        {
+            ["id"] = targetId,
+        };
+
+        await PostGraphQLAsync(mutation, variables, cancellationToken);
     }
 }

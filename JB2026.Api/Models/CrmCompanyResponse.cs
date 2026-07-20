@@ -153,6 +153,12 @@ public sealed class CrmTaskRelationResponse
     public string Type { get; set; } = string.Empty;
 }
 
+public sealed class CrmTaskRelationRequest
+{
+    public required string Id { get; init; }
+    public required string Type { get; init; }
+}
+
 public sealed class UpdateCrmTaskRequest
 {
     public string Title { get; set; } = string.Empty;
@@ -160,7 +166,7 @@ public sealed class UpdateCrmTaskRequest
     public string Status { get; set; } = string.Empty;
     public string? DueDate { get; set; }
     public string? AssigneeId { get; set; }
-    public List<string>? RelationIds { get; set; }
+    public List<CrmTaskRelationRequest>? Relations { get; set; }
 }
 
 public sealed class CrmTaskResponse
