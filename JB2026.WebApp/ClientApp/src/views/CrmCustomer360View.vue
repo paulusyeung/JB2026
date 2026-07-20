@@ -49,9 +49,37 @@
                 <span class="text-body-2">{{ company.formattedAddress }}</span>
               </div>
 
-              <div class="info-row">
+              <div v-if="company.people.length === 0" class="info-row">
                 <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
-                <span class="text-body-2">{{ company.people.length }} people</span>
+                <span class="text-body-2">0 people</span>
+              </div>
+              <div v-else class="people-section">
+                <div class="people-label">
+                  <v-icon size="small">mdi-account-multiple</v-icon>
+                  <span class="text-body-2">{{ company.people.length }} people</span>
+                </div>
+                <div class="people-cards">
+                  <div v-for="person in company.people" :key="person.id" class="person-card">
+                    <div class="person-card-header">
+                      <span class="text-body-2 font-weight-medium">{{ person.name }}</span>
+                      <v-btn icon="mdi-pencil" variant="flat" size="x-small" color="default" class="edit-btn" @click="openPersonDialog(person.id)" />
+                    </div>
+                    <div class="person-card-body">
+                      <div v-if="getPerson(person.id)?.jobTitle" class="person-detail">
+                        <v-icon size="x-small">mdi-badge-account-outline</v-icon>
+                        <span class="text-caption">{{ getPerson(person.id)?.jobTitle }}</span>
+                      </div>
+                      <div v-for="email in getPerson(person.id)?.emails ?? []" :key="email" class="person-detail">
+                        <v-icon size="x-small">mdi-email-outline</v-icon>
+                        <span class="text-caption">{{ email }}</span>
+                      </div>
+                      <div v-for="phone in getPerson(person.id)?.phones ?? []" :key="phone" class="person-detail">
+                        <v-icon size="x-small">mdi-phone-outline</v-icon>
+                        <span class="text-caption">{{ phone }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="info-row">
@@ -164,15 +192,24 @@
         @cancel="dialogOpen = false"
       />
     </v-dialog>
+
+    <v-dialog v-model="personDialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmPeopleRecordDialog
+        :person-id="editingPersonId"
+        @saved="handlePersonSaved"
+        @cancel="personDialogOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getCrmCompanies, getCrmCompany } from '@/services/crm'
+import { getCrmCompanies, getCrmCompany, getCrmPeople } from '@/services/crm'
 import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
-import type { CrmCompany } from '@/types/api'
+import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
+import type { CrmCompany, CrmPerson } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -223,10 +260,23 @@ function handleSaved(saved: CrmCompany) {
   dialogOpen.value = false
 }
 
+const personDialogOpen = ref(false)
+const editingPersonId = ref<string | null>(null)
+
+function openPersonDialog(personId: string) {
+  editingPersonId.value = personId
+  personDialogOpen.value = true
+}
+
+function handlePersonSaved(saved: CrmPerson) {
+  personDialogOpen.value = false
+}
+
 const { t } = useI18n({ useScope: 'global' })
 
 const companies = ref<CrmCompany[]>([])
 const company = ref<CrmCompany | null>(null)
+const people = ref<CrmPerson[]>([])
 const selectedCompanyId = ref<string | null>(null)
 const companySearch = ref('')
 const loadingCompanies = ref(false)
@@ -250,11 +300,18 @@ function onCompanySearch(val: string | null | undefined) {
 async function onCompanySelected(id: string | null) {
   if (!id) {
     company.value = null
+    people.value = []
     return
   }
   loadingCompany.value = true
   try {
-    company.value = await getCrmCompany(id)
+    const [c, allPeople] = await Promise.all([
+      getCrmCompany(id),
+      getCrmPeople(),
+    ])
+    company.value = c
+    const ids = new Set(c.people.map(p => p.id))
+    people.value = allPeople.filter(p => ids.has(p.id))
   } finally {
     loadingCompany.value = false
   }
@@ -270,6 +327,10 @@ function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleDateString()
+}
+
+function getPerson(id: string): CrmPerson | undefined {
+  return people.value.find(p => p.id === id)
 }
 </script>
 
@@ -357,6 +418,50 @@ function formatDate(dateStr: string): string {
 
 .edit-btn:hover {
   opacity: 1;
+}
+
+.people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.people-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.people-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.person-card {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+
+.person-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.person-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
+}
+
+.person-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .info-row {
