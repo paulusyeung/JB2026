@@ -385,8 +385,261 @@
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="tasks">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.tasks') }}</p>
+            <div class="tab-content tasks-tab-content">
+              <div class="filter-bar">
+                <v-text-field
+                  v-model="taskLookup"
+                  density="comfortable"
+                  :label="t('crm.tasks.lookup')"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyTaskLookup"
+                />
+                <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingTasks" @click="applyTaskLookup">
+                  {{ t('common.search') }}
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loadingTasks" @click="refreshTaskList">
+                  {{ t('common.refresh') }}
+                </v-btn>
+              </div>
+
+              <v-alert v-if="taskErrorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ taskErrorMessage }}</v-alert>
+
+              <div class="toolbar-bar mb-2">
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                      {{ t('crm.tasks.actions.columns') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item v-for="column in taskColumnOptions" :key="column.key" @click="toggleTaskColumn(column.key)">
+                      <template #prepend>
+                        <v-checkbox-btn :model-value="taskVisibleColumnKeys.includes(column.key)" />
+                      </template>
+                      <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                      {{ t('crm.tasks.actions.sorting') }}
+                    </v-btn>
+                  </template>
+                  <v-card min-width="280" class="pa-3">
+                    <v-select
+                      v-model="taskSortKey"
+                      :items="taskSortableColumns"
+                      item-title="title"
+                      item-value="key"
+                      density="compact"
+                      variant="outlined"
+                      :label="t('crm.tasks.actions.sortBy')"
+                      hide-details
+                    />
+                    <v-btn-toggle v-model="taskSortDirection" mandatory divided class="mt-3" density="compact">
+                      <v-btn value="asc">{{ t('crm.tasks.actions.asc') }}</v-btn>
+                      <v-btn value="desc">{{ t('crm.tasks.actions.desc') }}</v-btn>
+                    </v-btn-toggle>
+                  </v-card>
+                </v-menu>
+
+                <template v-if="!isPhoneLayout">
+                  <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="taskCheckboxMode = !taskCheckboxMode">
+                    {{ t('crm.tasks.actions.checkbox') }}
+                  </v-btn>
+
+                  <v-menu location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                        {{ t('crm.tasks.actions.views') }}
+                      </v-btn>
+                    </template>
+                    <v-list density="compact" class="toolbar-menu-list">
+                      <v-list-item prepend-icon="mdi-table" :active="taskViewMode === 'detail'" @click="setTaskViewMode('detail')">
+                        <v-list-item-title>{{ t('crm.tasks.actions.detailView') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-view-grid-outline" :active="taskViewMode === 'card'" @click="setTaskViewMode('card')">
+                        <v-list-item-title>{{ t('crm.tasks.actions.cardView') }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </template>
+
+                <v-menu v-else location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                      {{ t('crm.tasks.actions.views') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="taskCheckboxMode = !taskCheckboxMode">
+                      <v-list-item-title>{{ t('crm.tasks.actions.checkbox') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-table" :active="taskViewMode === 'detail'" @click="setTaskViewMode('detail')">
+                      <v-list-item-title>{{ t('crm.tasks.actions.detailView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-view-grid-outline" :active="taskViewMode === 'card'" @click="setTaskViewMode('card')">
+                      <v-list-item-title>{{ t('crm.tasks.actions.cardView') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-divider vertical class="mx-1" />
+
+                <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewTask">
+                  {{ t('crm.tasks.actions.newTask') }}
+                </v-btn>
+
+                <span v-if="taskCheckboxMode" class="text-caption text-medium-emphasis">
+                  {{ t('crm.tasks.actions.selected', { count: taskSelectedIds.length }) }}
+                </span>
+              </div>
+
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <template v-else-if="taskRows.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('crm.tasks.messages.noTasks') }}
+                </div>
+              </template>
+
+              <template v-else>
+                <ListMobileCard
+                  v-if="isPhoneLayout"
+                  :items="taskDisplayedRows"
+                  :columns="taskMobileColumns"
+                  item-key="id"
+                  :checkbox-mode="taskCheckboxMode"
+                  :selected-ids="taskSelectedIds"
+                  :on-select="handleTaskMobileSelect"
+                  :on-card-click="(item) => onTaskMobileCardClick(item)"
+                />
+
+                <div v-else-if="isTaskCardView" class="task-card-list">
+                  <v-card
+                    v-for="row in taskDisplayedRows"
+                    :key="row.id"
+                    rounded="lg"
+                    elevation="0"
+                    class="task-card"
+                  >
+                    <v-checkbox-btn
+                      v-if="taskCheckboxMode"
+                      :model-value="taskSelectedIds.includes(row.id)"
+                      density="compact"
+                      hide-details
+                      class="task-card__checkbox"
+                      @click="handleTaskCardCheckbox(row.id)"
+                    />
+                    <div class="task-card__header">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon size="18" color="primary">mdi-format-list-checks</v-icon>
+                        <div>
+                          <span class="text-subtitle-2 font-weight-bold">{{ row.title }}</span>
+                          <v-chip v-if="row.status" size="x-small" label :color="taskStatusColor(row.status)" variant="tonal" class="ml-1">
+                            {{ taskStatusLabel(row.status) }}
+                          </v-chip>
+                          <div v-if="row.dueDate" class="text-caption text-medium-emphasis">
+                            {{ t('crm.tasks.headers.dueDate') }}: {{ taskFormat(row.dueDate) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="task-card__body">
+                      <span class="text-caption">
+                        {{ t('crm.tasks.headers.assignee') }}: 
+                        <v-chip v-if="row.assignee" size="small" label color="primary" variant="tonal">{{ row.assignee }}</v-chip>
+                        <span v-else>-</span>
+                      </span>
+                      <span class="text-caption" v-if="row.relations?.length">
+                        <v-chip
+                          v-for="rel in row.relations"
+                          :key="rel.id"
+                          size="small"
+                          label
+                          color="secondary"
+                          variant="tonal"
+                          class="mr-1"
+                        >
+                          {{ rel.name }}
+                        </v-chip>
+                      </span>
+                    </div>
+                    <div class="task-card__footer text-caption text-medium-emphasis">
+                      <span>{{ t('crm.tasks.headers.updatedBy') }}: {{ row.updatedBy || '-' }}</span>
+                      <span>{{ t('crm.tasks.headers.updatedOn') }}: {{ taskFormat(row.updatedOn) }}</span>
+                    </div>
+                  </v-card>
+                </div>
+
+                <v-data-table
+                  v-else
+                  :headers="taskHeaders"
+                  :items="taskDisplayedRows"
+                  :loading="loadingTasks"
+                  item-value="id"
+                  v-model="taskSelectedIds"
+                  :show-select="taskCheckboxMode"
+                  density="compact"
+                  fixed-header
+                  height="45vh"
+                  class="tasks-table"
+                >
+                  <template #[`item.title`]='{ item }'>
+                    <a class="text-body-2 text-primary text-decoration-none cursor-pointer" @click.stop="openTaskPopup(item.id)">{{ item.title }}</a>
+                  </template>
+
+                  <template #[`item.status`]='{ item }'>
+                    <v-chip v-if="item.status" size="x-small" label :color="taskStatusColor(item.status)" variant="tonal">{{ taskStatusLabel(item.status) }}</v-chip>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.body`]='{ item }'>
+                    <span class="text-medium-emphasis text-truncate d-inline-block" style="max-width: 200px">
+                      {{ item.body ? taskStripHtml(item.body) : '-' }}
+                    </span>
+                  </template>
+
+                  <template #[`item.dueDate`]='{ item }'>
+                    <template v-if="item.dueDate">{{ taskFormat(item.dueDate) }}</template>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.assignee`]='{ item }'>
+                    <v-chip v-if="item.assignee" size="small" label color="primary" variant="tonal">{{ item.assignee }}</v-chip>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.relations`]='{ item }'>
+                    <template v-if="item.relations?.length">
+                      <v-chip
+                        v-for="rel in item.relations"
+                        :key="rel.id"
+                        size="small"
+                        label
+                        color="secondary"
+                        variant="tonal"
+                        class="mr-1"
+                      >
+                        {{ rel.name }}
+                      </v-chip>
+                    </template>
+                    <span v-else class="text-medium-emphasis">-</span>
+                  </template>
+
+                  <template #[`item.createdOn`]='{ item }'>{{ taskFormat(item.createdOn) }}</template>
+                  <template #[`item.createdBy`]='{ item }'>{{ item.createdBy || '-' }}</template>
+                  <template #[`item.updatedOn`]='{ item }'>{{ taskFormat(item.updatedOn) }}</template>
+                  <template #[`item.updatedBy`]='{ item }'>{{ item.updatedBy || '-' }}</template>
+                </v-data-table>
+              </template>
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="emails">
@@ -443,21 +696,37 @@
         <v-btn variant="text" @click="oppSaveSuccess = false">{{ t('common.cancel') }}</v-btn>
       </template>
     </v-snackbar>
+
+    <v-dialog v-model="taskDialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmTaskRecordDialog
+        :task-id="editingTaskId"
+        @saved="handleTaskSaved"
+        @cancel="taskDialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="taskSaveSuccess" color="success" timeout="3000">
+      {{ taskSuccessMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="taskSaveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions } from '@/services/crm'
+import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions } from '@/services/crm'
 import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
 import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
+import CrmTaskRecordDialog from '@/components/crm/CrmTaskRecordDialog.vue'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import type { CrmCompany, CrmPerson, CrmOpportunity } from '@/types/api'
+import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -773,6 +1042,210 @@ async function handleOppSaved(opportunity: CrmOpportunity) {
   oppSuccessMessage.value = t('crm.opportunities.messages.saveSuccess')
   oppSaveSuccess.value = true
 }
+
+// --- Tasks tab ---
+
+type TaskDisplayItem = CrmTask & {
+  ln: number
+}
+
+const taskRows = ref<CrmTask[]>([])
+const loadingTasks = ref(false)
+const taskLookup = ref('')
+const taskErrorMessage = ref('')
+const taskStatusLabelMap = ref<Record<string, string>>({})
+const taskDialogOpen = ref(false)
+const editingTaskId = ref<string | null>(null)
+const taskSaveSuccess = ref(false)
+const taskSuccessMessage = ref('')
+const taskSelectedIds = ref<string[]>([])
+
+const taskViewSettings = useViewSettings('crm-customer360-tasks', {
+  visibleColumns: ['title', 'status', 'body', 'dueDate', 'assignee', 'relations', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+  sortKey: 'title',
+  sortDirection: 'asc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const taskVisibleColumnKeys = taskViewSettings.visibleColumns
+const taskSortKey = taskViewSettings.sortKey
+const taskSortDirection = taskViewSettings.sortDirection
+const taskCheckboxMode = taskViewSettings.checkboxMode
+const taskViewMode = taskViewSettings.viewMode
+
+const { format: taskFormat } = useGlobalDateFormatter()
+
+getCrmTaskStatusOptions().then(opts => {
+  taskStatusLabelMap.value = Object.fromEntries(opts.map(o => [o.value, o.label]))
+}).catch(() => {})
+
+function taskStatusColor(status: string): string {
+  switch (status) {
+    case 'COMPLETED': return 'green'
+    case 'IN_PROGRESS': return 'info'
+    default: return 'default'
+  }
+}
+
+function taskStatusLabel(status: string): string {
+  return taskStatusLabelMap.value[status] || status
+}
+
+function taskStripHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent?.trim() || ''
+}
+
+const isTaskCardView = computed(() => taskViewMode.value === 'card')
+
+const allTaskHeaders = computed(() => [
+  { title: t('crm.tasks.headers.title'), key: 'title', minWidth: '220px' },
+  { title: t('crm.tasks.headers.status'), key: 'status', minWidth: '100px' },
+  { title: t('crm.tasks.headers.body'), key: 'body', minWidth: '200px' },
+  { title: t('crm.tasks.headers.dueDate'), key: 'dueDate', minWidth: '135px' },
+  { title: t('crm.tasks.headers.assignee'), key: 'assignee', minWidth: '140px' },
+  { title: t('crm.tasks.headers.relations'), key: 'relations', minWidth: '180px' },
+  { title: t('crm.tasks.headers.createdOn'), key: 'createdOn', minWidth: '135px' },
+  { title: t('crm.tasks.headers.createdBy'), key: 'createdBy', minWidth: '120px' },
+  { title: t('crm.tasks.headers.updatedOn'), key: 'updatedOn', minWidth: '135px' },
+  { title: t('crm.tasks.headers.updatedBy'), key: 'updatedBy', minWidth: '120px' },
+])
+
+const taskHeaders = computed(() =>
+  allTaskHeaders.value.filter((h) =>
+    taskVisibleColumnKeys.value.includes(String(h.key)) &&
+    oppIsColumnVisible(String(h.key), {
+      hideOnPhone: ['body', 'dueDate', 'assignee', 'relations', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+      hideOnTablet: [],
+    }),
+  ),
+)
+
+const taskMobileColumns = computed<ListMobileCardColumn<TaskDisplayItem>[]>(() => [
+  { key: 'title', label: t('crm.tasks.headers.title'), section: 'header', emphasis: true },
+  { key: 'status', label: t('crm.tasks.headers.status'), section: 'header' },
+  { key: 'assignee', label: t('crm.tasks.headers.assignee'), section: 'body' },
+  { key: 'dueDate', label: t('crm.tasks.headers.dueDate'), section: 'body', formatter: (item) => item.dueDate ? taskFormat(item.dueDate) : '-' },
+  { key: 'createdBy', label: t('crm.tasks.headers.createdBy'), section: 'footer' },
+  {
+    key: 'updatedOn',
+    label: t('crm.tasks.headers.updatedOn'),
+    section: 'footer',
+    formatter: (item) => taskFormat(item.updatedOn),
+  },
+])
+
+const taskSortableColumns = computed(() =>
+  allTaskHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
+)
+
+const taskColumnOptions = computed(() => allTaskHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+
+const taskDisplayedRows = computed<TaskDisplayItem[]>(() => {
+  const key = taskSortKey.value as keyof CrmTask
+  const result = [...taskRows.value]
+
+  result.sort((lhs, rhs) => {
+    const left = String(lhs[key] ?? '')
+    const right = String(rhs[key] ?? '')
+    return taskSortDirection.value === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+  })
+
+  return result.map((item, index) => ({
+    ...item,
+    ln: index + 1,
+  }))
+})
+
+async function loadTasks() {
+  if (!company.value) {
+    taskRows.value = []
+    return
+  }
+  loadingTasks.value = true
+  taskErrorMessage.value = ''
+  try {
+    const all = await getCrmTasks(taskLookup.value.trim())
+    taskRows.value = all.filter(t => t.relations?.some(r => r.id === company.value!.id))
+  } catch {
+    taskErrorMessage.value = t('crm.tasks.messages.loadFailed')
+  } finally {
+    loadingTasks.value = false
+  }
+}
+
+watch(company, () => {
+  loadTasks()
+})
+
+async function applyTaskLookup() {
+  await loadTasks()
+}
+
+async function refreshTaskList() {
+  taskLookup.value = ''
+  await loadTasks()
+}
+
+function toggleTaskColumn(columnKey: string) {
+  if (taskVisibleColumnKeys.value.includes(columnKey)) {
+    if (taskVisibleColumnKeys.value.length > 1) {
+      taskVisibleColumnKeys.value = taskVisibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+  taskVisibleColumnKeys.value = [...taskVisibleColumnKeys.value, columnKey]
+}
+
+function setTaskViewMode(mode: 'detail' | 'card') {
+  taskViewMode.value = mode
+}
+
+function handleTaskCardCheckbox(id: string) {
+  if (taskSelectedIds.value.includes(id)) {
+    taskSelectedIds.value = taskSelectedIds.value.filter((pid) => pid !== id)
+    return
+  }
+  taskSelectedIds.value = [...taskSelectedIds.value, id]
+}
+
+function onTaskMobileCardClick(item: TaskDisplayItem) {
+  if (taskCheckboxMode.value) {
+    handleTaskMobileSelect(item, !taskSelectedIds.value.includes(item.id))
+    return
+  }
+  openTaskPopup(item.id)
+}
+
+function handleTaskMobileSelect(item: TaskDisplayItem | Record<string, unknown>, selected: boolean) {
+  const id = String(item.id ?? '')
+  if (!id) return
+  if (selected) {
+    taskSelectedIds.value = [...new Set([...taskSelectedIds.value, id])]
+    return
+  }
+  taskSelectedIds.value = taskSelectedIds.value.filter((pid) => pid !== id)
+}
+
+function openTaskPopup(id: string) {
+  editingTaskId.value = id
+  taskDialogOpen.value = true
+  taskErrorMessage.value = ''
+}
+
+function openNewTask() {
+  editingTaskId.value = null
+  taskDialogOpen.value = true
+  taskErrorMessage.value = ''
+}
+
+async function handleTaskSaved(task: CrmTask) {
+  await loadTasks()
+  taskSelectedIds.value = [task.id]
+  editingTaskId.value = task.id
+  taskSuccessMessage.value = t('crm.tasks.messages.saveSuccess')
+  taskSaveSuccess.value = true
+}
 </script>
 
 <style scoped>
@@ -1017,6 +1490,112 @@ async function handleOppSaved(opportunity: CrmOpportunity) {
 
 @media (max-width: 960px) {
   .opportunities-tab-content .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tasks-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tasks-tab-content .filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
+  align-items: center;
+}
+
+.tasks-tab-content .toolbar-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tasks-tab-content .toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.tasks-tab-content .tasks-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.tasks-tab-content .tasks-table :deep(.v-table__wrapper > table > thead > tr > th),
+.tasks-tab-content .tasks-table :deep(.v-data-table__th) {
+  white-space: nowrap;
+  background-color: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.tasks-tab-content .tasks-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.tasks-tab-content .tasks-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.tasks-tab-content .tasks-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.tasks-tab-content .tasks-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+}
+
+.task-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .task-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+}
+
+.task-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.task-card__checkbox {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.task-card__header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.task-card__body,
+.task-card__footer {
+  grid-column: 1 / -1;
+}
+
+.task-card__header,
+.task-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.task-card__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+@media (max-width: 960px) {
+  .tasks-tab-content .filter-bar {
     grid-template-columns: 1fr;
   }
 }
