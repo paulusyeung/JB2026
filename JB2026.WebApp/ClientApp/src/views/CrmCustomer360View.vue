@@ -89,7 +89,7 @@
 
               <div class="info-row">
                 <v-icon size="small" class="mr-1">mdi-calendar</v-icon>
-                <span class="text-body-2">Created {{ formatDate(company.createdOn) }}</span>
+                <span class="text-body-2">Created {{ companyFormat(company.createdOn) }}</span>
               </div>
             </div>
           </template>
@@ -840,12 +840,6 @@ watch(companySearch, (val) => {
 
 loadCompanies()
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString()
-}
-
 function getPerson(id: string): CrmPerson | undefined {
   return people.value.find(p => p.id === id)
 }
@@ -882,6 +876,7 @@ const oppViewMode = oppViewSettings.viewMode
 
 const { isPhoneLayout, isColumnVisible: oppIsColumnVisible } = useResponsiveList()
 const { format: oppFormat } = useGlobalDateFormatter()
+const { format: companyFormat } = useGlobalDateFormatter()
 
 getCrmOpportunityStageOptions().then(opts => {
   oppStageLabelMap.value = Object.fromEntries(opts.map(o => [o.value, o.label]))
