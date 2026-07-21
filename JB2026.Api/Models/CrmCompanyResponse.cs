@@ -230,3 +230,18 @@ public sealed class CrmOpportunityResponse
 
     public string UpdatedBy { get; set; } = string.Empty;
 }
+
+public sealed class CrmTimelineItemResponse
+{
+    public required string Id { get; init; }
+
+    public required string Type { get; init; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Body { get; set; } = string.Empty;
+
+    public string CreatedOn { get; set; } = string.Empty;
+
+    public string CreatedBy { get; set; } = string.Empty;
+}

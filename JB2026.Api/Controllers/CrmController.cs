@@ -50,6 +50,17 @@ public sealed class CrmController : ControllerBase
         return Ok(company);
     }
 
+    [HttpGet("companies/{id}/timeline")]
+    [ProducesResponseType(typeof(IReadOnlyList<CrmTimelineItemResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CrmTimelineItemResponse>>> GetCompanyTimeline(
+        string id,
+        [FromServices] ITwentyCrmService twentyCrmService,
+        CancellationToken cancellationToken = default)
+    {
+        var timeline = await twentyCrmService.GetCompanyTimelineAsync(id, cancellationToken);
+        return Ok(timeline);
+    }
+
     [HttpGet("migratable-customers")]
     [ProducesResponseType(typeof(IReadOnlyList<CrmMigratableCustomerResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CrmMigratableCustomerResponse>>> GetMigratableCustomers(

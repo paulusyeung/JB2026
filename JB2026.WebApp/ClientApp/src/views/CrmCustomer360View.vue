@@ -1127,8 +1127,49 @@
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="timeline">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.timeline') }}</p>
+            <div class="tab-content timeline-tab-content">
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <template v-else-if="loadingTimeline">
+                <div class="d-flex justify-center py-6">
+                  <v-progress-circular indeterminate size="24" />
+                </div>
+              </template>
+
+              <template v-else-if="timelineItems.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('customer360.placeholders.timeline') }}
+                </div>
+              </template>
+
+              <v-timeline v-else density="compact" align="start">
+                <v-timeline-item
+                  v-for="item in timelineItems"
+                  :key="item.id"
+                  :dot-color="timelineDotColor(item.type)"
+                  size="small"
+                >
+                  <template #icon>
+                    <v-icon>{{ timelineIcon(item.type) }}</v-icon>
+                  </template>
+                  <div class="timeline-item-wrapper">
+                    <div class="timeline-item-header">
+                      <div class="text-body-2 font-weight-medium">{{ item.title || t('customer360.timeline.untitled') }}</div>
+                      <div class="text-caption text-medium-emphasis">
+                        {{ timelineFormat(item.createdOn) }} {{ timelineFormat(item.createdOn, 'shortTime') }}
+                        <span v-if="item.createdBy">{{ t('customer360.timeline.by', { name: item.createdBy }) }}</span>
+                      </div>
+                    </div>
+                    <v-card v-if="item.body" rounded="lg" elevation="0" class="timeline-card" variant="outlined">
+                      <v-card-text class="text-body-2">
+                        {{ item.body }}
+                      </v-card-text>
+                    </v-card>
+                  </div>
+                </v-timeline-item>
+              </v-timeline>
             </div>
           </v-tabs-window-item>
         </v-tabs-window>
@@ -1227,7 +1268,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
-import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions } from '@/services/crm'
+import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions, getCrmCompanyTimeline } from '@/services/crm'
 import { getJobList, deleteJobOrder } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
 import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
@@ -1244,7 +1285,7 @@ import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/Li
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, JobOrderRecord, JobDetail } from '@/types/api'
+import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, CrmTimelineItem, JobOrderRecord, JobDetail } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -1360,6 +1401,48 @@ loadCompanies()
 
 function getPerson(id: string): CrmPerson | undefined {
   return people.value.find(p => p.id === id)
+}
+
+// --- Timeline tab ---
+
+const timelineItems = ref<CrmTimelineItem[]>([])
+const loadingTimeline = ref(false)
+
+async function loadTimeline() {
+  if (!company.value) {
+    timelineItems.value = []
+    return
+  }
+  loadingTimeline.value = true
+  try {
+    timelineItems.value = await getCrmCompanyTimeline(company.value.id)
+  } catch {
+    timelineItems.value = []
+  } finally {
+    loadingTimeline.value = false
+  }
+}
+
+watch(company, () => {
+  loadTimeline()
+})
+
+const { format: timelineFormat } = useGlobalDateFormatter()
+
+function timelineDotColor(type: string): string {
+  if (type.startsWith('company.')) return 'primary'
+  if (type.startsWith('task.')) return 'warning'
+  if (type.startsWith('opportunity.')) return 'success'
+  if (type.startsWith('note')) return 'info'
+  return 'grey'
+}
+
+function timelineIcon(type: string): string {
+  if (type.startsWith('company.')) return 'mdi-domain'
+  if (type.startsWith('task.')) return 'mdi-format-list-checks'
+  if (type.startsWith('opportunity.')) return 'mdi-trending-up'
+  if (type.startsWith('note')) return 'mdi-sticky-note-outline'
+  return 'mdi-circle-small'
 }
 
 // --- Opportunities tab ---
@@ -2796,5 +2879,30 @@ function compareInvDateValues(left?: string, right?: string) {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     align-items: start;
   }
+}
+
+.timeline-tab-content {
+  max-height: calc(100vh - 14rem);
+  overflow-y: auto;
+}
+
+.timeline-tab-content .timeline-card {
+  border-color: rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.timeline-tab-content .timeline-card :deep(.v-card-text) {
+  white-space: pre-line;
+}
+
+.timeline-tab-content .timeline-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timeline-tab-content .timeline-item-header {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
 }
 </style>

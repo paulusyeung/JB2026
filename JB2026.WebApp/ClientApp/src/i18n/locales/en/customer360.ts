@@ -18,6 +18,10 @@ export const customer360Messages = {
     emails: 'Email data coming soon.',
     files: 'File data coming soon.',
     calendar: 'Calendar data coming soon.',
-    timeline: 'Timeline data coming soon.',
+    timeline: 'No timeline entries found.',
+  },
+  timeline: {
+    untitled: '(no title)',
+    by: 'by {name}',
   },
 } as const

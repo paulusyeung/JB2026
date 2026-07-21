@@ -2461,6 +2461,217 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
+    public async Task<IReadOnlyList<CrmTimelineItemResponse>> GetCompanyTimelineAsync(string companyId, CancellationToken cancellationToken = default)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            _logger.LogWarning("Twenty CRM not configured — returning empty timeline");
+            return [];
+        }
+
+        try
+        {
+            const string query = """
+                query CompanyTimeline($companyId: String!) {
+                  companies(filter: { id: { eq: $companyId } }) {
+                    edges {
+                      node {
+                        timelineActivities {
+                          edges {
+                            node {
+                              id
+                              name
+                              properties
+                              createdAt
+                              workspaceMemberId
+                              createdBy {
+                                source
+                                workspaceMemberId
+                                name
+                                context
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["companyId"] = companyId,
+            };
+
+            var data = await PostGraphQLAsync(query, variables, cancellationToken);
+
+            if (!data.TryGetProperty("companies", out var companiesEl)
+                || !companiesEl.TryGetProperty("edges", out var companyEdges)
+                || companyEdges.ValueKind != JsonValueKind.Array
+                || companyEdges.GetArrayLength() == 0)
+            {
+                return [];
+            }
+
+            var companyNode = companyEdges[0];
+            if (!companyNode.TryGetProperty("node", out var company) || company.ValueKind != JsonValueKind.Object)
+                return [];
+
+            if (!company.TryGetProperty("timelineActivities", out var timelineEl)
+                || !timelineEl.TryGetProperty("edges", out var edges)
+                || edges.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<CrmTimelineItemResponse>();
+
+            foreach (var edge in edges.EnumerateArray())
+            {
+                if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var id = GetStringProp(node, "id");
+                if (string.IsNullOrWhiteSpace(id))
+                    continue;
+
+                var name = GetStringProp(node, "name");
+                var type = string.IsNullOrWhiteSpace(name) ? "event" : name;
+                var actorName = ResolveTimelineActorName(node);
+                var body = FormatTimelineBody(name, node);
+
+                result.Add(new CrmTimelineItemResponse
+                {
+                    Id = id,
+                    Type = type,
+                    Title = HumanizeTimelineName(name),
+                    Body = body,
+                    CreatedOn = GetStringProp(node, "createdAt"),
+                    CreatedBy = actorName,
+                });
+            }
+
+            return result.OrderByDescending(i => i.CreatedOn).ToArray();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch timeline for company {CompanyId} from Twenty CRM", companyId);
+            return [];
+        }
+    }
+
+    private static string ResolveTimelineActorName(JsonElement node)
+    {
+        if (node.TryGetProperty("createdBy", out var createdBy) && createdBy.ValueKind == JsonValueKind.Object)
+        {
+            var name = GetStringProp(createdBy, "name");
+            if (!string.IsNullOrWhiteSpace(name) && !string.Equals(name, "System", StringComparison.OrdinalIgnoreCase))
+                return name;
+        }
+
+        return string.Empty;
+    }
+
+    private static string FormatTimelineBody(string? name, JsonElement node)
+    {
+        if (!node.TryGetProperty("properties", out var props) || props.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        if (!props.TryGetProperty("diff", out var diff) || diff.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        var parts = new List<string>();
+
+        foreach (var field in diff.EnumerateObject())
+        {
+            if (field.Value.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var after = field.Value.TryGetProperty("after", out var afterVal) ? afterVal : default;
+            var before = field.Value.TryGetProperty("before", out var beforeVal) ? beforeVal : default;
+
+            var afterStr = FormatTimelineValue(after);
+            var beforeStr = FormatTimelineValue(before);
+
+            if (string.IsNullOrWhiteSpace(afterStr) && string.IsNullOrWhiteSpace(beforeStr))
+                continue;
+
+            var fieldName = HumanizeFieldName(field.Name);
+
+            if (string.IsNullOrWhiteSpace(beforeStr))
+                parts.Add($"{fieldName}: {afterStr}");
+            else if (string.IsNullOrWhiteSpace(afterStr))
+                parts.Add($"{fieldName}: (removed) was {beforeStr}");
+            else
+                parts.Add($"{fieldName}: {afterStr} (was {beforeStr})");
+        }
+
+        return string.Join("\n", parts);
+    }
+
+    private static string FormatTimelineValue(JsonElement val)
+    {
+        if (val.ValueKind == JsonValueKind.Null || val.ValueKind == JsonValueKind.Undefined)
+            return string.Empty;
+
+        if (val.ValueKind == JsonValueKind.String)
+            return val.GetString() ?? string.Empty;
+
+        if (val.ValueKind == JsonValueKind.True || val.ValueKind == JsonValueKind.False)
+            return val.GetBoolean() ? "Yes" : "No";
+
+        if (val.ValueKind == JsonValueKind.Number)
+            return val.GetRawText();
+
+        if (val.ValueKind == JsonValueKind.Object)
+        {
+            if (val.TryGetProperty("name", out var nameVal) && nameVal.ValueKind == JsonValueKind.String)
+                return nameVal.GetString() ?? string.Empty;
+            if (val.TryGetProperty("displayName", out var dn) && dn.ValueKind == JsonValueKind.String)
+                return dn.GetString() ?? string.Empty;
+            if (val.TryGetProperty("primaryLinkUrl", out var link) && link.ValueKind == JsonValueKind.String)
+                return link.GetString() ?? string.Empty;
+            return val.GetRawText();
+        }
+
+        return val.GetRawText();
+    }
+
+    private static string HumanizeTimelineName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "Event";
+
+        var parts = name.Split('.');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (parts[i].Length > 0)
+                parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i][1..];
+        }
+        return string.Join(" ", parts);
+    }
+
+    private static string HumanizeFieldName(string field)
+    {
+        if (string.IsNullOrWhiteSpace(field))
+            return field;
+
+        var sb = new System.Text.StringBuilder();
+        for (var i = 0; i < field.Length; i++)
+        {
+            if (i == 0)
+                sb.Append(char.ToUpperInvariant(field[i]));
+            else if (char.IsUpper(field[i]))
+                sb.Append(' ').Append(field[i]);
+            else
+                sb.Append(field[i]);
+        }
+        return sb.ToString().Replace("Id", "ID").Replace("Url", "URL");
+    }
+
     private async Task<string?> DiscoverTaskStatusEnumTypeNameAsync(CancellationToken cancellationToken)
     {
         try

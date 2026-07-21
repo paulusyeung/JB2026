@@ -77,6 +77,15 @@ export interface CrmTaskRelation {
   type: string
 }
 
+export interface CrmTimelineItem {
+  id: string
+  type: string
+  title: string
+  body: string
+  createdOn: string
+  createdBy: string
+}
+
 export interface CrmTask {
   id: string
   title: string

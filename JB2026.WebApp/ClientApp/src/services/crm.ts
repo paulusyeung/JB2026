@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { CreateCrmCompanyRequest, CrmCompany, CrmCompanyCreated, CrmMember, CrmMigratableCustomer, CrmOpportunity, CrmPerson, CrmStageOption, CrmTask, UpdateCrmCompanyRequest, UpdateCrmPersonRequest } from '@/types/api'
+import type { CreateCrmCompanyRequest, CrmCompany, CrmCompanyCreated, CrmMember, CrmMigratableCustomer, CrmOpportunity, CrmPerson, CrmStageOption, CrmTask, CrmTimelineItem, UpdateCrmCompanyRequest, UpdateCrmPersonRequest } from '@/types/api'
 
 export interface CrmCompaniesQuery {
   lookup?: string
@@ -144,5 +144,10 @@ export async function updateCrmTask(id: string, request: {
   relations?: CrmTaskRelationRequest[] | null
 }): Promise<CrmTask> {
   const response = await apiClient.put<CrmTask>(`/api/v2/crm/tasks/${id}`, request)
+  return response.data
+}
+
+export async function getCrmCompanyTimeline(companyId: string): Promise<CrmTimelineItem[]> {
+  const response = await apiClient.get<CrmTimelineItem[]>(`/api/v2/crm/companies/${companyId}/timeline`)
   return response.data
 }

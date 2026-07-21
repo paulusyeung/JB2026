@@ -18,6 +18,10 @@ export const customer360Messages = {
     emails: '郵件資料即將推出。',
     files: '檔案資料即將推出。',
     calendar: '日曆資料即將推出。',
-    timeline: '時間線資料即將推出。',
+    timeline: '暫無時間線條目。',
+  },
+  timeline: {
+    untitled: '(無標題)',
+    by: '由 {name} 建立',
   },
 } as const
