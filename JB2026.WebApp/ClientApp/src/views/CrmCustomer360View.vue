@@ -1144,30 +1144,30 @@
                 </div>
               </template>
 
-              <v-timeline v-else density="compact" align="start">
+              <v-timeline v-else side="end">
                 <v-timeline-item
                   v-for="item in timelineItems"
                   :key="item.id"
                   :dot-color="timelineDotColor(item.type)"
                   size="small"
                 >
-                  <template #icon>
+                  <template v-slot:icon>
                     <v-icon>{{ timelineIcon(item.type) }}</v-icon>
                   </template>
-                  <div class="timeline-item-wrapper">
-                    <div class="timeline-item-header">
+                  <template v-slot:opposite>
+                    <div class="timeline-opposite">
                       <div class="text-body-2 font-weight-medium">{{ item.title || t('customer360.timeline.untitled') }}</div>
                       <div class="text-caption text-medium-emphasis">
-                        {{ timelineFormat(item.createdOn) }} {{ timelineFormat(item.createdOn, 'shortTime') }}
+                        {{ timelineFormat(item.createdOn) }}
                         <span v-if="item.createdBy">{{ t('customer360.timeline.by', { name: item.createdBy }) }}</span>
                       </div>
                     </div>
-                    <v-card v-if="item.body" rounded="lg" elevation="0" class="timeline-card" variant="outlined">
-                      <v-card-text class="text-body-2">
-                        {{ item.body }}
-                      </v-card-text>
-                    </v-card>
-                  </div>
+                  </template>
+                  <v-card v-if="item.body" rounded="lg" elevation="0" class="timeline-card" variant="outlined">
+                    <v-card-text class="text-body-2">
+                      {{ item.body }}
+                    </v-card-text>
+                  </v-card>
                 </v-timeline-item>
               </v-timeline>
             </div>
@@ -2894,15 +2894,7 @@ function compareInvDateValues(left?: string, right?: string) {
   white-space: pre-line;
 }
 
-.timeline-tab-content .timeline-item-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.timeline-tab-content .timeline-item-header {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.4;
+.timeline-tab-content .timeline-opposite {
+  text-align: right;
 }
 </style>
