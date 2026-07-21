@@ -154,6 +154,7 @@
                   hide-details
                   clearable
                   @keydown.enter="applyJoLookup"
+                  @click:clear="clearJoLookup"
                 />
                 <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingJobOrders" @click="applyJoLookup">
                   {{ t('jobOrder.jobList.search') }}
@@ -373,16 +374,6 @@
           <v-tabs-window-item value="invoices">
             <div class="tab-content invoices-tab-content">
               <div class="filter-bar">
-                <v-text-field
-                  v-model="invLookup"
-                  density="comfortable"
-                  :label="t('billing.invoices.lookup')"
-                  prepend-inner-icon="mdi-magnify"
-                  variant="solo-filled"
-                  hide-details
-                  clearable
-                  @keydown.enter="applyInvLookup"
-                />
                 <v-text-field
                   v-model="invInvoiceLookup"
                   density="comfortable"
@@ -1853,7 +1844,18 @@ const joColumnOptions = computed(() =>
 )
 
 const joDisplayedRows = computed(() => {
-  const result = [...joRows.value]
+  let result = [...joRows.value]
+
+  const search = joLookup.value.trim().toLowerCase()
+  if (search) {
+    result = result.filter(row =>
+      Object.values(row).some(val => {
+        if (val === null || val === undefined) return false
+        return String(val).toLowerCase().includes(search)
+      }),
+    )
+  }
+
   const key = (joSortKey.value ?? 'orderNumber') as keyof JobOrderRecord
   const direction = joSortDirection.value ?? 'desc'
 
@@ -1874,8 +1876,7 @@ async function loadJobOrders() {
   loadingJobOrders.value = true
   joErrorMessage.value = ''
   try {
-    const query = [company.value!.name.trim(), joLookup.value.trim()].filter(Boolean).join(' ')
-    joRows.value = await getJobList({ lookup: query || undefined })
+    joRows.value = await getJobList({ lookup: company.value!.name.trim() || undefined })
   } catch {
     joErrorMessage.value = t('jobOrder.jobList.loadFailed')
   } finally {
@@ -1886,6 +1887,10 @@ async function loadJobOrders() {
 watch(company, () => {
   loadJobOrders()
 })
+
+function clearJoLookup() {
+  joLookup.value = ''
+}
 
 async function applyJoLookup() {
   await loadJobOrders()
@@ -1972,7 +1977,6 @@ function handleJoSaved() {
 
 const invRows = ref<InvoiceBillingSummary[]>([])
 const loadingInvoices = ref(false)
-const invLookup = ref('')
 const invInvoiceLookup = ref('')
 const invErrorMessage = ref('')
 const invSelectedIds = ref<string[]>([])
@@ -2075,7 +2079,6 @@ async function applyInvLookup() {
 }
 
 async function refreshInvList() {
-  invLookup.value = ''
   invInvoiceLookup.value = ''
   await loadInvoices()
 }
@@ -2698,7 +2701,7 @@ function compareInvDateValues(left?: string, right?: string) {
 .invoices-tab-content .filter-bar {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) auto auto;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
   align-items: center;
 }
 
