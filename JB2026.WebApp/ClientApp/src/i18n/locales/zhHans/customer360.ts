@@ -20,6 +20,9 @@ export const customer360Messages = {
     calendar: '日历数据即将推出。',
     timeline: '暂无时间线条目。',
   },
+  files: {
+    loadFailed: '从文档服务器加载文件失败。',
+  },
   timeline: {
     untitled: '(无标题)',
     by: '由 {name} 创建',

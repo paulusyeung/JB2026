@@ -1117,8 +1117,48 @@
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="files">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.files') }}</p>
+            <div class="tab-content files-tab-content">
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <div v-else-if="loadingFiles" class="d-flex justify-center py-6">
+                <v-progress-circular indeterminate size="24" />
+              </div>
+
+              <v-alert v-else-if="filesErrorMessage" type="warning" variant="tonal" class="mb-3">{{ filesErrorMessage }}</v-alert>
+
+              <template v-else-if="files.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('customer360.placeholders.files') }}
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="files-list">
+                  <v-card
+                    v-for="doc in files"
+                    :key="doc.id"
+                    rounded="lg"
+                    elevation="0"
+                    class="file-card"
+                  >
+                    <div class="file-card__icon">
+                      <v-icon size="32" :color="fileIconColor(doc.mime_type)">{{ fileIcon(doc.mime_type) }}</v-icon>
+                    </div>
+                    <div class="file-card__info">
+                      <div class="file-card__title text-subtitle-2 font-weight-medium text-truncate">{{ doc.title }}</div>
+                      <div class="file-card__meta text-caption text-medium-emphasis">
+                        <span>{{ doc.original_filename || doc.title }}</span>
+                        <span v-if="doc.added"> &middot; {{ formatFileDate(doc.added) }}</span>
+                      </div>
+                    </div>
+                    <div class="file-card__actions">
+                      <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(doc)" />
+                    </div>
+                  </v-card>
+                </div>
+              </template>
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="calendar">
@@ -1269,6 +1309,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions, getCrmCompanyTimeline } from '@/services/crm'
+import { getCompanyPaperlessFiles } from '@/services/files'
 import { getJobList, deleteJobOrder } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
 import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
@@ -1285,7 +1326,7 @@ import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/Li
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, CrmTimelineItem, JobOrderRecord, JobDetail } from '@/types/api'
+import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, CrmTimelineItem, JobOrderRecord, JobDetail, PaperlessNgxDocument } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -2367,6 +2408,65 @@ function compareInvDateValues(left?: string, right?: string) {
   const rightValue = right ? new Date(right).getTime() : Number.NEGATIVE_INFINITY
   return leftValue - rightValue
 }
+
+// --- Files tab ---
+
+const files = ref<PaperlessNgxDocument[]>([])
+const paperlessBaseUrl = ref('')
+const loadingFiles = ref(false)
+const filesErrorMessage = ref('')
+const formatFileDate = useGlobalDateFormatter().format
+
+async function loadFiles() {
+  if (!company.value) {
+    files.value = []
+    paperlessBaseUrl.value = ''
+    return
+  }
+  loadingFiles.value = true
+  filesErrorMessage.value = ''
+  try {
+    const result = await getCompanyPaperlessFiles(company.value.id, company.value.name.trim())
+    files.value = result.documents
+    paperlessBaseUrl.value = result.baseUrl
+  } catch (e) {
+    console.error('[FilesTab]', e)
+    filesErrorMessage.value = t('customer360.files.loadFailed')
+  } finally {
+    loadingFiles.value = false
+  }
+}
+
+watch(company, () => {
+  loadFiles()
+})
+
+function openFile(doc: PaperlessNgxDocument) {
+  const url = paperlessBaseUrl.value
+    ? `${paperlessBaseUrl.value.replace(/\/+$/, '')}/documents/${doc.id}/`
+    : `/api/v2/crm/files/${doc.id}/preview`
+  window.open(url, '_blank')
+}
+
+function fileIcon(mimeType: string | null | undefined): string {
+  if (!mimeType) return 'mdi-file-outline'
+  if (mimeType.startsWith('image/')) return 'mdi-file-image'
+  if (mimeType === 'application/pdf') return 'mdi-file-pdf-box'
+  if (mimeType.startsWith('text/')) return 'mdi-file-document-outline'
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'mdi-file-excel'
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'mdi-file-powerpoint'
+  return 'mdi-file-outline'
+}
+
+function fileIconColor(mimeType: string | null | undefined): string {
+  if (!mimeType) return 'grey'
+  if (mimeType.startsWith('image/')) return 'success'
+  if (mimeType === 'application/pdf') return 'error'
+  if (mimeType.startsWith('text/')) return 'info'
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'green'
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'orange'
+  return 'grey'
+}
 </script>
 
 <style scoped>
@@ -2879,6 +2979,50 @@ function compareInvDateValues(left?: string, right?: string) {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     align-items: start;
   }
+}
+
+.files-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.files-tab-content .files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.files-tab-content .file-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.files-tab-content .file-card__icon {
+  flex-shrink: 0;
+}
+
+.files-tab-content .file-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.files-tab-content .file-card__title {
+  line-height: 1.4;
+}
+
+.files-tab-content .file-card__meta {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.files-tab-content .file-card__actions {
+  flex-shrink: 0;
 }
 
 .timeline-tab-content {

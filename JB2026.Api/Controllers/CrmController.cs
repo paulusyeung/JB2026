@@ -4,8 +4,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using JB2026.Api.Models;
+using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.Api.Services.TwentyCrm;
+using Microsoft.Extensions.Options;
 using JB2026.EfCore.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -462,6 +464,39 @@ public sealed class CrmController : ControllerBase
         }
     }
 
+    [HttpGet("companies/{id}/files")]
+    [ProducesResponseType(typeof(CompanyFilesResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CompanyFilesResponse>> GetCompanyFiles(
+        string id,
+        [FromQuery] string name,
+        [FromServices] IPaperlessNgxService paperlessNgxService,
+        [FromServices] IOptions<PaperlessNgxOptions> options,
+        ILogger<CrmController> logger,
+        CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("[Files] companyId={CompanyId} name={Name}", id, name);
+
+        if (string.IsNullOrWhiteSpace(name))
+            return Ok(new CompanyFilesResponse { BaseUrl = "", Documents = [] });
+
+        IReadOnlyList<PaperlessNgxDocument> documents;
+        try
+        {
+            documents = await paperlessNgxService.SearchDocumentsAsync(name, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("[Files] search error: {Msg}", ex.Message);
+            documents = [];
+        }
+
+        return Ok(new CompanyFilesResponse
+        {
+            BaseUrl = options.Value.BaseUrl,
+            Documents = documents
+        });
+    }
+
     private async Task<string?> ResolveCurrentUserEmailAsync(JB5LegacyReadContext readContext, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -516,4 +551,10 @@ public sealed class CrmController : ControllerBase
 
         return string.Empty;
     }
+}
+
+public sealed class CompanyFilesResponse
+{
+    public string BaseUrl { get; set; } = string.Empty;
+    public IReadOnlyList<PaperlessNgxDocument> Documents { get; set; } = [];
 }

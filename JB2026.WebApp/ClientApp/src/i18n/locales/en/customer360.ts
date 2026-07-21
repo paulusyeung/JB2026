@@ -20,6 +20,9 @@ export const customer360Messages = {
     calendar: 'Calendar data coming soon.',
     timeline: 'No timeline entries found.',
   },
+  files: {
+    loadFailed: 'Failed to load files from document server.',
+  },
   timeline: {
     untitled: '(no title)',
     by: 'by {name}',

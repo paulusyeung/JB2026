@@ -62,6 +62,7 @@ builder.Services.Configure<LegacyFilesOptions>(builder.Configuration.GetSection(
 builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection(BillingOptions.SectionName));
 builder.Services.Configure<TwentyCrmOptions>(builder.Configuration.GetSection(TwentyCrmOptions.SectionName));
 builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection(OllamaOptions.SectionName));
+builder.Services.Configure<PaperlessNgxOptions>(builder.Configuration.GetSection(PaperlessNgxOptions.SectionName));
 
 var ollamaBaseUrl = builder.Configuration.GetValue<string>("Ollama:BaseUrl") ?? "http://localhost:11434";
 var ollamaModel = builder.Configuration.GetValue<string>("Ollama:DefaultModel") ?? "llama3";
@@ -70,6 +71,7 @@ builder.Services.AddSingleton<IOllamaApiClient>(_ => new OllamaApiClient(ollamaB
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IInvoiceNinjaHttpClient, InvoiceNinjaHttpClient>();
 builder.Services.AddScoped<ITwentyCrmService, TwentyCrmService>();
+builder.Services.AddScoped<IPaperlessNgxService, PaperlessNgxService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ILegacyIdentityService, HybridLegacyIdentityService>();
 builder.Services.AddSingleton<InMemorySettingsService>();

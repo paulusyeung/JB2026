@@ -1127,3 +1127,17 @@ export interface LegacySliceActionPlan {
   generatedAtUtc: string
   steps: LegacySliceActionPlanStep[]
 }
+
+export interface PaperlessNgxDocument {
+  id: number
+  title: string
+  content: string | null
+  created: string
+  modified: string
+  added: string
+  documentType: number | null
+  correspondent: number | null
+  tags: number[]
+  mime_type: string
+  original_filename: string | null
+}

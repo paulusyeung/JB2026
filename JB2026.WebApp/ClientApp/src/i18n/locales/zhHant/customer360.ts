@@ -20,6 +20,9 @@ export const customer360Messages = {
     calendar: '日曆資料即將推出。',
     timeline: '暫無時間線條目。',
   },
+  files: {
+    loadFailed: '從文檔伺服器載入檔案失敗。',
+  },
   timeline: {
     untitled: '(無標題)',
     by: '由 {name} 建立',
