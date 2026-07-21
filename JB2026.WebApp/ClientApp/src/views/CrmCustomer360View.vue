@@ -143,8 +143,231 @@
 
         <v-tabs-window v-model="activeTab">
           <v-tabs-window-item value="job-orders">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.jobOrders') }}</p>
+            <div class="tab-content job-orders-tab-content">
+              <div class="filter-bar">
+                <v-text-field
+                  v-model="joLookup"
+                  density="comfortable"
+                  :label="t('jobOrder.jobList.lookup')"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyJoLookup"
+                />
+                <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingJobOrders" @click="applyJoLookup">
+                  {{ t('jobOrder.jobList.search') }}
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loadingJobOrders" @click="refreshJoList">
+                  {{ t('jobOrder.jobList.actions.refresh') }}
+                </v-btn>
+              </div>
+
+              <v-alert v-if="joErrorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ joErrorMessage }}</v-alert>
+
+              <div class="toolbar-bar mb-2">
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                      {{ t('jobOrder.jobList.actions.columns') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item v-for="column in joColumnOptions" :key="column.key" @click="toggleJoColumn(column.key)">
+                      <template #prepend>
+                        <v-checkbox-btn :model-value="joVisibleColumnKeys.includes(column.key)" />
+                      </template>
+                      <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                      {{ t('jobOrder.jobList.actions.sorting') }}
+                    </v-btn>
+                  </template>
+                  <v-card min-width="280" class="pa-3">
+                    <v-select
+                      v-model="joSortKey"
+                      :items="joSortableColumns"
+                      item-title="title"
+                      item-value="key"
+                      density="compact"
+                      variant="outlined"
+                      :label="t('jobOrder.jobList.actions.sortBy')"
+                      hide-details
+                    />
+                    <v-btn-toggle v-model="joSortDirection" mandatory divided class="mt-3" density="compact">
+                      <v-btn value="asc">{{ t('jobOrder.jobList.actions.asc') }}</v-btn>
+                      <v-btn value="desc">{{ t('jobOrder.jobList.actions.desc') }}</v-btn>
+                    </v-btn-toggle>
+                  </v-card>
+                </v-menu>
+
+                <template v-if="!isPhoneLayout">
+                  <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="joCheckboxMode = !joCheckboxMode">
+                    {{ t('jobOrder.jobList.actions.checkbox') }}
+                  </v-btn>
+
+                  <v-menu location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                        {{ t('jobOrder.jobList.actions.views') }}
+                      </v-btn>
+                    </template>
+                    <v-list density="compact" class="toolbar-menu-list">
+                      <v-list-item prepend-icon="mdi-table" :active="joViewMode === 'detail'" @click="setJoViewMode('detail')">
+                        <v-list-item-title>{{ t('jobOrder.jobList.actions.detailView') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-view-grid-outline" :active="joViewMode === 'card'" @click="setJoViewMode('card')">
+                        <v-list-item-title>{{ t('jobOrder.jobList.actions.cardView') }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+
+                  <v-divider vertical class="mx-1" />
+
+                  <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-file-plus" @click="openNewJobOrder">
+                    {{ t('jobOrder.jobList.actions.newOrder') }}
+                  </v-btn>
+
+                  <v-btn
+                    variant="tonal"
+                    color="error"
+                    size="small"
+                    prepend-icon="mdi-delete"
+                    :disabled="joSelectedIds.length === 0 || joDeleting"
+                    :loading="joDeleting"
+                    @click="confirmJoBatchDelete"
+                  >
+                    {{ t('jobOrder.jobList.actions.deleteSelected') }}
+                  </v-btn>
+                </template>
+
+                <v-menu v-else location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                      {{ t('jobOrder.jobList.actions.more') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="joCheckboxMode = !joCheckboxMode">
+                      <v-list-item-title>{{ t('jobOrder.jobList.actions.checkbox') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-table" :active="joViewMode === 'detail'" @click="setJoViewMode('detail')">
+                      <v-list-item-title>{{ t('jobOrder.jobList.actions.detailView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-view-grid-outline" :active="joViewMode === 'card'" @click="setJoViewMode('card')">
+                      <v-list-item-title>{{ t('jobOrder.jobList.actions.cardView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-file-plus" @click="openNewJobOrder">
+                      <v-list-item-title>{{ t('jobOrder.jobList.actions.newOrder') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-delete" :disabled="joSelectedIds.length === 0 || joDeleting" @click="confirmJoBatchDelete">
+                      <v-list-item-title>{{ t('jobOrder.jobList.actions.deleteSelected') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <span v-if="joCheckboxMode" class="text-caption text-medium-emphasis">
+                  {{ t('jobOrder.jobList.actions.selected', { count: joSelectedIds.length }) }}
+                </span>
+              </div>
+
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <template v-else-if="joRows.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('customer360.placeholders.jobOrders') }}
+                </div>
+              </template>
+
+              <template v-else>
+                <v-data-table
+                  :headers="joHeaders"
+                  :items="joDisplayedRows"
+                  :loading="loadingJobOrders"
+                  item-value="orderId"
+                  v-model="joSelectedIds"
+                  :show-select="joCheckboxMode"
+                  density="compact"
+                  fixed-header
+                  height="45vh"
+                  class="job-orders-table"
+                  @click:row="onJoRowClick"
+                >
+                  <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
+
+                  <template #[`header.orderType`]>
+                    <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span>
+                    <v-icon size="14" color="primary">mdi-tag-outline</v-icon>
+                  </template>
+
+                  <template #[`header.status`]>
+                    <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span>
+                    <v-icon size="14" color="primary">mdi-flag</v-icon>
+                  </template>
+
+                  <template #[`header.attachProduct`]>
+                    <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span>
+                    <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+                  </template>
+
+                  <template #[`header.attachCustomer`]>
+                    <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span>
+                    <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+                  </template>
+
+                  <template #[`item.orderType`]="{ item }">
+                    <div class="d-flex justify-center">
+                      <v-icon size="16" :color="joOrderTypeMeta(item.orderType).color">{{ joOrderTypeMeta(item.orderType).icon }}</v-icon>
+                    </div>
+                  </template>
+
+                  <template #[`item.orderNumber`]="{ item }">
+                    <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openJoEditor(item)">
+                      {{ joCompositeNumber(item) }}
+                    </v-btn>
+                  </template>
+
+                  <template #[`item.status`]="{ item }">
+                    <div class="d-flex justify-center">
+                      <v-tooltip :text="joStatusLabel(item.status)" location="top">
+                        <template v-slot:activator="{ props }">
+                          <v-icon v-bind="props" size="16" :color="joStatusColor(item.status)">{{ joStatusIcon(item.status) }}</v-icon>
+                        </template>
+                      </v-tooltip>
+                    </div>
+                  </template>
+
+                  <template #[`item.attachProduct`]="{ item }">
+                    <div class="d-flex justify-center">
+                      <v-icon size="14" :color="item.attachmentProductCount > 0 ? 'success' : 'error'">
+                        {{ item.attachmentProductCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
+                      </v-icon>
+                    </div>
+                  </template>
+
+                  <template #[`item.attachCustomer`]="{ item }">
+                    <div class="d-flex justify-center">
+                      <v-icon size="14" :color="item.attachmentCustomerCount > 0 ? 'success' : 'error'">
+                        {{ item.attachmentCustomerCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
+                      </v-icon>
+                    </div>
+                  </template>
+
+                  <template #[`item.orderedOn`]="{ item }">{{ joFormat(item.orderedOn) }}</template>
+                  <template #[`item.requiredOn`]="{ item }">{{ joFormat(item.requiredOn) }}</template>
+                  <template #[`item.completedOn`]="{ item }">{{ item.completedOn ? joFormat(item.completedOn) : '-' }}</template>
+                  <template #[`item.modifiedOn`]="{ item }">{{ item.modifiedOn ? joFormat(item.modifiedOn) : '-' }}</template>
+                  <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
+                  <template #[`item.invoiceAmount`]="{ item }">{{ joFormatCurrency(item.invoiceAmount) }}</template>
+                </v-data-table>
+              </template>
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="invoices">
@@ -711,6 +934,22 @@
         <v-btn variant="text" @click="taskSaveSuccess = false">{{ t('common.cancel') }}</v-btn>
       </template>
     </v-snackbar>
+
+    <v-dialog v-model="joFormOpen" max-width="min(100%, 760px)" scrollable>
+      <JobOrderForm
+        v-if="joFormOpen"
+        :job="joFormJob"
+        @saved="handleJoSaved"
+        @cancel="joFormOpen = false"
+      />
+    </v-dialog>
+
+    <v-snackbar v-model="joSaveSuccess" color="success" timeout="3000">
+      {{ joSuccessMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="joSaveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
   </section>
 </template>
 
@@ -718,15 +957,21 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions } from '@/services/crm'
+import { getJobList, deleteJobOrder } from '@/services/jobOrders'
+import { getJobDetail } from '@/services/jobs'
+import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
+import { getOrderTypeMeta } from '@/utils/orderType'
+import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
 import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
 import CrmTaskRecordDialog from '@/components/crm/CrmTaskRecordDialog.vue'
+import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask } from '@/types/api'
+import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, JobOrderRecord, JobDetail } from '@/types/api'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -1241,6 +1486,205 @@ async function handleTaskSaved(task: CrmTask) {
   taskSuccessMessage.value = t('crm.tasks.messages.saveSuccess')
   taskSaveSuccess.value = true
 }
+
+// --- Job Orders tab ---
+
+const joRows = ref<JobOrderRecord[]>([])
+const loadingJobOrders = ref(false)
+const joLookup = ref('')
+const joErrorMessage = ref('')
+const joSelectedIds = ref<string[]>([])
+const joDeleting = ref(false)
+const joFormOpen = ref(false)
+const joFormJob = ref<JobDetail | null>(null)
+const joSaveSuccess = ref(false)
+const joSuccessMessage = ref('')
+
+const joViewSettings = useViewSettings('crm-customer360-job-orders', {
+  visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
+  sortKey: 'orderNumber',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const joVisibleColumnKeys = joViewSettings.visibleColumns
+const joSortKey = joViewSettings.sortKey
+const joSortDirection = joViewSettings.sortDirection
+const joCheckboxMode = joViewSettings.checkboxMode
+const joViewMode = joViewSettings.viewMode
+
+const { format: joFormat } = useGlobalDateFormatter()
+const { formatCurrency: joFormatCurrency } = useLocaleFormatters()
+
+function joStatusIcon(value: number): string {
+  return statusIcon(value)
+}
+
+function joStatusColor(value: number): string {
+  return statusColor(value)
+}
+
+function joStatusLabel(value: number): string {
+  return statusLabel(value)
+}
+
+function joOrderTypeMeta(value: number) {
+  return getOrderTypeMeta(value)
+}
+
+function joCompositeNumber(row: JobOrderRecord): string {
+  return row.jobNumber ? `${row.orderNumber}-${row.jobNumber}` : row.orderNumber
+}
+
+const allJoHeaders = computed(() => [
+  { title: t('jobOrder.jobList.headers.orderType'), key: 'orderType', width: '52px', sortable: false },
+  { title: t('jobOrder.jobList.headers.ln'), key: 'ln', width: '52px', sortable: false },
+  { title: t('jobOrder.jobList.headers.order'), key: 'orderNumber', width: '132px' },
+  { title: t('jobOrder.jobList.headers.status'), key: 'status', width: '72px', sortable: false },
+  { title: t('jobOrder.jobList.headers.orderedOn'), key: 'orderedOn', width: '122px' },
+  { title: t('jobOrder.jobList.headers.customer'), key: 'customerName', minWidth: '220px' },
+  { title: t('jobOrder.jobList.headers.orderTitle'), key: 'orderTitle', minWidth: '240px' },
+  { title: t('jobOrder.jobList.headers.attachProduct'), key: 'attachProduct', width: '72px', sortable: false },
+  { title: t('jobOrder.jobList.headers.customerRef'), key: 'customerRef', width: '160px' },
+  { title: t('jobOrder.jobList.headers.attachCustomer'), key: 'attachCustomer', width: '72px', sortable: false },
+  { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
+  { title: t('jobOrder.jobList.headers.quotation'), key: 'productStyle', width: '120px' },
+  { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '132px', align: 'end' as const },
+  { title: t('jobOrder.jobList.headers.requiredOn'), key: 'requiredOn', width: '122px' },
+  { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '122px' },
+  { title: t('jobOrder.jobList.headers.modifiedBy'), key: 'modifiedBy', width: '100px' },
+  { title: t('jobOrder.jobList.headers.completedOn'), key: 'completedOn', width: '122px' },
+])
+
+const joHeaders = computed(() =>
+  allJoHeaders.value.filter((header) => joVisibleColumnKeys.value.includes(String(header.key))),
+)
+
+const joSortableColumns = computed(() =>
+  allJoHeaders.value
+    .filter((header) => header.sortable !== false && header.key !== 'status' && header.key !== 'attachProduct' && header.key !== 'attachCustomer')
+    .map((header) => ({ key: String(header.key), title: String(header.title) })),
+)
+
+const joColumnOptions = computed(() =>
+  allJoHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })),
+)
+
+const joDisplayedRows = computed(() => {
+  const result = [...joRows.value]
+  const key = (joSortKey.value ?? 'orderNumber') as keyof JobOrderRecord
+  const direction = joSortDirection.value ?? 'desc'
+
+  result.sort((lhs, rhs) => {
+    const left = String(lhs[key] ?? '')
+    const right = String(rhs[key] ?? '')
+    return direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+  })
+
+  return result
+})
+
+async function loadJobOrders() {
+  if (!company.value) {
+    joRows.value = []
+    return
+  }
+  loadingJobOrders.value = true
+  joErrorMessage.value = ''
+  try {
+    const query = [company.value!.name.trim(), joLookup.value.trim()].filter(Boolean).join(' ')
+    joRows.value = await getJobList({ lookup: query || undefined })
+  } catch {
+    joErrorMessage.value = t('jobOrder.jobList.loadFailed')
+  } finally {
+    loadingJobOrders.value = false
+  }
+}
+
+watch(company, () => {
+  loadJobOrders()
+})
+
+async function applyJoLookup() {
+  await loadJobOrders()
+}
+
+async function refreshJoList() {
+  joLookup.value = ''
+  await loadJobOrders()
+}
+
+function toggleJoColumn(columnKey: string) {
+  if (joVisibleColumnKeys.value.includes(columnKey)) {
+    if (joVisibleColumnKeys.value.length > 1) {
+      joVisibleColumnKeys.value = joVisibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+  joVisibleColumnKeys.value = [...joVisibleColumnKeys.value, columnKey]
+}
+
+function setJoViewMode(mode: 'detail' | 'card') {
+  joViewMode.value = mode
+}
+
+async function onJoRowClick(event: Event, payload: unknown) {
+  const row = payload as { item?: JobOrderRecord | { raw?: JobOrderRecord } }
+  const item = row?.item
+  const record = item && typeof item === 'object' && 'raw' in item ? item.raw : (item as JobOrderRecord | undefined)
+  if (!record) return
+  if ((event.target as HTMLElement | null)?.closest('a,button,[role="button"],input,label,.v-selection-control')) return
+  if (joCheckboxMode.value) {
+    const idx = joSelectedIds.value.indexOf(record.orderId)
+    if (idx >= 0) joSelectedIds.value.splice(idx, 1)
+    else joSelectedIds.value.push(record.orderId)
+    return
+  }
+  await openJoEditor(record)
+}
+
+async function openJoEditor(record: JobOrderRecord) {
+  try {
+    joFormJob.value = await getJobDetail(record.orderId)
+    joFormOpen.value = true
+  } catch {
+    joErrorMessage.value = t('jobOrder.openEditFailed')
+  }
+}
+
+function openNewJobOrder() {
+  joFormJob.value = null
+  joFormOpen.value = true
+}
+
+async function confirmJoBatchDelete() {
+  const idsToDelete = [...joSelectedIds.value]
+  if (idsToDelete.length === 0) return
+  if (!window.confirm(t('jobOrder.jobList.batchDeleteConfirm', { count: idsToDelete.length }))) return
+  joDeleting.value = true
+  let succeeded = 0
+  let failed = 0
+  for (const id of idsToDelete) {
+    try {
+      await deleteJobOrder(id)
+      succeeded++
+    } catch {
+      failed++
+    }
+  }
+  joDeleting.value = false
+  joSelectedIds.value = []
+  await loadJobOrders()
+  if (failed > 0) {
+    joErrorMessage.value = t('jobOrder.jobList.batchDeleteResult', { succeeded, failed, total: idsToDelete.length })
+  }
+}
+
+function handleJoSaved() {
+  joFormOpen.value = false
+  joSaveSuccess.value = true
+  loadJobOrders()
+}
 </script>
 
 <style scoped>
@@ -1591,6 +2035,60 @@ async function handleTaskSaved(task: CrmTask) {
 
 @media (max-width: 960px) {
   .tasks-tab-content .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.job-orders-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.job-orders-tab-content .filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
+  align-items: center;
+}
+
+.job-orders-tab-content .toolbar-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.job-orders-tab-content .toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.job-orders-tab-content .job-orders-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.job-orders-tab-content .job-orders-table :deep(.v-table__wrapper > table > thead > tr > th),
+.job-orders-tab-content .job-orders-table :deep(.v-data-table__th) {
+  white-space: nowrap;
+  background-color: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.job-orders-tab-content .job-orders-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.job-orders-tab-content .job-orders-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.job-orders-tab-content .job-orders-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.job-orders-tab-content .job-orders-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+}
+
+@media (max-width: 960px) {
+  .job-orders-tab-content .filter-bar {
     grid-template-columns: 1fr;
   }
 }
