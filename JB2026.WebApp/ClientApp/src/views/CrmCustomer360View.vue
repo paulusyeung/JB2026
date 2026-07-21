@@ -371,8 +371,263 @@
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="invoices">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.invoices') }}</p>
+            <div class="tab-content invoices-tab-content">
+              <div class="filter-bar">
+                <v-text-field
+                  v-model="invLookup"
+                  density="comfortable"
+                  :label="t('billing.invoices.lookup')"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyInvLookup"
+                />
+                <v-text-field
+                  v-model="invInvoiceLookup"
+                  density="comfortable"
+                  :label="t('billing.invoices.invoiceLookup')"
+                  prepend-inner-icon="mdi-file-document-outline"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyInvLookup"
+                />
+                <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingInvoices" @click="applyInvLookup">
+                  {{ t('common.search') }}
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loadingInvoices" @click="refreshInvList">
+                  {{ t('common.refresh') }}
+                </v-btn>
+              </div>
+
+              <v-alert v-if="invErrorMessage" type="warning" variant="tonal" class="mt-2 mb-2">{{ invErrorMessage }}</v-alert>
+
+              <div class="toolbar-bar mb-2">
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                      {{ t('billing.invoices.actions.columns') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item v-for="column in invColumnOptions" :key="column.key" @click="toggleInvColumn(column.key)">
+                      <template #prepend>
+                        <v-checkbox-btn :model-value="invVisibleColumnKeys.includes(column.key)" />
+                      </template>
+                      <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                      {{ t('billing.invoices.actions.sorting') }}
+                    </v-btn>
+                  </template>
+                  <v-card min-width="280" class="pa-3">
+                    <v-select
+                      v-model="invSortKey"
+                      :items="invSortableColumns"
+                      item-title="title"
+                      item-value="key"
+                      density="compact"
+                      variant="outlined"
+                      :label="t('billing.invoices.actions.sortBy')"
+                      hide-details
+                    />
+                    <v-btn-toggle v-model="invSortDirection" mandatory divided class="mt-3" density="compact">
+                      <v-btn value="asc">{{ t('billing.invoices.actions.asc') }}</v-btn>
+                      <v-btn value="desc">{{ t('billing.invoices.actions.desc') }}</v-btn>
+                    </v-btn-toggle>
+                  </v-card>
+                </v-menu>
+
+                <template v-if="!isPhoneLayout">
+                  <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="invCheckboxMode = !invCheckboxMode">
+                    {{ t('billing.invoices.actions.checkbox') }}
+                  </v-btn>
+
+                  <v-menu location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                        {{ t('billing.invoices.actions.views') }}
+                      </v-btn>
+                    </template>
+                    <v-list density="compact" class="toolbar-menu-list">
+                      <v-list-item prepend-icon="mdi-table" :active="invViewMode === 'detail'" @click="setInvViewMode('detail')">
+                        <v-list-item-title>{{ t('billing.invoices.actions.detailView') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-view-grid-outline" :active="invViewMode === 'card'" @click="setInvViewMode('card')">
+                        <v-list-item-title>{{ t('billing.invoices.actions.cardView') }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+
+                  <v-divider vertical class="mx-1" />
+
+                  <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewInvoice">
+                    {{ t('billing.invoices.actions.newInvoice') }}
+                  </v-btn>
+
+                  <v-btn
+                    variant="outlined"
+                    size="small"
+                    :disabled="!isInvMarkSentEnabled || isInvSending"
+                    :loading="isInvSending"
+                    prepend-icon="mdi-send-circle-outline"
+                    @click="handleInvMarkSent"
+                  >
+                    {{ t('billing.invoices.actions.markSent') }}
+                  </v-btn>
+
+                  <v-menu location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        variant="outlined"
+                        size="small"
+                        :disabled="!isInvDownloadEnabled"
+                        prepend-icon="mdi-download-circle-outline"
+                      >
+                        {{ t('billing.invoices.actions.download') }}
+                      </v-btn>
+                    </template>
+                    <v-list density="compact" class="toolbar-menu-list">
+                      <v-list-item @click="handleInvDownloadInvoicePdf">
+                        <v-list-item-title>{{ t('billing.invoices.actions.invoicePdf') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="handleInvDownloadDeliveryNote">
+                        <v-list-item-title>{{ t('billing.invoices.actions.deliveryNote') }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </template>
+
+                <v-menu v-else location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                      {{ t('billing.invoices.actions.more') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="invCheckboxMode = !invCheckboxMode">
+                      <v-list-item-title>{{ t('billing.invoices.actions.checkbox') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-table" :active="invViewMode === 'detail'" @click="setInvViewMode('detail')">
+                      <v-list-item-title>{{ t('billing.invoices.actions.detailView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-view-grid-outline" :active="invViewMode === 'card'" @click="setInvViewMode('card')">
+                      <v-list-item-title>{{ t('billing.invoices.actions.cardView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-plus-circle-outline" @click="openNewInvoice">
+                      <v-list-item-title>{{ t('billing.invoices.actions.newInvoice') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <span v-if="invCheckboxMode" class="text-caption text-medium-emphasis">
+                  {{ t('billing.invoices.labels.selected', { count: invSelectedIds.length }) }}
+                </span>
+              </div>
+
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <template v-else-if="isInvCardView && invRows.length > 0">
+                <div class="invoice-card-list">
+                  <v-card
+                    v-for="invoice in invDisplayedRows"
+                    :key="invoice.externalInvoiceId"
+                    rounded="lg"
+                    elevation="0"
+                    class="invoice-card"
+                    @click="openInvoice(invoice)"
+                  >
+                    <div v-if="invCheckboxMode" class="invoice-card__checkbox-anchor" @click.stop>
+                      <v-checkbox-btn
+                        class="invoice-card__checkbox"
+                        :model-value="invSelectedIds.includes(invoice.externalInvoiceId)"
+                        density="compact"
+                        hide-details
+                        @click.stop="handleInvCardCheckbox(invoice.externalInvoiceId)"
+                      />
+                    </div>
+
+                    <div class="invoice-card__header">
+                      <div>
+                        <div class="text-subtitle-2 font-weight-bold">{{ invDisplayValue(invoice.invoiceNumber || invoice.externalInvoiceId) }}</div>
+                        <div class="text-caption text-medium-emphasis">{{ invDisplayValue(invoice.clientName) }}</div>
+                      </div>
+                    </div>
+
+                    <div class="invoice-card__body">
+                      <span>{{ invoice.invoiceDate ? invFormat(invoice.invoiceDate) : t('billing.invoices.labels.empty') }}</span>
+                      <v-chip size="small" :color="invStatusColor(invoice.status)" variant="tonal">
+                        {{ invStatusLabel(invoice.status) }}
+                      </v-chip>
+                    </div>
+
+                    <div class="invoice-card__footer text-caption text-medium-emphasis">
+                      <span>{{ t('billing.invoices.labels.amount') }}: {{ invFormatCurrency(invoice.amount) }}</span>
+                      <span>{{ t('billing.invoices.labels.due') }}: {{ invoice.dueDate ? invFormat(invoice.dueDate) : t('billing.invoices.labels.empty') }}</span>
+                      <span>{{ t('billing.invoices.labels.lastSynced') }}: {{ invoice.lastSyncedAt ? invFormat(invoice.lastSyncedAt) : t('billing.invoices.labels.empty') }}</span>
+                    </div>
+                  </v-card>
+                </div>
+              </template>
+
+              <template v-else-if="invRows.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('customer360.placeholders.invoices') }}
+                </div>
+              </template>
+
+              <template v-else>
+                <v-data-table
+                  v-model="invSelectedIds"
+                  :headers="invHeaders"
+                  :items="invDisplayedRows"
+                  :loading="loadingInvoices"
+                  item-value="externalInvoiceId"
+                  :show-select="invCheckboxMode"
+                  density="compact"
+                  fixed-header
+                  height="45vh"
+                  class="invoices-table"
+                  @click:row="onInvRowClick"
+                >
+                  <template #[`item.invoiceNumber`]="{ item }">
+                    <v-btn variant="text" color="primary" class="px-0 text-none" @click.stop="openInvoice(item)">
+                      {{ item.invoiceNumber || item.externalInvoiceId }}
+                    </v-btn>
+                  </template>
+
+                  <template #[`item.clientName`]="{ item }">
+                    {{ invDisplayValue(item.clientName) }}
+                  </template>
+
+                  <template #[`item.invoiceDate`]="{ item }">
+                    {{ item.invoiceDate ? invFormat(item.invoiceDate) : t('billing.invoices.labels.empty') }}
+                  </template>
+
+                  <template #[`item.status`]="{ item }">
+                    <v-chip size="small" :color="invStatusColor(item.status)" variant="tonal">
+                      {{ invStatusLabel(item.status) }}
+                    </v-chip>
+                  </template>
+
+                  <template #[`item.amount`]="{ item }">
+                    {{ invFormatCurrency(item.amount) }}
+                  </template>
+
+                  <template #[`item.dueDate`]="{ item }">
+                    {{ item.dueDate ? invFormat(item.dueDate) : t('billing.invoices.labels.empty') }}
+                  </template>
+                </v-data-table>
+              </template>
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="opportunities">
@@ -950,23 +1205,50 @@
         <v-btn variant="text" @click="joSaveSuccess = false">{{ t('common.cancel') }}</v-btn>
       </template>
     </v-snackbar>
+
+    <!-- Invoice Editor Dialog -->
+    <BillingInvoiceEditorDialog
+      v-model="invShowEditorDialog"
+      :mode="invEditorMode"
+      :external-invoice-id="invEditorInvoiceId"
+      @saved="handleInvSaved"
+    />
+
+    <v-dialog v-model="invShowMarkSentConfirmation" max-width="400">
+      <v-card>
+        <v-card-title>{{ t('billing.invoices.actions.confirmMarkSent') }}</v-card-title>
+        <v-card-text>
+          {{ t('billing.invoices.messages.markSentConfirm') }}
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="invShowMarkSentConfirmation = false">{{ t('billing.invoices.actions.cancel') }}</v-btn>
+          <v-btn color="primary" variant="elevated" :loading="isInvSending" @click="performInvMarkSent">
+            {{ t('billing.invoices.actions.markAsSent') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import axios from 'axios'
 import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions } from '@/services/crm'
 import { getJobList, deleteJobOrder } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
 import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
 import { getOrderTypeMeta } from '@/utils/orderType'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
 import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
 import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
 import CrmTaskRecordDialog from '@/components/crm/CrmTaskRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
+import BillingInvoiceEditorDialog from '@/components/billing/BillingInvoiceEditorDialog.vue'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
@@ -1685,6 +1967,320 @@ function handleJoSaved() {
   joSaveSuccess.value = true
   loadJobOrders()
 }
+
+// --- Invoices tab ---
+
+const invRows = ref<InvoiceBillingSummary[]>([])
+const loadingInvoices = ref(false)
+const invLookup = ref('')
+const invInvoiceLookup = ref('')
+const invErrorMessage = ref('')
+const invSelectedIds = ref<string[]>([])
+const isInvSending = ref(false)
+const invShowMarkSentConfirmation = ref(false)
+const invShowEditorDialog = ref(false)
+const invEditorMode = ref<'create' | 'edit' | 'view'>('create')
+const invEditorInvoiceId = ref<string | undefined>(undefined)
+
+const invViewSettings = useViewSettings('crm-customer360-invoices', {
+  visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate'],
+  sortKey: 'invoiceDate',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const invVisibleColumnKeys = invViewSettings.visibleColumns
+const invSortKey = invViewSettings.sortKey
+const invSortDirection = invViewSettings.sortDirection
+const invCheckboxMode = invViewSettings.checkboxMode
+const invViewMode = invViewSettings.viewMode
+
+const { format: invFormat } = useGlobalDateFormatter()
+const { formatCurrency: invFormatCurrency } = useLocaleFormatters()
+
+const isInvCardView = computed(() => invViewMode.value === 'card')
+
+const allInvHeaders = computed(() => [
+  { title: t('billing.invoices.headers.invoice'), key: 'invoiceNumber', minWidth: '180px' },
+  { title: t('billing.invoices.headers.client'), key: 'clientName', minWidth: '220px' },
+  { title: t('billing.invoices.headers.invoiceDate'), key: 'invoiceDate', width: '130px' },
+  { title: t('billing.invoices.headers.status'), key: 'status', width: '140px' },
+  { title: t('billing.invoices.headers.amount'), key: 'amount', width: '140px', align: 'end' as const },
+  { title: t('billing.invoices.headers.dueDate'), key: 'dueDate', width: '130px' },
+])
+
+const invHeaders = computed(() =>
+  allInvHeaders.value.filter((header) => invVisibleColumnKeys.value.includes(String(header.key))),
+)
+
+const invColumnOptions = computed(() =>
+  allInvHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+)
+
+const invSortableColumns = computed(() =>
+  allInvHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+)
+
+const isInvMarkSentEnabled = computed(() => {
+  if (!invCheckboxMode.value || invSelectedIds.value.length !== 1) return false
+  const selectedId = invSelectedIds.value[0]
+  const selectedInvoice = invRows.value.find((inv) => inv.externalInvoiceId === selectedId)
+  return selectedInvoice?.status === 'Draft'
+})
+
+const isInvDownloadEnabled = computed(() => {
+  if (!invCheckboxMode.value || invSelectedIds.value.length !== 1) return false
+  return true
+})
+
+const invDisplayedRows = computed(() => {
+  const result = [...invRows.value]
+  const activeSortKey = invSortKey.value || 'invoiceDate'
+  const direction = invSortDirection.value === 'asc' ? 1 : -1
+
+  result.sort((left, right) => compareInv(left, right, activeSortKey) * direction)
+  return result
+})
+
+async function loadInvoices() {
+  if (!company.value) {
+    invRows.value = []
+    return
+  }
+  loadingInvoices.value = true
+  invErrorMessage.value = ''
+  try {
+    const lookup = company.value!.name.trim()
+    invRows.value = await listInvoices(lookup || undefined, invInvoiceLookup.value.trim() || undefined)
+  } catch (e) {
+    console.error('Failed to load invoices', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      invErrorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.loadFailed')
+    } else if (e instanceof Error) {
+      invErrorMessage.value = e.message || t('billing.invoices.messages.loadFailed')
+    } else {
+      invErrorMessage.value = t('billing.invoices.messages.loadFailed')
+    }
+  } finally {
+    loadingInvoices.value = false
+  }
+}
+
+watch(company, () => {
+  loadInvoices()
+})
+
+async function applyInvLookup() {
+  await loadInvoices()
+}
+
+async function refreshInvList() {
+  invLookup.value = ''
+  invInvoiceLookup.value = ''
+  await loadInvoices()
+}
+
+function toggleInvColumn(columnKey: string) {
+  if (invVisibleColumnKeys.value.includes(columnKey)) {
+    if (invVisibleColumnKeys.value.length > 1) {
+      invVisibleColumnKeys.value = invVisibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+  invVisibleColumnKeys.value = [...invVisibleColumnKeys.value, columnKey]
+}
+
+function setInvViewMode(mode: 'detail' | 'card') {
+  invViewMode.value = mode
+}
+
+function handleInvCardCheckbox(externalInvoiceId: string) {
+  if (invSelectedIds.value.includes(externalInvoiceId)) {
+    invSelectedIds.value = invSelectedIds.value.filter((id) => id !== externalInvoiceId)
+    return
+  }
+  invSelectedIds.value = [...invSelectedIds.value, externalInvoiceId]
+}
+
+function onInvRowClick(_event: Event, payload: { item: InvoiceBillingSummary }) {
+  if (invCheckboxMode.value) return
+  openInvoice(payload.item)
+}
+
+function openInvoice(invoice: InvoiceBillingSummary) {
+  invEditorMode.value = invoice.status === 'Draft' ? 'edit' : 'view'
+  invEditorInvoiceId.value = invoice.externalInvoiceId
+  invShowEditorDialog.value = true
+}
+
+function openNewInvoice() {
+  invEditorMode.value = 'create'
+  invEditorInvoiceId.value = undefined
+  invShowEditorDialog.value = true
+}
+
+async function handleInvSaved() {
+  await loadInvoices()
+}
+
+function handleInvMarkSent() {
+  invShowMarkSentConfirmation.value = true
+}
+
+async function performInvMarkSent() {
+  const selectedId = invSelectedIds.value[0]
+  if (!selectedId) return
+
+  isInvSending.value = true
+  invErrorMessage.value = ''
+
+  try {
+    const updatedSummary = await sendInvoice(selectedId)
+    const invoiceIndex = invRows.value.findIndex((inv) => inv.externalInvoiceId === selectedId)
+    if (invoiceIndex !== -1) {
+      invRows.value[invoiceIndex] = updatedSummary
+    }
+    invSelectedIds.value = []
+    invShowMarkSentConfirmation.value = false
+  } catch (e) {
+    console.error('Failed to send invoice', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      invErrorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.sendFailed')
+    } else if (e instanceof Error) {
+      invErrorMessage.value = e.message || t('billing.invoices.messages.sendFailed')
+    } else {
+      invErrorMessage.value = t('billing.invoices.messages.sendUnexpected')
+    }
+  } finally {
+    isInvSending.value = false
+  }
+}
+
+function invOpenPdfPreviewWindow() {
+  const previewWindow = window.open('', '_blank')
+  if (!previewWindow) return null
+  previewWindow.document.title = t('billing.invoices.messages.previewTitle')
+  previewWindow.document.body.innerHTML = `<p style="font-family: sans-serif; padding: 16px;">${t('billing.invoices.messages.previewLoading')}</p>`
+  return previewWindow
+}
+
+function invShowPdfPreview(previewWindow: Window, blob: Blob) {
+  const previewUrl = URL.createObjectURL(blob)
+  previewWindow.location.href = previewUrl
+  window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000)
+}
+
+async function handleInvDownloadInvoicePdf() {
+  const selectedId = invSelectedIds.value[0]
+  if (!selectedId) return
+
+  const previewWindow = invOpenPdfPreviewWindow()
+  if (!previewWindow) {
+    invErrorMessage.value = t('billing.invoices.messages.previewBlocked')
+    return
+  }
+
+  invErrorMessage.value = ''
+
+  try {
+    const blob = await downloadInvoicePdf(selectedId)
+    invShowPdfPreview(previewWindow, blob)
+  } catch (e) {
+    previewWindow.close()
+    console.error('Failed to download invoice PDF', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      invErrorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.downloadInvoicePdfFailed')
+    } else if (e instanceof Error) {
+      invErrorMessage.value = e.message || t('billing.invoices.messages.downloadInvoicePdfFailed')
+    } else {
+      invErrorMessage.value = t('billing.invoices.messages.downloadInvoicePdfUnexpected')
+    }
+  }
+}
+
+async function handleInvDownloadDeliveryNote() {
+  const selectedId = invSelectedIds.value[0]
+  if (!selectedId) return
+
+  const previewWindow = invOpenPdfPreviewWindow()
+  if (!previewWindow) {
+    invErrorMessage.value = t('billing.invoices.messages.previewBlocked')
+    return
+  }
+
+  invErrorMessage.value = ''
+
+  try {
+    const blob = await downloadDeliveryNote(selectedId)
+    invShowPdfPreview(previewWindow, blob)
+  } catch (e) {
+    previewWindow.close()
+    console.error('Failed to download delivery note', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      invErrorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.downloadDeliveryNoteFailed')
+    } else if (e instanceof Error) {
+      invErrorMessage.value = e.message || t('billing.invoices.messages.downloadDeliveryNoteFailed')
+    } else {
+      invErrorMessage.value = t('billing.invoices.messages.downloadDeliveryNoteUnexpected')
+    }
+  }
+}
+
+function invDisplayValue(value?: string | null) {
+  return value || t('billing.invoices.labels.empty')
+}
+
+function invStatusLabel(status?: string | null) {
+  if (!status) return t('billing.invoices.status.unknown')
+  const normalized = status.trim().toLowerCase()
+  if (normalized === 'draft') return t('billing.invoices.status.draft')
+  if (normalized === 'sent') return t('billing.invoices.status.sent')
+  if (normalized === 'viewed') return t('billing.invoices.status.viewed')
+  if (normalized === 'partial') return t('billing.invoices.status.partial')
+  if (normalized === 'paid') return t('billing.invoices.status.paid')
+  if (normalized === 'cancelled') return t('billing.invoices.status.cancelled')
+  if (normalized === 'reversed') return t('billing.invoices.status.reversed')
+  if (normalized === 'overdue') return t('billing.invoices.status.overdue')
+  if (normalized === 'unpaid') return t('billing.invoices.status.unpaid')
+  if (normalized === 'deleted') return t('billing.invoices.status.deleted')
+  return status
+}
+
+function invStatusColor(status: string) {
+  const normalized = status.toLowerCase()
+  if (normalized.includes('paid')) return 'success'
+  if (normalized.includes('overdue')) return 'error'
+  if (normalized.includes('sent') || normalized.includes('view')) return 'info'
+  if (normalized === 'cancelled' || normalized === 'reversed' || normalized.includes('deleted')) return 'default'
+  return 'warning'
+}
+
+function compareInv(left: InvoiceBillingSummary, right: InvoiceBillingSummary, key: string) {
+  switch (key) {
+    case 'amount':
+      return left.amount - right.amount
+    case 'invoiceDate':
+      return compareInvDateValues(left.invoiceDate, right.invoiceDate)
+    case 'dueDate':
+      return compareInvDateValues(left.dueDate, right.dueDate)
+    case 'lastSyncedAt':
+      return compareInvDateValues(left.lastSyncedAt, right.lastSyncedAt)
+    case 'invoiceNumber':
+      return left.invoiceNumber.localeCompare(right.invoiceNumber)
+    case 'clientName':
+      return left.clientName.localeCompare(right.clientName)
+    case 'status':
+      return left.status.localeCompare(right.status)
+    default:
+      return 0
+  }
+}
+
+function compareInvDateValues(left?: string, right?: string) {
+  const leftValue = left ? new Date(left).getTime() : Number.NEGATIVE_INFINITY
+  const rightValue = right ? new Date(right).getTime() : Number.NEGATIVE_INFINITY
+  return leftValue - rightValue
+}
 </script>
 
 <style scoped>
@@ -2090,6 +2686,112 @@ function handleJoSaved() {
 @media (max-width: 960px) {
   .job-orders-tab-content .filter-bar {
     grid-template-columns: 1fr;
+  }
+}
+
+.invoices-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.invoices-tab-content .filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) auto auto;
+  align-items: center;
+}
+
+.invoices-tab-content .toolbar-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.invoices-tab-content .toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.invoices-tab-content .invoices-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.invoices-tab-content .invoices-table :deep(.v-table__wrapper > table > thead > tr > th),
+.invoices-tab-content .invoices-table :deep(.v-data-table__th) {
+  white-space: nowrap;
+  background-color: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.invoices-tab-content .invoices-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.invoices-tab-content .invoices-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.invoices-tab-content .invoices-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.invoices-tab-content .invoices-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+}
+
+.invoices-tab-content .invoice-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+.invoices-tab-content .invoice-card {
+  position: relative;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.invoices-tab-content .invoice-card__checkbox-anchor {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.invoices-tab-content .invoice-card__checkbox {
+  margin: 0;
+}
+
+.invoices-tab-content .invoice-card__header,
+.invoices-tab-content .invoice-card__body,
+.invoices-tab-content .invoice-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.invoices-tab-content .invoice-card__body,
+.invoices-tab-content .invoice-card__footer {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 960px) {
+  .invoices-tab-content .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 960px) {
+  .invoices-tab-content .invoice-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
   }
 }
 </style>
