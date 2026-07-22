@@ -121,13 +121,13 @@
             <v-icon start>mdi-format-list-checks</v-icon>
             {{ t('customer360.tabs.tasks') }}
           </v-tab>
-          <v-tab value="emails">
-            <v-icon start>mdi-email-outline</v-icon>
-            {{ t('customer360.tabs.emails') }}
-          </v-tab>
           <v-tab value="files">
             <v-icon start>mdi-file-outline</v-icon>
             {{ t('customer360.tabs.files') }}
+          </v-tab>
+          <v-tab value="emails">
+            <v-icon start>mdi-email-outline</v-icon>
+            {{ t('customer360.tabs.emails') }}
           </v-tab>
           <v-tab value="calendar">
             <v-icon start>mdi-calendar-outline</v-icon>
@@ -1111,11 +1111,6 @@
               </template>
             </div>
           </v-tabs-window-item>
-          <v-tabs-window-item value="emails">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.emails') }}</p>
-            </div>
-          </v-tabs-window-item>
           <v-tabs-window-item value="files">
             <div class="tab-content files-tab-content">
               <div class="filter-bar">
@@ -1350,6 +1345,11 @@
                   </template>
                 </v-data-table>
               </template>
+            </div>
+          </v-tabs-window-item>
+          <v-tabs-window-item value="emails">
+            <div class="tab-content">
+              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.emails') }}</p>
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="calendar">
