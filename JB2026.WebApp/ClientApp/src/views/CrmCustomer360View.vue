@@ -1185,6 +1185,22 @@
                   {{ t('customer360.files.actions.checkbox') }}
                 </v-btn>
 
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                      {{ t('customer360.files.actions.views') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item prepend-icon="mdi-table" :active="filesViewMode === 'detail'" @click="setFilesViewMode('detail')">
+                      <v-list-item-title>{{ t('customer360.files.actions.detailView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-view-grid-outline" :active="filesViewMode === 'card'" @click="setFilesViewMode('card')">
+                      <v-list-item-title>{{ t('customer360.files.actions.cardView') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
                 <span v-if="filesCheckboxMode" class="text-caption text-medium-emphasis">
                   {{ t('customer360.files.actions.selected', { count: filesSelectedIds.length }) }}
                 </span>
@@ -1205,7 +1221,67 @@
               </template>
 
               <template v-else>
+                <div v-if="isFilesCardView" class="file-card-list">
+                  <v-card
+                    v-for="doc in filesDisplayedRows"
+                    :key="doc.id"
+                    rounded="lg"
+                    elevation="0"
+                    class="file-card"
+                  >
+                    <div
+                      class="file-card__thumbnail"
+                      :style="{ backgroundImage: doc.thumbnail ? `url(${doc.thumbnail})` : undefined }"
+                    >
+                      <div class="file-card__thumbnail-fallback">
+                        <v-icon size="36" :color="fileIconColor(doc.mimeType)">{{ fileIcon(doc.mimeType) }}</v-icon>
+                      </div>
+                    </div>
+                    <div class="file-card__header">
+                      <span class="text-subtitle-2 font-weight-medium text-truncate d-block">{{ doc.title }}</span>
+                      <span v-if="doc.correspondentName" class="text-caption text-medium-emphasis">{{ doc.correspondentName }}</span>
+                    </div>
+                    <div v-if="doc.tags?.length" class="file-card__tags">
+                      <v-chip
+                        v-for="tag in doc.tags"
+                        :key="tag.id"
+                        size="x-small"
+                        label
+                        variant="flat"
+                        class="px-1"
+                        :style="{ backgroundColor: tag.color + '30', color: tag.color, border: '1px solid ' + tag.color + '60' }"
+                      >
+                        {{ tag.name }}
+                      </v-chip>
+                    </div>
+                    <div class="file-card__body">
+                      <div class="file-card__body-row">
+                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.documentType') }}:</span>
+                        <span class="text-caption">{{ doc.documentTypeName || '—' }}</span>
+                      </div>
+                      <div class="file-card__body-row">
+                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.created') }}:</span>
+                        <span class="text-caption">{{ formatFileDate(doc.created) }}</span>
+                      </div>
+                      <div class="file-card__body-row">
+                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.pages') }}:</span>
+                        <span class="text-caption">{{ doc.pageCount ?? '—' }}</span>
+                      </div>
+                      <div class="file-card__body-row">
+                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.owner') }}:</span>
+                        <span class="text-caption">{{ doc.ownerName || '—' }}</span>
+                      </div>
+                      <div v-if="doc.isSharedByRequester" class="file-card__body-row">
+                        <v-chip size="x-small" label color="success" variant="tonal">{{ t('common.yes') }}</v-chip>
+                      </div>
+                    </div>
+                    <div class="file-card__footer">
+                      <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(doc)" />
+                    </div>
+                  </v-card>
+                </div>
                 <v-data-table
+                  v-else
                   :headers="filesHeaders"
                   :items="filesDisplayedRows"
                   :loading="loadingFiles"
@@ -2591,11 +2667,19 @@ const filesViewSettings = useViewSettings('crm-customer360-files', {
   sortKey: 'created',
   sortDirection: 'desc',
   checkboxMode: false,
+  viewMode: 'detail',
 })
 const filesVisibleColumnKeys = filesViewSettings.visibleColumns
 const filesSortKey = filesViewSettings.sortKey
 const filesSortDirection = filesViewSettings.sortDirection
 const filesCheckboxMode = filesViewSettings.checkboxMode
+const filesViewMode = filesViewSettings.viewMode
+
+const isFilesCardView = computed(() => filesViewMode.value === 'card')
+
+function setFilesViewMode(mode: 'detail' | 'card') {
+  filesViewMode.value = mode
+}
 
 async function loadFiles() {
   if (!company.value) {
@@ -3246,6 +3330,84 @@ function fileIconColor(mimeType: string | null | undefined): string {
 .files-tab-content .files-table :deep(.v-data-table__th:last-child) {
   border-top-right-radius: 8px;
   padding-right: 0.5rem;
+}
+
+.files-tab-content .file-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .files-tab-content .file-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    align-items: start;
+  }
+}
+
+.files-tab-content .file-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.files-tab-content .file-card__thumbnail {
+  grid-column: 1 / -1;
+  position: relative;
+  aspect-ratio: 210 / 297;
+  overflow: hidden;
+  background-color: rgb(var(--v-theme-surface-variant));
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.files-tab-content .file-card__thumbnail-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.files-tab-content .file-card__header {
+  grid-column: 1;
+  padding-left: 1rem;
+  padding-bottom: 0;
+  min-width: 0;
+}
+
+.files-tab-content .file-card__tags {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 1rem;
+}
+
+.files-tab-content .file-card__body {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0 1rem 0.8rem;
+}
+
+.files-tab-content .file-card__body-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.files-tab-content .file-card__footer {
+  grid-column: 2;
+  align-self: start;
+  justify-self: end;
+  padding-right: 0.5rem;
+  padding-top: 0.2rem;
 }
 
 .timeline-tab-content {

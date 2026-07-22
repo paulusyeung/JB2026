@@ -116,6 +116,8 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
                 .ToList(),
         }).ToList();
 
+        await FetchThumbnailsAsync(cfg, enriched, cancellationToken);
+
         _logger.LogInformation("[PNGX] returning {Count} enriched docs for query={Query}", enriched.Count, query);
         return enriched.AsReadOnly();
     }
@@ -155,6 +157,37 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
             _logger.LogWarning("[PNGX] lookup error for {Url}: {Msg}", url, ex.Message);
             return [];
         }
+    }
+
+    private static async Task FetchThumbnailsAsync(PaperlessNgxOptions cfg, List<PaperlessNgxDocumentResponse> documents, CancellationToken cancellationToken)
+    {
+        if (documents.Count == 0)
+            return;
+
+        using var client = new HttpClient();
+        client.BaseAddress = new Uri(cfg.BaseUrl.TrimEnd('/'));
+        client.DefaultRequestHeaders.Add("Authorization", $"Token {cfg.ApiToken}");
+        client.Timeout = TimeSpan.FromSeconds(5);
+
+        var tasks = documents.Select(async doc =>
+        {
+            try
+            {
+                var response = await client.GetAsync($"/api/documents/{doc.Id}/thumb/", cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                    return;
+
+                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                var contentType = response.Content.Headers.ContentType?.ToString() ?? "image/webp";
+                doc.Thumbnail = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+            }
+            catch
+            {
+                // thumbnails are optional
+            }
+        });
+
+        await Task.WhenAll(tasks);
     }
 
     private static string[] SplitSearchTerms(string name)
@@ -224,6 +257,7 @@ public sealed class PaperlessNgxDocumentResponse
     public string? OwnerName { get; set; }
     public bool IsSharedByRequester { get; set; }
     public int NoteCount { get; set; }
+    public string? Thumbnail { get; set; }
     public List<PaperlessNgxTagResponse> Tags { get; set; } = [];
 }
 

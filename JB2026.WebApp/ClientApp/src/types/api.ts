@@ -1142,6 +1142,7 @@ export interface PaperlessNgxDocument {
   ownerName: string | null
   isSharedByRequester: boolean
   noteCount: number
+  thumbnail: string | null
   tags: PaperlessNgxTag[]
 }
 

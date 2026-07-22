@@ -24,6 +24,9 @@ export const customer360Messages = {
     loadFailed: '從文檔伺服器載入檔案失敗。',
     lookup: '搜尋文檔\u2026',
     actions: {
+      views: '檢視',
+      detailView: '表格檢視',
+      cardView: '卡片檢視',
       columns: '列',
       sortBy: '排序方式',
       asc: '升序',

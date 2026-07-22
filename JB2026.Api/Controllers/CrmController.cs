@@ -497,6 +497,40 @@ public sealed class CrmController : ControllerBase
         });
     }
 
+    [HttpGet("files/{id}/thumb")]
+    [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any)]
+    public async Task<ActionResult> GetFileThumbnail(
+        int id,
+        [FromServices] IHttpClientFactory httpClientFactory,
+        [FromServices] IOptions<PaperlessNgxOptions> options,
+        ILogger<CrmController> logger,
+        CancellationToken cancellationToken = default)
+    {
+        var cfg = options.Value;
+        if (string.IsNullOrWhiteSpace(cfg.BaseUrl) || string.IsNullOrWhiteSpace(cfg.ApiToken))
+            return NotFound();
+
+        try
+        {
+            using var client = httpClientFactory.CreateClient();
+            var thumbUrl = $"{cfg.BaseUrl.TrimEnd('/')}/api/documents/{id}/thumb/";
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {cfg.ApiToken}");
+
+            var response = await client.GetAsync(thumbUrl, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return NotFound();
+
+            var contentType = response.Content.Headers.ContentType?.ToString() ?? "image/webp";
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return File(bytes, contentType);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Files] thumbnail error for document {Id}", id);
+            return NotFound();
+        }
+    }
+
     [HttpGet("files/{id}/download")]
     public async Task<ActionResult> DownloadFile(
         int id,

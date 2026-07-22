@@ -24,6 +24,9 @@ export const customer360Messages = {
     loadFailed: 'Failed to load files from document server.',
     lookup: 'Search documents\u2026',
     actions: {
+      views: 'Views',
+      detailView: 'Detail View',
+      cardView: 'Card View',
       columns: 'Columns',
       sortBy: 'Sort by',
       asc: 'Asc',

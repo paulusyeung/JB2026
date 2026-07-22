@@ -24,6 +24,9 @@ export const customer360Messages = {
     loadFailed: '从文档服务器加载文件失败。',
     lookup: '搜索文档\u2026',
     actions: {
+      views: '视图',
+      detailView: '表格视图',
+      cardView: '卡片视图',
       columns: '列',
       sortBy: '排序方式',
       asc: '升序',
