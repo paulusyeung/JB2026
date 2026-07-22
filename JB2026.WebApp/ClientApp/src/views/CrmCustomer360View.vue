@@ -1180,6 +1180,14 @@
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
+
+                <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="filesCheckboxMode = !filesCheckboxMode">
+                  {{ t('customer360.files.actions.checkbox') }}
+                </v-btn>
+
+                <span v-if="filesCheckboxMode" class="text-caption text-medium-emphasis">
+                  {{ t('customer360.files.actions.selected', { count: filesSelectedIds.length }) }}
+                </span>
               </div>
 
               <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
@@ -1202,6 +1210,8 @@
                   :items="filesDisplayedRows"
                   :loading="loadingFiles"
                   item-value="id"
+                  v-model="filesSelectedIds"
+                  :show-select="filesCheckboxMode"
                   density="compact"
                   fixed-header
                   height="45vh"
@@ -2573,16 +2583,19 @@ const files = ref<PaperlessNgxDocument[]>([])
 const loadingFiles = ref(false)
 const filesErrorMessage = ref('')
 const filesLookup = ref('')
+const filesSelectedIds = ref<number[]>([])
 const formatFileDate = useGlobalDateFormatter().format
 
 const filesViewSettings = useViewSettings('crm-customer360-files', {
   visibleColumns: ['archiveSerialNumber', 'correspondentName', 'title', 'ownerName', 'noteCount', 'documentTypeName', 'created', 'pageCount', 'isSharedByRequester', 'actions'],
   sortKey: 'created',
   sortDirection: 'desc',
+  checkboxMode: false,
 })
 const filesVisibleColumnKeys = filesViewSettings.visibleColumns
 const filesSortKey = filesViewSettings.sortKey
 const filesSortDirection = filesViewSettings.sortDirection
+const filesCheckboxMode = filesViewSettings.checkboxMode
 
 async function loadFiles() {
   if (!company.value) {

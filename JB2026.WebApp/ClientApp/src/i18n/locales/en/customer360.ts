@@ -28,6 +28,8 @@ export const customer360Messages = {
       sortBy: 'Sort by',
       asc: 'Asc',
       desc: 'Desc',
+      checkbox: 'Checkbox',
+      selected: '{count} selected',
     },
     created: 'Created',
     correspondent: 'Correspondent',

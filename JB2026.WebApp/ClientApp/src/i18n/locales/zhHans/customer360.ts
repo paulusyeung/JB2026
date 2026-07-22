@@ -28,6 +28,8 @@ export const customer360Messages = {
       sortBy: '排序方式',
       asc: '升序',
       desc: '降序',
+      checkbox: '复选框',
+      selected: '已选择 {count} 项',
     },
     created: '创建日期',
     correspondent: '发件人',
