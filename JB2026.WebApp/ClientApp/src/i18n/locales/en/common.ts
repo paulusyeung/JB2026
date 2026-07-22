@@ -14,4 +14,6 @@ export const commonMessages = {
       cancel: 'Cancel',
       confirmation: 'Confirmation',
       close: 'Close',
+      yes: 'Yes',
+      no: 'No',
     } as const

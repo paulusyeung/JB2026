@@ -25,11 +25,13 @@ function processQueue(token: string | null) {
 }
 
 apiClient.interceptors.request.use((config) => {
+  const isAuth = config.url?.includes('/api/v2/auth/')
   const token = localStorage.getItem('jb2026.accessToken')
-  if (token) {
+  if (token && !isAuth) {
     config.headers.Authorization = `Bearer ${token}`
   }
 
+  console.log('[Auth] request', config.method?.toUpperCase(), config.url, !!token)
   return config
 })
 
@@ -38,10 +40,13 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Handle 401 Unauthorized responses
+    if (error.response?.status === 401) {
+      console.log('[Auth] 401 on', originalRequest?.method?.toUpperCase(), originalRequest?.url, 'retry=', !!originalRequest?._retry, 'refreshing=', isRefreshing)
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
-        // Queue the request to retry after refresh completes
+        console.log('[Auth] queueing request')
         return new Promise((resolve, reject) => {
           failedQueue.push({
             resolve: (token: string) => {
@@ -58,17 +63,17 @@ apiClient.interceptors.response.use(
 
       try {
         const storedRefreshToken = localStorage.getItem('jb2026.refreshToken')
+        console.log('[Auth] refresh: token present=', !!storedRefreshToken)
         
         if (!storedRefreshToken) {
-          // No refresh token, must login again
+          console.log('[Auth] no refresh token, redirecting to login')
           clearSessionAndRedirectToLogin()
           return Promise.reject(error)
         }
 
-        // Call refresh endpoint
         const response = await refreshToken(storedRefreshToken)
+        console.log('[Auth] refresh succeeded')
         
-        // Update stored tokens
         const newAccessToken = response.accessToken
         localStorage.setItem('jb2026.accessToken', newAccessToken)
         
@@ -76,24 +81,20 @@ apiClient.interceptors.response.use(
           localStorage.setItem('jb2026.refreshToken', response.refreshToken)
         }
 
-        // Update session store with new tokens
         const sessionStore = useSessionStore()
         sessionStore.accessToken = newAccessToken
         if (response.refreshToken) {
           sessionStore.refreshToken = response.refreshToken
         }
 
-        // Update the original request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
 
-        // Process queued requests with new token
         processQueue(newAccessToken)
         isRefreshing = false
 
-        // Retry original request
         return apiClient(originalRequest)
       } catch (refreshError) {
-        // Refresh failed, clear session and redirect
+        console.log('[Auth] refresh failed:', refreshError)
         clearSessionAndRedirectToLogin()
         processQueue(null)
         isRefreshing = false
@@ -101,7 +102,6 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // For other errors or if already retried, just reject
     return Promise.reject(error)
   },
 )

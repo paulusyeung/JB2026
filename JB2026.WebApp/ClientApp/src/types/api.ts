@@ -1131,13 +1131,22 @@ export interface LegacySliceActionPlan {
 export interface PaperlessNgxDocument {
   id: number
   title: string
-  content: string | null
   created: string
-  modified: string
   added: string
-  documentType: number | null
-  correspondent: number | null
-  tags: number[]
-  mime_type: string
-  original_filename: string | null
+  archiveSerialNumber: number | null
+  mimeType: string
+  originalFileName: string | null
+  correspondentName: string | null
+  documentTypeName: string | null
+  pageCount: number
+  ownerName: string | null
+  isSharedByRequester: boolean
+  noteCount: number
+  tags: PaperlessNgxTag[]
+}
+
+export interface PaperlessNgxTag {
+  id: number
+  name: string
+  color: string
 }

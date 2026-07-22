@@ -22,6 +22,21 @@ export const customer360Messages = {
   },
   files: {
     loadFailed: 'Failed to load files from document server.',
+    lookup: 'Search documents\u2026',
+    actions: {
+      columns: 'Columns',
+      sortBy: 'Sort by',
+      asc: 'Asc',
+      desc: 'Desc',
+    },
+    created: 'Created',
+    correspondent: 'Correspondent',
+    title: 'Title',
+    owner: 'Owner',
+    notes: 'Notes',
+    documentType: 'Document Type',
+    pages: 'Pages',
+    shared: 'Shared',
   },
   timeline: {
     untitled: '(no title)',

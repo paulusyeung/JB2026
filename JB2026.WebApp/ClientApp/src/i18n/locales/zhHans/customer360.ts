@@ -22,6 +22,21 @@ export const customer360Messages = {
   },
   files: {
     loadFailed: '从文档服务器加载文件失败。',
+    lookup: '搜索文档\u2026',
+    actions: {
+      columns: '列',
+      sortBy: '排序方式',
+      asc: '升序',
+      desc: '降序',
+    },
+    created: '创建日期',
+    correspondent: '发件人',
+    title: '标题',
+    owner: '拥有者',
+    notes: '备注',
+    documentType: '文档类型',
+    pages: '页数',
+    shared: '共享',
   },
   timeline: {
     untitled: '(无标题)',

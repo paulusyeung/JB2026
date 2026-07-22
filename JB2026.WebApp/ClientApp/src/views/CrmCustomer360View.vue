@@ -1118,6 +1118,70 @@
           </v-tabs-window-item>
           <v-tabs-window-item value="files">
             <div class="tab-content files-tab-content">
+              <div class="filter-bar">
+                <v-text-field
+                  v-model="filesLookup"
+                  density="comfortable"
+                  :label="t('customer360.files.lookup')"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyFilesLookup"
+                  @click:clear="clearFilesLookup"
+                />
+                <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingFiles" @click="applyFilesLookup">
+                  {{ t('common.search') }}
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loadingFiles" @click="refreshFilesList">
+                  {{ t('common.refresh') }}
+                </v-btn>
+              </div>
+
+              <v-alert v-if="filesErrorMessage" type="warning" variant="tonal" class="mb-3">{{ filesErrorMessage }}</v-alert>
+
+              <div class="toolbar-bar mb-2">
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                      {{ t('customer360.files.actions.columns') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item v-for="column in filesColumnOptions" :key="column.key" @click="toggleFilesColumn(column.key)">
+                      <template #prepend>
+                        <v-checkbox-btn :model-value="filesVisibleColumnKeys.includes(column.key)" />
+                      </template>
+                      <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                      {{ t('customer360.files.actions.sortBy') }}
+                    </v-btn>
+                  </template>
+                  <v-card min-width="280" class="pa-3">
+                    <v-select
+                      v-model="filesSortKey"
+                      :items="filesSortableColumns"
+                      item-title="title"
+                      item-value="key"
+                      density="compact"
+                      variant="outlined"
+                      :label="t('customer360.files.actions.sortBy')"
+                      hide-details
+                    />
+                    <v-btn-toggle v-model="filesSortDirection" mandatory divided class="mt-3" density="compact">
+                      <v-btn value="asc">{{ t('customer360.files.actions.asc') }}</v-btn>
+                      <v-btn value="desc">{{ t('customer360.files.actions.desc') }}</v-btn>
+                    </v-btn-toggle>
+                  </v-card>
+                </v-menu>
+              </div>
+
               <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
                 {{ t('customer360.selectCompany') }}
               </div>
@@ -1126,38 +1190,79 @@
                 <v-progress-circular indeterminate size="24" />
               </div>
 
-              <v-alert v-else-if="filesErrorMessage" type="warning" variant="tonal" class="mb-3">{{ filesErrorMessage }}</v-alert>
-
-              <template v-else-if="files.length === 0">
+              <template v-else-if="filesDisplayedRows.length === 0">
                 <div class="text-center py-6 text-medium-emphasis text-body-2">
                   {{ t('customer360.placeholders.files') }}
                 </div>
               </template>
 
               <template v-else>
-                <div class="files-list">
-                  <v-card
-                    v-for="doc in files"
-                    :key="doc.id"
-                    rounded="lg"
-                    elevation="0"
-                    class="file-card"
-                  >
-                    <div class="file-card__icon">
-                      <v-icon size="32" :color="fileIconColor(doc.mime_type)">{{ fileIcon(doc.mime_type) }}</v-icon>
-                    </div>
-                    <div class="file-card__info">
-                      <div class="file-card__title text-subtitle-2 font-weight-medium text-truncate">{{ doc.title }}</div>
-                      <div class="file-card__meta text-caption text-medium-emphasis">
-                        <span>{{ doc.original_filename || doc.title }}</span>
-                        <span v-if="doc.added"> &middot; {{ formatFileDate(doc.added) }}</span>
+                <v-data-table
+                  :headers="filesHeaders"
+                  :items="filesDisplayedRows"
+                  :loading="loadingFiles"
+                  item-value="id"
+                  density="compact"
+                  fixed-header
+                  height="45vh"
+                  class="files-table"
+                >
+                  <template #[`item.archiveSerialNumber`]="{ value }">
+                    {{ value ?? '—' }}
+                  </template>
+                  <template #[`item.correspondentName`]="{ item }">
+                    <v-chip v-if="item.correspondentName" size="small" label variant="tonal" color="primary">{{ item.correspondentName }}</v-chip>
+                    <span v-else class="text-medium-emphasis">—</span>
+                  </template>
+                  <template #[`item.title`]="{ item }">
+                    <div class="d-flex flex-column" style="min-width: 0;">
+                      <span class="text-truncate d-inline-block" style="max-width: 280px;">
+                        <v-icon size="14" class="mr-1">{{ fileIcon(item.mimeType) }}</v-icon>
+                        {{ item.title }}
+                      </span>
+                      <div v-if="item.tags?.length" class="d-flex flex-wrap ga-1 mt-1">
+                        <v-chip
+                          v-for="tag in item.tags"
+                          :key="tag.id"
+                          size="small"
+                          label
+                          variant="flat"
+                          class="px-1"
+                          :style="{ backgroundColor: tag.color + '30', color: tag.color, border: '1px solid ' + tag.color + '60' }"
+                        >
+                          {{ tag.name }}
+                        </v-chip>
                       </div>
                     </div>
-                    <div class="file-card__actions">
-                      <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(doc)" />
-                    </div>
-                  </v-card>
-                </div>
+                  </template>
+                  <template #[`item.ownerName`]="{ value }">
+                    {{ value || '—' }}
+                  </template>
+                  <template #[`item.noteCount`]="{ value }">
+                    <span v-if="value && value > 0" class="d-flex align-center justify-center ga-1">
+                      <v-icon size="14" color="medium-emphasis">mdi-sticker-text-outline</v-icon>
+                      {{ value }}
+                    </span>
+                    <span v-else class="text-medium-emphasis">—</span>
+                  </template>
+                  <template #[`item.documentTypeName`]="{ item }">
+                    <v-chip v-if="item.documentTypeName" size="small" label variant="tonal">{{ item.documentTypeName }}</v-chip>
+                    <span v-else class="text-medium-emphasis">—</span>
+                  </template>
+                  <template #[`item.created`]="{ value }">
+                    {{ formatFileDate(value) }}
+                  </template>
+                  <template #[`item.pageCount`]="{ value }">
+                    {{ value }}
+                  </template>
+                  <template #[`item.isSharedByRequester`]="{ value }">
+                    <v-chip v-if="value" size="small" label color="success" variant="tonal">{{ t('common.yes') }}</v-chip>
+                    <v-chip v-else size="small" label variant="tonal">{{ t('common.no') }}</v-chip>
+                  </template>
+                  <template #[`item.actions`]="{ item }">
+                    <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(item)" />
+                  </template>
+                </v-data-table>
               </template>
             </div>
           </v-tabs-window-item>
@@ -1957,6 +2062,58 @@ const joHeaders = computed(() =>
   allJoHeaders.value.filter((header) => joVisibleColumnKeys.value.includes(String(header.key))),
 )
 
+const allFilesHeaders = computed(() => [
+  { title: 'ASN', key: 'archiveSerialNumber', width: '80px' },
+  { title: t('customer360.files.correspondent'), key: 'correspondentName', width: '160px' },
+  { title: t('customer360.files.title'), key: 'title', minWidth: '240px' },
+  { title: t('customer360.files.owner'), key: 'ownerName', width: '120px' },
+  { title: t('customer360.files.notes'), key: 'noteCount', width: '60px', align: 'center' as const },
+  { title: t('customer360.files.documentType'), key: 'documentTypeName', width: '160px' },
+  { title: t('customer360.files.created'), key: 'created', width: '100px' },
+  { title: t('customer360.files.pages'), key: 'pageCount', width: '60px', align: 'center' as const },
+  { title: t('customer360.files.shared'), key: 'isSharedByRequester', width: '60px', align: 'center' as const },
+  { title: '', key: 'actions', width: '48px', sortable: false },
+])
+
+const filesHeaders = computed(() =>
+  allFilesHeaders.value.filter((header) => filesVisibleColumnKeys.value.includes(String(header.key))),
+)
+
+const filesColumnOptions = computed(() =>
+  allFilesHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+)
+
+const filesSortableColumns = computed(() =>
+  allFilesHeaders.value
+    .filter((header) => header.sortable !== false && header.key !== 'actions')
+    .map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+)
+
+const filesDisplayedRows = computed(() => {
+  let result = [...files.value]
+
+  const search = filesLookup.value.trim().toLowerCase()
+  if (search) {
+    result = result.filter((row) =>
+      Object.values(row).some((val) => {
+        if (val === null || val === undefined) return false
+        return String(val).toLowerCase().includes(search)
+      }),
+    )
+  }
+
+  const key = (filesSortKey.value ?? 'created') as keyof PaperlessNgxDocument
+  const direction = filesSortDirection.value ?? 'desc'
+
+  result.sort((lhs, rhs) => {
+    const left = String(lhs[key] ?? '')
+    const right = String(rhs[key] ?? '')
+    return direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+  })
+
+  return result
+})
+
 const joSortableColumns = computed(() =>
   allJoHeaders.value
     .filter((header) => header.sortable !== false && header.key !== 'status' && header.key !== 'attachProduct' && header.key !== 'attachCustomer')
@@ -2415,7 +2572,17 @@ const files = ref<PaperlessNgxDocument[]>([])
 const paperlessBaseUrl = ref('')
 const loadingFiles = ref(false)
 const filesErrorMessage = ref('')
+const filesLookup = ref('')
 const formatFileDate = useGlobalDateFormatter().format
+
+const filesViewSettings = useViewSettings('crm-customer360-files', {
+  visibleColumns: ['archiveSerialNumber', 'correspondentName', 'title', 'ownerName', 'noteCount', 'documentTypeName', 'created', 'pageCount', 'isSharedByRequester', 'actions'],
+  sortKey: 'created',
+  sortDirection: 'desc',
+})
+const filesVisibleColumnKeys = filesViewSettings.visibleColumns
+const filesSortKey = filesViewSettings.sortKey
+const filesSortDirection = filesViewSettings.sortDirection
 
 async function loadFiles() {
   if (!company.value) {
@@ -2440,6 +2607,29 @@ async function loadFiles() {
 watch(company, () => {
   loadFiles()
 })
+
+function clearFilesLookup() {
+  filesLookup.value = ''
+}
+
+async function applyFilesLookup() {
+  await loadFiles()
+}
+
+async function refreshFilesList() {
+  filesLookup.value = ''
+  await loadFiles()
+}
+
+function toggleFilesColumn(columnKey: string) {
+  if (filesVisibleColumnKeys.value.includes(columnKey)) {
+    if (filesVisibleColumnKeys.value.length > 1) {
+      filesVisibleColumnKeys.value = filesVisibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+  filesVisibleColumnKeys.value = [...filesVisibleColumnKeys.value, columnKey]
+}
 
 function openFile(doc: PaperlessNgxDocument) {
   const url = paperlessBaseUrl.value
@@ -2987,42 +3177,53 @@ function fileIconColor(mimeType: string | null | undefined): string {
   gap: 0.5rem;
 }
 
-.files-tab-content .files-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.files-tab-content .filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
+  align-items: center;
 }
 
-.files-tab-content .file-card {
+.files-tab-content .toolbar-bar {
   display: flex;
+  gap: 8px;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
+  flex-wrap: wrap;
+}
+
+.files-tab-content .toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.files-tab-content .files-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
-  background: rgba(255, 255, 255, 0.72);
 }
 
-.files-tab-content .file-card__icon {
-  flex-shrink: 0;
+.files-tab-content .files-table :deep(.v-table__wrapper > table > thead > tr > th),
+.files-tab-content .files-table :deep(.v-data-table__th) {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  background-color: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
 }
 
-.files-tab-content .file-card__info {
-  flex: 1;
-  min-width: 0;
+.files-tab-content .files-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.files-tab-content .files-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+  padding-left: 1rem;
 }
 
-.files-tab-content .file-card__title {
-  line-height: 1.4;
-}
-
-.files-tab-content .file-card__meta {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
-}
-
-.files-tab-content .file-card__actions {
-  flex-shrink: 0;
+.files-tab-content .files-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.files-tab-content .files-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+  padding-right: 0.5rem;
 }
 
 .timeline-tab-content {

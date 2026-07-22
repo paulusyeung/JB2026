@@ -479,7 +479,7 @@ public sealed class CrmController : ControllerBase
         if (string.IsNullOrWhiteSpace(name))
             return Ok(new CompanyFilesResponse { BaseUrl = "", Documents = [] });
 
-        IReadOnlyList<PaperlessNgxDocument> documents;
+        IReadOnlyList<PaperlessNgxDocumentResponse> documents;
         try
         {
             documents = await paperlessNgxService.SearchDocumentsAsync(name, cancellationToken);
@@ -556,5 +556,5 @@ public sealed class CrmController : ControllerBase
 public sealed class CompanyFilesResponse
 {
     public string BaseUrl { get; set; } = string.Empty;
-    public IReadOnlyList<PaperlessNgxDocument> Documents { get; set; } = [];
+    public IReadOnlyList<PaperlessNgxDocumentResponse> Documents { get; set; } = [];
 }
