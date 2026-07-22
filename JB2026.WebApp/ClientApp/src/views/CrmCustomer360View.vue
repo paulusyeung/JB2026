@@ -1414,6 +1414,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions, getCrmCompanyTimeline } from '@/services/crm'
+import { apiClient } from '@/services/api'
 import { getCompanyPaperlessFiles } from '@/services/files'
 import { getJobList, deleteJobOrder } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
@@ -2569,7 +2570,6 @@ function compareInvDateValues(left?: string, right?: string) {
 // --- Files tab ---
 
 const files = ref<PaperlessNgxDocument[]>([])
-const paperlessBaseUrl = ref('')
 const loadingFiles = ref(false)
 const filesErrorMessage = ref('')
 const filesLookup = ref('')
@@ -2587,7 +2587,6 @@ const filesSortDirection = filesViewSettings.sortDirection
 async function loadFiles() {
   if (!company.value) {
     files.value = []
-    paperlessBaseUrl.value = ''
     return
   }
   loadingFiles.value = true
@@ -2595,7 +2594,6 @@ async function loadFiles() {
   try {
     const result = await getCompanyPaperlessFiles(company.value.id, company.value.name.trim())
     files.value = result.documents
-    paperlessBaseUrl.value = result.baseUrl
   } catch (e) {
     console.error('[FilesTab]', e)
     filesErrorMessage.value = t('customer360.files.loadFailed')
@@ -2632,10 +2630,21 @@ function toggleFilesColumn(columnKey: string) {
 }
 
 function openFile(doc: PaperlessNgxDocument) {
-  const url = paperlessBaseUrl.value
-    ? `${paperlessBaseUrl.value.replace(/\/+$/, '')}/documents/${doc.id}/`
-    : `/api/v2/crm/files/${doc.id}/preview`
-  window.open(url, '_blank')
+  const previewWindow = window.open('', '_blank')
+  if (!previewWindow) return
+
+  previewWindow.document.title = 'Loading...'
+  previewWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 16px;">Loading...</p>'
+
+  apiClient.get(`/api/v2/crm/files/${doc.id}/download`, { responseType: 'blob' })
+    .then((response) => {
+      const url = URL.createObjectURL(response.data)
+      previewWindow.location.href = url
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    })
+    .catch(() => {
+      previewWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 16px;">Failed to load document.</p>'
+    })
 }
 
 function fileIcon(mimeType: string | null | undefined): string {

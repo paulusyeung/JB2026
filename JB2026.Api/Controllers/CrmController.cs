@@ -497,6 +497,42 @@ public sealed class CrmController : ControllerBase
         });
     }
 
+    [HttpGet("files/{id}/download")]
+    public async Task<ActionResult> DownloadFile(
+        int id,
+        [FromServices] IHttpClientFactory httpClientFactory,
+        [FromServices] IOptions<PaperlessNgxOptions> options,
+        ILogger<CrmController> logger,
+        CancellationToken cancellationToken = default)
+    {
+        var cfg = options.Value;
+        if (string.IsNullOrWhiteSpace(cfg.BaseUrl) || string.IsNullOrWhiteSpace(cfg.ApiToken))
+            return BadRequest(new { message = "Paperless-ngx is not configured" });
+
+        try
+        {
+            using var client = httpClientFactory.CreateClient();
+            var downloadUrl = $"{cfg.BaseUrl.TrimEnd('/')}/api/documents/{id}/download/";
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {cfg.ApiToken}");
+
+            var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return StatusCode((int)response.StatusCode, new { message = "Failed to fetch document from paperless-ngx" });
+
+            var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+            var disposition = response.Content.Headers.ContentDisposition;
+            var fileName = disposition?.FileNameStar ?? disposition?.FileName ?? $"document-{id}";
+
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            return File(stream, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Files] download error for document {Id}", id);
+            return StatusCode(502, new { message = "Failed to proxy document from paperless-ngx" });
+        }
+    }
+
     private async Task<string?> ResolveCurrentUserEmailAsync(JB5LegacyReadContext readContext, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
