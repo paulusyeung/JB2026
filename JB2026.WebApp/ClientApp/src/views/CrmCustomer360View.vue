@@ -288,7 +288,63 @@
               </template>
 
               <template v-else>
+                <div v-if="isJoCardView" class="jo-card-list">
+                  <v-card
+                    v-for="row in joDisplayedRows"
+                    :key="row.orderId"
+                    rounded="lg"
+                    elevation="0"
+                    class="jo-card"
+                    @click="openJoEditor(row)"
+                  >
+                    <v-checkbox-btn
+                      v-if="joCheckboxMode"
+                      :model-value="joSelectedIds.includes(row.orderId)"
+                      density="compact"
+                      hide-details
+                      class="jo-card__checkbox"
+                      @click.stop="handleJoCardCheckbox(row.orderId)"
+                    />
+                    <div class="jo-card__header">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon size="18" :color="joOrderTypeMeta(row.orderType).color">
+                          {{ joOrderTypeMeta(row.orderType).icon }}
+                        </v-icon>
+                        <div>
+                          <div class="text-subtitle-2 font-weight-bold">{{ joCompositeNumber(row) }}</div>
+                          <div class="text-caption text-medium-emphasis">{{ row.customerName || '-' }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="jo-card__body">
+                      <div class="d-flex align-center ga-2 mb-2">
+                        <v-chip size="small" :color="joStatusColor(row.status)" variant="tonal">
+                          <v-tooltip :text="joStatusLabel(row.status)" location="top">
+                            <template v-slot:activator="{ props }">
+                              <v-icon v-bind="props" start size="12" :color="joStatusColor(row.status)">{{ joStatusIcon(row.status) }}</v-icon>
+                            </template>
+                          </v-tooltip>
+                          {{ joStatusLabel(row.status) }}
+                        </v-chip>
+                        <span class="text-caption">{{ row.orderTitle || '-' }}</span>
+                      </div>
+                      <div class="jo-card__metrics">
+                        <span class="text-caption">{{ t('jobOrder.jobList.headers.quotation') }}: {{ row.productStyle || '-' }}</span>
+                        <span class="text-caption font-weight-medium">{{ t('jobOrder.jobList.headers.invoiceAmount') }}: {{ joFormatCurrency(row.invoiceAmount) }}</span>
+                      </div>
+                    </div>
+                    <div class="jo-card__footer text-caption text-medium-emphasis">
+                      <span>{{ t('jobOrder.jobList.headers.orderedOn') }}: {{ joFormat(row.orderedOn) }}</span>
+                      <span>{{ t('jobOrder.jobList.headers.requiredOn') }}: {{ joFormat(row.requiredOn) }}</span>
+                    </div>
+                    <div class="jo-card__meta text-caption text-medium-emphasis">
+                      <span>{{ t('jobOrder.jobList.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
+                      <span>{{ t('jobOrder.jobList.headers.modifiedOn') }}: {{ joFormat(row.modifiedOn) }}</span>
+                    </div>
+                  </v-card>
+                </div>
                 <v-data-table
+                  v-else
                   :headers="joHeaders"
                   :items="joDisplayedRows"
                   :loading="loadingJobOrders"
@@ -304,22 +360,22 @@
                   <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
 
                   <template #[`header.orderType`]>
-                    <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span>
+                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span> -->
                     <v-icon size="14" color="primary">mdi-tag-outline</v-icon>
                   </template>
 
                   <template #[`header.status`]>
-                    <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span>
+                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span> -->
                     <v-icon size="14" color="primary">mdi-flag</v-icon>
                   </template>
 
                   <template #[`header.attachProduct`]>
-                    <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span>
+                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span> -->
                     <v-icon size="14" color="primary">mdi-paperclip</v-icon>
                   </template>
 
                   <template #[`header.attachCustomer`]>
-                    <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span>
+                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span> -->
                     <v-icon size="14" color="primary">mdi-paperclip</v-icon>
                   </template>
 
@@ -2115,6 +2171,8 @@ const joSortDirection = joViewSettings.sortDirection
 const joCheckboxMode = joViewSettings.checkboxMode
 const joViewMode = joViewSettings.viewMode
 
+const isJoCardView = computed(() => joViewMode.value === 'card')
+
 const { format: joFormat } = useGlobalDateFormatter()
 const { formatCurrency: joFormatCurrency } = useLocaleFormatters()
 
@@ -2294,6 +2352,14 @@ function toggleJoColumn(columnKey: string) {
 
 function setJoViewMode(mode: 'detail' | 'card') {
   joViewMode.value = mode
+}
+
+function handleJoCardCheckbox(id: string) {
+  if (joSelectedIds.value.includes(id)) {
+    joSelectedIds.value = joSelectedIds.value.filter((pid) => pid !== id)
+    return
+  }
+  joSelectedIds.value = [...joSelectedIds.value, id]
 }
 
 async function onJoRowClick(event: Event, payload: unknown) {
@@ -3182,6 +3248,66 @@ function fileIconColor(mimeType: string | null | undefined): string {
   .job-orders-tab-content .filter-bar {
     grid-template-columns: 1fr;
   }
+}
+
+.jo-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .jo-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
+  }
+}
+
+.jo-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.jo-card__checkbox {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.jo-card__header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.jo-card__body,
+.jo-card__footer,
+.jo-card__meta {
+  grid-column: 1 / -1;
+}
+
+.jo-card__header,
+.jo-card__footer,
+.jo-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.jo-card__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.jo-card__metrics {
+  display: grid;
+  gap: 0.3rem;
 }
 
 .invoices-tab-content {
