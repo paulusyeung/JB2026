@@ -162,7 +162,8 @@
           <div :class="['transfer-col', { 'transfer-col--phone': isPhoneLayout }, 'd-flex', 'flex-column', 'align-center', 'justify-center', 'ga-1']">
             <v-tooltip v-for="mc in [1,2,3,4,5]" :key="mc" :text="`→ M${mc}`" location="right">
               <template #activator="{ props }">
-                <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" :color="machineColor(String(mc))"
+                <v-btn v-bind="props" icon size="small" variant="flat" density="compact" :color="machineColor(String(mc))"
+                  class="machine-btn"
                   @click="moveToScheduled(mc)">
                   <span class="text-caption font-weight-bold">{{ mc }}</span>
                 </v-btn>
@@ -333,7 +334,7 @@
                       <td class="col-customer">{{ item.customerName }}</td>
                       <td class="col-title">{{ item.orderTitle }}</td>
                       <td class="col-machine text-center">
-                        <v-chip size="small" :color="machineColor(item.machineNumber)" variant="tonal">{{ item.machineNumber || '-' }}</v-chip>
+                        <v-btn icon size="small" variant="flat" density="compact" :color="machineColor(item.machineNumber)" class="machine-chip"><span class="text-caption font-weight-bold">{{ item.machineNumber || '-' }}</span></v-btn>
                       </td>
                       <td class="col-light text-center">
                         <v-icon size="16" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
@@ -406,8 +407,8 @@
             <v-divider class="my-1 w-100" />
             <v-tooltip v-for="mc in [1,2,3,4,5]" :key="`chg${mc}`" :text="`M${mc}`" location="left">
               <template #activator="{ props }">
-                <v-btn v-bind="props" icon size="small" variant="outlined" density="compact"
-                  :color="machineColor(String(mc))"
+                <v-btn v-bind="props" icon size="small" variant="flat" density="compact"
+                  :color="machineColor(String(mc))" class="machine-btn"
                   @click="changeMachine(mc)">
                   <span class="text-caption font-weight-bold">{{ mc }}</span>
                 </v-btn>
@@ -1222,6 +1223,12 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .action-col {
   flex: 0 0 36px;
   padding-top: 46px;
+}
+
+.transfer-col :deep(.machine-btn),
+.action-col :deep(.machine-btn),
+.schedule-table :deep(.machine-chip) {
+  color: #fff !important;
 }
 
 .panel-header {
