@@ -68,13 +68,17 @@
         </v-col>
 
         <v-col cols="12" md="4">
-          <v-select
+          <v-autocomplete
             v-model="draft.customerName"
             :items="customerOptions"
+            item-title="title"
+            item-value="value"
             :label="t('jobOrder.record.fields.customerName')"
             variant="outlined"
             density="compact"
             :readonly="mode === 'edit'"
+            clearable
+            hide-no-data
             @update:model-value="handleCustomerChanged"
           />
         </v-col>
@@ -279,7 +283,7 @@ const deleting = ref(false)
 const errorMessage = ref('')
 const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
-const adminCustomerNames = ref<string[]>([])
+const adminCustomerNames = ref<{ name: string; code: string }[]>([])
 const userMap = ref<Record<string, string>>({})
 const nextOrderNumber = ref('')
 const selectedIds = ref(new Set<string>())
@@ -395,15 +399,26 @@ const relatedHeaders = computed(() => [
 ])
 
 const customerOptions = computed(() => {
-  const values = new Set<string>()
-  for (const name of adminCustomerNames.value) {
-    if (name) values.add(name)
+  const seen = new Set<string>()
+  const items: { title: string; value: string }[] = []
+
+  for (const c of adminCustomerNames.value) {
+    if (!c.name || seen.has(c.name)) continue
+    seen.add(c.name)
+    items.push({ title: c.name, value: c.name })
   }
+
   for (const row of props.allOrders) {
-    if (row.customerName) values.add(row.customerName)
+    if (!row.customerName || seen.has(row.customerName)) continue
+    seen.add(row.customerName)
+    items.push({ title: row.customerName, value: row.customerName })
   }
-  if (draft.value.customerName) values.add(draft.value.customerName)
-  return [...values].sort((a, b) => a.localeCompare(b))
+
+  if (draft.value.customerName && !seen.has(draft.value.customerName)) {
+    items.push({ title: draft.value.customerName, value: draft.value.customerName })
+  }
+
+  return items.sort((a, b) => a.title.localeCompare(b.title))
 })
 
 const customerProfiles = computed(() => {
@@ -537,8 +552,8 @@ async function loadAdminCustomers() {
   try {
     const customers = await getAdminCustomers()
     adminCustomerNames.value = customers
-      .map((c) => c.customerName)
-      .filter((name): name is string => Boolean(name && name.trim()))
+      .filter((c) => c.customerName?.trim())
+      .map((c) => ({ name: c.customerName.trim(), code: c.customerCode?.trim() ?? '' }))
   } catch {
     // Admin customer list is optional; fall back to order-based names only.
   }
