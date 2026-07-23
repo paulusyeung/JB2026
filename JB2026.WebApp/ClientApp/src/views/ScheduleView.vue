@@ -194,9 +194,9 @@
             <v-divider class="my-1 w-100" />
             <v-tooltip :text="t('scheduler.schedule.actions.unresolved')" location="right">
               <template #activator="{ props }">
-                <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" color="warning"
+                <v-btn v-bind="props" icon size="24" variant="text" density="compact" color="error"
                   @click="unresolveSelected">
-                  <v-icon size="16">mdi-alert-circle-outline</v-icon>
+                  <v-icon size="24">mdi-minus-circle-outline</v-icon>
                 </v-btn>
               </template>
             </v-tooltip>
@@ -417,9 +417,9 @@
             <v-divider class="my-1 w-100" />
             <v-tooltip :text="t('scheduler.schedule.actions.completed')" location="left">
               <template #activator="{ props }">
-                <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" color="success"
+                <v-btn v-bind="props" icon size="24" variant="text" density="compact" color="success"
                   @click="markCompleted">
-                  <v-icon size="16">mdi-check-circle-outline</v-icon>
+                  <v-icon size="24">mdi-check-circle-outline</v-icon>
                 </v-btn>
               </template>
             </v-tooltip>
