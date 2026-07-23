@@ -1228,6 +1228,19 @@
                       class="file-card__thumbnail"
                       :style="{ backgroundImage: doc.thumbnail ? `url(${doc.thumbnail})` : undefined }"
                     >
+                      <v-tooltip :text="t('customer360.files.preview')" location="top">
+                        <template #activator="{ props }">
+                          <v-btn
+                            v-bind="props"
+                            icon="mdi-eye"
+                            variant="text"
+                            size="small"
+                            color="red"
+                            class="file-card__thumbnail-open-btn"
+                            @click.stop="openFile(doc)"
+                          />
+                        </template>
+                      </v-tooltip>
                       <div class="file-card__thumbnail-fallback">
                         <v-icon size="36" :color="fileIconColor(doc.mimeType)">{{ fileIcon(doc.mimeType) }}</v-icon>
                       </div>
@@ -1270,7 +1283,7 @@
                         <v-chip size="x-small" label color="success" variant="tonal">{{ t('common.yes') }}</v-chip>
                       </div>
                     </div>
-                    <div class="file-card__footer">
+                    <div class="file-card__footer" style="display: none">
                       <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(doc)" />
                     </div>
                   </v-card>
@@ -3372,6 +3385,22 @@ function fileIconColor(mimeType: string | null | undefined): string {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.files-tab-content .file-card__thumbnail-open-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  background: rgb(255, 255, 255);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.files-tab-content .file-card__thumbnail-open-btn:hover {
+  background: rgba(255, 0, 0, 0.1) !important;
+  transform: scale(1.15);
 }
 
 .files-tab-content .file-card__header {

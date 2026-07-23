@@ -42,6 +42,7 @@ export const customer360Messages = {
     documentType: 'Document Type',
     pages: 'Pages',
     shared: 'Shared',
+    preview: 'Preview',
   },
   timeline: {
     untitled: '(no title)',

@@ -42,6 +42,7 @@ export const customer360Messages = {
     documentType: '文檔類型',
     pages: '頁數',
     shared: '共享',
+    preview: '預覽',
   },
   timeline: {
     untitled: '(無標題)',
