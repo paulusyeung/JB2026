@@ -251,7 +251,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
-import { getAdminUsers } from '@/services/admin'
+import { getAdminCustomers, getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
 import { getSettings, updateSettings } from '@/services/settings'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
@@ -279,6 +279,7 @@ const deleting = ref(false)
 const errorMessage = ref('')
 const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
+const adminCustomerNames = ref<string[]>([])
 const userMap = ref<Record<string, string>>({})
 const nextOrderNumber = ref('')
 const selectedIds = ref(new Set<string>())
@@ -308,6 +309,7 @@ onMounted(async () => {
   await Promise.all([
     loadOrderedByOptions(),
     loadNextOrderNumber(),
+    loadAdminCustomers(),
   ])
 })
 
@@ -394,6 +396,9 @@ const relatedHeaders = computed(() => [
 
 const customerOptions = computed(() => {
   const values = new Set<string>()
+  for (const name of adminCustomerNames.value) {
+    if (name) values.add(name)
+  }
   for (const row of props.allOrders) {
     if (row.customerName) values.add(row.customerName)
   }
@@ -525,6 +530,17 @@ function handleCustomerChanged(customerName: string | null) {
 
   if (!draft.value.orderedBy && profile.orderedBy) {
     draft.value.orderedBy = profile.orderedBy
+  }
+}
+
+async function loadAdminCustomers() {
+  try {
+    const customers = await getAdminCustomers()
+    adminCustomerNames.value = customers
+      .map((c) => c.customerName)
+      .filter((name): name is string => Boolean(name && name.trim()))
+  } catch {
+    // Admin customer list is optional; fall back to order-based names only.
   }
 }
 
