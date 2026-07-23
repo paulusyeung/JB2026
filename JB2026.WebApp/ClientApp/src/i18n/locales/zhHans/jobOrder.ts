@@ -122,6 +122,7 @@ export const jobOrderMessages = {
           defaultLineDescription: '作业发票项目',
           notInvoiced: '未开票',
           legacyInvoiced: '旧版已开票',
+          loadMore: '加载 {count} 条更多',
         },
         batchDeleteConfirm: '确定删除所选 {count} 条作业？此操作无法撤销。',
         batchDeleteFailed: '部分作业无法删除。',

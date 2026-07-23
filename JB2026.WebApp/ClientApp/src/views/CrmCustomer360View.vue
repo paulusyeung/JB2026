@@ -290,7 +290,7 @@
               <template v-else>
                 <div v-if="isJoCardView" class="jo-card-list">
                   <v-card
-                    v-for="row in joDisplayedRows"
+                    v-for="row in joCardDisplayedRows"
                     :key="row.orderId"
                     rounded="lg"
                     elevation="0"
@@ -342,6 +342,11 @@
                       <span>{{ t('jobOrder.jobList.headers.modifiedOn') }}: {{ joFormat(row.modifiedOn) }}</span>
                     </div>
                   </v-card>
+                  <div v-if="joCardHasMore" class="jo-card-load-more">
+                    <v-btn variant="tonal" prepend-icon="mdi-chevron-down" @click="loadMoreJoCards">
+                      {{ t('jobOrder.jobList.actions.loadMore', { count: joDisplayedRows.length - joCardLimit }) }}
+                    </v-btn>
+                  </div>
                 </div>
                 <v-data-table
                   v-else
@@ -2172,6 +2177,14 @@ const joCheckboxMode = joViewSettings.checkboxMode
 const joViewMode = joViewSettings.viewMode
 
 const isJoCardView = computed(() => joViewMode.value === 'card')
+const joCardLimit = ref(50)
+
+const joCardDisplayedRows = computed(() => joDisplayedRows.value.slice(0, joCardLimit.value))
+const joCardHasMore = computed(() => joDisplayedRows.value.length > joCardLimit.value)
+
+function loadMoreJoCards() {
+  joCardLimit.value += 50
+}
 
 const { format: joFormat } = useGlobalDateFormatter()
 const { formatCurrency: joFormatCurrency } = useLocaleFormatters()
@@ -2314,6 +2327,7 @@ async function loadJobOrders() {
   }
   loadingJobOrders.value = true
   joErrorMessage.value = ''
+  joCardLimit.value = 50
   try {
     joRows.value = await getJobList({ lookup: company.value!.name.trim() || undefined })
   } catch {
@@ -2352,6 +2366,7 @@ function toggleJoColumn(columnKey: string) {
 
 function setJoViewMode(mode: 'detail' | 'card') {
   joViewMode.value = mode
+  if (mode === 'card') joCardLimit.value = 50
 }
 
 function handleJoCardCheckbox(id: string) {
@@ -3308,6 +3323,13 @@ function fileIconColor(mimeType: string | null | undefined): string {
 .jo-card__metrics {
   display: grid;
   gap: 0.3rem;
+}
+
+.jo-card-load-more {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
 }
 
 .invoices-tab-content {

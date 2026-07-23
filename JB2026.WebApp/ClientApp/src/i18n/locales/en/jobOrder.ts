@@ -123,6 +123,7 @@ export const jobOrderMessages = {
           defaultLineDescription: 'Job invoice line item',
           notInvoiced: 'Not Invoiced',
           legacyInvoiced: 'Legacy Invoiced',
+          loadMore: 'Load {count} more',
         },
         batchDeleteConfirm: 'Delete {count} selected job(s)? This action cannot be undone.',
         batchDeleteFailed: 'One or more jobs could not be deleted.',

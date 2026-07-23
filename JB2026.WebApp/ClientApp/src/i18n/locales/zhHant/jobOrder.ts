@@ -123,6 +123,7 @@ export const jobOrderMessages = {
           defaultLineDescription: '作業發票項目',
           notInvoiced: '未開票',
           legacyInvoiced: '舊版已開票',
+          loadMore: '載入 {count} 筆更多',
         },
         batchDeleteConfirm: '確定刪除所選 {count} 筆作業？此操作無法復原。',
         batchDeleteFailed: '部分作業無法刪除。',
