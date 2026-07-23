@@ -21,6 +21,7 @@ interface CreateJobOrderRequest {
 }
 
 interface UpdateJobOrderRequest {
+  orderNumber: string
   customerName: string
   customerRef: string
   orderTitle: string
@@ -30,6 +31,7 @@ interface UpdateJobOrderRequest {
   paymentTerms: string
   remarks: string
   status: number
+  orderType: number
   jobNumber?: string
   invoiceRef?: string
   invoiceAmount?: number

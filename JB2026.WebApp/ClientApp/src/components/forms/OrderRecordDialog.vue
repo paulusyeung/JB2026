@@ -668,6 +668,7 @@ async function handleSave(closeAfterSave = false) {
       }
     } else {
       const updated = await updateJobOrder(props.order!.orderId, {
+        orderNumber: draft.value.orderNumber,
         customerName: draft.value.customerName,
         customerRef: draft.value.customerRef,
         orderTitle: draft.value.orderTitle,
@@ -677,6 +678,7 @@ async function handleSave(closeAfterSave = false) {
         paymentTerms: draft.value.paymentTerms || 'Net 30',
         remarks: draft.value.remarks,
         status: draft.value.status,
+        orderType: draft.value.orderType,
         jobNumber: draft.value.jobNumber,
         invoiceRef: draft.value.invoiceRef || '',
         invoiceAmount: draft.value.invoiceAmount,
