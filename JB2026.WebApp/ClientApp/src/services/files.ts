@@ -6,9 +6,9 @@ export interface CompanyFilesResponse {
   documents: PaperlessNgxDocument[]
 }
 
-export async function getCompanyPaperlessFiles(companyId: string, companyName: string): Promise<CompanyFilesResponse> {
+export async function getCompanyPaperlessFiles(companyId: string, companyName: string, searchText?: string): Promise<CompanyFilesResponse> {
   const response = await apiClient.get<CompanyFilesResponse>(`/api/v2/crm/companies/${companyId}/files`, {
-    params: { name: companyName },
+    params: { name: companyName, searchText: searchText || undefined },
   })
   return response.data
 }

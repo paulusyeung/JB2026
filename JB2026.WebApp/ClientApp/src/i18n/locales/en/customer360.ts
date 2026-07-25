@@ -43,6 +43,7 @@ export const customer360Messages = {
     pages: 'Pages',
     shared: 'Shared',
     preview: 'Preview',
+    loadMore: 'Load {count} more',
   },
   timeline: {
     untitled: '(no title)',

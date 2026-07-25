@@ -1133,7 +1133,7 @@ export interface PaperlessNgxDocument {
   title: string
   created: string
   added: string
-  archiveSerialNumber: number | null
+  archiveSerialNumber: string | null
   mimeType: string
   originalFileName: string | null
   correspondentName: string | null

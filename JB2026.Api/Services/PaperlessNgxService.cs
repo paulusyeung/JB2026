@@ -7,7 +7,7 @@ namespace JB2026.Api.Services;
 
 public interface IPaperlessNgxService
 {
-    Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, string? searchText = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class PaperlessNgxService : IPaperlessNgxService
@@ -26,13 +26,15 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, string? searchText = null, CancellationToken cancellationToken = default)
     {
         var cfg = _options.Value;
         if (string.IsNullOrWhiteSpace(cfg.BaseUrl) || string.IsNullOrWhiteSpace(cfg.ApiToken))
             return [];
 
-        var searchTerms = SplitSearchTerms(query);
+        var searchTerms = string.IsNullOrWhiteSpace(searchText)
+            ? SplitSearchTerms(query)
+            : [searchText.Trim()];
         var allResults = new List<PaperlessNgxDocument>();
         var seenIds = new HashSet<int>();
 
@@ -49,23 +51,32 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
                 client.Timeout = TimeSpan.FromSeconds(
                     cfg.HttpClientTimeoutSeconds > 0 ? cfg.HttpClientTimeoutSeconds : DefaultTimeoutSeconds);
 
-                var url = $"/api/documents/?query={Uri.EscapeDataString(term.Trim())}&page_size=50";
-                _logger.LogInformation("[PNGX] GET {Url}", url);
+                var nextUrl = $"/api/documents/?query={Uri.EscapeDataString(term.Trim())}&page_size=100&ordering=-created";
+                var pageCount = 0;
+                const int maxPages = 50;
 
-                var response = await client.GetAsync(url, cancellationToken);
-                _logger.LogInformation("[PNGX] status={StatusCode} term={Term}", (int)response.StatusCode, term);
-
-                if (!response.IsSuccessStatusCode)
-                    continue;
-
-                var body = await response.Content.ReadFromJsonAsync<PaperlessNgxSearchResult>(JsonOptions, cancellationToken);
-                if (body?.Results is null)
-                    continue;
-
-                foreach (var doc in body.Results)
+                while (!string.IsNullOrWhiteSpace(nextUrl) && pageCount < maxPages)
                 {
-                    if (seenIds.Add(doc.Id))
-                        allResults.Add(doc);
+                    pageCount++;
+                    _logger.LogInformation("[PNGX] GET {Url}", nextUrl);
+
+                    var response = await client.GetAsync(nextUrl, cancellationToken);
+                    _logger.LogInformation("[PNGX] status={StatusCode} term={Term} page={Page}", (int)response.StatusCode, term, pageCount);
+
+                    if (!response.IsSuccessStatusCode)
+                        break;
+
+                    var body = await response.Content.ReadFromJsonAsync<PaperlessNgxSearchResult>(JsonOptions, cancellationToken);
+                    if (body?.Results is null)
+                        break;
+
+                    foreach (var doc in body.Results)
+                    {
+                        if (seenIds.Add(doc.Id))
+                            allResults.Add(doc);
+                    }
+
+                    nextUrl = body.Next ?? string.Empty;
                 }
             }
             catch (Exception ex)
@@ -211,6 +222,8 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
 public sealed class PaperlessNgxSearchResult
 {
     public int Count { get; set; }
+    [JsonPropertyName("next")]
+    public string? Next { get; set; }
     public List<PaperlessNgxDocument>? Results { get; set; }
 }
 
@@ -223,7 +236,7 @@ public sealed class PaperlessNgxDocument
     public DateTime Modified { get; set; }
     public DateTime Added { get; set; }
     [JsonPropertyName("archive_serial_number")]
-    public int? ArchiveSerialNumber { get; set; }
+    public string? ArchiveSerialNumber { get; set; }
     public int? Correspondent { get; set; }
     [JsonPropertyName("document_type")]
     public int? DocumentType { get; set; }
@@ -248,7 +261,7 @@ public sealed class PaperlessNgxDocumentResponse
     public string Title { get; set; } = string.Empty;
     public DateOnly Created { get; set; }
     public DateTime Added { get; set; }
-    public int? ArchiveSerialNumber { get; set; }
+    public string? ArchiveSerialNumber { get; set; }
     public string MimeType { get; set; } = string.Empty;
     public string? OriginalFileName { get; set; }
     public string? CorrespondentName { get; set; }

@@ -469,12 +469,13 @@ public sealed class CrmController : ControllerBase
     public async Task<ActionResult<CompanyFilesResponse>> GetCompanyFiles(
         string id,
         [FromQuery] string name,
+        [FromQuery] string? searchText,
         [FromServices] IPaperlessNgxService paperlessNgxService,
         [FromServices] IOptions<PaperlessNgxOptions> options,
         ILogger<CrmController> logger,
         CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("[Files] companyId={CompanyId} name={Name}", id, name);
+        logger.LogInformation("[Files] companyId={CompanyId} name={Name} searchText={SearchText}", id, name, searchText);
 
         if (string.IsNullOrWhiteSpace(name))
             return Ok(new CompanyFilesResponse { BaseUrl = "", Documents = [] });
@@ -482,7 +483,7 @@ public sealed class CrmController : ControllerBase
         IReadOnlyList<PaperlessNgxDocumentResponse> documents;
         try
         {
-            documents = await paperlessNgxService.SearchDocumentsAsync(name, cancellationToken);
+            documents = await paperlessNgxService.SearchDocumentsAsync(name, searchText, cancellationToken);
         }
         catch (Exception ex)
         {

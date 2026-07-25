@@ -43,6 +43,7 @@ export const customer360Messages = {
     pages: '頁數',
     shared: '共享',
     preview: '預覽',
+    loadMore: '載入 {count} 筆更多',
   },
   timeline: {
     untitled: '(無標題)',

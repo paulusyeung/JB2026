@@ -1277,78 +1277,85 @@
               </template>
 
               <template v-else>
-                <div v-if="isFilesCardView" class="file-card-list">
-                  <v-card
-                    v-for="doc in filesDisplayedRows"
-                    :key="doc.id"
-                    rounded="lg"
-                    elevation="0"
-                    class="file-card"
-                  >
-                    <div
-                      class="file-card__thumbnail"
-                      :style="{ backgroundImage: doc.thumbnail ? `url(${doc.thumbnail})` : undefined }"
+                <template v-if="isFilesCardView">
+                  <div class="file-card-list">
+                    <v-card
+                      v-for="doc in filesCardDisplayedRows"
+                      :key="doc.id"
+                      rounded="lg"
+                      elevation="0"
+                      class="file-card"
                     >
-                      <v-tooltip :text="t('customer360.files.preview')" location="top">
-                        <template #activator="{ props }">
-                          <v-btn
-                            v-bind="props"
-                            icon="mdi-eye"
-                            variant="text"
-                            size="small"
-                            color="red"
-                            class="file-card__thumbnail-open-btn"
-                            @click.stop="openFile(doc)"
-                          />
-                        </template>
-                      </v-tooltip>
-                      <div class="file-card__thumbnail-fallback">
-                        <v-icon size="36" :color="fileIconColor(doc.mimeType)">{{ fileIcon(doc.mimeType) }}</v-icon>
-                      </div>
-                    </div>
-                    <div class="file-card__header">
-                      <span class="text-subtitle-2 font-weight-medium text-truncate d-block">{{ doc.title }}</span>
-                      <span v-if="doc.correspondentName" class="text-caption text-medium-emphasis">{{ doc.correspondentName }}</span>
-                    </div>
-                    <div v-if="doc.tags?.length" class="file-card__tags">
-                      <v-chip
-                        v-for="tag in doc.tags"
-                        :key="tag.id"
-                        size="x-small"
-                        label
-                        variant="flat"
-                        class="px-1"
-                        :style="{ backgroundColor: tag.color + '30', color: tag.color, border: '1px solid ' + tag.color + '60' }"
+                      <div
+                        class="file-card__thumbnail"
+                        :style="{ backgroundImage: doc.thumbnail ? `url(${doc.thumbnail})` : undefined }"
                       >
-                        {{ tag.name }}
-                      </v-chip>
-                    </div>
-                    <div class="file-card__body">
-                      <div class="file-card__body-row">
-                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.documentType') }}:</span>
-                        <span class="text-caption">{{ doc.documentTypeName || '—' }}</span>
+                        <v-tooltip :text="t('customer360.files.preview')" location="top">
+                          <template #activator="{ props }">
+                            <v-btn
+                              v-bind="props"
+                              icon="mdi-eye"
+                              variant="text"
+                              size="small"
+                              color="red"
+                              class="file-card__thumbnail-open-btn"
+                              @click.stop="openFile(doc)"
+                            />
+                          </template>
+                        </v-tooltip>
+                        <div class="file-card__thumbnail-fallback">
+                          <v-icon size="36" :color="fileIconColor(doc.mimeType)">{{ fileIcon(doc.mimeType) }}</v-icon>
+                        </div>
                       </div>
-                      <div class="file-card__body-row">
-                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.created') }}:</span>
-                        <span class="text-caption">{{ formatFileDate(doc.created) }}</span>
+                      <div class="file-card__header">
+                        <span class="text-subtitle-2 font-weight-medium text-truncate d-block">{{ doc.title }}</span>
+                        <span v-if="doc.correspondentName" class="text-caption text-medium-emphasis">{{ doc.correspondentName }}</span>
                       </div>
-                      <div class="file-card__body-row">
-                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.pages') }}:</span>
-                        <span class="text-caption">{{ doc.pageCount ?? '—' }}</span>
+                      <div v-if="doc.tags?.length" class="file-card__tags">
+                        <v-chip
+                          v-for="tag in doc.tags"
+                          :key="tag.id"
+                          size="x-small"
+                          label
+                          variant="flat"
+                          class="px-1"
+                          :style="{ backgroundColor: tag.color + '30', color: tag.color, border: '1px solid ' + tag.color + '60' }"
+                        >
+                          {{ tag.name }}
+                        </v-chip>
                       </div>
-                      <div class="file-card__body-row">
-                        <span class="text-caption text-medium-emphasis">{{ t('customer360.files.owner') }}:</span>
-                        <span class="text-caption">{{ doc.ownerName || '—' }}</span>
+                      <div class="file-card__body">
+                        <div class="file-card__body-row">
+                          <span class="text-caption text-medium-emphasis">{{ t('customer360.files.documentType') }}:</span>
+                          <span class="text-caption">{{ doc.documentTypeName || '—' }}</span>
+                        </div>
+                        <div class="file-card__body-row">
+                          <span class="text-caption text-medium-emphasis">{{ t('customer360.files.created') }}:</span>
+                          <span class="text-caption">{{ formatFileDate(doc.created) }}</span>
+                        </div>
+                        <div class="file-card__body-row">
+                          <span class="text-caption text-medium-emphasis">{{ t('customer360.files.pages') }}:</span>
+                          <span class="text-caption">{{ doc.pageCount ?? '—' }}</span>
+                        </div>
+                        <div class="file-card__body-row">
+                          <span class="text-caption text-medium-emphasis">{{ t('customer360.files.owner') }}:</span>
+                          <span class="text-caption">{{ doc.ownerName || '—' }}</span>
+                        </div>
+                        <div v-if="doc.isSharedByRequester" class="file-card__body-row">
+                          <v-chip size="x-small" label color="success" variant="tonal">{{ t('common.yes') }}</v-chip>
+                        </div>
                       </div>
-                      <div v-if="doc.isSharedByRequester" class="file-card__body-row">
-                        <v-chip size="x-small" label color="success" variant="tonal">{{ t('common.yes') }}</v-chip>
+                      <div class="file-card__footer" style="display: none">
+                        <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(doc)" />
                       </div>
-                    </div>
-                    <div class="file-card__footer" style="display: none">
-                      <v-btn icon="mdi-open-in-new" variant="text" size="small" color="primary" @click="openFile(doc)" />
-                    </div>
-                  </v-card>
-                </div>
+                    </v-card>
+                  </div>
+                  <div v-if="filesCardHasMore" class="file-card-load-more d-flex justify-center my-3">
+                    <v-btn variant="tonal" prepend-icon="mdi-chevron-down" @click="loadMoreFilesCard">
+                      {{ t('customer360.files.loadMore', { count: filesDisplayedRows.length - filesCardLimit }) }}
+                    </v-btn>
+                  </div>
+                </template>
                 <v-data-table
                   v-else
                   :headers="filesHeaders"
@@ -2260,6 +2267,20 @@ const filesSortableColumns = computed(() =>
     .map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
 )
 
+function compareValues(left: unknown, right: unknown): number {
+  if (left == null && right == null) return 0
+  if (left == null) return 1
+  if (right == null) return -1
+  if (typeof left === 'number' && typeof right === 'number') return left - right
+  if (typeof left === 'boolean' && typeof right === 'boolean') return Number(left) - Number(right)
+  const leftStr = String(left)
+  const rightStr = String(right)
+  const leftDate = Date.parse(leftStr)
+  const rightDate = Date.parse(rightStr)
+  if (!isNaN(leftDate) && !isNaN(rightDate)) return leftDate - rightDate
+  return leftStr.localeCompare(rightStr)
+}
+
 const filesDisplayedRows = computed(() => {
   let result = [...files.value]
 
@@ -2277,9 +2298,10 @@ const filesDisplayedRows = computed(() => {
   const direction = filesSortDirection.value ?? 'desc'
 
   result.sort((lhs, rhs) => {
-    const left = String(lhs[key] ?? '')
-    const right = String(rhs[key] ?? '')
-    return direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
+    const left = lhs[key]
+    const right = rhs[key]
+    const cmp = compareValues(left, right)
+    return direction === 'asc' ? cmp : -cmp
   })
 
   return result
@@ -2770,20 +2792,30 @@ const filesCheckboxMode = filesViewSettings.checkboxMode
 const filesViewMode = filesViewSettings.viewMode
 
 const isFilesCardView = computed(() => filesViewMode.value === 'card')
+const filesCardLimit = ref(50)
+
+const filesCardDisplayedRows = computed(() => filesDisplayedRows.value.slice(0, filesCardLimit.value))
+const filesCardHasMore = computed(() => filesDisplayedRows.value.length > filesCardLimit.value)
+
+function loadMoreFilesCard() {
+  filesCardLimit.value += 50
+}
 
 function setFilesViewMode(mode: 'detail' | 'card') {
   filesViewMode.value = mode
+  if (mode === 'card') filesCardLimit.value = 50
 }
 
-async function loadFiles() {
+async function loadFiles(searchText?: string) {
   if (!company.value) {
     files.value = []
     return
   }
   loadingFiles.value = true
   filesErrorMessage.value = ''
+  filesCardLimit.value = 50
   try {
-    const result = await getCompanyPaperlessFiles(company.value.id, company.value.name.trim())
+    const result = await getCompanyPaperlessFiles(company.value.id, company.value.name.trim(), searchText)
     files.value = result.documents
   } catch (e) {
     console.error('[FilesTab]', e)
@@ -2802,7 +2834,7 @@ function clearFilesLookup() {
 }
 
 async function applyFilesLookup() {
-  await loadFiles()
+  await loadFiles(filesLookup.value.trim() || undefined)
 }
 
 async function refreshFilesList() {
