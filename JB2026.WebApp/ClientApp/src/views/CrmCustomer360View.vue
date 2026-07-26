@@ -1810,6 +1810,10 @@
                 <span class="text-body-2">{{ emailDetail.sender }}</span>
               </div>
               <div class="email-detail__meta-row">
+                <span class="text-caption text-medium-emphasis">{{ t('customer360.emails.headers.subject') }}:</span>
+                <span class="text-body-2 font-weight-medium">{{ emailDetail.subject }}</span>
+              </div>
+              <div class="email-detail__meta-row">
                 <span class="text-caption text-medium-emphasis">{{ t('customer360.emails.headers.to') }}:</span>
                 <span class="text-body-2">{{ emailDetail.to.join(', ') }}</span>
               </div>
