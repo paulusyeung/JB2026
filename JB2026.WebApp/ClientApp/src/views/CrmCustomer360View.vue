@@ -129,10 +129,10 @@
             <v-icon start>mdi-email-outline</v-icon>
             {{ t('customer360.tabs.emails') }}
           </v-tab>
-          <v-tab value="calendar">
+<!--           <v-tab value="calendar">
             <v-icon start>mdi-calendar-outline</v-icon>
             {{ t('customer360.tabs.calendar') }}
-          </v-tab>
+          </v-tab> -->
           <v-tab value="timeline">
             <v-icon start>mdi-timeline-outline</v-icon>
             {{ t('customer360.tabs.timeline') }}
@@ -335,9 +335,11 @@
                     </div>
                     <div class="jo-card__footer text-caption text-medium-emphasis">
                       <span>{{ t('jobOrder.jobList.headers.orderedOn') }}: {{ joFormat(row.orderedOn) }}</span>
+                      <span>{{ t('jobOrder.jobList.headers.createdOn') }}: {{ joFormat(row.createdOn) }}</span>
                       <span>{{ t('jobOrder.jobList.headers.requiredOn') }}: {{ joFormat(row.requiredOn) }}</span>
                     </div>
                     <div class="jo-card__meta text-caption text-medium-emphasis">
+                      <span>{{ t('jobOrder.jobList.headers.completedOn') }}: {{ row.completedOn ? joFormat(row.completedOn) : '-' }}</span>
                       <span>{{ t('jobOrder.jobList.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
                       <span>{{ t('jobOrder.jobList.headers.modifiedOn') }}: {{ joFormat(row.modifiedOn) }}</span>
                     </div>
@@ -423,6 +425,7 @@
                   </template>
 
                   <template #[`item.orderedOn`]="{ item }">{{ joFormat(item.orderedOn) }}</template>
+                  <template #[`item.createdOn`]="{ item }">{{ joFormat(item.createdOn) }}</template>
                   <template #[`item.requiredOn`]="{ item }">{{ joFormat(item.requiredOn) }}</template>
                   <template #[`item.completedOn`]="{ item }">{{ item.completedOn ? joFormat(item.completedOn) : '-' }}</template>
                   <template #[`item.modifiedOn`]="{ item }">{{ item.modifiedOn ? joFormat(item.modifiedOn) : '-' }}</template>
@@ -2447,7 +2450,7 @@ const joSaveSuccess = ref(false)
 const joSuccessMessage = ref('')
 
 const joViewSettings = useViewSettings('crm-customer360-job-orders', {
-  visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
+  visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'createdOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -2503,6 +2506,7 @@ const allJoHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.attachProduct'), key: 'attachProduct', width: '72px', sortable: false },
   { title: t('jobOrder.jobList.headers.customerRef'), key: 'customerRef', width: '160px' },
   { title: t('jobOrder.jobList.headers.attachCustomer'), key: 'attachCustomer', width: '72px', sortable: false },
+  { title: t('jobOrder.jobList.headers.createdOn'), key: 'createdOn', width: '122px' },
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.jobList.headers.quotation'), key: 'productStyle', width: '120px' },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '132px', align: 'end' as const },
