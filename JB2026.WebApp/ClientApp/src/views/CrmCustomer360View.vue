@@ -1429,9 +1429,222 @@
             </div>
           </v-tabs-window-item>
           <v-tabs-window-item value="emails">
-            <div class="tab-content">
-              <p class="text-body-2 text-medium-emphasis">{{ t('customer360.placeholders.emails') }}</p>
+            <div class="tab-content emails-tab-content">
+              <div class="filter-bar">
+                <v-text-field
+                  v-model="emailLookup"
+                  density="comfortable"
+                  :label="t('customer360.emails.lookup')"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="solo-filled"
+                  hide-details
+                  clearable
+                  @keydown.enter="applyEmailLookup"
+                  @click:clear="clearEmailLookup"
+                />
+                <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loadingEmails" @click="applyEmailLookup">
+                  {{ t('customer360.emails.actions.search') }}
+                </v-btn>
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" :loading="loadingEmails" @click="refreshEmailList">
+                  {{ t('customer360.emails.actions.refresh') }}
+                </v-btn>
+              </div>
+
+              <v-alert v-if="emailErrorMessage" type="warning" variant="tonal" class="mt-3 mb-2">{{ emailErrorMessage }}</v-alert>
+
+              <div class="toolbar-bar mb-2">
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-view-column">
+                      {{ t('customer360.emails.actions.columns') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item v-for="column in emailColumnOptions" :key="column.key" @click="toggleEmailColumn(column.key)">
+                      <template #prepend>
+                        <v-checkbox-btn :model-value="emailVisibleColumnKeys.includes(column.key)" />
+                      </template>
+                      <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <v-menu location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
+                      {{ t('customer360.emails.actions.sorting') }}
+                    </v-btn>
+                  </template>
+                  <v-card min-width="280" class="pa-3">
+                    <v-select
+                      v-model="emailSortKey"
+                      :items="emailSortableColumns"
+                      item-title="title"
+                      item-value="key"
+                      density="compact"
+                      variant="outlined"
+                      :label="t('customer360.emails.actions.sortBy')"
+                      hide-details
+                    />
+                    <v-btn-toggle v-model="emailSortDirection" mandatory divided class="mt-3" density="compact">
+                      <v-btn value="asc">{{ t('customer360.emails.actions.asc') }}</v-btn>
+                      <v-btn value="desc">{{ t('customer360.emails.actions.desc') }}</v-btn>
+                    </v-btn-toggle>
+                  </v-card>
+                </v-menu>
+
+                <template v-if="!isPhoneLayout">
+                  <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-multiple-marked-outline" @click="emailCheckboxMode = !emailCheckboxMode">
+                    {{ t('customer360.emails.actions.checkbox') }}
+                  </v-btn>
+
+                  <v-menu location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-eye-outline">
+                        {{ t('customer360.emails.actions.views') }}
+                      </v-btn>
+                    </template>
+                    <v-list density="compact" class="toolbar-menu-list">
+                      <v-list-item prepend-icon="mdi-table" :active="emailViewMode === 'detail'" @click="setEmailViewMode('detail')">
+                        <v-list-item-title>{{ t('customer360.emails.actions.detailView') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item prepend-icon="mdi-view-grid-outline" :active="emailViewMode === 'card'" @click="setEmailViewMode('card')">
+                        <v-list-item-title>{{ t('customer360.emails.actions.cardView') }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </template>
+
+                <v-menu v-else location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-dots-horizontal">
+                      {{ t('customer360.emails.actions.views') }}
+                    </v-btn>
+                  </template>
+                  <v-list density="compact" class="toolbar-menu-list">
+                    <v-list-item prepend-icon="mdi-checkbox-multiple-marked-outline" @click="emailCheckboxMode = !emailCheckboxMode">
+                      <v-list-item-title>{{ t('customer360.emails.actions.checkbox') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-table" :active="emailViewMode === 'detail'" @click="setEmailViewMode('detail')">
+                      <v-list-item-title>{{ t('customer360.emails.actions.detailView') }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-view-grid-outline" :active="emailViewMode === 'card'" @click="setEmailViewMode('card')">
+                      <v-list-item-title>{{ t('customer360.emails.actions.cardView') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <span v-if="emailCheckboxMode" class="text-caption text-medium-emphasis">
+                  {{ t('customer360.emails.actions.selected', { count: emailSelectedIds.length }) }}
+                </span>
+              </div>
+
+              <div v-if="!company" class="text-center py-6 text-medium-emphasis text-body-2">
+                {{ t('customer360.selectCompany') }}
+              </div>
+
+              <template v-else-if="emailRows.length === 0">
+                <div class="text-center py-6 text-medium-emphasis text-body-2">
+                  {{ t('customer360.placeholders.emails') }}
+                </div>
+              </template>
+
+              <template v-else>
+                <div v-if="isEmailCardView" class="email-card-list">
+                  <v-card
+                    v-for="row in emailCardDisplayedRows"
+                    :key="row.id"
+                    rounded="lg"
+                    elevation="0"
+                    class="email-card"
+                    @click="openEmailDetail(row)"
+                  >
+                    <v-checkbox-btn
+                      v-if="emailCheckboxMode"
+                      :model-value="emailSelectedIds.includes(row.id)"
+                      density="compact"
+                      hide-details
+                      class="email-card__checkbox"
+                      @click.stop="handleEmailCardCheckbox(row.id)"
+                    />
+                    <div class="email-card__header">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon size="18" color="primary">mdi-email-outline</v-icon>
+                        <div>
+                          <div class="text-subtitle-2 font-weight-bold text-truncate" style="max-width: 240px;">{{ row.sender }}</div>
+                          <div class="text-caption text-medium-emphasis text-truncate" style="max-width: 240px;">{{ row.subject || '-' }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="email-card__body">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon v-if="row.hasAttachment" size="14" color="primary">mdi-paperclip</v-icon>
+                        <span class="text-caption">{{ emailFormat(row.date) }}</span>
+                      </div>
+                    </div>
+                    <div class="email-card__footer text-caption text-medium-emphasis">
+                      <span>{{ emailFormatSize(row.size) }}</span>
+                    </div>
+                  </v-card>
+                  <div v-if="emailCardHasMore" class="email-card-load-more">
+                    <v-btn variant="tonal" prepend-icon="mdi-chevron-down" @click="loadMoreEmailCards">
+                      {{ t('customer360.files.loadMore', { count: emailDisplayedRows.length - emailCardLimit }) }}
+                    </v-btn>
+                  </div>
+                </div>
+                <v-data-table
+                  v-else
+                  :headers="emailHeaders"
+                  :items="emailDisplayedRows"
+                  :loading="loadingEmails"
+                  item-value="id"
+                  v-model="emailSelectedIds"
+                  :show-select="emailCheckboxMode"
+                  density="compact"
+                  fixed-header
+                  height="45vh"
+                  class="emails-table"
+                  @click:row="onEmailRowClick"
+                >
+                  <template #[`item.sender`]="{ item }">
+                    <div class="d-flex align-center ga-1 text-truncate email-row-click" style="max-width: 260px;" @click="onEmailRowClick($event, { item })">
+                      <v-icon size="14" class="flex-shrink-0">mdi-email-outline</v-icon>
+                      <span class="text-truncate">{{ item.sender }}</span>
+                    </div>
+                  </template>
+
+                  <template #[`item.subject`]="{ item }">
+                    <span class="text-truncate d-inline-block email-row-click" style="max-width: 320px;" @click="onEmailRowClick($event, { item })">{{ item.subject || '-' }}</span>
+                  </template>
+
+                  <template #[`item.date`]="{ item }">
+                    <span class="email-row-click" @click="onEmailRowClick($event, { item })">{{ emailFormat(item.date) }}</span>
+                  </template>
+
+                  <template #[`item.size`]="{ item }">
+                    <span class="email-row-click" @click="onEmailRowClick($event, { item })">{{ emailFormatSize(item.size) }}</span>
+                  </template>
+
+                  <template #[`header.hasAttachment`]>
+                    <div class="d-flex justify-center">
+                      <v-tooltip :text="t('customer360.emails.headers.attachment')" location="top">
+                        <template #activator="{ props }">
+                          <v-icon v-bind="props" size="14">mdi-paperclip</v-icon>
+                        </template>
+                      </v-tooltip>
+                    </div>
+                  </template>
+
+                  <template #[`item.hasAttachment`]="{ item }">
+                    <div class="d-flex justify-center">
+                      <v-icon v-if="item.hasAttachment" size="14" color="primary">mdi-paperclip</v-icon>
+                      <span v-else class="text-medium-emphasis">—</span>
+                    </div>
+                  </template>
+                </v-data-table>
+              </template>
             </div>
+
           </v-tabs-window-item>
           <v-tabs-window-item value="calendar">
             <div class="tab-content">
@@ -1573,6 +1786,68 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="emailDetailDialogOpen" max-width="min(100%, 800px)">
+      <v-card rounded="xl" elevation="0" class="email-detail-dialog">
+        <v-card-title class="d-flex align-center ga-2 pr-2">
+          <v-icon>mdi-email-outline</v-icon>
+          <span class="text-h6 font-weight-bold text-truncate">Email</span>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="emailDetailDialogOpen = false" />
+        </v-card-title>
+        <v-divider />
+        <v-card-text>
+          <div v-if="loadingEmailDetail" class="d-flex justify-center py-12">
+            <v-progress-circular indeterminate size="24" />
+          </div>
+          <div v-else-if="emailDetail">
+            <div class="email-detail__meta">
+              <div class="email-detail__meta-row">
+                <span class="text-caption text-medium-emphasis">{{ t('customer360.emails.headers.sender') }}:</span>
+                <span class="text-body-2">{{ emailDetail.sender }}</span>
+              </div>
+              <div class="email-detail__meta-row">
+                <span class="text-caption text-medium-emphasis">{{ t('customer360.emails.headers.to') }}:</span>
+                <span class="text-body-2">{{ emailDetail.to.join(', ') }}</span>
+              </div>
+              <div v-if="emailDetail.cc.length > 0" class="email-detail__meta-row">
+                <span class="text-caption text-medium-emphasis">CC:</span>
+                <span class="text-body-2">{{ emailDetail.cc.join(', ') }}</span>
+              </div>
+              <div class="email-detail__meta-row">
+                <span class="text-caption text-medium-emphasis">{{ t('customer360.emails.headers.date') }}:</span>
+                <span class="text-body-2">{{ emailFormat(emailDetail.date) }}</span>
+              </div>
+              <div v-if="emailDetail.attachments.length > 0" class="email-detail__meta-row">
+                <span class="text-caption text-medium-emphasis">{{ t('customer360.emails.headers.attachments') }}:</span>
+                <div class="d-flex flex-wrap ga-2">
+                  <v-chip
+                    v-for="att in emailDetail.attachments"
+                    :key="att.fileName"
+                    size="small"
+                    variant="tonal"
+                    prepend-icon="mdi-paperclip"
+                    @click="handleAttachmentDownload(emailDetail.id, emailDetail.folder, att.fileName)"
+                  >
+                    {{ att.fileName }}
+                    <span class="text-caption text-medium-emphasis ml-1">({{ emailFormatSize(att.size) }})</span>
+                  </v-chip>
+                </div>
+              </div>
+            </div>
+            <v-divider class="my-3" />
+            <div class="email-detail__body">
+              <div v-if="emailDetail.bodyHtml" v-html="emailDetail.bodyHtml" class="email-detail__html" />
+              <div v-else class="email-detail__text text-body-2" style="white-space: pre-wrap;">{{ emailDetail.bodyText || t('customer360.emails.messages.noBody') }}</div>
+            </div>
+          </div>
+          <div v-else class="text-center py-6 text-medium-emphasis text-body-2">
+            {{ t('customer360.emails.messages.loadFailed') }}
+            <div v-if="emailDetailError" class="mt-2 text-caption text-error">{{ emailDetailError }}</div>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </section>
 </template>
 
@@ -1599,7 +1874,8 @@ import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/Li
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, CrmTimelineItem, JobOrderRecord, JobDetail, PaperlessNgxDocument } from '@/types/api'
+import type { CrmCompany, CrmPerson, CrmOpportunity, CrmTask, CrmTimelineItem, JobOrderRecord, JobDetail, PaperlessNgxDocument, EmailMessage, EmailDetail } from '@/types/api'
+import { searchEmails, getEmailDetail, downloadAttachment } from '@/services/emails'
 
 const STORAGE_KEY = 'customer-360-left-pane-width'
 const MIN_WIDTH_PX = 280
@@ -2889,6 +3165,204 @@ function fileIconColor(mimeType: string | null | undefined): string {
   if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'orange'
   return 'grey'
 }
+
+// --- Emails tab ---
+
+const emailRows = ref<EmailMessage[]>([])
+const loadingEmails = ref(false)
+const emailLookup = ref('')
+const emailErrorMessage = ref('')
+const emailSelectedIds = ref<string[]>([])
+const emailCardLimit = ref(50)
+
+const emailViewSettings = useViewSettings('crm-customer360-emails', {
+  visibleColumns: ['sender', 'subject', 'date', 'size', 'hasAttachment'],
+  sortKey: 'date',
+  sortDirection: 'desc',
+  checkboxMode: false,
+  viewMode: 'detail',
+})
+const emailVisibleColumnKeys = emailViewSettings.visibleColumns
+const emailSortKey = emailViewSettings.sortKey
+const emailSortDirection = emailViewSettings.sortDirection
+const emailCheckboxMode = emailViewSettings.checkboxMode
+const emailViewMode = emailViewSettings.viewMode
+
+const { format: emailFormat } = useGlobalDateFormatter()
+
+function emailFormatSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const size = (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)
+  return `${size} ${units[i]}`
+}
+
+const isEmailCardView = computed(() => emailViewMode.value === 'card')
+
+const emailCardDisplayedRows = computed(() => emailDisplayedRows.value.slice(0, emailCardLimit.value))
+const emailCardHasMore = computed(() => emailDisplayedRows.value.length > emailCardLimit.value)
+
+function loadMoreEmailCards() {
+  emailCardLimit.value += 50
+}
+
+const allEmailHeaders = computed(() => [
+  { title: t('customer360.emails.headers.sender'), key: 'sender', minWidth: '220px' },
+  { title: t('customer360.emails.headers.subject'), key: 'subject', minWidth: '280px' },
+  { title: t('customer360.emails.headers.date'), key: 'date', width: '150px' },
+  { title: t('customer360.emails.headers.size'), key: 'size', width: '100px', align: 'end' as const },
+  { title: t('customer360.emails.headers.attachment'), key: 'hasAttachment', width: '72px', sortable: false },
+])
+
+const emailHeaders = computed(() =>
+  allEmailHeaders.value.filter((header) => emailVisibleColumnKeys.value.includes(String(header.key))),
+)
+
+const emailSortableColumns = computed(() =>
+  allEmailHeaders.value
+    .filter((header) => header.sortable !== false)
+    .map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+)
+
+const emailColumnOptions = computed(() =>
+  allEmailHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+)
+
+const emailDisplayedRows = computed(() => {
+  let result = [...emailRows.value]
+
+  const search = emailLookup.value.trim().toLowerCase()
+  if (search) {
+    result = result.filter(row =>
+      Object.values(row).some(val => {
+        if (val === null || val === undefined) return false
+        return String(val).toLowerCase().includes(search)
+      }),
+    )
+  }
+
+  const key = (emailSortKey.value ?? 'date') as keyof EmailMessage
+  const direction = emailSortDirection.value ?? 'desc'
+
+  result.sort((lhs, rhs) => {
+    const left = lhs[key]
+    const right = rhs[key]
+    if (key === 'date') {
+      const leftDate = left ? new Date(String(left)).getTime() : 0
+      const rightDate = right ? new Date(String(right)).getTime() : 0
+      return direction === 'asc' ? leftDate - rightDate : rightDate - leftDate
+    }
+    if (key === 'size') {
+      return direction === 'asc' ? Number(left ?? 0) - Number(right ?? 0) : Number(right ?? 0) - Number(left ?? 0)
+    }
+    const leftStr = String(left ?? '')
+    const rightStr = String(right ?? '')
+    return direction === 'asc' ? leftStr.localeCompare(rightStr) : rightStr.localeCompare(leftStr)
+  })
+
+  return result
+})
+
+async function loadEmails() {
+  if (!company.value) {
+    emailRows.value = []
+    return
+  }
+  loadingEmails.value = true
+  emailErrorMessage.value = ''
+  emailCardLimit.value = 50
+  try {
+    emailRows.value = await searchEmails(company.value!.domainName || company.value!.name.trim() || undefined)
+  } catch {
+    emailErrorMessage.value = t('customer360.emails.loadFailed')
+  } finally {
+    loadingEmails.value = false
+  }
+}
+
+watch(company, () => {
+  loadEmails()
+})
+
+function clearEmailLookup() {
+  emailLookup.value = ''
+}
+
+async function applyEmailLookup() {
+  await loadEmails()
+}
+
+async function refreshEmailList() {
+  emailLookup.value = ''
+  await loadEmails()
+}
+
+function toggleEmailColumn(columnKey: string) {
+  if (emailVisibleColumnKeys.value.includes(columnKey)) {
+    if (emailVisibleColumnKeys.value.length > 1) {
+      emailVisibleColumnKeys.value = emailVisibleColumnKeys.value.filter((key) => key !== columnKey)
+    }
+    return
+  }
+  emailVisibleColumnKeys.value = [...emailVisibleColumnKeys.value, columnKey]
+}
+
+function setEmailViewMode(mode: 'detail' | 'card') {
+  emailViewMode.value = mode
+  if (mode === 'card') emailCardLimit.value = 50
+}
+
+function handleEmailCardCheckbox(id: string) {
+  if (emailSelectedIds.value.includes(id)) {
+    emailSelectedIds.value = emailSelectedIds.value.filter((pid) => pid !== id)
+    return
+  }
+  emailSelectedIds.value = [...emailSelectedIds.value, id]
+}
+
+const emailDetailDialogOpen = ref(false)
+const emailDetail = ref<EmailDetail | null>(null)
+const loadingEmailDetail = ref(false)
+const emailDetailError = ref<string | null>(null)
+
+async function openEmailDetail(item: EmailMessage) {
+  emailDetailDialogOpen.value = true
+  if (emailCheckboxMode.value) return
+  if (!item) return
+
+  emailDetailError.value = null
+  loadingEmailDetail.value = true
+  emailDetail.value = null
+  try {
+    emailDetail.value = await getEmailDetail(item.id, item.folder)
+  } catch (err: any) {
+    emailDetail.value = null
+    emailDetailError.value = err?.response?.status
+      ? `HTTP ${err.response.status}`
+      : err?.message || String(err)
+  } finally {
+    loadingEmailDetail.value = false
+  }
+}
+
+function onEmailRowClick(_event: Event, payload: unknown) {
+  const row = payload as { item?: { raw?: EmailMessage } }
+  const item = row?.item?.raw ?? (payload as { item?: EmailMessage }).item
+  if (!item) return
+  openEmailDetail(item)
+}
+
+function handleAttachmentDownload(id: string, folder: string, fileName: string) {
+  downloadAttachment(id, folder, fileName)
+}
+
+watch(emailDetailDialogOpen, (open) => {
+  if (!open) {
+    emailDetail.value = null
+    emailDetailError.value = null
+  }
+})
 </script>
 
 <style scoped>
@@ -3468,6 +3942,154 @@ function fileIconColor(mimeType: string | null | undefined): string {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     align-items: start;
   }
+}
+
+.emails-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.emails-tab-content .filter-bar {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
+  align-items: center;
+}
+
+.emails-tab-content .toolbar-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.emails-tab-content .toolbar-menu-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.emails-tab-content .emails-table {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+}
+
+.emails-tab-content .emails-table :deep(.v-table__wrapper > table > thead > tr > th),
+.emails-tab-content .emails-table :deep(.v-data-table__th) {
+  white-space: nowrap;
+  background-color: color-mix(in srgb, rgb(var(--v-theme-surface-variant)) 88%, rgb(var(--v-theme-primary)) 12%) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.emails-tab-content .emails-table :deep(.v-table__wrapper > table > thead > tr > th:first-child),
+.emails-tab-content .emails-table :deep(.v-data-table__th:first-child) {
+  border-top-left-radius: 8px;
+}
+
+.emails-tab-content .emails-table :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.emails-tab-content .emails-table :deep(.v-data-table__th:last-child) {
+  border-top-right-radius: 8px;
+}
+
+@media (max-width: 960px) {
+  .emails-tab-content .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.email-card-list {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .email-card-list {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
+  }
+}
+
+.email-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.email-card__checkbox {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.email-card__header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.email-card__body,
+.email-card__footer {
+  grid-column: 1 / -1;
+}
+
+.email-card__header,
+.email-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.email-card__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.email-card-load-more {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.email-detail-dialog :deep(.v-card-text) {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.email-detail__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.email-detail__meta-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.email-detail__meta-row > .text-caption {
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.email-detail__body {
+  min-height: 100px;
+}
+
+.email-detail__html {
+  overflow-x: auto;
+}
+
+.email-detail__html :deep(img) {
+  max-width: 100%;
+  height: auto;
 }
 
 .files-tab-content {

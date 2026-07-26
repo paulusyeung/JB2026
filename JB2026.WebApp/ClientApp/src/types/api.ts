@@ -1151,3 +1151,34 @@ export interface PaperlessNgxTag {
   name: string
   color: string
 }
+
+export interface EmailMessage {
+  id: string
+  sender: string
+  subject: string
+  date: string
+  size: number
+  hasAttachment: boolean
+  folder: string
+}
+
+export interface EmailAttachmentInfo {
+  fileName: string
+  size: number
+  mimeType: string
+}
+
+export interface EmailDetail {
+  id: string
+  sender: string
+  to: string[]
+  cc: string[]
+  subject: string
+  date: string
+  size: number
+  hasAttachment: boolean
+  bodyText: string
+  bodyHtml: string
+  folder: string
+  attachments: EmailAttachmentInfo[]
+}

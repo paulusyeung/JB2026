@@ -63,6 +63,7 @@ builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection(Bill
 builder.Services.Configure<TwentyCrmOptions>(builder.Configuration.GetSection(TwentyCrmOptions.SectionName));
 builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection(OllamaOptions.SectionName));
 builder.Services.Configure<PaperlessNgxOptions>(builder.Configuration.GetSection(PaperlessNgxOptions.SectionName));
+builder.Services.Configure<MailcowOptions>(builder.Configuration.GetSection(MailcowOptions.SectionName));
 
 var ollamaBaseUrl = builder.Configuration.GetValue<string>("Ollama:BaseUrl") ?? "http://localhost:11434";
 var ollamaModel = builder.Configuration.GetValue<string>("Ollama:DefaultModel") ?? "llama3";
@@ -80,6 +81,7 @@ builder.Services.AddSingleton<IHelpContentService, InMemoryHelpContentService>()
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<ICurrentUserProfileService, HttpContextCurrentUserProfileService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var primaryConnectionString = builder.Configuration.GetConnectionString("Primary");
 if (isRunningInContainer && string.IsNullOrWhiteSpace(primaryConnectionString))
