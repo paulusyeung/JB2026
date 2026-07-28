@@ -67,7 +67,7 @@ export const billingMessages = {
   },
   invoiceStats: {
     title: '發票統計',
-    subtitle: '來自 Invoice Ninja 的已發送發票摘要。未選日期範圍時，預設顯示本年度資料。',
+    subtitle: '未選日期範圍時，預設顯示本年度資料。',
     startDate: '開始日期',
     endDate: '結束日期',
     rows: '筆數：{count}',

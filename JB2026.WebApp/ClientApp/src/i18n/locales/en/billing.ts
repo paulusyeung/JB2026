@@ -67,7 +67,7 @@ export const billingMessages = {
   },
   invoiceStats: {
     title: 'Invoice stats',
-    subtitle: 'Invoice Ninja-backed sent invoice summary. Defaults to the current year unless a date range is selected.',
+    subtitle: 'Defaults to the current year unless a date range is selected.',
     startDate: 'Start date',
     endDate: 'End date',
     rows: 'Rows: {count}',
