@@ -9,25 +9,49 @@
           </div>
 
           <div class="toolbar-filters">
-            <v-text-field
-              v-model="startDate"
-              type="date"
-              density="comfortable"
-              :label="t('billing.invoiceStats.startDate')"
-              variant="solo-filled"
-              hide-details
-              @keydown.enter="refresh"
-            />
+            <v-menu v-model="startDatePickerOpen" :close-on-content-click="false">
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  :model-value="startDate ? format(startDate) : ''"
+                  :label="t('billing.invoiceStats.startDate')"
+                  variant="solo-filled"
+                  density="comfortable"
+                  readonly
+                  append-inner-icon="mdi-calendar"
+                  v-bind="menuProps"
+                  hide-details
+                  clearable
+                  @click:clear="startDate = ''"
+                />
+              </template>
+              <v-date-picker
+                :model-value="startDate ? new Date(startDate + 'T12:00:00') : undefined"
+                hide-header
+                @update:model-value="onStartDatePicked"
+              />
+            </v-menu>
 
-            <v-text-field
-              v-model="endDate"
-              type="date"
-              density="comfortable"
-              :label="t('billing.invoiceStats.endDate')"
-              variant="solo-filled"
-              hide-details
-              @keydown.enter="refresh"
-            />
+            <v-menu v-model="endDatePickerOpen" :close-on-content-click="false">
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  :model-value="endDate ? format(endDate) : ''"
+                  :label="t('billing.invoiceStats.endDate')"
+                  variant="solo-filled"
+                  density="comfortable"
+                  readonly
+                  append-inner-icon="mdi-calendar"
+                  v-bind="menuProps"
+                  hide-details
+                  clearable
+                  @click:clear="endDate = ''"
+                />
+              </template>
+              <v-date-picker
+                :model-value="endDate ? new Date(endDate + 'T12:00:00') : undefined"
+                hide-header
+                @update:model-value="onEndDatePicked"
+              />
+            </v-menu>
 
             <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="refresh">
               {{ t('common.search') }}
@@ -110,6 +134,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { listInvoices, type InvoiceBillingSummary } from '@/services/billing'
 import { useThemeStore } from '@/stores/theme'
 
@@ -140,6 +165,7 @@ type BillingInvoiceStatsRow = {
 const { t } = useI18n({ useScope: 'global' })
 const { locale } = useI18n({ useScope: 'global' })
 const { formatCurrency, formatDate, formatNumber } = useLocaleFormatters()
+const { format } = useGlobalDateFormatter()
 const display = useDisplay()
 const themeStore = useThemeStore()
 const isPhoneLayout = computed(() => display.smAndDown.value)
@@ -226,10 +252,33 @@ const pivotMounted = ref(false)
 const pivotAvailable = ref(false)
 const startDate = ref('')
 const endDate = ref('')
+const startDatePickerOpen = ref(false)
+const endDatePickerOpen = ref(false)
 
 let hydrateRetryTimer: number | null = null
 let hydrateAttempts = 0
 const MAX_HYDRATE_ATTEMPTS = 8
+
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function onStartDatePicked(date: Date | null) {
+  if (date) {
+    startDate.value = toIsoDate(date)
+  }
+  startDatePickerOpen.value = false
+}
+
+function onEndDatePicked(date: Date | null) {
+  if (date) {
+    endDate.value = toIsoDate(date)
+  }
+  endDatePickerOpen.value = false
+}
 
 const hasDateRangeFilter = computed(() => startDate.value.length > 0 || endDate.value.length > 0)
 const emptyMessage = computed(() => (

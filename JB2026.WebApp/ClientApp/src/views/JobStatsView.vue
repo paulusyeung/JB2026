@@ -16,23 +16,49 @@
             @keydown.enter="refresh"
           />
 
-          <v-text-field
-            v-model="startOn"
-            type="date"
-            density="comfortable"
-            :label="t('jobOrder.jobStats.startDate')"
-            variant="solo-filled"
-            hide-details
-          />
+          <v-menu v-model="startDatePickerOpen" :close-on-content-click="false">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="startOn ? format(startOn) : ''"
+                :label="t('jobOrder.jobStats.startDate')"
+                variant="solo-filled"
+                density="comfortable"
+                readonly
+                append-inner-icon="mdi-calendar"
+                v-bind="menuProps"
+                hide-details
+                clearable
+                @click:clear="startOn = ''"
+              />
+            </template>
+            <v-date-picker
+              :model-value="startOn ? new Date(startOn + 'T12:00:00') : undefined"
+              hide-header
+              @update:model-value="onStartDatePicked"
+            />
+          </v-menu>
 
-          <v-text-field
-            v-model="endOn"
-            type="date"
-            density="comfortable"
-            :label="t('jobOrder.jobStats.endDate')"
-            variant="solo-filled"
-            hide-details
-          />
+          <v-menu v-model="endDatePickerOpen" :close-on-content-click="false">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="endOn ? format(endOn) : ''"
+                :label="t('jobOrder.jobStats.endDate')"
+                variant="solo-filled"
+                density="comfortable"
+                readonly
+                append-inner-icon="mdi-calendar"
+                v-bind="menuProps"
+                hide-details
+                clearable
+                @click:clear="endOn = ''"
+              />
+            </template>
+            <v-date-picker
+              :model-value="endOn ? new Date(endOn + 'T12:00:00') : undefined"
+              hide-header
+              @update:model-value="onEndDatePicked"
+            />
+          </v-menu>
 
           <v-select
             v-model="rowField"
@@ -181,6 +207,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
+import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { getJobStats } from '@/services/jobOrders'
 import { useThemeStore } from '@/stores/theme'
@@ -216,11 +243,14 @@ const pivotAvailable = ref(false)
 
 const startOn = ref('')
 const endOn = ref('')
+const startDatePickerOpen = ref(false)
+const endDatePickerOpen = ref(false)
 let hydrateRetryTimer: number | null = null
 let hydrateAttempts = 0
 const MAX_HYDRATE_ATTEMPTS = 8
 
 const { t, locale } = useI18n({ useScope: 'global' })
+const { format } = useGlobalDateFormatter()
 const { formatNumber } = useLocaleFormatters()
 const display = useDisplay()
 const themeStore = useThemeStore()
@@ -487,6 +517,27 @@ async function load() {
 
 async function refresh() {
   await load()
+}
+
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function onStartDatePicked(date: Date | null) {
+  if (date) {
+    startOn.value = toIsoDate(date)
+  }
+  startDatePickerOpen.value = false
+}
+
+function onEndDatePicked(date: Date | null) {
+  if (date) {
+    endOn.value = toIsoDate(date)
+  }
+  endDatePickerOpen.value = false
 }
 
 async function hydratePivot() {
