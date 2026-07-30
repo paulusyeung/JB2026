@@ -24,6 +24,7 @@ import { orderTypesMessages } from './orderTypes'
 import { themeMessages } from './theme'
 import { crmMessages } from './crm'
 import { customer360Messages } from './customer360'
+import { visualizationMessages } from './visualization'
 
 export const zhHantMessages = {
   app: appMessages,
@@ -52,4 +53,5 @@ export const zhHantMessages = {
   theme: themeMessages,
   crm: crmMessages,
   customer360: customer360Messages,
+  visualization: visualizationMessages,
 } as const

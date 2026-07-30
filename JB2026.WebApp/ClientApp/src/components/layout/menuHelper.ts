@@ -69,6 +69,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       title: t('routes.crm'),
       icon: 'mdi-account-group-outline',
       children: [
+        { title: t('routes.crmVisualization'), to: '/crm/visualization', icon: 'mdi-chart-box-outline' },
         { title: t('routes.crmCustomer360'), to: '/crm/customer-360', icon: 'mdi-account-search-outline' },
         { title: t('routes.crmCompanies'), to: '/crm/companies', icon: 'mdi-domain' },
         { title: t('routes.crmPeople'), to: '/crm/people', icon: 'mdi-account-multiple-outline' },

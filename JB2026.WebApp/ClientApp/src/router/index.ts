@@ -34,6 +34,7 @@ const legacyLeafRoutes = [
   { path: '/billing/invoices/:externalInvoiceId', name: 'billing-invoice-detail', titleKey: 'routes.billingInvoiceDetail' },
   { path: '/billing/settings', name: 'billing-settings', titleKey: 'routes.billingSettings' },
   { path: '/crm/staff-members', name: 'crm-staff-members', titleKey: 'routes.crmStaffMembers' },
+  { path: '/crm/visualization', name: 'crm-visualization', titleKey: 'routes.crmVisualization' },
   { path: '/crm/customer-360', name: 'crm-customer-360', titleKey: 'routes.crmCustomer360' },
   { path: '/crm/companies', name: 'crm-companies', titleKey: 'routes.crmCompanies' },
   { path: '/crm/people', name: 'crm-people', titleKey: 'routes.crmPeople' },
@@ -207,6 +208,8 @@ const router = createRouter({
           ? () => import('@/views/BillingSettingsView.vue')
         : route.path === '/crm/staff-members'
           ? () => import('@/views/CrmStaffMembersView.vue')
+        : route.path === '/crm/visualization'
+          ? () => import('@/views/CrmVisualizationView.vue')
         : route.path === '/crm/customer-360'
           ? () => import('@/views/CrmCustomer360View.vue')
         : route.path === '/crm/companies'

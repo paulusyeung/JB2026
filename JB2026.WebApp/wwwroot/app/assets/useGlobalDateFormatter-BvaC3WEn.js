@@ -1,1 +1,0 @@
-import{c8 as m,aS as c,c9 as n,l as u}from"./index-JvTYEHXQ.js";import{u as F}from"./useLocaleFormatters-CeXkHZ-W.js";function p(){const r=m(),{activeLocale:a}=F();return{currentFormat:u({get:()=>r.currentFormat,set:t=>r.setCurrentFormat(t)}),format:(t,e,s)=>{const o=s||a.value;return e?n(t,e,o):r.format(t,o)},setFormat:t=>{r.setCurrentFormat(t)},DATE_FORMATS:c}}export{p as u};

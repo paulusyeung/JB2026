@@ -30,6 +30,7 @@
     "@fullcalendar/timegrid": "^6.1.19",
     "@fullcalendar/vue3": "^6.1.19",
     "@mdi/font": "^7.4.47",
+    "@observablehq/plot": "^0.6.17",
     "axios": "^1.12.2",
     "chart.js": "^4.5.1",
     "libphonenumber-js": "^1.13.9",

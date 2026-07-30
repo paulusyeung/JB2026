@@ -23,6 +23,7 @@ export const routesMessages = {
   smlInvoiceStats: '發票統計',
     billing: '帳單',
       crm: '客戶關係管理',
+  crmVisualization: '視覺化',
   crmCustomer360: '客戶 360',
   crmCompanies: '公司',
   crmPeople: '聯絡人',

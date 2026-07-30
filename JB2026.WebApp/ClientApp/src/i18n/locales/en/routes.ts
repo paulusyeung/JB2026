@@ -23,6 +23,7 @@ export const routesMessages = {
   smlInvoiceStats: 'Invoice Stats',
     billing: 'Billing',
       crm: 'CRM',
+  crmVisualization: 'Visualization',
   crmCustomer360: 'Customer 360',
   crmCompanies: 'Companies',
   crmPeople: 'People',
