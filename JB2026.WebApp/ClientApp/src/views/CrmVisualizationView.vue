@@ -148,24 +148,7 @@
             {{ t('visualization.empty') }}
           </div>
 
-          <div v-if="!loading && filteredRows.length > 0 && (graphType === 'bell' || graphType === 'line')" ref="plotContainer" class="plot-container" />
-
-          <v-data-table
-            v-if="graphType === 'stack' && !loading && filteredRows.length > 0"
-            :headers="tableHeaders"
-            :items="filteredRows"
-            density="compact"
-            items-per-page="-1"
-            class="result-table"
-            hide-default-footer
-          >
-            <template #[`item.invoiceAmount`]="{ item }">
-              {{ formatNumber(item.invoiceAmount ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-            </template>
-            <template #[`item.cost`]="{ item }">
-              {{ formatNumber(item.cost ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-            </template>
-          </v-data-table>
+          <div v-if="!loading && filteredRows.length > 0 && (graphType === 'bell' || graphType === 'line' || graphType === 'stack')" ref="plotContainer" class="plot-container" />
         </v-card-text>
       </v-card>
     </div>
@@ -464,6 +447,169 @@ async function renderPlot() {
     return
   }
 
+  if (graphType.value === 'stack') {
+    errorMessage.value = ''
+
+    const stackKeyField = optionField.value === 'customer' ? 'customerName' : 'salesRep'
+    const includedNames = new Set(filteredGroupedData.value.map((d) => d.name))
+
+    const monthMap = new Map<string, number>()
+    for (const row of filteredRows.value) {
+      const entityName = String(row[stackKeyField as keyof JobStatsRecord] ?? '').trim()
+      if (!entityName || !includedNames.has(entityName)) continue
+      const year = normalizeToGregorianYear(row.year)
+      if (!Number.isFinite(year)) continue
+      const m = Number(row.month)
+      if (!Number.isFinite(m) || m < 1 || m > 12) continue
+      const key = `${year}-${String(m).padStart(2, '0')}`
+      monthMap.set(key, (monthMap.get(key) ?? 0) + Number(row.invoiceAmount ?? 0))
+    }
+
+    const allMonths = Array.from(monthMap.entries())
+      .map(([mk, revenue]) => {
+        const [y, mNum] = mk.split('-').map(Number)
+        return { year: y, month: mNum, revenue }
+      })
+      .sort((a, b) => a.year - b.year || a.month - b.month)
+
+    if (allMonths.length === 0) {
+      errorMessage.value = t('visualization.stack.empty')
+      return
+    }
+
+    const chartData = allMonths.map((d, i) => {
+      const prev = i > 0 ? allMonths[i - 1].revenue : d.revenue
+      const growth = prev > 0 ? ((d.revenue - prev) / prev) * 100 : 0
+      const label = `${d.year}-${String(d.month).padStart(2, '0')}`
+      return { month: label, revenue: d.revenue, growth: Math.round(growth * 10) / 10 }
+    })
+
+    const maxRev = Math.max(...chartData.map((d) => d.revenue), 1)
+    const maxGrowth = Math.max(...chartData.map((d) => Math.abs(d.growth)), 1)
+    const scaleFactor = maxRev / maxGrowth
+    const scaledData = chartData.map((d) => ({ ...d, scaledGrowth: d.growth * scaleFactor }))
+
+    const tickCount = 4
+    const step = Math.ceil(maxGrowth / tickCount)
+    const lastMonth = chartData.length > 0 ? chartData[chartData.length - 1].month : ''
+    const rightTicks: { pos: number; label: string; xPos: string }[] = []
+    for (let i = -tickCount; i <= tickCount; i++) {
+      const v = i * step
+      rightTicks.push({ pos: v * scaleFactor, label: `${v > 0 ? '+' : ''}${v}%`, xPos: lastMonth })
+    }
+    const maxTickPos = Math.max(...rightTicks.map((t) => t.pos))
+    const titleY = maxTickPos * 1.15 || maxRev
+
+    try {
+      const plotEl = Plot.plot({
+        width: Math.round(640 * graphScale.value),
+        height: Math.round(400 * graphScale.value),
+        marks: [
+          Plot.barY(scaledData, {
+            x: 'month',
+            y: 'revenue',
+            fill: isDark ? '#e29a60' : '#4f708f',
+            fillOpacity: 0.6,
+          }),
+          Plot.text(scaledData, {
+            x: 'month',
+            y: 'revenue',
+            text: (d: any) => {
+              if (d.revenue >= 1_000_000) return `$${(d.revenue / 1_000_000).toFixed(1)}M`
+              if (d.revenue >= 1_000) return `$${Math.round(d.revenue / 1_000)}K`
+              return `$${d.revenue}`
+            },
+            dy: -6,
+            textAnchor: 'middle',
+            fill: isDark ? '#d7ddd3' : '#333333',
+            fontSize: 11,
+          }),
+          Plot.line(scaledData, {
+            x: 'month',
+            y: 'scaledGrowth',
+            stroke: isDark ? '#8cb9d4' : '#c0392b',
+            strokeWidth: 2.5,
+            sort: null,
+          }),
+          Plot.dot(scaledData, {
+            x: 'month',
+            y: 'scaledGrowth',
+            stroke: isDark ? '#8cb9d4' : '#c0392b',
+            fill: isDark ? '#1e241f' : '#ffffff',
+            r: 4,
+            sort: null,
+            title: (d: any) => `${d.month}: ${d.growth}%`,
+          }),
+          Plot.text(scaledData, {
+            x: 'month',
+            y: 'scaledGrowth',
+            text: (d: any) => `${d.growth > 0 ? '+' : ''}${d.growth}%`,
+            dy: -10,
+            textAnchor: 'middle',
+            fill: isDark ? '#8cb9d4' : '#c0392b',
+            fontSize: 11,
+            fontWeight: 'bold',
+          }),
+          // Right axis tick labels
+          Plot.text(rightTicks, {
+            x: 'xPos',
+            y: 'pos',
+            text: 'label',
+            dx: 12,
+            textAnchor: 'start',
+            fill: isDark ? '#8cb9d4' : '#c0392b',
+            fontSize: 10,
+          }),
+          Plot.text(
+            [{ label: t('visualization.stack.xLabelGrowth'), xPos: lastMonth }],
+            {
+              x: 'xPos',
+              y: titleY,
+              text: 'label',
+              dx: 22,
+              textAnchor: 'start',
+              fill: isDark ? '#8cb9d4' : '#c0392b',
+              fontSize: 10,
+            },
+          ),
+          Plot.ruleY([0]),
+        ],
+        x: {
+          label: t('visualization.stack.yLabel') + ' →',
+          type: 'band',
+          tickFormat: (d: string) => d,
+        },
+        y: {
+          label: t('visualization.stack.xLabelRev') + ' ↑',
+          grid: true,
+          tickFormat: (d: number) => {
+            const neg = d < 0 ? '-' : ''
+            const abs = Math.abs(d)
+            if (abs >= 1_000_000) return `${neg}$${(abs / 1_000_000).toFixed(1)}M`
+            if (abs >= 1_000) return `${neg}$${Math.round(abs / 1_000)}K`
+            return `${neg}$${abs}`
+          },
+        },
+        marginLeft: 60,
+        marginRight: 70,
+        marginBottom: 50,
+        style: {
+          background: isDark ? '#1e241f' : '#ffffff',
+          color: isDark ? '#d7ddd3' : '#333333',
+          fontSize: '13px',
+          fontFamily: 'system-ui, sans-serif',
+          maxWidth: 'none',
+        },
+        insetTop: 20,
+      })
+      container.appendChild(plotEl)
+      plotSvg = plotEl
+    } catch (err) {
+      errorMessage.value = String(err)
+    }
+    return
+  }
+
   if (graphType.value !== 'bell') return
 
   const data = filteredGroupedData.value
@@ -565,11 +711,13 @@ async function renderPlot() {
         label: t('visualization.bell.xLabel') + ' →',
         nice: true,
         ticks: 8,
-        tickFormat: (d: number) => {
-          if (d >= 1_000_000) return `$${(d / 1_000_000).toFixed(1)}M`
-          if (d >= 1_000) return `$${Math.round(d / 1_000)}K`
-          return `$${d}`
-        },
+          tickFormat: (d: number) => {
+            const neg = d < 0 ? '-' : ''
+            const abs = Math.abs(d)
+            if (abs >= 1_000_000) return `${neg}$${(abs / 1_000_000).toFixed(1)}M`
+            if (abs >= 1_000) return `${neg}$${Math.round(abs / 1_000)}K`
+            return `${neg}$${abs}`
+          },
       },
       y: {
         label: '↑ ' + t('visualization.bell.yLabel', { entity: entityPlural }),

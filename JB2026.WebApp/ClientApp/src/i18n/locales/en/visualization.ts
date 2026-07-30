@@ -29,6 +29,12 @@ export const visualizationMessages = {
     yLabel: 'Total Invoice Amount',
     empty: 'No invoice data for the selected period.',
   },
+  stack: {
+    yLabel: 'Month',
+    xLabelRev: 'Revenues',
+    xLabelGrowth: 'MoM Growth Rate',
+    empty: 'No invoice data for the selected period.',
+  },
   bell: {
     entityRep: 'Sales Rep',
     entityRepPlural: 'Sales Reps',

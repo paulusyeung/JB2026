@@ -29,6 +29,12 @@ export const visualizationMessages = {
     yLabel: '总发票金额',
     empty: '所选期间无发票数据。',
   },
+  stack: {
+    yLabel: '月份',
+    xLabelRev: '收入',
+    xLabelGrowth: '环比增长率',
+    empty: '所选期间无发票数据。',
+  },
   bell: {
     entityRep: '销售代表',
     entityRepPlural: '销售代表',
