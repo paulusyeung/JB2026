@@ -288,6 +288,7 @@ async function renderPlot() {
     container.removeChild(plotSvg)
     plotSvg = null
   }
+  container.querySelectorAll('.line-legend').forEach(el => el.remove())
 
   const isDark = themeStore.mode === 'dark'
 
