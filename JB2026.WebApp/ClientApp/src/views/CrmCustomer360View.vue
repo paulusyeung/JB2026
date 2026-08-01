@@ -431,6 +431,7 @@
                   <template #[`item.modifiedOn`]="{ item }">{{ item.modifiedOn ? joFormat(item.modifiedOn) : '-' }}</template>
                   <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
                   <template #[`item.invoiceAmount`]="{ item }">{{ joFormatCurrency(item.invoiceAmount) }}</template>
+                  <template #[`item.invoiceRef`]="{ item }">{{ joInvoiceNumberForRow(item) || '-' }}</template>
                 </v-data-table>
               </template>
             </div>
@@ -1870,7 +1871,7 @@ import { getJobDetail } from '@/services/jobs'
 import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
 import { getOrderTypeMeta } from '@/utils/orderType'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
-import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
+import { listInvoices, getInvoiceSummary, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
 import CrmCompanyRecordDialog from '@/components/crm/CrmCompanyRecordDialog.vue'
 import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
 import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
@@ -2452,9 +2453,10 @@ const joFormOpen = ref(false)
 const joFormJob = ref<JobDetail | null>(null)
 const joSaveSuccess = ref(false)
 const joSuccessMessage = ref('')
+const joInvoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
 const joViewSettings = useViewSettings('crm-customer360-job-orders', {
-  visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'createdOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
+  visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'createdOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'invoiceRef', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -2499,6 +2501,11 @@ function joCompositeNumber(row: JobOrderRecord): string {
   return row.jobNumber ? `${row.orderNumber}-${row.jobNumber}` : row.orderNumber
 }
 
+function joInvoiceNumberForRow(row: JobOrderRecord): string {
+  const summary = joInvoiceSummaryByOrderId.value[row.orderId]
+  return summary?.invoiceNumber || row.invoiceRef || ''
+}
+
 const allJoHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.orderType'), key: 'orderType', width: '52px', sortable: false },
   { title: t('jobOrder.jobList.headers.ln'), key: 'ln', width: '52px', sortable: false },
@@ -2514,6 +2521,7 @@ const allJoHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.jobList.headers.quotation'), key: 'productStyle', width: '120px' },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '132px', align: 'end' as const },
+  { title: t('jobOrder.jobList.headers.invoiceRef'), key: 'invoiceRef', width: '160px' },
   { title: t('jobOrder.jobList.headers.requiredOn'), key: 'requiredOn', width: '122px' },
   { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '122px' },
   { title: t('jobOrder.jobList.headers.modifiedBy'), key: 'modifiedBy', width: '100px' },
@@ -2618,8 +2626,8 @@ const joDisplayedRows = computed(() => {
   const direction = joSortDirection.value ?? 'desc'
 
   result.sort((lhs, rhs) => {
-    const left = String(lhs[key] ?? '')
-    const right = String(rhs[key] ?? '')
+    const left = String(key === 'invoiceRef' ? joInvoiceNumberForRow(lhs) : (lhs[key] ?? ''))
+    const right = String(key === 'invoiceRef' ? joInvoiceNumberForRow(rhs) : (rhs[key] ?? ''))
     return direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
   })
 
@@ -2636,11 +2644,28 @@ async function loadJobOrders() {
   joCardLimit.value = 50
   try {
     joRows.value = await getJobList({ lookup: company.value!.name.trim() || undefined })
+    await hydrateJoInvoiceSummaries(joRows.value)
   } catch {
     joErrorMessage.value = t('jobOrder.jobList.loadFailed')
   } finally {
     loadingJobOrders.value = false
   }
+}
+
+async function hydrateJoInvoiceSummaries(jobRows: JobOrderRecord[]) {
+  const withInvoiceRefs = jobRows.filter((row) => !!row.invoiceRef)
+  await Promise.all(
+    withInvoiceRefs.map(async (row) => {
+      try {
+        const summary = await getInvoiceSummary(row.invoiceRef)
+        if (summary) {
+          joInvoiceSummaryByOrderId.value[row.orderId] = summary
+        }
+      } catch {
+        // Keep legacy invoice values if summary lookup fails.
+      }
+    }),
+  )
 }
 
 watch(company, () => {

@@ -434,6 +434,7 @@
               </div>
             </template>
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(invoiceAmountForRow(item)) }}</template>
+            <template #[`item.invoiceRef`]="{ item }">{{ invoiceNumberForRow(item) || '-' }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
           </v-data-table>
         </div>
@@ -595,6 +596,7 @@ const defaultColumnKeys = [
   'orderedBy',
   'productStyle',
   'invoiceAmount',
+  'invoiceRef',
   'invoiceStatus',
   'requiredOn',
   'modifiedOn',
@@ -692,6 +694,7 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.jobList.headers.quotation'), key: 'productStyle', width: '120px' },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '132px', align: 'end' as const },
+  { title: t('jobOrder.jobList.headers.invoiceRef'), key: 'invoiceRef', width: '160px' },
   { title: t('jobOrder.jobList.headers.invoiceStatus'), key: 'invoiceStatus', width: '220px', sortable: false },
   { title: t('jobOrder.jobList.headers.requiredOn'), key: 'requiredOn', width: '122px' },
   { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '122px' },
@@ -927,6 +930,10 @@ function exportToCsv() {
           return `"${compositeOrderNumber(row).replace(/"/g, '""')}"`
         }
 
+        if (key === 'invoiceRef') {
+          return `"${invoiceNumberForRow(row).replace(/"/g, '""')}"`
+        }
+
         const value = row[key as keyof JobOrderRecord]
         if (value == null || value === '') return '""'
         if (dateKeys.has(key)) return `"${format(value as string, DATE_FORMATS.ISO_DATE)}"`
@@ -985,6 +992,10 @@ function valueForSort(row: JobOrderRecord, key: keyof JobOrderRecord) {
     return Number.isFinite(numeric) ? numeric : row.jobNumber
   }
 
+  if (key === 'invoiceRef') {
+    return invoiceNumberForRow(row)
+  }
+
   return row[key]
 }
 
@@ -1007,6 +1018,11 @@ function billingStatusColor(row: JobOrderRecord) {
 function invoiceAmountForRow(row: JobOrderRecord) {
   const summary = invoiceSummaryByOrderId.value[row.orderId]
   return summary?.amount ?? row.invoiceAmount
+}
+
+function invoiceNumberForRow(row: JobOrderRecord) {
+  const summary = invoiceSummaryByOrderId.value[row.orderId]
+  return summary?.invoiceNumber || row.invoiceRef || ''
 }
 
 function canGenerateInvoice(row: JobOrderRecord) {
