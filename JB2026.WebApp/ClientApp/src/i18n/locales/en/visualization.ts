@@ -16,6 +16,7 @@ export const visualizationMessages = {
     graphTypeBell: 'Bell',
     graphTypeLine: 'Line',
     graphTypeStack: 'Stack',
+    graphTypeDiverging: 'Diverging',
   },
   graphSize: 'Graph Size',
   search: 'Search',
@@ -48,5 +49,12 @@ export const visualizationMessages = {
     countLabel: '{count} {entity}',
     channelName: '{entity}',
     channelTotal: 'Total Invoice',
+  },
+  diverging: {
+    xLabel: 'Change from Average (%)',
+    averageLabel: 'Average',
+    totalLabel: 'Total Invoice',
+    changeLabel: 'Change (%)',
+    empty: 'No invoice data for the selected period.',
   },
 } as const

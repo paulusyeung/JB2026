@@ -16,6 +16,7 @@ export const visualizationMessages = {
     graphTypeBell: '鐘形',
     graphTypeLine: '折線',
     graphTypeStack: '堆疊',
+    graphTypeDiverging: '分歧',
   },
   graphSize: '圖表大小',
   search: '搜尋',
@@ -48,5 +49,12 @@ export const visualizationMessages = {
     countLabel: '{count} 個{entity}',
     channelName: '{entity}',
     channelTotal: '總發票金額',
+  },
+  diverging: {
+    xLabel: '與平均值的差異 (%)',
+    averageLabel: '平均值',
+    totalLabel: '總發票金額',
+    changeLabel: '差異 (%)',
+    empty: '所選期間無發票資料。',
   },
 } as const

@@ -86,6 +86,10 @@
                 <v-icon>mdi-chart-bar-stacked</v-icon>
                 <v-tooltip activator="parent" location="top">{{ t('visualization.filters.graphTypeStack') }}</v-tooltip>
               </v-btn>
+              <v-btn value="diverging" icon>
+                <v-icon>mdi-chart-gantt</v-icon>
+                <v-tooltip activator="parent" location="top">{{ t('visualization.filters.graphTypeDiverging') }}</v-tooltip>
+              </v-btn>
             </v-btn-toggle>
 
             <v-divider class="my-2" />
@@ -148,7 +152,7 @@
             {{ t('visualization.empty') }}
           </div>
 
-          <div v-if="!loading && filteredRows.length > 0 && (graphType === 'bell' || graphType === 'line' || graphType === 'stack')" ref="plotContainer" class="plot-container" />
+          <div v-if="!loading && filteredRows.length > 0 && (graphType === 'bell' || graphType === 'line' || graphType === 'stack' || graphType === 'diverging')" ref="plotContainer" class="plot-container" />
         </v-card-text>
       </v-card>
     </div>
@@ -224,7 +228,7 @@ const startDatePickerOpen = ref(false)
 const endDatePickerOpen = ref(false)
 const optionField = ref<'salesRep' | 'customer'>('salesRep')
 const groupFilter = ref('none')
-const graphType = ref<'bell' | 'line' | 'stack'>('bell')
+const graphType = ref<'bell' | 'line' | 'stack' | 'diverging'>('bell')
 const graphScale = ref(1.5)
 
 const optionItems = computed(() => [
@@ -611,6 +615,140 @@ async function renderPlot() {
     return
   }
 
+  if (graphType.value === 'diverging') {
+    errorMessage.value = ''
+
+    const data = filteredGroupedData.value
+    if (data.length === 0) {
+      errorMessage.value = t('visualization.diverging.empty')
+      return
+    }
+
+    const grandTotal = data.reduce((sum, d) => sum + d.total, 0)
+    const average = grandTotal / data.length
+
+    type DivergingRow = { name: string; total: number; change: number }
+
+    const chartData: DivergingRow[] = data
+      .map((d) => ({ name: d.name, total: d.total, change: average > 0 ? ((d.total - average) / average) * 100 : 0 }))
+      .sort((a, b) => b.change - a.change)
+
+    const maxAbs = Math.max(...chartData.map((d) => Math.abs(d.change)), 1)
+    const xDomain = [-maxAbs * 1.15, maxAbs * 1.15]
+
+    const barHeight = 12
+    const height = Math.round(Math.max(220, chartData.length * barHeight + 90) * graphScale.value)
+
+    const positiveColor = '#6cc5b0'
+    const negativeColor = '#ff725c'
+
+    const pctTick = (d: number) => `${Math.round(d * 10) / 10}%`
+
+    const formatPct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(Math.abs(v) * 10) / 10}%`
+
+    const formatMoney = (v: number) => {
+      if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
+      if (v >= 1_000) return `$${Math.round(v / 1_000)}K`
+      return `$${Math.round(v)}`
+    }
+
+    try {
+      const plotEl = Plot.plot({
+        width: Math.round(640 * graphScale.value),
+        height,
+        marks: [
+          Plot.gridX({ stroke: '#e0e0e0', strokeOpacity: 1 }),
+          Plot.gridY({ stroke: '#e0e0e0', strokeOpacity: 1 }),
+          Plot.barX(chartData, {
+            x: 'change',
+            y: 'name',
+            fill: (d: DivergingRow) => (d.change >= 0 ? positiveColor : negativeColor),
+            fillOpacity: 0.85,
+            sort: null,
+            title: (d: DivergingRow) =>
+              `${d.name}\n${t('visualization.diverging.totalLabel')}: $${d.total.toLocaleString('en-US')}\n${t('visualization.diverging.averageLabel')}: $${average.toLocaleString('en-US')}\n${t('visualization.diverging.changeLabel')}: ${formatPct(d.change)}`,
+          }),
+          Plot.ruleX([0], { stroke: '#999999', strokeOpacity: 0.9, strokeWidth: 1.5 }),
+          Plot.text(chartData.filter((d) => d.change >= 0), {
+            x: 0,
+            y: 'name',
+            text: 'name',
+            fill: '#333333',
+            fontSize: 13,
+            textAnchor: 'end',
+            dx: -8,
+            sort: null,
+          }),
+          Plot.text(chartData.filter((d) => d.change < 0), {
+            x: 0,
+            y: 'name',
+            text: 'name',
+            fill: '#333333',
+            fontSize: 13,
+            textAnchor: 'start',
+            dx: 8,
+            sort: null,
+          }),
+          Plot.text(chartData.filter((d) => d.change >= 0), {
+            x: 'change',
+            y: 'name',
+            text: (d: DivergingRow) => formatPct(d.change),
+            fill: positiveColor,
+            fontSize: 13,
+            textAnchor: 'start',
+            dx: 6,
+            sort: null,
+          }),
+          Plot.text(chartData.filter((d) => d.change < 0), {
+            x: 'change',
+            y: 'name',
+            text: (d: DivergingRow) => formatPct(d.change),
+            fill: negativeColor,
+            fontSize: 13,
+            textAnchor: 'end',
+            dx: -6,
+            sort: null,
+          }),
+          Plot.text([`(${formatMoney(average)})`], {
+            x: 0,
+            frameAnchor: 'bottom',
+            dy: 34,
+            textAnchor: 'middle',
+            fill: '#333333',
+            fontSize: 13,
+          }),
+        ],
+        x: {
+          domain: xDomain,
+          label: t('visualization.diverging.xLabel') + ' →',
+          tickFormat: pctTick,
+        },
+        y: {
+          domain: chartData.map((d) => d.name),
+          axis: null,
+        },
+        marginLeft: 20,
+        marginRight: 20,
+        marginBottom: 60,
+        marginTop: 20,
+        style: {
+          background: '#ffffff',
+          color: '#333333',
+          fontSize: '13px',
+          fontFamily: 'system-ui, sans-serif',
+          maxWidth: 'none',
+        },
+        insetTop: 10,
+        insetBottom: 10,
+      })
+      container.appendChild(plotEl)
+      plotSvg = plotEl
+    } catch (err) {
+      errorMessage.value = String(err)
+    }
+    return
+  }
+
   if (graphType.value !== 'bell') return
 
   const data = filteredGroupedData.value
@@ -985,7 +1123,7 @@ onUnmounted(() => {
   flex: 1;
   min-height: 500px;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 
 .plot-container svg {
