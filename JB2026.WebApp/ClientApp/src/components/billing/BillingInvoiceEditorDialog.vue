@@ -254,14 +254,56 @@
       <v-divider />
 
       <v-card-actions class="px-4 py-3">
+        <div class="d-flex align-center ga-2">
+          <v-btn
+            variant="outlined"
+            size="small"
+            color="primary"
+            prepend-icon="mdi-send-circle-outline"
+            :disabled="!canMarkSent || isSending"
+            :loading="isSending"
+            @click="handleMarkSent"
+          >
+            {{ t('billing.invoices.actions.markSent') }}
+          </v-btn>
+
+          <v-menu location="top start">
+            <template #activator="{ props: menuProps }">
+              <v-btn
+                v-bind="menuProps"
+                variant="outlined"
+                size="small"
+                :disabled="!canDownload || isDownloading"
+                :loading="isDownloading"
+                prepend-icon="mdi-download-circle-outline"
+              >
+                {{ t('billing.invoices.actions.download') }}
+              </v-btn>
+            </template>
+            <v-list density="compact">
+              <v-list-item :disabled="isDownloading" @click="handleDownloadInvoicePdf">
+                <v-list-item-title>{{ t('billing.invoices.actions.invoicePdf') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item :disabled="isDownloading" @click="handleDownloadDeliveryNote">
+                <v-list-item-title>{{ t('billing.invoices.actions.deliveryNote') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </div>
+
         <v-spacer />
-        <v-btn variant="text" @click="close">
+        <v-btn
+          variant="outlined"
+          size="small"
+          @click="close"
+        >
           {{ isReadOnly ? t('billing.invoices.editor.actions.close') : t('billing.invoices.editor.actions.cancel') }}
         </v-btn>
         <v-btn
           v-if="!isReadOnly"
+          variant="outlined"
+          size="small"
           color="primary"
-          variant="elevated"
           :loading="isSaving"
           @click="handleSave"
         >
@@ -285,6 +327,22 @@
         </v-card>
       </v-dialog>
 
+      <v-dialog v-model="showMarkSentConfirmation" max-width="420">
+        <v-card>
+          <v-card-title>{{ t('billing.invoices.actions.confirmMarkSent') }}</v-card-title>
+          <v-card-text>{{ t('billing.invoices.messages.markSentConfirm') }}</v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="showMarkSentConfirmation = false">
+              {{ t('billing.invoices.actions.cancel') }}
+            </v-btn>
+            <v-btn color="primary" variant="elevated" :loading="isSending" @click="performMarkSent">
+              {{ t('billing.invoices.actions.markAsSent') }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <div class="resize-handle" @mousedown.stop.prevent="startResize" />
     </v-card>
   </v-dialog>
@@ -302,6 +360,9 @@ import {
   lookupInvoiceEditorAutofill,
   createInvoice,
   updateInvoice,
+  sendInvoice,
+  downloadInvoicePdf,
+  downloadDeliveryNote,
   type BillingClientOption,
   type InvoiceEditorAutofillLookupItem,
   type InvoiceEditorAutofillLookupStatus,
@@ -384,7 +445,13 @@ const form = ref<FormState>(resetForm())
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
-const isReadOnly = computed(() => props.mode === 'view')
+const isReadOnly = computed(() => props.mode === 'view' || markedSent.value)
+
+const canMarkSent = computed(
+  () => props.mode === 'edit' && !!props.externalInvoiceId && !markedSent.value,
+)
+
+const canDownload = computed(() => !!props.externalInvoiceId)
 
 const dialogTitle = computed(() => {
   if (props.mode === 'create') return t('billing.invoices.editor.titleCreate')
@@ -640,6 +707,10 @@ watch(
     if (open) {
       errorMessage.value = ''
       isSaving.value = false
+      markedSent.value = false
+      showMarkSentConfirmation.value = false
+      isSending.value = false
+      isDownloading.value = false
       if (props.mode === 'create') {
         form.value = resetForm()
         clientOptions.value = []
@@ -798,6 +869,10 @@ async function runAutofillRefresh() {
 
 const isSaving = ref(false)
 const errorMessage = ref('')
+const markedSent = ref(false)
+const showMarkSentConfirmation = ref(false)
+const isSending = ref(false)
+const isDownloading = ref(false)
 
 const rules = {
   clientRequired: (v: BillingClientOption | null) =>
@@ -878,6 +953,102 @@ function validateLineItems(): string | null {
     if (isNaN(cost) || cost < 0) return t('billing.invoices.editor.validation.unitCostNonNegative')
   }
   return null
+}
+
+// ── Mark Sent ─────────────────────────────────────────────────────────────────
+
+function handleMarkSent() {
+  showMarkSentConfirmation.value = true
+}
+
+async function performMarkSent() {
+  if (!props.externalInvoiceId) return
+  isSending.value = true
+  errorMessage.value = ''
+  try {
+    const updatedSummary = await sendInvoice(props.externalInvoiceId)
+    markedSent.value = true
+    emit('saved', updatedSummary)
+    showMarkSentConfirmation.value = false
+  } catch (e) {
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message ?? e.message ?? t('billing.invoices.messages.sendFailed')
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message
+    } else {
+      errorMessage.value = t('billing.invoices.messages.sendUnexpected')
+    }
+  } finally {
+    isSending.value = false
+  }
+}
+
+// ── Download ──────────────────────────────────────────────────────────────────
+
+function openPdfPreviewWindow(): Window | null {
+  const previewWindow = window.open('', '_blank')
+  if (!previewWindow) return null
+  previewWindow.document.title = t('billing.invoices.messages.previewTitle')
+  previewWindow.document.body.innerHTML = `<p style="font-family: sans-serif; padding: 16px;">${t('billing.invoices.messages.previewLoading')}</p>`
+  return previewWindow
+}
+
+function showPdfPreview(previewWindow: Window, blob: Blob) {
+  const previewUrl = URL.createObjectURL(blob)
+  previewWindow.location.href = previewUrl
+  window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000)
+}
+
+async function handleDownloadInvoicePdf() {
+  if (!props.externalInvoiceId || isDownloading.value) return
+  const previewWindow = openPdfPreviewWindow()
+  if (!previewWindow) {
+    errorMessage.value = t('billing.invoices.messages.previewBlocked')
+    return
+  }
+  isDownloading.value = true
+  errorMessage.value = ''
+  try {
+    const blob = await downloadInvoicePdf(props.externalInvoiceId)
+    showPdfPreview(previewWindow, blob)
+  } catch (e) {
+    previewWindow.close()
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message ?? e.message ?? t('billing.invoices.messages.downloadInvoicePdfFailed')
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message
+    } else {
+      errorMessage.value = t('billing.invoices.messages.downloadInvoicePdfUnexpected')
+    }
+  } finally {
+    isDownloading.value = false
+  }
+}
+
+async function handleDownloadDeliveryNote() {
+  if (!props.externalInvoiceId || isDownloading.value) return
+  const previewWindow = openPdfPreviewWindow()
+  if (!previewWindow) {
+    errorMessage.value = t('billing.invoices.messages.previewBlocked')
+    return
+  }
+  isDownloading.value = true
+  errorMessage.value = ''
+  try {
+    const blob = await downloadDeliveryNote(props.externalInvoiceId)
+    showPdfPreview(previewWindow, blob)
+  } catch (e) {
+    previewWindow.close()
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message ?? e.message ?? t('billing.invoices.messages.downloadDeliveryNoteFailed')
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message
+    } else {
+      errorMessage.value = t('billing.invoices.messages.downloadDeliveryNoteUnexpected')
+    }
+  } finally {
+    isDownloading.value = false
+  }
 }
 </script>
 
