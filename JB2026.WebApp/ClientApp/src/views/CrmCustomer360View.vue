@@ -88,6 +88,11 @@
               </div>
 
               <div class="info-row">
+                <v-icon size="small" class="mr-1">mdi-format-list-checks</v-icon>
+                <span class="text-body-2">{{ taskRows.length }} tasks</span>
+              </div>
+
+              <div class="info-row">
                 <v-icon size="small" class="mr-1">mdi-calendar</v-icon>
                 <span class="text-body-2">Created {{ companyFormat(company.createdOn) }}</span>
               </div>
