@@ -1,5 +1,11 @@
 export const customer360Messages = {
   selectCompany: '選擇公司以查看 360° 詳細資訊',
+  company: {
+    people: '{count} 位聯絡人',
+    opportunities: '{count} 個商機',
+    tasks: '{count} 個任務',
+    created: '建立於 {date}',
+  },
   jobOrders: {
     invoiceNotFound: '發票 {invoiceNumber} 未在發票或檔案分頁中找到。',
   },

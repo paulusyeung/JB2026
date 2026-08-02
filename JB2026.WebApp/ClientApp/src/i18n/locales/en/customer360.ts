@@ -1,5 +1,11 @@
 export const customer360Messages = {
   selectCompany: 'Select a company to view 360° details',
+  company: {
+    people: '{count} people',
+    opportunities: '{count} opportunities',
+    tasks: '{count} tasks',
+    created: 'Created {date}',
+  },
   jobOrders: {
     invoiceNotFound: 'Invoice {invoiceNumber} not found in Invoices or Files.',
   },

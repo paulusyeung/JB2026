@@ -51,12 +51,12 @@
 
               <div v-if="company.people.length === 0" class="info-row">
                 <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
-                <span class="text-body-2">0 people</span>
+                <span class="text-body-2">{{ t('customer360.company.people', { count: 0 }) }}</span>
               </div>
               <div v-else class="people-section">
                 <div class="people-label">
                   <v-icon size="small">mdi-account-multiple</v-icon>
-                  <span class="text-body-2">{{ company.people.length }} people</span>
+                  <span class="text-body-2">{{ t('customer360.company.people', { count: company.people.length }) }}</span>
                 </div>
                 <div class="people-cards">
                   <div v-for="person in company.people" :key="person.id" class="person-card">
@@ -84,17 +84,17 @@
 
               <div class="info-row">
                 <v-icon size="small" class="mr-1">mdi-trending-up</v-icon>
-                <span class="text-body-2">{{ company.opportunities.length }} opportunities</span>
+                <span class="text-body-2">{{ t('customer360.company.opportunities', { count: company.opportunities.length }) }}</span>
               </div>
 
               <div class="info-row">
                 <v-icon size="small" class="mr-1">mdi-format-list-checks</v-icon>
-                <span class="text-body-2">{{ taskRows.length }} tasks</span>
+                <span class="text-body-2">{{ t('customer360.company.tasks', { count: taskRows.length }) }}</span>
               </div>
 
               <div class="info-row">
                 <v-icon size="small" class="mr-1">mdi-calendar</v-icon>
-                <span class="text-body-2">Created {{ companyFormat(company.createdOn) }}</span>
+                <span class="text-body-2">{{ t('customer360.company.created', { date: companyFormat(company.createdOn) }) }}</span>
               </div>
             </div>
           </template>
