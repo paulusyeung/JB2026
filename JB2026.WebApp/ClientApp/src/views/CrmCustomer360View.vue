@@ -431,7 +431,28 @@
                   <template #[`item.modifiedOn`]="{ item }">{{ item.modifiedOn ? joFormat(item.modifiedOn) : '-' }}</template>
                   <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
                   <template #[`item.invoiceAmount`]="{ item }">{{ joFormatCurrency(item.invoiceAmount) }}</template>
-                  <template #[`item.invoiceRef`]="{ item }">{{ joInvoiceNumberForRow(item) || '-' }}</template>
+                  <template #[`item.invoiceRef`]="{ item }">
+                    <div class="d-flex align-center ga-1">
+                      <v-btn
+                        v-if="joInvoiceNumberForRow(item)"
+                        variant="text"
+                        color="primary"
+                        density="comfortable"
+                        class="px-0 text-none"
+                        :disabled="joInvoiceSearchingFor !== null"
+                        @click.stop="searchInvoiceNumber(item)"
+                      >
+                        {{ joInvoiceNumberForRow(item) }}
+                      </v-btn>
+                      <v-progress-circular
+                        v-if="joInvoiceSearchingFor === item.orderId"
+                        :size="14"
+                        width="2"
+                        indeterminate
+                      />
+                      <span v-else-if="!joInvoiceNumberForRow(item)">-</span>
+                    </div>
+                  </template>
                 </v-data-table>
               </template>
             </div>
@@ -1767,6 +1788,13 @@
       </template>
     </v-snackbar>
 
+    <v-snackbar v-model="joInvoiceNoticeOpen" color="warning" timeout="5000">
+      {{ joInvoiceNotice }}
+      <template #actions>
+        <v-btn variant="text" @click="joInvoiceNoticeOpen = false">{{ t('common.close') }}</v-btn>
+      </template>
+    </v-snackbar>
+
     <!-- Invoice Editor Dialog -->
     <BillingInvoiceEditorDialog
       v-model="invShowEditorDialog"
@@ -2454,6 +2482,9 @@ const joFormJob = ref<JobDetail | null>(null)
 const joSaveSuccess = ref(false)
 const joSuccessMessage = ref('')
 const joInvoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
+const joInvoiceSearchingFor = ref<string | null>(null)
+const joInvoiceNotice = ref('')
+const joInvoiceNoticeOpen = ref(false)
 
 const joViewSettings = useViewSettings('crm-customer360-job-orders', {
   visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'createdOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'invoiceRef', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
@@ -2504,6 +2535,58 @@ function joCompositeNumber(row: JobOrderRecord): string {
 function joInvoiceNumberForRow(row: JobOrderRecord): string {
   const summary = joInvoiceSummaryByOrderId.value[row.orderId]
   return summary?.invoiceNumber || row.invoiceRef || ''
+}
+
+async function searchInvoiceNumber(row: JobOrderRecord) {
+  const invoiceNumber = joInvoiceNumberForRow(row)
+  if (!invoiceNumber || joInvoiceSearchingFor.value !== null) return
+
+  joInvoiceSearchingFor.value = row.orderId
+  try {
+    await ensureJoInvoicesLoaded()
+    const matchedInvoice = invRows.value.find(
+      (inv) =>
+        inv.invoiceNumber === invoiceNumber ||
+        inv.externalInvoiceId === invoiceNumber ||
+        (!!row.invoiceRef && inv.externalInvoiceId === row.invoiceRef),
+    )
+    if (matchedInvoice) {
+      openInvoice(matchedInvoice)
+      return
+    }
+
+    await ensureJoFilesLoaded()
+    const matchedFile = files.value.find((doc) => fileMatchesInvoiceNumber(doc, invoiceNumber))
+    if (matchedFile) {
+      openFile(matchedFile)
+      return
+    }
+
+    joInvoiceNotice.value = t('customer360.jobOrders.invoiceNotFound', { invoiceNumber })
+    joInvoiceNoticeOpen.value = true
+  } finally {
+    joInvoiceSearchingFor.value = null
+  }
+}
+
+async function ensureJoInvoicesLoaded() {
+  if (invRows.value.length === 0 && company.value) {
+    await loadInvoices()
+  }
+}
+
+async function ensureJoFilesLoaded() {
+  if (files.value.length === 0 && company.value) {
+    await loadFiles()
+  }
+}
+
+function fileMatchesInvoiceNumber(doc: PaperlessNgxDocument, invoiceNumber: string): boolean {
+  const trimmed = invoiceNumber.trim()
+  if (!trimmed) return false
+  if (doc.archiveSerialNumber && doc.archiveSerialNumber === trimmed) return true
+  const needle = trimmed.toLowerCase()
+  return [doc.title, doc.originalFileName].some((value) => !!value && value.toLowerCase().includes(needle))
 }
 
 const allJoHeaders = computed(() => [

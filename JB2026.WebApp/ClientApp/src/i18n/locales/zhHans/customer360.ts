@@ -1,5 +1,8 @@
 export const customer360Messages = {
   selectCompany: '选择公司以查看 360° 详细信息',
+  jobOrders: {
+    invoiceNotFound: '发票 {invoiceNumber} 未在发票或文件选项卡中找到。',
+  },
   tabs: {
     jobOrders: '工单',
     invoices: '发票',
