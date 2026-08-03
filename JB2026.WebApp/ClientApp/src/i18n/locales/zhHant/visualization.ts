@@ -25,6 +25,12 @@ export const visualizationMessages = {
   rows: '{count} 行',
   empty: '目前篩選條件無記錄。',
   loadFailed: '資料載入失敗。',
+  chartTitles: {
+    bell: '{entity}總發票金額分佈',
+    line: '{entity}每月總發票金額',
+    stack: '每月收入與增長',
+    diverging: '{entity}總發票金額與平均值比較',
+  },
   line: {
     xLabel: '月份',
     yLabel: '總發票金額',

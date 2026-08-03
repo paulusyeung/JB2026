@@ -300,6 +300,8 @@ async function renderPlot() {
     errorMessage.value = ''
 
     const keyField = optionField.value === 'customer' ? 'customerName' : 'salesRep'
+    const isCustomer = optionField.value === 'customer'
+    const entityPlural = t(isCustomer ? 'visualization.bell.entityCustomerPlural' : 'visualization.bell.entityRepPlural')
 
     const monthRepMap = new Map<string, Map<string, number>>()
     const repTotals = new Map<string, number>()
@@ -373,6 +375,7 @@ async function renderPlot() {
 
     try {
       const plotEl = Plot.plot({
+        title: t('visualization.chartTitles.line', { entity: entityPlural }),
         width: Math.round(640 * graphScale.value),
         height: Math.round(400 * graphScale.value),
         marks: [
@@ -407,6 +410,7 @@ async function renderPlot() {
         },
         color: { domain: plotData, range: palette },
         marginLeft: 60,
+        marginTop: 50,
         marginBottom: 50,
         style: {
           background: isDark ? '#1e241f' : '#ffffff',
@@ -417,8 +421,7 @@ async function renderPlot() {
         },
         insetTop: 20,
       })
-      container.appendChild(plotEl)
-      plotSvg = plotEl
+      mountPlot(plotEl)
 
       const legendDiv = document.createElement('div')
       legendDiv.className = 'line-legend'
@@ -507,6 +510,7 @@ async function renderPlot() {
 
     try {
       const plotEl = Plot.plot({
+        title: t('visualization.chartTitles.stack'),
         width: Math.round(640 * graphScale.value),
         height: Math.round(400 * graphScale.value),
         marks: [
@@ -597,6 +601,7 @@ async function renderPlot() {
         },
         marginLeft: 60,
         marginRight: 70,
+        marginTop: 50,
         marginBottom: 50,
         style: {
           background: isDark ? '#1e241f' : '#ffffff',
@@ -607,8 +612,7 @@ async function renderPlot() {
         },
         insetTop: 20,
       })
-      container.appendChild(plotEl)
-      plotSvg = plotEl
+      mountPlot(plotEl)
     } catch (err) {
       errorMessage.value = String(err)
     }
@@ -623,6 +627,9 @@ async function renderPlot() {
       errorMessage.value = t('visualization.diverging.empty')
       return
     }
+
+    const isCustomer = optionField.value === 'customer'
+    const entityPlural = t(isCustomer ? 'visualization.bell.entityCustomerPlural' : 'visualization.bell.entityRepPlural')
 
     const grandTotal = data.reduce((sum, d) => sum + d.total, 0)
     const average = grandTotal / data.length
@@ -654,6 +661,7 @@ async function renderPlot() {
 
     try {
       const plotEl = Plot.plot({
+        title: t('visualization.chartTitles.diverging', { entity: entityPlural }),
         width: Math.round(640 * graphScale.value),
         height,
         marks: [
@@ -729,8 +737,8 @@ async function renderPlot() {
         },
         marginLeft: 20,
         marginRight: 20,
+        marginTop: 50,
         marginBottom: 60,
-        marginTop: 20,
         style: {
           background: '#ffffff',
           color: '#333333',
@@ -741,8 +749,7 @@ async function renderPlot() {
         insetTop: 10,
         insetBottom: 10,
       })
-      container.appendChild(plotEl)
-      plotSvg = plotEl
+      mountPlot(plotEl)
     } catch (err) {
       errorMessage.value = String(err)
     }
@@ -807,6 +814,7 @@ async function renderPlot() {
     const isDark = themeStore.mode === 'dark'
 
     const plotEl = Plot.plot({
+      title: t('visualization.chartTitles.bell', { entity: entityPlural }),
       width: Math.round(640 * graphScale.value),
       height: Math.round(400 * graphScale.value),
       marks: [
@@ -865,6 +873,7 @@ async function renderPlot() {
       },
       marginLeft: 60,
       marginRight: 40,
+      marginTop: 50,
       marginBottom: 40,
       style: {
         background: isDark ? '#1e241f' : '#ffffff',
@@ -878,11 +887,30 @@ async function renderPlot() {
 
     errorMessage.value = ''
 
-    container.appendChild(plotEl)
-    plotSvg = plotEl
+    mountPlot(plotEl)
   } catch (err) {
     errorMessage.value = String(err)
   }
+}
+
+function mountPlot(plotEl: Element) {
+  const container = plotContainer.value
+  if (!container) return
+  container.appendChild(plotEl)
+  stylePlotTitle(plotEl)
+  plotSvg = plotEl
+}
+
+function stylePlotTitle(plotEl: Element) {
+  const titleEl = plotEl.querySelector(':scope > h2')
+  if (!titleEl) return
+  const el = titleEl as HTMLElement
+  const isDark = themeStore.mode === 'dark'
+  el.style.textAlign = 'center'
+  el.style.margin = '0 0 8px'
+  el.style.fontSize = '14px'
+  el.style.fontWeight = '600'
+  el.style.color = isDark ? '#d7ddd3' : '#333333'
 }
 
 watch([graphType, themeStore, graphScale, optionField, groupFilter], async () => {
@@ -1124,6 +1152,12 @@ onUnmounted(() => {
   min-height: 500px;
   overflow-x: auto;
   overflow-y: auto;
+}
+
+.plot-container :deep(figure.plot-figure) {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .plot-container svg {

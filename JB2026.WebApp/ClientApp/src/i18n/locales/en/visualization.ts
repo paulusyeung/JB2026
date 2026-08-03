@@ -25,6 +25,12 @@ export const visualizationMessages = {
   rows: '{count} rows',
   empty: 'No records for current filters.',
   loadFailed: 'Failed to load data.',
+  chartTitles: {
+    bell: 'Distribution of Invoice Totals by {entity}',
+    line: 'Monthly Invoice Totals by {entity}',
+    stack: 'Monthly Revenue and Growth',
+    diverging: 'Invoice Totals vs. Average by {entity}',
+  },
   line: {
     xLabel: 'Month',
     yLabel: 'Total Invoice Amount',
