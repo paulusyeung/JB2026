@@ -34,6 +34,7 @@ export const routesMessages = {
     billingStatement: 'Statement',
     billingInvoiceStats: 'Invoice Stats',
     billingInvoiceDetail: 'Invoice Detail',
+    billingClients: 'Clients',
     billingSettings: 'Billing Settings',
       stock: 'Stock',
   stockProduct: 'Product',

@@ -83,6 +83,35 @@ export const billingMessages = {
     },
     loadFailed: '无法加载账单发票统计。',
   },
+  clients: {
+    title: '账单客户',
+    subtitle: '已与 Invoice Ninja 同步的客户记录',
+    lookup: '客户搜索',
+    actions: {
+      columns: '栏位',
+      sorting: '排序',
+      sortBy: '排序字段',
+      asc: '升序',
+      desc: '降序',
+      checkbox: '复选框',
+      views: '视图',
+      detailView: '明细视图',
+      cardView: '卡片视图',
+      selected: '已选 {count} 条',
+    },
+    headers: {
+      clientName: '客户',
+      clientCode: '客户编号',
+      externalClientId: '客户 ID',
+      outstandingBalance: '未结余额',
+    },
+    labels: {
+      empty: '-',
+    },
+    messages: {
+      loadFailed: '无法加载账单客户列表。',
+    },
+  },
   invoices: {
     title: '账单发票',
     subtitle: '已与 Invoice Ninja 同步的发票摘要',

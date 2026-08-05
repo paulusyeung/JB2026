@@ -34,6 +34,7 @@ export const routesMessages = {
     billingStatement: '結單',
     billingInvoiceStats: '發票統計',
     billingInvoiceDetail: '發票詳情',
+    billingClients: '客戶',
     billingSettings: '帳單設定',
       stock: '庫存',
   stockProduct: '產品',

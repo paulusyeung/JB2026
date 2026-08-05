@@ -63,6 +63,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
         { title: t('routes.billingInvoices'), to: '/billing/invoices', icon: 'mdi-receipt-text-check-outline' },
         { title: t('routes.billingStatement'), to: '/billing/statement', icon: 'mdi-file-document-outline' },
         { title: t('routes.billingInvoiceStats'), to: '/billing/invoice-stats', icon: 'mdi-chart-areaspline' },
+        { title: t('routes.billingClients'), to: '/billing/clients', icon: 'mdi-account-group-outline' },
       ],
     },
     {

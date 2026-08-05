@@ -83,6 +83,35 @@ export const billingMessages = {
     },
     loadFailed: '無法載入帳單發票統計。',
   },
+  clients: {
+    title: '帳單客戶',
+    subtitle: '已與 Invoice Ninja 同步的客戶記錄',
+    lookup: '客戶搜尋',
+    actions: {
+      columns: '欄位',
+      sorting: '排序',
+      sortBy: '排序欄位',
+      asc: '升冪',
+      desc: '降冪',
+      checkbox: '核取方塊',
+      views: '檢視',
+      detailView: '明細檢視',
+      cardView: '卡片檢視',
+      selected: '已選 {count} 筆',
+    },
+    headers: {
+      clientName: '客戶',
+      clientCode: '客戶編號',
+      externalClientId: '客戶 ID',
+      outstandingBalance: '未結餘額',
+    },
+    labels: {
+      empty: '-',
+    },
+    messages: {
+      loadFailed: '無法載入帳單客戶清單。',
+    },
+  },
   invoices: {
     title: '帳單發票',
     subtitle: '已與 Invoice Ninja 同步的發票摘要',

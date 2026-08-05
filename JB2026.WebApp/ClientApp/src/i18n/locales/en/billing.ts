@@ -83,6 +83,35 @@ export const billingMessages = {
     },
     loadFailed: 'Unable to load billing invoice stats.',
   },
+  clients: {
+    title: 'Billing Clients',
+    subtitle: 'Invoice Ninja synced client records',
+    lookup: 'Client lookup',
+    actions: {
+      columns: 'Columns',
+      sorting: 'Sorting',
+      sortBy: 'Sort by',
+      asc: 'Asc',
+      desc: 'Desc',
+      checkbox: 'Check Box',
+      views: 'Views',
+      detailView: 'Detail View',
+      cardView: 'Card View',
+      selected: '{count} selected',
+    },
+    headers: {
+      clientName: 'Client',
+      clientCode: 'Client Code',
+      externalClientId: 'Client ID',
+      outstandingBalance: 'Outstanding Balance',
+    },
+    labels: {
+      empty: '-',
+    },
+    messages: {
+      loadFailed: 'Unable to load billing clients.',
+    },
+  },
   invoices: {
     title: 'Billing Invoices',
     subtitle: 'Invoice Ninja synced invoice summaries',
