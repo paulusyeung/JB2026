@@ -188,6 +188,14 @@
             <v-icon size="14" color="primary">mdi-account</v-icon>
           </template>
 
+          <template #[`item.clientName`]="{ item }">
+            <a
+              href="#"
+              class="billing-clients-name-link"
+              @click.prevent.stop="openClientRecord(item)"
+            >{{ item.clientName }}</a>
+          </template>
+
           <template #[`item.outstandingBalance`]="{ item }">
             <span class="billing-clients-balance">{{ formatOutstandingBalance(item.outstandingBalance) }}</span>
           </template>
@@ -205,6 +213,9 @@
 
     <v-dialog v-model="dialogOpen" max-width="min(100%, 760px)" scrollable>
       <BillingClientRecordDialog
+        :key="dialogKey"
+        :customer-id="recordCustomerId ?? undefined"
+        :external-client-id="recordExternalClientId ?? undefined"
         @saved="handleSaved"
         @cancel="dialogOpen = false"
       />
@@ -220,6 +231,7 @@ import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/Li
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { listBillingClients, type BillingClientOption, type SyncCustomerResponse } from '@/services/billing'
+import { getAdminCustomers } from '@/services/admin'
 
 type BillingClientsViewMode = 'detail' | 'card'
 
@@ -236,6 +248,9 @@ const lookup = ref('')
 const errorMessage = ref('')
 const selectedClientIds = ref<string[]>([])
 const dialogOpen = ref(false)
+const dialogKey = ref(0)
+const recordCustomerId = ref<string | null>(null)
+const recordExternalClientId = ref<string | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
 const viewSettings = useViewSettings('billing-clients', {
@@ -380,6 +395,33 @@ function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
 }
 
 function openNewClient() {
+  recordCustomerId.value = null
+  recordExternalClientId.value = null
+  dialogKey.value += 1
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function openClientRecord(row: BillingClientDisplayItem) {
+  recordCustomerId.value = null
+  recordExternalClientId.value = null
+
+  const name = row.name || row.clientName
+  if (name) {
+    try {
+      const matches = await getAdminCustomers({ lookup: name, take: 100 })
+      const target = matches.find((customer) => customer.invoiceNinjaClientId === row.externalClientId)
+        ?? matches.find((customer) => customer.customerName.localeCompare(name, undefined, { sensitivity: 'base' }) === 0)
+      if (target) {
+        recordCustomerId.value = target.customerId
+        recordExternalClientId.value = row.externalClientId
+      }
+    } catch {
+      // Leave record unset; dialog falls back to the normal migrate flow.
+    }
+  }
+
+  dialogKey.value += 1
   dialogOpen.value = true
   errorMessage.value = ''
 }
@@ -473,6 +515,16 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
   display: inline-block;
   text-align: right;
   width: 100%;
+}
+
+.billing-clients-name-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.billing-clients-name-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 960px) {

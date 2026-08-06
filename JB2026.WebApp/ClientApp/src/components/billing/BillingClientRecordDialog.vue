@@ -3,7 +3,7 @@
     <v-card-title class="d-flex align-center ga-3 pb-2">
       <div>
         <h2 class="text-h6 mb-1">
-          {{ t('billing.clients.form.newTitle') }}
+          {{ isRecordMode ? t('billing.clients.form.editTitle') : t('billing.clients.form.newTitle') }}
         </h2>
         <p class="text-body-2 text-medium-emphasis mb-0">
           {{ selectedCustomerName || '-' }}
@@ -14,7 +14,7 @@
     </v-card-title>
 
     <v-card-text class="pt-2">
-      <v-sheet rounded="lg" border class="pa-4 mb-4 migrate-sheet">
+      <v-sheet v-if="!isRecordMode" rounded="lg" border class="pa-4 mb-4 migrate-sheet">
         <div class="text-subtitle-2 font-weight-bold mb-3">
           {{ t('billing.clients.form.migrateCustomer') }}
         </div>
@@ -181,6 +181,11 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
+const props = defineProps<{
+  customerId?: string
+  externalClientId?: string
+}>()
+
 const { t } = useI18n({ useScope: 'global' })
 
 const migrating = ref(false)
@@ -203,6 +208,8 @@ const draft = reactive({
   billTo: '',
   shipToAddresses: [] as CustomerShipToAddress[],
 })
+
+const isRecordMode = computed(() => !!props.customerId)
 
 const selectedCustomerName = computed(() =>
   selectedCustomer.value?.customerName ??
@@ -241,7 +248,11 @@ function isSynced(customer: AdminCustomerListItem): boolean {
 
 onMounted(async () => {
   await loadBillingGroups()
-  await searchCustomers()
+  if (props.customerId) {
+    await selectCustomerById(props.customerId, props.externalClientId)
+  } else {
+    await searchCustomers()
+  }
 })
 
 async function loadBillingGroups() {
@@ -304,6 +315,30 @@ function clearDraft() {
   draft.group = ''
   draft.billTo = ''
   draft.shipToAddresses = []
+}
+
+async function selectCustomerById(customerId: string, externalClientId?: string) {
+  selectedMigrateCustomerId.value = customerId
+  selectedCustomerListItem.value = {
+    customerId,
+    customerName: '',
+    loginAccount: '',
+    loginPassword: '',
+    customerCode: '',
+    invoiceNinjaClientId: externalClientId ?? '',
+    billingSyncStatus: externalClientId ? 'success' : '',
+    createdOn: '',
+    createdBy: '',
+    modifiedOn: '',
+    modifiedBy: '',
+  }
+  selectedCustomerBillingSynced.value = !!externalClientId
+  try {
+    const record = await getAdminCustomer(customerId)
+    applyCustomerRecord(record)
+  } catch {
+    errorMessage.value = t('billing.clients.messages.loadRecordFailed')
+  }
 }
 
 async function onMigrateCustomerSelected(customerId: string | null) {

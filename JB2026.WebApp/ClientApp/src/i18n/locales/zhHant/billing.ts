@@ -118,6 +118,7 @@ export const billingMessages = {
     },
     form: {
       newTitle: '新增客戶',
+      editTitle: '客戶記錄',
       migrateCustomer: '遷移客戶',
       migrateCustomerSelect: '選擇要遷移的 JB2026 客戶',
       alreadySyncedNotice: '此客戶已同步到 Invoice Ninja，可更新其帳單資訊。',

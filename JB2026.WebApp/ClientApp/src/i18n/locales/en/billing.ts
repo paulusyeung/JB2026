@@ -118,6 +118,7 @@ export const billingMessages = {
     },
     form: {
       newTitle: 'New Client',
+      editTitle: 'Client Record',
       migrateCustomer: 'Migrate Customer',
       migrateCustomerSelect: 'Select a JB2026 customer to migrate',
       alreadySyncedNotice: 'This customer is already synced to Invoice Ninja. You can update its billing info.',
