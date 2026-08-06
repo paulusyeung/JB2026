@@ -102,14 +102,15 @@
 
         <v-row dense>
           <v-col cols="12">
-            <label class="text-body-2 text-medium-emphasis mb-1 d-block">{{ t('billing.clients.form.shipToAddress') }}</label>
-            <v-sheet v-if="draft.shipToAddresses.length" rounded="lg" border class="pa-2 mb-2">
-              <div v-for="entry in draft.shipToAddresses" :key="entry.name" class="ship-to-entry">
-                <div class="text-body-2 font-weight-medium">{{ entry.name }}</div>
-                <div class="text-body-2 text-medium-emphasis">{{ entry.address || t('billing.clients.labels.empty') }}</div>
-              </div>
-            </v-sheet>
-            <div v-else class="text-body-2 text-medium-emphasis">{{ t('billing.clients.labels.empty') }}</div>
+            <v-textarea
+              :model-value="shipToText"
+              :label="t('billing.clients.form.shipToAddress')"
+              variant="outlined"
+              density="compact"
+              rows="4"
+              auto-grow
+              readonly
+            />
           </v-col>
         </v-row>
 
@@ -224,6 +225,13 @@ const groupName = computed(() => {
   }
   return billingGroups.value.find((group) => group.externalGroupId === groupId)?.name ?? groupId
 })
+
+const shipToText = computed(() =>
+  draft.shipToAddresses
+    .map((entry) => entry.address.trim())
+    .filter(Boolean)
+    .join('\n\n'),
+)
 
 const readinessChecks = computed(() => [
   { label: t('billing.clients.form.requiredName'), satisfied: draft.customerName.trim().length > 0 },
@@ -431,14 +439,5 @@ async function handleMigrate() {
 .readiness-list {
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
   border-radius: 8px;
-}
-
-.ship-to-entry {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface-variant), 0.1);
-}
-
-.ship-to-entry:last-child {
-  border-bottom: none;
 }
 </style>
