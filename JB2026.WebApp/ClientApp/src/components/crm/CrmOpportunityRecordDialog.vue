@@ -199,7 +199,9 @@ onMounted(async () => {
   }
   try {
     const members = await getCrmMembers()
-    ownerOptions.value = members.map(m => ({ id: m.id, name: m.displayName }))
+    ownerOptions.value = members
+      .map(m => ({ id: m.id, name: m.displayName }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   } catch {
     ownerOptions.value = []
   }

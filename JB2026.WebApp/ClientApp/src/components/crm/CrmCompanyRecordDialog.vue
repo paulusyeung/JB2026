@@ -154,7 +154,18 @@
 
       <v-row dense>
         <v-col cols="12" md="6">
-          <label class="text-body-2 text-medium-emphasis mb-1 d-block">{{ t('crm.companies.headers.people') }}</label>
+          <div class="d-flex align-center mb-1">
+            <label class="text-body-2 text-medium-emphasis d-block">{{ t('crm.companies.headers.people') }}</label>
+            <v-spacer />
+            <v-btn
+              class="add-person-btn"
+              icon="mdi-account-plus"
+              size="small"
+              variant="tonal"
+              :title="t('crm.people.actions.newPerson')"
+              @click="openAddPersonDialog"
+            />
+          </div>
           <div v-if="draft.peopleItems.length" class="mb-2">
             <v-chip
               v-for="person in draft.peopleItems"
@@ -181,7 +192,18 @@
           />
         </v-col>
         <v-col cols="12" md="6">
-          <label class="text-body-2 text-medium-emphasis mb-1 d-block">{{ t('crm.companies.headers.opportunities') }}</label>
+          <div class="d-flex align-center mb-1">
+            <label class="text-body-2 text-medium-emphasis d-block">{{ t('crm.companies.headers.opportunities') }}</label>
+            <v-spacer />
+            <v-btn
+              class="add-opportunity-btn"
+              icon="mdi-invoice-text-plus"
+              size="small"
+              variant="tonal"
+              :title="t('crm.opportunities.actions.newOpportunity')"
+              @click="openAddOpportunityDialog"
+            />
+          </div>
           <div v-if="draft.opportunityItems.length" class="mb-2">
             <v-chip
               v-for="opp in draft.opportunityItems"
@@ -216,6 +238,23 @@
       {{ errorMessage }}
     </v-alert>
 
+    <v-dialog v-model="peopleDialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmPeopleRecordDialog
+        :person-id="null"
+        @saved="handlePersonSaved"
+        @cancel="peopleDialogOpen = false"
+      />
+    </v-dialog>
+
+    <v-dialog v-model="opportunityDialogOpen" max-width="min(100%, 760px)" scrollable>
+      <CrmOpportunityRecordDialog
+        :opportunity-id="null"
+        :initial-company-id="props.companyId"
+        @saved="handleOpportunitySaved"
+        @cancel="opportunityDialogOpen = false"
+      />
+    </v-dialog>
+
     <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
       <v-spacer />
       <v-btn variant="text" :disabled="saving" @click="emit('cancel')">
@@ -228,6 +267,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import CrmPeopleRecordDialog from '@/components/crm/CrmPeopleRecordDialog.vue'
+import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
 import { getCrmCompany, getCrmMembers, getCrmMigratableCustomers, getCrmOpportunities, getCrmPeople, createCrmCompany, updateCrmCompany } from '@/services/crm'
 import { getAdminCustomer } from '@/services/admin'
 import { parseBillToAddress } from '@/utils/addressParser'
@@ -254,6 +295,8 @@ const loadingPeople = ref(false)
 const loadingOpportunities = ref(false)
 const selectedPersonId = ref<string | null>(null)
 const selectedOpportunityId = ref<string | null>(null)
+const peopleDialogOpen = ref(false)
+const opportunityDialogOpen = ref(false)
 
 const isNewCompany = computed(() => props.companyId === null)
 const migratableCustomers = ref<CrmMigratableCustomer[]>([])
@@ -350,6 +393,30 @@ async function loadCatalogs() {
   }
 }
 
+async function loadPeople() {
+  loadingPeople.value = true
+  try {
+    const people = await getCrmPeople()
+    allPeople.value = [...people].sort((a, b) => a.name.localeCompare(b.name))
+  } catch {
+    allPeople.value = []
+  } finally {
+    loadingPeople.value = false
+  }
+}
+
+async function loadOpportunities() {
+  loadingOpportunities.value = true
+  try {
+    const opportunities = await getCrmOpportunities()
+    allOpportunities.value = [...opportunities].sort((a, b) => a.name.localeCompare(b.name))
+  } catch {
+    allOpportunities.value = []
+  } finally {
+    loadingOpportunities.value = false
+  }
+}
+
 async function loadMigratableCustomers() {
   loadingMigrate.value = true
   try {
@@ -405,6 +472,24 @@ function addPerson(id: string | null) {
 
 function removePerson(id: string) {
   draft.peopleItems = draft.peopleItems.filter(item => item.id !== id)
+}
+
+function openAddPersonDialog() {
+  peopleDialogOpen.value = true
+}
+
+async function handlePersonSaved() {
+  peopleDialogOpen.value = false
+  await loadPeople()
+}
+
+function openAddOpportunityDialog() {
+  opportunityDialogOpen.value = true
+}
+
+async function handleOpportunitySaved() {
+  opportunityDialogOpen.value = false
+  await loadOpportunities()
 }
 
 function addOpportunity(id: string | null) {
