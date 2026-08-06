@@ -147,7 +147,7 @@
           >
             <div class="billing-client-card__header">
               <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="primary">mdi-account</v-icon>
+                <v-icon size="18" color="primary">mdi-account-sync</v-icon>
                 <div>
                   <div class="text-subtitle-2 font-weight-bold">{{ row.clientName }}</div>
                   <div class="text-caption text-medium-emphasis">{{ row.clientCode || t('billing.clients.labels.empty') }}</div>
@@ -185,7 +185,7 @@
           @click:row="onRowClick"
         >
           <template #[`item.icon`]>
-            <v-icon size="14" color="primary">mdi-account</v-icon>
+            <v-icon size="16" color="primary">mdi-account-sync</v-icon>
           </template>
 
           <template #[`item.clientName`]="{ item }">
