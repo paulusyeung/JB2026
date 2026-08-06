@@ -621,7 +621,8 @@ let clientSearchTimer: ReturnType<typeof setTimeout> | null = null
 async function loadClients(query?: string) {
   loadingClients.value = true
   try {
-    clientOptions.value = await listBillingClients(query)
+    clientOptions.value = [...await listBillingClients(query)]
+      .sort((left, right) => left.displayName.localeCompare(right.displayName))
     // Ensure selected client is always in the options list
     if (form.value.client) {
       const exists = clientOptions.value.some(
