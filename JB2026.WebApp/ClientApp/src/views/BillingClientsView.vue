@@ -89,6 +89,12 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+
+            <v-divider vertical class="mx-1" />
+
+            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-plus-circle-outline" @click="openNewClient">
+              {{ t('billing.clients.actions.newClient') }}
+            </v-btn>
           </template>
 
           <v-menu v-else location="bottom end">
@@ -107,6 +113,9 @@
               </v-list-item>
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
                 <v-list-item-title>{{ t('billing.clients.actions.cardView') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-plus-circle-outline" @click="openNewClient">
+                <v-list-item-title>{{ t('billing.clients.actions.newClient') }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -186,16 +195,31 @@
 
       </v-card-text>
     </v-card>
+
+    <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="saveSuccess = false">{{ t('common.cancel') }}</v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-dialog v-model="dialogOpen" max-width="min(100%, 760px)" scrollable>
+      <BillingClientRecordDialog
+        @saved="handleSaved"
+        @cancel="dialogOpen = false"
+      />
+    </v-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import BillingClientRecordDialog from '@/components/billing/BillingClientRecordDialog.vue'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
-import { listBillingClients, type BillingClientOption } from '@/services/billing'
+import { listBillingClients, type BillingClientOption, type SyncCustomerResponse } from '@/services/billing'
 
 type BillingClientsViewMode = 'detail' | 'card'
 
@@ -211,6 +235,9 @@ const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
 const selectedClientIds = ref<string[]>([])
+const dialogOpen = ref(false)
+const saveSuccess = ref(false)
+const successMessage = ref('')
 const viewSettings = useViewSettings('billing-clients', {
   visibleColumns: ['icon', 'ln', 'clientName', 'clientCode', 'outstandingBalance'],
   sortKey: 'clientName',
@@ -350,6 +377,22 @@ function handleMobileSelect(item: Record<string, unknown>, selected: boolean) {
   }
 
   selectedClientIds.value = selectedClientIds.value.filter((id) => id !== externalClientId)
+}
+
+function openNewClient() {
+  dialogOpen.value = true
+  errorMessage.value = ''
+}
+
+async function handleSaved(_result: SyncCustomerResponse, customerName: string) {
+  dialogOpen.value = false
+  await load()
+  const migrated = rows.value.find((row) => row.displayName === customerName || row.name === customerName)
+  if (migrated) {
+    selectedClientIds.value = [migrated.externalClientId]
+  }
+  successMessage.value = t('billing.clients.messages.migrateSuccess')
+  saveSuccess.value = true
 }
 
 function formatOutstandingBalance(value: number) {
