@@ -541,12 +541,12 @@ function handleCardCheckbox(id: string) {
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--v-theme-surface));
   cursor: pointer;
 }
 
 .company-card:active {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 92%, rgb(var(--v-theme-primary)) 8%);
 }
 
 .company-card__checkbox {

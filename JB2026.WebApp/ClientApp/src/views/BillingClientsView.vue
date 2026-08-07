@@ -149,8 +149,8 @@
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" color="primary">mdi-account-sync</v-icon>
                 <div>
-                  <div class="text-subtitle-2 font-weight-bold">{{ row.clientName }}</div>
-                  <div class="text-caption text-medium-emphasis">{{ row.clientCode || t('billing.clients.labels.empty') }}</div>
+                  <div class="billing-client-card__title">{{ row.clientName }}</div>
+                  <div class="billing-client-card__subtitle">{{ row.clientCode || t('billing.clients.labels.empty') }}</div>
                 </div>
               </div>
               <v-checkbox-btn
@@ -162,10 +162,16 @@
               />
             </div>
             <div class="billing-client-card__body">
-              <span class="text-caption">{{ t('billing.clients.headers.externalClientId') }}: {{ row.externalClientId || '-' }}</span>
+              <span class="billing-client-card__meta">
+                <span class="billing-client-card__label">{{ t('billing.clients.headers.externalClientId') }}</span>
+                {{ row.externalClientId || '-' }}
+              </span>
             </div>
-            <div class="billing-client-card__footer text-caption text-medium-emphasis">
-              <span>{{ t('billing.clients.headers.outstandingBalance') }}: {{ formatOutstandingBalance(row.outstandingBalance) }}</span>
+            <div class="billing-client-card__footer">
+              <span class="billing-client-card__meta">
+                <span class="billing-client-card__label">{{ t('billing.clients.headers.outstandingBalance') }}</span>
+                <span class="billing-client-card__balance">{{ formatOutstandingBalance(row.outstandingBalance) }}</span>
+              </span>
             </div>
           </v-card>
         </div>
@@ -550,13 +556,14 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
-  border: 1px solid rgba(var(--v-theme-primary), 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(var(--v-theme-primary), 0.18);
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), 0.92);
   cursor: pointer;
 }
 
 .billing-client-card:active {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 92%, rgb(var(--v-theme-primary)) 8%);
 }
 
 .billing-client-card__header,
@@ -571,5 +578,44 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
 .billing-client-card__body {
   display: grid;
   gap: 0.45rem;
+}
+
+.billing-client-card__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: rgba(var(--v-theme-on-surface), 0.95);
+}
+
+.billing-client-card__subtitle {
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: rgba(var(--v-theme-on-surface), 0.72);
+}
+
+.billing-client-card__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: rgba(var(--v-theme-on-surface), 0.86);
+}
+
+.billing-client-card__label {
+  color: rgba(var(--v-theme-on-surface), 0.62);
+  font-weight: 500;
+}
+
+.billing-client-card__label::after {
+  content: ':';
+}
+
+.billing-client-card__balance {
+  font-weight: 600;
+  color: rgba(var(--v-theme-on-surface), 0.92);
+  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -699,12 +699,12 @@ async function syncSelectedCustomer() {
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--v-theme-surface));
   cursor: pointer;
 }
 
 .customer-card:active {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 92%, rgb(var(--v-theme-primary)) 8%);
 }
 
 .customer-card__header,

@@ -738,7 +738,7 @@ function exportToCsv() {
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--v-theme-surface));
 }
 
 .stock-mobile-card__header,

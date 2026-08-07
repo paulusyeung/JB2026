@@ -590,9 +590,19 @@ function formatLineAmount(value: string | number | null | undefined, fractionDig
 }
 
 .rtf-mobile-card {
-  border: 1px solid rgba(var(--v-theme-primary), 0.16);
-  background: rgba(246, 250, 255, 0.95);
+  border: 1px solid rgba(var(--v-theme-primary), 0.18);
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), 0.92);
   padding: 12px;
+}
+
+.rtf-mobile-card :deep(.text-medium-emphasis) {
+  color: rgba(var(--v-theme-on-surface), 0.72) !important;
+  opacity: 1;
+}
+
+.rtf-mobile-card :deep(.text-caption) {
+  color: rgba(var(--v-theme-on-surface), 0.86);
 }
 
 .rtf-mobile-card__header {
@@ -600,6 +610,10 @@ function formatLineAmount(value: string | number | null | undefined, fractionDig
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.rtf-mobile-card__header .text-subtitle-2 {
+  color: rgba(var(--v-theme-on-surface), 0.95);
 }
 
 .rtf-mobile-card__body {
@@ -622,9 +636,5 @@ function formatLineAmount(value: string | number | null | undefined, fractionDig
   margin-top: 10px;
   border-top: 1px solid rgba(var(--v-theme-primary), 0.2);
   padding-top: 10px;
-}
-
-:global(.v-theme--dark) .rtf-mobile-card {
-  background: rgba(32, 46, 66, 0.9);
 }
 </style>

@@ -177,13 +177,18 @@
         </div>
 
         <div v-if="isCardView" class="order-mobile-list" :class="{ 'order-mobile-list--desktop': !isPhoneLayout }">
-          <v-card
-            v-for="master in masterRows"
-            :key="master.orderId"
-            rounded="lg"
-            elevation="0"
-            class="order-mobile-card"
-          >
+          <div v-if="showCardLoading" class="order-mobile-list__loading" role="status" aria-live="polite">
+            <v-icon class="order-mobile-list__spinner" color="primary" size="40">mdi-loading</v-icon>
+          </div>
+
+          <template v-else>
+            <v-card
+              v-for="master in masterRows"
+              :key="master.orderId"
+              rounded="lg"
+              elevation="0"
+              class="order-mobile-card"
+            >
             <div class="order-mobile-card__header">
               <div>
                 <div class="text-subtitle-2 font-weight-bold">{{ master.orderNumber }}</div>
@@ -293,6 +298,7 @@
               </div>
             </v-expand-transition>
           </v-card>
+          </template>
         </div>
 
         <v-data-table
@@ -492,7 +498,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
@@ -512,6 +518,7 @@ type OrderListViewMode = 'detail' | 'card'
 
 const rows = ref<JobOrderRecord[]>([])
 const loading = ref(false)
+const cardViewPreparing = ref(false)
 const errorMessage = ref('')
 const snackbarOpen = ref(false)
 const lookup = ref('')
@@ -573,6 +580,7 @@ const isPhoneLayout = computed(() => display.smAndDown.value)
 const detailViewLabel = computed(() => t('jobOrder.jobList.actions.detailView'))
 const cardViewLabel = computed(() => t('jobOrder.jobList.actions.cardView'))
 const isCardView = computed(() => viewMode.value === 'card')
+const showCardLoading = computed(() => loading.value || cardViewPreparing.value)
 
 const commonQueryItems = computed(() => [
   { value: 0, label: t('jobOrder.orderList.commonQueryItems.none') },
@@ -801,7 +809,24 @@ function toggleSelected(orderId: string) {
   selectedOrderIds.value = [...selectedOrderIds.value, orderId]
 }
 
-function setViewMode(mode: OrderListViewMode) {
+async function setViewMode(mode: OrderListViewMode) {
+  if (mode === viewMode.value) return
+
+  if (mode === 'card') {
+    cardViewPreparing.value = true
+    viewMode.value = mode
+    // Paint the spinner and keep it spinning briefly before mounting cards
+    // (heavy card DOM would otherwise freeze animations on the same turn).
+    await nextTick()
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    })
+    await new Promise<void>((resolve) => setTimeout(resolve, 280))
+    cardViewPreparing.value = false
+    return
+  }
+
+  cardViewPreparing.value = false
   viewMode.value = mode
 }
 
@@ -1172,10 +1197,40 @@ function billingStatusColor(row: JobOrderRecord) {
   align-items: start;
 }
 
+.order-mobile-list__loading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  padding: 2rem;
+}
+
+.order-mobile-list__spinner {
+  animation: order-card-spin 0.75s linear infinite;
+  will-change: transform;
+}
+
+@keyframes order-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .order-mobile-card {
-  border: 1px solid rgba(var(--v-theme-primary), 0.16);
-  background: rgba(246, 250, 255, 0.95);
+  border: 1px solid rgba(var(--v-theme-primary), 0.18);
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), 0.92);
   padding: 12px;
+}
+
+.order-mobile-card :deep(.text-medium-emphasis) {
+  color: rgba(var(--v-theme-on-surface), 0.72) !important;
+  opacity: 1;
+}
+
+.order-mobile-card :deep(.text-caption) {
+  color: rgba(var(--v-theme-on-surface), 0.86);
 }
 
 .order-mobile-card__header {
@@ -1183,6 +1238,10 @@ function billingStatusColor(row: JobOrderRecord) {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.order-mobile-card__header .text-subtitle-2 {
+  color: rgba(var(--v-theme-on-surface), 0.95);
 }
 
 .order-mobile-card__body {
@@ -1220,16 +1279,13 @@ function billingStatusColor(row: JobOrderRecord) {
   border: 1px solid rgba(var(--v-theme-primary), 0.18);
   border-radius: 10px;
   padding: 8px;
-  background: rgba(var(--v-theme-surface), 0.96);
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 94%, rgb(var(--v-theme-primary)) 6%);
+  color: rgba(var(--v-theme-on-surface), 0.92);
   cursor: pointer;
 }
 
-.order-list-page--dark .order-mobile-card {
-  background: rgba(32, 46, 66, 0.9);
-}
-
-.order-list-page--dark .order-mobile-card__detail-row {
-  background: rgba(26, 38, 55, 0.95);
+.order-mobile-card__detail-row:active {
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 88%, rgb(var(--v-theme-primary)) 12%);
 }
 
 @media (max-width: 960px) {

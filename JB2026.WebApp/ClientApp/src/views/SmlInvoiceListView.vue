@@ -416,9 +416,19 @@ function formatAmount(value: number) {
 }
 
 .invoice-mobile-card {
-  border: 1px solid rgba(var(--v-theme-primary), 0.16);
-  background: rgba(246, 250, 255, 0.95);
+  border: 1px solid rgba(var(--v-theme-primary), 0.18);
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), 0.92);
   padding: 12px;
+}
+
+.invoice-mobile-card :deep(.text-medium-emphasis) {
+  color: rgba(var(--v-theme-on-surface), 0.72) !important;
+  opacity: 1;
+}
+
+.invoice-mobile-card :deep(.text-caption) {
+  color: rgba(var(--v-theme-on-surface), 0.86);
 }
 
 .invoice-mobile-card__header {
@@ -426,6 +436,10 @@ function formatAmount(value: number) {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.invoice-mobile-card__header .text-subtitle-2 {
+  color: rgba(var(--v-theme-on-surface), 0.95);
 }
 
 .invoice-mobile-card__body {
@@ -442,9 +456,5 @@ function formatAmount(value: number) {
   flex-wrap: wrap;
   gap: 8px 16px;
   margin-top: 8px;
-}
-
-:global(.v-theme--dark) .invoice-mobile-card {
-  background: rgba(32, 46, 66, 0.9);
 }
 </style>
