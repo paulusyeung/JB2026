@@ -350,6 +350,7 @@ function removeRelation(id: string) {
 <style scoped>
 .task-body-editor :deep(.ck-editor__editable) {
   min-height: 140px;
+  color: var(--ck-color-base-text, #333);
 }
 
 .task-body-editor :deep(.ck.ck-editor__main) {

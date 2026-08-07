@@ -848,6 +848,10 @@ onBeforeUnmount(() => {
   max-height: 60vh;
 }
 
+:deep(.ck-editor__editable) {
+  color: var(--ck-color-base-text, #333);
+}
+
 .remarks-editor :deep(.ck-editor__editable_inline table td:nth-child(2)),
 .remarks-editor :deep(.ck-editor__editable_inline table th:nth-child(2)) {
   text-align: right;

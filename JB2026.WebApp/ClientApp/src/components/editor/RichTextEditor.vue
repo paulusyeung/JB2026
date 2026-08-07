@@ -53,3 +53,9 @@ const config = {
   },
 }
 </script>
+
+<style scoped>
+:deep(.ck-editor__editable) {
+  color: var(--ck-color-base-text, #333);
+}
+</style>
