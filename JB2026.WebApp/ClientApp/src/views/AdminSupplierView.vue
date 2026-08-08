@@ -140,6 +140,16 @@
             class="supplier-card"
             @click="openPopup(row.supplierId)"
           >
+            <div v-if="checkboxMode" class="supplier-card__checkbox-anchor" @click.stop>
+              <v-checkbox-btn
+                class="supplier-card__checkbox"
+                :model-value="selectedSupplierIds.includes(row.supplierId)"
+                density="compact"
+                hide-details
+                @click.stop="handleCardCheckbox(row.supplierId)"
+              />
+            </div>
+
             <div class="supplier-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" color="secondary">mdi-truck-delivery</v-icon>
@@ -148,13 +158,6 @@
                   <div class="text-caption text-medium-emphasis">{{ row.supplierCode || '-' }}</div>
                 </div>
               </div>
-              <v-checkbox-btn
-                v-if="checkboxMode"
-                :model-value="selectedSupplierIds.includes(row.supplierId)"
-                density="compact"
-                hide-details
-                @click.stop="handleCardCheckbox(row.supplierId)"
-              />
             </div>
             <div class="supplier-card__body">
               <span class="text-caption">{{ t('admin.supplier.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
@@ -506,12 +509,28 @@ function formatDateCell(value: string): string {
 }
 
 .supplier-card {
+  position: relative;
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
   background: rgb(var(--v-theme-surface));
   cursor: pointer;
+  overflow: hidden;
+}
+
+.supplier-card__checkbox-anchor {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.supplier-card__checkbox {
+  margin: 0;
 }
 
 .supplier-card:active {

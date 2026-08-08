@@ -197,6 +197,16 @@
             class="customer-card"
             @click="openPopup(row.customerId)"
           >
+            <div v-if="checkboxMode" class="customer-card__checkbox-anchor" @click.stop>
+              <v-checkbox-btn
+                class="customer-card__checkbox"
+                :model-value="selectedCustomerIds.includes(row.customerId)"
+                density="compact"
+                hide-details
+                @click.stop="handleCardCheckbox(row.customerId)"
+              />
+            </div>
+
             <div class="customer-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon
@@ -208,13 +218,6 @@
                   <div class="text-caption text-medium-emphasis">{{ row.customerCode || '-' }}</div>
                 </div>
               </div>
-              <v-checkbox-btn
-                v-if="checkboxMode"
-                :model-value="selectedCustomerIds.includes(row.customerId)"
-                density="compact"
-                hide-details
-                @click.stop="handleCardCheckbox(row.customerId)"
-              />
             </div>
             <div class="customer-card__body">
               <span class="text-caption">{{ t('admin.customer.headers.loginAccount') }}: {{ row.loginAccount || '-' }}</span>
@@ -695,12 +698,28 @@ async function syncSelectedCustomer() {
 }
 
 .customer-card {
+  position: relative;
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
   background: rgb(var(--v-theme-surface));
   cursor: pointer;
+  overflow: hidden;
+}
+
+.customer-card__checkbox-anchor {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.customer-card__checkbox {
+  margin: 0;
 }
 
 .customer-card:active {

@@ -144,6 +144,16 @@
             class="user-card"
             @click="openPopup(row.userId)"
           >
+            <div v-if="checkboxMode" class="user-card__checkbox-anchor" @click.stop>
+              <v-checkbox-btn
+                class="user-card__checkbox"
+                :model-value="selectedUserIds.includes(row.userId)"
+                density="compact"
+                hide-details
+                @click.stop="handleCardCheckbox(row.userId)"
+              />
+            </div>
+
             <div class="user-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" :color="row.primaryRec ? 'warning' : 'secondary'">
@@ -154,13 +164,6 @@
                   <div class="text-caption text-medium-emphasis">{{ row.username }}</div>
                 </div>
               </div>
-              <v-checkbox-btn
-                v-if="checkboxMode"
-                :model-value="selectedUserIds.includes(row.userId)"
-                density="compact"
-                hide-details
-                @click.stop="handleCardCheckbox(row.userId)"
-              />
             </div>
             <div class="user-card__body">
               <span class="text-caption">{{ t('admin.user.headers.userRole') }}: {{ row.role || '-' }}</span>
@@ -517,12 +520,28 @@ function formatDateCell(value: string): string {
 }
 
 .user-card {
+  position: relative;
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid rgba(var(--v-theme-primary), 0.12);
   background: rgb(var(--v-theme-surface));
   cursor: pointer;
+  overflow: hidden;
+}
+
+.user-card__checkbox-anchor {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.user-card__checkbox {
+  margin: 0;
 }
 
 .user-card:active {
