@@ -398,6 +398,7 @@ async function renderPlot() {
         ],
         x: {
           label: t('visualization.line.xLabel') + ' →',
+          tickRotate: -45,
           tickFormat: (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
         },
         y: {
@@ -411,7 +412,7 @@ async function renderPlot() {
         color: { domain: plotData, range: palette },
         marginLeft: 60,
         marginTop: 50,
-        marginBottom: 50,
+        marginBottom: 60,
         style: {
           background: isDark ? '#1e241f' : '#ffffff',
           color: isDark ? '#d7ddd3' : '#333333',
@@ -586,6 +587,7 @@ async function renderPlot() {
         x: {
           label: t('visualization.stack.yLabel') + ' →',
           type: 'band',
+          tickRotate: -45,
           tickFormat: (d: string) => d,
         },
         y: {
@@ -602,7 +604,7 @@ async function renderPlot() {
         marginLeft: 60,
         marginRight: 70,
         marginTop: 50,
-        marginBottom: 50,
+        marginBottom: 78,
         style: {
           background: isDark ? '#1e241f' : '#ffffff',
           color: isDark ? '#d7ddd3' : '#333333',
