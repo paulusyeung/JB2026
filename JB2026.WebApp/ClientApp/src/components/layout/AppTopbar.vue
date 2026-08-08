@@ -49,7 +49,7 @@
           class="topbar-locale"
           @update:model-value="handleLocaleChange"
         />
-        <div class="text-right topbar-identity" v-if="session.profile">
+        <div class="text-right topbar-identity" v-if="session.profile" @click="openProfileEditor">
           <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
           <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
         </div>
@@ -65,7 +65,7 @@
         </v-btn>
       </template>
 
-      <v-menu v-else location="bottom end">
+      <v-menu v-else v-model="mobileMenuOpen" location="bottom end">
         <template #activator="{ props }">
           <v-btn
             icon
@@ -92,7 +92,7 @@
             @update:model-value="handleLocaleChange"
           />
 
-          <div class="topbar-identity mb-3" v-if="session.profile">
+          <div class="topbar-identity mb-3" v-if="session.profile" @click="openProfileEditor">
             <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
             <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
           </div>
@@ -111,11 +111,19 @@
         </v-card>
       </v-menu>
     </div>
+
+    <v-dialog v-model="recordDialogOpen" max-width="min(100%, 760px)" scrollable>
+      <StaffMemberRecordDialog
+        :user-id="editingUserId"
+        @saved="handleRecordSaved"
+        @cancel="recordDialogOpen = false"
+      />
+    </v-dialog>
   </header>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
@@ -123,6 +131,7 @@ import { localeOptions, type AppLocale } from '@/i18n/messages'
 import { setLocale } from '@/i18n'
 import { useThemeStore } from '@/stores/theme'
 import ThemeSettings from '@/components/settings/ThemeSettings.vue'
+import StaffMemberRecordDialog from '@/components/crm/StaffMemberRecordDialog.vue'
 
 const props = defineProps<{
   isMobile: boolean
@@ -144,6 +153,21 @@ const pageTitle = computed(() => {
   return titleKey ? t(titleKey) : t('common.appName')
 })
 
+const mobileMenuOpen = ref(false)
+const recordDialogOpen = ref(false)
+const editingUserId = ref<string | null>(null)
+
+function openProfileEditor() {
+  mobileMenuOpen.value = false
+  if (!session.profile) return
+  editingUserId.value = session.profile.userId
+  recordDialogOpen.value = true
+}
+
+async function handleRecordSaved() {
+  await session.bootstrapProfile()
+}
+
 const selectedLocale = computed(() => locale.value as AppLocale)
 const sidebarToggleLabel = computed(() =>
   props.isSidebarCollapsed ? t('topbar.expandNavigation') : t('topbar.collapseNavigation'),
@@ -162,3 +186,9 @@ function handleLogout() {
   router.push({ name: 'login' })
 }
 </script>
+
+<style scoped>
+.topbar-identity {
+  cursor: pointer;
+}
+</style>
