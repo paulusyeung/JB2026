@@ -138,6 +138,7 @@
             rounded="lg"
             elevation="0"
             class="opportunity-card"
+            @click="handleCardClick(row)"
           >
             <v-checkbox-btn
               v-if="checkboxMode"
@@ -145,13 +146,13 @@
               density="compact"
               hide-details
               class="opportunity-card__checkbox"
-              @click="handleCardCheckbox(row.id)"
+              @click.stop="handleCardCheckbox(row.id)"
             />
             <div class="opportunity-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" color="primary">mdi-trending-up</v-icon>
                 <div>
-                  <span class="text-subtitle-2 font-weight-bold">{{ row.name }}</span>
+                  <a class="text-subtitle-2 font-weight-bold text-primary text-decoration-none cursor-pointer" @click.stop="openPopup(row.id)">{{ row.name }}</a>
                   <v-chip v-if="row.stage" size="x-small" label color="primary" variant="tonal" class="ml-1">
                     {{ stageLabel(row.stage) }}
                   </v-chip>
@@ -418,6 +419,14 @@ function handleMobileSelect(item: OpportunitiesDisplayItem | Record<string, unkn
 
 function setViewMode(mode: OpportunitiesViewMode) {
   viewMode.value = mode
+}
+
+function handleCardClick(row: OpportunitiesDisplayItem) {
+  if (checkboxMode.value) {
+    handleCardCheckbox(row.id)
+    return
+  }
+  openPopup(row.id)
 }
 
 function handleCardCheckbox(id: string) {

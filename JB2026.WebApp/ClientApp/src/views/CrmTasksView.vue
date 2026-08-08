@@ -138,6 +138,7 @@
             rounded="lg"
             elevation="0"
             class="task-card"
+            @click="handleCardClick(row)"
           >
             <v-checkbox-btn
               v-if="checkboxMode"
@@ -145,13 +146,13 @@
               density="compact"
               hide-details
               class="task-card__checkbox"
-              @click="handleCardCheckbox(row.id)"
+              @click.stop="handleCardCheckbox(row.id)"
             />
             <div class="task-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" color="primary">mdi-format-list-checks</v-icon>
                 <div>
-                  <span class="text-subtitle-2 font-weight-bold">{{ row.title }}</span>
+                  <a class="text-subtitle-2 font-weight-bold text-primary text-decoration-none cursor-pointer" @click.stop="openPopup(row.id)">{{ row.title }}</a>
                   <v-chip v-if="row.status" size="x-small" label :color="statusColor(row.status)" variant="tonal" class="ml-1">
                     {{ statusLabel(row.status) }}
                   </v-chip>
@@ -456,6 +457,14 @@ function handleMobileSelect(item: TasksDisplayItem | Record<string, unknown>, se
 
 function setViewMode(mode: TasksViewMode) {
   viewMode.value = mode
+}
+
+function handleCardClick(row: TasksDisplayItem) {
+  if (checkboxMode.value) {
+    handleCardCheckbox(row.id)
+    return
+  }
+  openPopup(row.id)
 }
 
 function handleCardCheckbox(id: string) {
