@@ -144,7 +144,17 @@
             rounded="lg"
             elevation="0"
             class="billing-client-card"
+            @click="openClientRecord(row)"
           >
+            <div v-if="checkboxMode" class="billing-client-card__checkbox-anchor" @click.stop>
+              <v-checkbox-btn
+                class="billing-client-card__checkbox"
+                :model-value="selectedClientIds.includes(row.externalClientId)"
+                density="compact"
+                hide-details
+                @click.stop="handleCardCheckbox(row.externalClientId)"
+              />
+            </div>
             <div class="billing-client-card__header">
               <div class="d-flex align-center ga-2">
                 <v-icon size="18" color="primary">mdi-account-sync</v-icon>
@@ -153,13 +163,6 @@
                   <div class="billing-client-card__subtitle">{{ row.clientCode || t('billing.clients.labels.empty') }}</div>
                 </div>
               </div>
-              <v-checkbox-btn
-                v-if="checkboxMode"
-                :model-value="selectedClientIds.includes(row.externalClientId)"
-                density="compact"
-                hide-details
-                @click.stop="handleCardCheckbox(row.externalClientId)"
-              />
             </div>
             <div class="billing-client-card__body">
               <span class="billing-client-card__meta">
@@ -553,6 +556,7 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
 }
 
 .billing-client-card {
+  position: relative;
   display: grid;
   gap: 0.8rem;
   padding: 1rem;
@@ -560,6 +564,21 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
   background: rgb(var(--v-theme-surface));
   color: rgba(var(--v-theme-on-surface), 0.92);
   cursor: pointer;
+  overflow: hidden;
+}
+
+.billing-client-card__checkbox-anchor {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.billing-client-card__checkbox {
+  margin: 0;
 }
 
 .billing-client-card:active {
