@@ -1,5 +1,5 @@
 <template>
-  <v-card class="user-record-dialog">
+  <v-card v-draggable-dialog class="user-record-dialog">
     <v-card-title class="d-flex align-center ga-3 pb-2">
       <div>
         <h2 class="text-h6 mb-1">
@@ -30,6 +30,17 @@
           @click="handleDelete"
         >
           {{ t('admin.user.form.delete') }}
+        </v-btn>
+        <v-divider vertical class="mx-1" />
+        <v-btn
+          size="small"
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-cloud-sync"
+          :disabled="!canSyncToCrm"
+          @click="syncToCrm"
+        >
+          {{ t('admin.user.actions.syncCrm') }}
         </v-btn>
       </div>
 
@@ -103,6 +114,15 @@
         {{ t('admin.user.form.cancel') }}
       </v-btn>
     </v-card-actions>
+
+    <v-dialog v-model="crmDialogOpen" max-width="520px">
+      <SyncCrmDialog
+        :user-id="props.userId ?? ''"
+        :user-email="draft.email"
+        @cancel="crmDialogOpen = false"
+        @done="crmDialogOpen = false; loadRecord(props.userId)"
+      />
+    </v-dialog>
   </v-card>
 </template>
 
@@ -115,6 +135,7 @@ import {
   getAdminUser,
   updateAdminUser,
 } from '@/services/admin'
+import SyncCrmDialog from '@/components/crm/SyncCrmDialog.vue'
 import type { AdminUserRecord } from '@/types/api'
 
 const props = defineProps<{
@@ -132,6 +153,7 @@ const { t } = useI18n({ useScope: 'global' })
 const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
+const crmDialogOpen = ref(false)
 
 const draft = reactive({
   username: '',
@@ -142,6 +164,13 @@ const draft = reactive({
 })
 
 const isNew = computed(() => !props.userId)
+
+const canSyncToCrm = computed(() => !isNew.value && draft.email.trim().length > 0)
+
+function syncToCrm() {
+  if (!canSyncToCrm.value) return
+  crmDialogOpen.value = true
+}
 
 const userRoleOptions = computed(() => [
   { value: 0, title: t('admin.user.form.roles.guest') },
