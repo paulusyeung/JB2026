@@ -185,7 +185,7 @@
           @dblclick="openPopup"
         >
           <template #[`item.icon`]>
-            <v-icon size="14" color="secondary">mdi-truck-delivery</v-icon>
+            <v-icon size="16" color="secondary">mdi-truck-delivery</v-icon>
           </template>
 
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>

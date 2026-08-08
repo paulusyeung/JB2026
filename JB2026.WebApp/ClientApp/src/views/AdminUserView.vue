@@ -91,7 +91,7 @@
 
             <v-divider vertical class="mx-1" />
 
-            <v-btn variant="outlined" size="small" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
+            <v-btn variant="outlined" size="medium" color="primary" prepend-icon="mdi-account-plus" @click="openNewUser">
               {{ t('admin.user.actions.newUser') }}
             </v-btn>
           </template>
@@ -189,7 +189,7 @@
           class="admin-user-table"
         >
           <template #[`item.icon`]='{ item }'>
-            <v-icon size="14" :color="item.primaryRec ? 'warning' : 'secondary'">
+            <v-icon size="16" :color="item.primaryRec ? 'warning' : 'secondary'">
               {{ item.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
             </v-icon>
           </template>
