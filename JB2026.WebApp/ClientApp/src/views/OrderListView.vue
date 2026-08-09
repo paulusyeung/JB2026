@@ -1175,12 +1175,12 @@ function billingStatusColor(row: JobOrderRecord) {
 
 .detail-grid {
   border-top: 1px solid rgba(var(--v-theme-primary), 0.2);
-  background: rgba(220, 232, 247, 0.55);
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 94%, rgb(var(--v-theme-primary)) 6%);
   margin-left: 48px;
 }
 
 .detail-grid :deep(tbody tr:nth-child(odd)) {
-  background: rgba(227, 236, 248, 0.7);
+  background: color-mix(in srgb, rgb(var(--v-theme-surface)) 90%, rgb(var(--v-theme-primary)) 10%);
 }
 
 .detail-grid :deep(tbody td) {
