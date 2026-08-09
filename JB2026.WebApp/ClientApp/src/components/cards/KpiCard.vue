@@ -1,5 +1,11 @@
 <template>
-  <v-card class="metric-card" rounded="xl" elevation="0">
+  <v-card
+    class="metric-card"
+    rounded="xl"
+    elevation="0"
+    :class="{ 'metric-card--clickable': clickable }"
+    @click="emit('click')"
+  >
     <v-card-text>
       <div class="d-flex justify-space-between align-start mb-4">
         <div>
@@ -27,5 +33,22 @@ defineProps<{
   trend?: number
   inverse?: boolean
   statusColor?: string
+  clickable?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'click'): void
 }>()
 </script>
+
+<style scoped>
+.metric-card--clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metric-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+</style>

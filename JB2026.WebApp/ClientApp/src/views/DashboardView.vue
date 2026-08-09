@@ -17,6 +17,8 @@
         :helper="t('dashboard.kpi.ordersLoadedHelper')"
         icon="mdi-cart-outline"
         :trend="0"
+        clickable
+        @click="goToOrders"
       />
       <KpiCard
         :label="t('dashboard.kpi.jobsLoadedLabel')"
@@ -24,6 +26,8 @@
         :helper="t('dashboard.kpi.jobsLoadedHelper')"
         icon="mdi-briefcase-clock-outline"
         :trend="5"
+        clickable
+        @click="goToJobs"
       />
       <KpiCard
         :label="t('dashboard.kpi.invoicesLoadedLabel')"
@@ -31,6 +35,8 @@
         :helper="t('dashboard.kpi.invoicesLoadedHelper')"
         icon="mdi-receipt-text-outline"
         :trend="-2"
+        clickable
+        @click="goToInvoices"
       />
     </div>
 
@@ -258,6 +264,24 @@ async function openJobFromActivity(orderId: string) {
   }
 }
 
+function goToOrders() {
+  void router.push({ name: 'job-order-order-list' })
+}
+
+function goToJobs() {
+  void router.push({ name: 'job-order-job-list' })
+}
+
+function goToInvoices() {
+  void router.push({ name: 'billing-invoices' })
+}
+
+function handleChartClick(index: number | undefined) {
+  if (index === 0) goToOrders()
+  if (index === 1) goToJobs()
+  if (index === 2) goToInvoices()
+}
+
 async function handleFormSaved() {
   formOpen.value = false
   await reload()
@@ -350,6 +374,12 @@ const chartPalette = computed(() =>
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
+  onClick: (_event: unknown, elements: { index: number }[]) => {
+    handleChartClick(elements[0]?.index)
+  },
+  onHover: (_event: unknown, elements: unknown[], chart: { canvas: HTMLCanvasElement }) => {
+    chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'
+  },
   plugins: {
     legend: {
       display: false,
