@@ -240,6 +240,7 @@ export const billingMessages = {
         close: 'Close',
         refreshFromJobNumbers: 'Refresh from Job Numbers',
         confirmRefresh: 'Regenerate Invoice Rows',
+        newClient: 'New Client',
       },
       validation: {
         clientRequired: 'Client is required.',

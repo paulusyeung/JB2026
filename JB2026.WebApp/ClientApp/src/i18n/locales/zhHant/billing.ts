@@ -240,6 +240,7 @@ export const billingMessages = {
         close: '關閉',
         refreshFromJobNumbers: '依工單編號重新整理',
         confirmRefresh: '重新產生發票項目',
+        newClient: '新增客戶',
       },
       validation: {
         clientRequired: '請選擇客戶。',

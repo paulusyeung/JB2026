@@ -27,7 +27,7 @@
         <v-form ref="formRef">
           <v-row dense>
             <!-- Client selector -->
-            <v-col cols="12" md="4">
+            <v-col cols="12" :md="isCreateMode ? 3 : 4">
               <v-autocomplete
                 v-model="form.client"
                 v-model:search="clientSearchText"
@@ -45,6 +45,22 @@
                 variant="outlined"
                 @update:search="handleClientSearch"
               />
+            </v-col>
+
+            <!-- New client button -->
+            <v-col v-if="isCreateMode" cols="12" md="auto" class="d-flex align-top" style="width: 48px; max-width: 48px; margin-right: 4px;">
+              <v-tooltip :text="t('billing.invoices.editor.actions.newClient')" location="top">
+                <template #activator="{ props: tooltipProps }">
+                  <v-btn
+                    v-bind="tooltipProps"
+                    icon="mdi-account-plus"
+                    size="small"
+                    variant="tonal"
+                    color="primary"
+                    @click="openNewClientDialog"
+                  />
+                </template>
+              </v-tooltip>
             </v-col>
 
             <!-- Invoice date -->
@@ -311,6 +327,14 @@
         </v-btn>
       </v-card-actions>
 
+      <v-dialog v-model="showNewClientDialog" max-width="min(100%, 760px)" scrollable>
+        <BillingClientRecordDialog
+          :key="newClientDialogKey"
+          @saved="handleNewClientSaved"
+          @cancel="showNewClientDialog = false"
+        />
+      </v-dialog>
+
       <v-dialog v-model="showAutofillOverwriteConfirmation" max-width="420">
         <v-card>
           <v-card-title>{{ t('billing.invoices.editor.actions.confirmRefresh') }}</v-card-title>
@@ -367,8 +391,10 @@ import {
   type InvoiceEditorAutofillLookupItem,
   type InvoiceEditorAutofillLookupStatus,
   type InvoiceBillingSummary,
+  type SyncCustomerResponse,
 } from '@/services/billing'
 import { buildJobNumberSignature, parseJobNumberExpression } from './invoiceAutofill'
+import BillingClientRecordDialog from '@/components/billing/BillingClientRecordDialog.vue'
 
 // ── Props & Emits ─────────────────────────────────────────────────────────────
 
@@ -446,6 +472,8 @@ const form = ref<FormState>(resetForm())
 // ── Computed ──────────────────────────────────────────────────────────────────
 
 const isReadOnly = computed(() => props.mode === 'view' || markedSent.value)
+
+const isCreateMode = computed(() => props.mode === 'create')
 
 const canMarkSent = computed(
   () => props.mode === 'edit' && !!props.externalInvoiceId && !markedSent.value,
@@ -663,6 +691,32 @@ const loadingClients = ref(false)
 const clientSearchText = ref('')
 let clientSearchTimer: ReturnType<typeof setTimeout> | null = null
 
+const showNewClientDialog = ref(false)
+const newClientDialogKey = ref(0)
+
+function openNewClientDialog() {
+  newClientDialogKey.value += 1
+  showNewClientDialog.value = true
+}
+
+async function handleNewClientSaved(result: SyncCustomerResponse, customerName: string) {
+  const newClient: BillingClientOption = {
+    externalClientId: result.invoiceNinjaClientId,
+    name: customerName,
+    displayName: customerName,
+    idNumber: '',
+    outstandingBalance: 0,
+  }
+  clientOptions.value = [
+    newClient,
+    ...clientOptions.value.filter((c) => c.externalClientId !== newClient.externalClientId),
+  ].sort((left, right) => left.displayName.localeCompare(right.displayName))
+  form.value.client = newClient
+  clientSearchText.value = customerName
+  showNewClientDialog.value = false
+  void loadClients()
+}
+
 async function loadClients(query?: string) {
   loadingClients.value = true
   try {
@@ -778,6 +832,7 @@ watch(
         addResizeListener()
       }))
     } else {
+      showNewClientDialog.value = false
       overlayEl.value = null
       removeResizeListener()
     }

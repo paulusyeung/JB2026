@@ -238,6 +238,7 @@ export const billingMessages = {
         save: '保存',
         cancel: '取消',
         close: '关闭',
+        newClient: '新建客户',
       },
       validation: {
         clientRequired: '请选择客户。',
