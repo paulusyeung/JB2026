@@ -521,22 +521,47 @@ const dialogSize = ref<DialogSize>(loadSavedSize())
 const dialogPos = ref({ x: 0, y: 0 })
 const overlayEl = ref<HTMLElement | null>(null)
 
-function initDialogPosition() {
-  const el = document.querySelector<HTMLElement>('.billing-editor-overlay')
+const DIALOG_VIEWPORT_MARGIN = 24
+
+function getClampedSize(): { width: number; height: number } {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  return {
+    width: Math.min(dialogSize.value.width, vw - DIALOG_VIEWPORT_MARGIN),
+    height: Math.min(dialogSize.value.height, vh - DIALOG_VIEWPORT_MARGIN),
+  }
+}
+
+function applyDialogLayout(recenter: boolean) {
+  const el = overlayEl.value
   if (!el) return
-  overlayEl.value = el
-  const rect = el.getBoundingClientRect()
-  dialogPos.value = { x: rect.left, y: rect.top }
+  const { width, height } = getClampedSize()
+  let { x, y } = dialogPos.value
+  if (recenter) {
+    x = Math.max(0, Math.round((window.innerWidth - width) / 2))
+    y = Math.max(0, Math.round((window.innerHeight - height) / 2))
+  } else {
+    x = Math.min(Math.max(0, x), Math.max(0, window.innerWidth - width))
+    y = Math.min(Math.max(0, y), Math.max(0, window.innerHeight - height))
+  }
+  dialogPos.value = { x, y }
   el.style.position = 'fixed'
   el.style.inset = 'auto'
   el.style.top = '0'
   el.style.left = '0'
-  el.style.transform = `translate(${dialogPos.value.x}px, ${dialogPos.value.y}px)`
-  el.style.width = `${dialogSize.value.width}px`
-  el.style.height = `${dialogSize.value.height}px`
-  el.style.maxWidth = '9999px'
-  el.style.maxHeight = '9999px'
+  el.style.transform = `translate(${x}px, ${y}px)`
+  el.style.width = `${width}px`
+  el.style.height = `${height}px`
+  el.style.maxWidth = `${width}px`
+  el.style.maxHeight = `${height}px`
   el.style.margin = '0'
+}
+
+function initDialogPosition() {
+  const el = document.querySelector<HTMLElement>('.billing-editor-overlay')
+  if (!el) return
+  overlayEl.value = el
+  applyDialogLayout(true)
 }
 
 function startDrag(e: MouseEvent) {
@@ -547,9 +572,10 @@ function startDrag(e: MouseEvent) {
   const startPosX = dialogPos.value.x
   const startPosY = dialogPos.value.y
   const onMove = (ev: MouseEvent) => {
+    const { width, height } = getClampedSize()
     dialogPos.value = {
-      x: Math.max(0, startPosX + ev.clientX - startX),
-      y: Math.max(0, startPosY + ev.clientY - startY),
+      x: Math.min(Math.max(0, startPosX + ev.clientX - startX), Math.max(0, window.innerWidth - width)),
+      y: Math.min(Math.max(0, startPosY + ev.clientY - startY), Math.max(0, window.innerHeight - height)),
     }
     if (overlayEl.value) {
       overlayEl.value.style.transform = `translate(${dialogPos.value.x}px, ${dialogPos.value.y}px)`
@@ -570,13 +596,17 @@ function startResize(e: MouseEvent) {
   const startW = dialogSize.value.width
   const startH = dialogSize.value.height
   const onMove = (ev: MouseEvent) => {
+    const vw = window.innerWidth
+    const vh = window.innerHeight
     dialogSize.value = {
-      width: Math.max(600, startW + ev.clientX - startX),
-      height: Math.max(400, startH + ev.clientY - startY),
+      width: Math.min(Math.max(600, startW + ev.clientX - startX), vw - DIALOG_VIEWPORT_MARGIN),
+      height: Math.min(Math.max(400, startH + ev.clientY - startY), vh - DIALOG_VIEWPORT_MARGIN),
     }
     if (overlayEl.value) {
       overlayEl.value.style.width = `${dialogSize.value.width}px`
       overlayEl.value.style.height = `${dialogSize.value.height}px`
+      overlayEl.value.style.maxWidth = `${dialogSize.value.width}px`
+      overlayEl.value.style.maxHeight = `${dialogSize.value.height}px`
     }
   }
   const onUp = () => {
@@ -586,6 +616,21 @@ function startResize(e: MouseEvent) {
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
+}
+
+let onWindowResize: (() => void) | null = null
+
+function addResizeListener() {
+  removeResizeListener()
+  onWindowResize = () => applyDialogLayout(false)
+  window.addEventListener('resize', onWindowResize)
+}
+
+function removeResizeListener() {
+  if (onWindowResize) {
+    window.removeEventListener('resize', onWindowResize)
+    onWindowResize = null
+  }
 }
 
 const invoiceTotal = computed(() =>
@@ -728,9 +773,13 @@ watch(
         }
       }
       await nextTick()
-      requestAnimationFrame(() => requestAnimationFrame(initDialogPosition))
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        initDialogPosition()
+        addResizeListener()
+      }))
     } else {
       overlayEl.value = null
+      removeResizeListener()
     }
   },
 )
