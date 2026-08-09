@@ -5,6 +5,8 @@ import { themeRegistry } from '@/themes/registry'
 const THEME_STORAGE_KEY = 'jb2026.theme.v2'
 const LEGACY_THEME_STORAGE_KEY = 'jb2026.theme'
 
+const DEFAULT_SCHEME = 'indigo'
+
 export const appModes = ['light', 'dark'] as const
 export type AppMode = (typeof appModes)[number]
 
@@ -37,7 +39,7 @@ export const useThemeStore = defineStore('theme', () => {
     state.value.mode = nextMode
     // Ensure scheme is valid for new mode, if not, reset to default
     if (!(appSchemes[nextMode] as readonly string[]).includes(state.value.scheme)) {
-      state.value.scheme = nextMode === 'light' ? 'nature' : 'forest'
+      state.value.scheme = DEFAULT_SCHEME
     }
     saveTheme()
   }
@@ -85,7 +87,7 @@ function readStoredTheme(): ThemeState {
   if (legacy === 'light' || legacy === 'dark') {
     return {
       mode: legacy,
-      scheme: legacy === 'light' ? 'nature' : 'forest',
+      scheme: DEFAULT_SCHEME,
     }
   }
 
@@ -95,6 +97,6 @@ function readStoredTheme(): ThemeState {
 
   return {
     mode: systemMode,
-    scheme: systemMode === 'light' ? 'nature' : 'forest',
+    scheme: DEFAULT_SCHEME,
   }
 }

@@ -25,7 +25,7 @@
 
     <v-item-group :model-value="themeStore.scheme" mandatory @update:model-value="themeStore.setScheme">
       <v-row dense>
-        <v-col v-for="scheme in currentSchemes" :key="scheme.id" cols="4">
+        <v-col v-for="scheme in currentSchemes" :key="scheme.id" cols="3">
           <v-item v-slot="{ isSelected, toggle }" :value="scheme.id">
             <v-card
               :class="['scheme-card', { 'active-scheme': isSelected }]"
@@ -52,6 +52,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore, appSchemes } from '@/stores/theme'
+import colors from 'vuetify/util/colors'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
@@ -59,21 +60,10 @@ const themeStore = useThemeStore()
 const currentSchemes = computed(() => {
   const mode = themeStore.mode
   const ids = appSchemes[mode]
-  
-  const palettePreviews: Record<string, string> = {
-    nature: '#9f4f2a',
-    indigo: '#1e40af',
-    rose: '#e11d48',
-    forest: '#e29a60',
-    midnight: '#38bdf8',
-    amethyst: '#c084fc',
-    slate: '#475569',
-    obsidian: '#fbbf24'
-  }
 
   return ids.map(id => ({
     id,
-    previewColor: palettePreviews[id] || '#ccc'
+    previewColor: (colors as Record<string, { base?: string }>)[id]?.base ?? '#ccc'
   }))
 })
 </script>

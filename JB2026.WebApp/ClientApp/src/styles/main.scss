@@ -1,50 +1,25 @@
 :root {
-  --shell-ink: #1f2421;
-  --shell-ink-rgb: 31, 36, 33;
-  --shell-paper: #f5f4ee;
-  --shell-panel: #fffdf8;
-  --shell-panel-rgb: 255, 253, 248;
-  --shell-accent: #9f4f2a;
-  --shell-accent-strong: #c9923d;
-  --shell-secondary: #284b63;
-  --shell-secondary-soft: rgba(40, 75, 99, 0.1);
-  --shell-soft: #ece4d5;
-  --shell-soft-rgb: 236, 228, 213;
-  --shell-bg-top: #f7f2e8;
-  --shell-bg-glow-rgb: 201, 146, 61;
-  --shell-sidebar-rgb: 255, 253, 248;
-  --shell-border: rgba(31, 36, 33, 0.08);
-  --shell-card-border: rgba(31, 36, 33, 0.06);
-  --shell-field-label: rgba(31, 36, 33, 0.64);
+  --shell-ink: rgb(var(--v-theme-on-surface));
+  --shell-ink-rgb: var(--v-theme-on-surface);
+  --shell-paper: rgb(var(--v-theme-background));
+  --shell-panel: rgb(var(--v-theme-surface));
+  --shell-panel-rgb: var(--v-theme-surface);
+  --shell-accent: rgb(var(--v-theme-primary));
+  --shell-accent-strong: rgb(var(--v-theme-accent));
+  --shell-secondary: rgb(var(--v-theme-secondary));
+  --shell-secondary-soft: rgba(var(--v-theme-secondary), 0.1);
+  --shell-soft: rgb(var(--v-theme-surface-variant));
+  --shell-soft-rgb: var(--v-theme-surface-variant);
+  --shell-bg-top: color-mix(in srgb, rgb(var(--v-theme-background)) 90%, rgb(var(--v-theme-primary)) 10%);
+  --shell-bg-glow-rgb: var(--v-theme-accent);
+  --shell-sidebar-rgb: var(--v-theme-surface);
+  --shell-border: rgba(var(--v-theme-on-surface), 0.08);
+  --shell-card-border: rgba(var(--v-theme-on-surface), 0.06);
+  --shell-field-label: rgba(var(--v-theme-on-surface), 0.64);
   color: var(--shell-ink);
   background: radial-gradient(circle at top right, rgba(var(--shell-bg-glow-rgb), 0.16), transparent 32%),
     linear-gradient(180deg, var(--shell-bg-top) 0%, var(--shell-paper) 100%);
   font-family: "Segoe UI", "Trebuchet MS", sans-serif;
-}
-
-:root[data-theme='light'] {
-  color-scheme: light;
-}
-
-:root[data-theme='dark'] {
-  --shell-ink: #edf1eb;
-  --shell-ink-rgb: 237, 241, 235;
-  --shell-paper: #161916;
-  --shell-panel: #1e241f;
-  --shell-panel-rgb: 30, 36, 31;
-  --shell-accent: #e29a60;
-  --shell-accent-strong: #d8ab58;
-  --shell-secondary: #8cb9d4;
-  --shell-secondary-soft: rgba(140, 185, 212, 0.18);
-  --shell-soft: #2a322b;
-  --shell-soft-rgb: 42, 50, 43;
-  --shell-bg-top: #202520;
-  --shell-bg-glow-rgb: 120, 150, 176;
-  --shell-sidebar-rgb: 26, 31, 27;
-  --shell-border: rgba(237, 241, 235, 0.1);
-  --shell-card-border: rgba(237, 241, 235, 0.08);
-  --shell-field-label: rgba(237, 241, 235, 0.72);
-  color-scheme: dark;
 }
 
 html {

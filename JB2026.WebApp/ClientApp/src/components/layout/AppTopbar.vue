@@ -31,7 +31,7 @@
             <v-icon :icon="themeStore.isDark ? 'mdi-weather-night' : 'mdi-white-balance-sunny'" />
           </v-btn>
         </template>
-        <v-card min-width="300" class="pa-4">
+        <v-card width="480" min-width="0" class="pa-4">
           <ThemeSettings />
         </v-card>
       </v-menu>

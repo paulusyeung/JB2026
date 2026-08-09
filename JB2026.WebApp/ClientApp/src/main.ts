@@ -21,7 +21,7 @@ themeRegistry.forEach(pair => {
 
 const vuetify = createVuetify({
   theme: {
-    defaultTheme: 'light-nature',
+    defaultTheme: 'light-indigo',
     themes: vuetifyThemes,
   },
 })
