@@ -147,8 +147,8 @@
       <!-- elevation="1" adds a subtle shadow. rounded makes corners smooth. -->
       <v-sheet 
         v-if="mode !== 'create'"
-        elevation="4" 
         rounded="lg" 
+        border="primary sm opacity-100"
         class="pa-4 mb-4 d-flex flex-column gap-2"
       >
         <div class="d-flex flex-wrap ga-2 mt-2 mb-3">
