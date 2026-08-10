@@ -901,6 +901,12 @@ function mountPlot(plotEl: Element) {
   container.appendChild(plotEl)
   stylePlotTitle(plotEl)
   plotSvg = plotEl
+
+  const svg = (plotEl.tagName === 'svg' ? plotEl : plotEl.querySelector('svg')) as SVGElement | null
+  if (svg) {
+    const isDark = themeStore.mode === 'dark'
+    svg.style.setProperty('--plot-background', isDark ? '#1e241f' : '#ffffff')
+  }
 }
 
 function stylePlotTitle(plotEl: Element) {
