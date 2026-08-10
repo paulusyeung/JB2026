@@ -823,19 +823,10 @@ function formatUser(userId: string | null | undefined): string {
 
 .order-record-dialog :deep(.v-input:has(input[readonly]) .v-field),
 .order-record-dialog :deep(.v-input:has(textarea[readonly]) .v-field) {
-  background: #e8e8e8;
+  background: rgba(var(--v-theme-on-surface), 0.06);
 }
 
 .order-record-dialog :deep(.v-input.date-picker-input:has(input[readonly]) .v-field) {
-  background: transparent;
-}
-
-:deep(.v-theme--dark) .order-record-dialog .v-input:has(input[readonly]) .v-field,
-:deep(.v-theme--dark) .order-record-dialog .v-input:has(textarea[readonly]) .v-field {
-  background: #2f3841;
-}
-
-:deep(.v-theme--dark) .order-record-dialog .v-input.date-picker-input:has(input[readonly]) .v-field {
   background: transparent;
 }
 

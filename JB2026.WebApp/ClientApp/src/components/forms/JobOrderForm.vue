@@ -807,23 +807,24 @@ async function loadPreviewImage(job: JobDetail) {
 
 .legacy-form-surface {
   --legacy-notes-height: 188px;
-  color: #1f2328;
+  color: rgba(var(--v-theme-on-surface), 0.95);
 }
 
 .legacy-form-surface :deep(.v-field) {
-  background: #fff;
+  background: rgb(var(--v-theme-surface));
 }
 
 .legacy-form-surface :deep(.v-input:has(input[readonly]) .v-field),
 .legacy-form-surface :deep(.v-input:has(textarea[readonly]) .v-field) {
-  background: #e8e8e8;
+  background: rgba(var(--v-theme-on-surface), 0.06);
+}
+
+.legacy-form-surface :deep(.v-input:has(input[readonly]) .v-field__input),
+.legacy-form-surface :deep(.v-input:has(textarea[readonly]) .v-field__input) {
+  color: rgba(var(--v-theme-on-surface), 0.95);
 }
 
 .legacy-form-surface :deep(.v-input.date-picker-input:has(input[readonly]) .v-field) {
-  background: transparent;
-}
-
-:deep(.v-theme--dark .legacy-form-surface .v-input.date-picker-input:has(input[readonly]) .v-field) {
   background: transparent;
 }
 
@@ -892,9 +893,9 @@ async function loadPreviewImage(job: JobDetail) {
   min-height: var(--legacy-notes-height);
   max-height: var(--legacy-notes-height);
   overflow-y: auto;
-  border: 1px solid #9a9a9a;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.28);
   border-radius: 4px;
-  background: #f3f3f3;
+  background: rgba(var(--v-theme-on-surface), 0.05);
   padding: 12px 14px;
   line-height: 1.35;
   white-space: normal;
@@ -902,11 +903,6 @@ async function loadPreviewImage(job: JobDetail) {
 
 .legacy-remarks-html :deep(table td:nth-child(2)),
 .legacy-remarks-html :deep(table th:nth-child(2)) {
-  text-align: right;
-}
-
-:deep(.v-theme--dark) .legacy-remarks-html :deep(table td:nth-child(2)),
-:deep(.v-theme--dark) .legacy-remarks-html :deep(table th:nth-child(2)) {
   text-align: right;
 }
 
@@ -920,7 +916,7 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 .legacy-empty-hint {
-  color: #8a8a8a;
+  color: rgba(var(--v-theme-on-surface), 0.5);
   font-style: italic;
 }
 
@@ -933,9 +929,9 @@ async function loadPreviewImage(job: JobDetail) {
   min-height: var(--legacy-notes-height);
   max-height: var(--legacy-notes-height);
   overflow-y: auto;
-  border: 1px solid #9a9a9a;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.28);
   border-radius: 4px;
-  background: #f3f3f3;
+  background: rgba(var(--v-theme-on-surface), 0.05);
   padding: 12px 14px;
   line-height: 1.35;
   white-space: normal;
@@ -966,7 +962,7 @@ async function loadPreviewImage(job: JobDetail) {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 1px solid #8e8e8e;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.4);
   display: inline-block;
 }
 
@@ -995,16 +991,16 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 .legacy-preview {
-  border: 1px solid #9a9a9a;
-  background: #f0f0f0;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.28);
+  background: rgba(var(--v-theme-on-surface), 0.04);
   min-height: 182px;
 }
 
 .legacy-preview-header {
   padding: 6px 10px;
   font-size: 12px;
-  color: #4f4f4f;
-  border-bottom: 1px solid #b4b4b4;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.2);
 }
 
 .legacy-preview-body {
@@ -1021,77 +1017,15 @@ async function loadPreviewImage(job: JobDetail) {
   object-fit: contain;
 }
 
-:deep(.v-theme--dark) .legacy-form-surface {
-  color: #e7ebf0;
+.legacy-form-surface :deep(.v-field-label),
+.legacy-form-surface :deep(.v-label) {
+  color: rgba(var(--v-theme-on-surface), 0.55);
+  opacity: 1;
 }
 
-:deep(.v-theme--dark) .legacy-form-surface .v-btn {
-  letter-spacing: 0.01em;
-}
-
-:deep(.v-theme--dark) .legacy-form-surface .v-field {
-  background: #3a4550;
-  color: #edf2f7;
-}
-
-:deep(.v-theme--dark .legacy-form-surface .v-input:has(input[readonly]) .v-field),
-:deep(.v-theme--dark .legacy-form-surface .v-input:has(textarea[readonly]) .v-field) {
-  background: #2f3841;
-}
-
-:deep(.v-theme--dark) .legacy-form-surface .v-field__input {
-  color: #edf2f7;
-}
-
-:deep(.v-theme--light) .legacy-form-surface .v-field-label,
-:deep(.v-theme--light) .legacy-form-surface .v-label {
-  color: #999999 !important;
-  opacity: 1 !important;
-}
-
-:deep(.v-theme--dark) .legacy-form-surface .v-field-label,
-:deep(.v-theme--dark) .legacy-form-surface .v-label {
-  color: #666666 !important;
-  opacity: 1 !important;
-}
-
-:deep(.legacy-form-surface) .v-field--focused .v-field-label {
-  color: rgba(var(--v-theme-on-surface), 0.9) !important;
-  opacity: 1 !important;
-}
-
-:deep(.v-theme--dark) .legacy-form-surface .v-field--variant-outlined .v-field__outline {
-  --v-field-border-opacity: 0.75;
-}
-
-:deep(.v-theme--dark) .legacy-preview {
-  border-color: #555f6b;
-  background: #1f252b;
-}
-
-:deep(.v-theme--dark) .legacy-product-details-html {
-  border-color: #5d6672;
-  background: #2b333c;
-  color: #edf2f7;
-}
-
-:deep(.v-theme--dark) .legacy-remarks-html {
-  border-color: #5d6672;
-  background: #2b333c;
-  color: #edf2f7;
-}
-
-:deep(.v-theme--dark) .legacy-empty-hint {
-  color: #8b96a3;
-}
-
-:deep(.v-theme--dark) .legacy-preview-header {
-  color: #c5c9cf;
-  border-bottom-color: #555f6b;
-}
-
-:deep(.v-theme--dark) .legacy-indicator {
-  border-color: #8b96a3;
+.legacy-form-surface :deep(.v-field--focused .v-field-label) {
+  color: rgba(var(--v-theme-on-surface), 0.9);
+  opacity: 1;
 }
 
 @media (max-width: 960px) {
