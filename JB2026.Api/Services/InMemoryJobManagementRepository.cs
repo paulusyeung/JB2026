@@ -193,7 +193,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                     Cost = cost,
                     InvoiceAmount = invoiceAmount,
                     InvNumber = job.OrderNumber,
-                    InvDate = job.OrderedOn,
+                    InvDate = DateOnly.FromDateTime(job.OrderedOn),
                     Year = job.OrderedOn.Year,
                     Month = job.OrderedOn.Month,
                 };

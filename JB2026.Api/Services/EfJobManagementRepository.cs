@@ -250,7 +250,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                 Cost = item.Cost ?? 0m,
                 InvoiceAmount = item.InvoiceAmount ?? 0m,
                 InvNumber = item.InvNumber ?? string.Empty,
-                InvDate = item.InvDate,
+                InvDate = item.InvDate.HasValue ? DateOnly.FromDateTime(item.InvDate.Value) : null,
                 Year = item.InvDate.HasValue ? item.InvDate.Value.Year : null,
                 Month = item.InvDate.HasValue ? item.InvDate.Value.Month : null,
             })

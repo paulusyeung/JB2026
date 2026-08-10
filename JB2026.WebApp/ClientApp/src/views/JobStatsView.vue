@@ -761,8 +761,7 @@ function isWithinLastTenYears(row: JobStatsRecord): boolean {
   }
 
   if (typeof row.invDate === 'string') {
-    const parsed = new Date(row.invDate)
-    const parsedYear = parsed.getFullYear()
+    const parsedYear = Number(row.invDate.slice(0, 4))
     return Number.isFinite(parsedYear) && parsedYear >= minYear && parsedYear <= currentYear
   }
 

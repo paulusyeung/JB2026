@@ -20,7 +20,7 @@ public sealed class JobStatsResponse
 
     public required string InvNumber { get; init; }
 
-    public DateTime? InvDate { get; init; }
+    public DateOnly? InvDate { get; init; }
 
     public int? Year { get; init; }
 

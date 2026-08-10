@@ -164,7 +164,7 @@ public sealed class JobOrdersControllerTests
                     Cost = 75m,
                     InvoiceAmount = 100m,
                     InvNumber = "INV-100",
-                    InvDate = new DateTime(2026, 4, 1),
+                    InvDate = new DateOnly(2026, 4, 1),
                     Year = 2026,
                     Month = 4,
                 }
