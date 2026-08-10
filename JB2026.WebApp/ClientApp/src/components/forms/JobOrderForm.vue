@@ -13,7 +13,7 @@
           <v-btn
             icon="mdi-close"
             size="small"
-            variant="text"
+            variant="tonal"
             class="legacy-close-btn"
             @click="emit('cancel')"
           />
