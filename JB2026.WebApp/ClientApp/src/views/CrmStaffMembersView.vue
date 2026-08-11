@@ -184,6 +184,7 @@
           fixed-header
           height="62vh"
           class="staff-members-table"
+          @click:row="onDataRowClick"
         >
           <template #[`item.icon`]='{ item }'>
             <v-icon size="14" :color="item.crmSynced ? 'pink' : item.primaryRec ? 'warning' : 'secondary'">
@@ -443,6 +444,15 @@ function openNewUser() {
 
 function setViewMode(mode: StaffMembersViewMode) {
   viewMode.value = mode
+}
+
+function onDataRowClick(_event: MouseEvent, row: { item: StaffMembersDisplayItem }) {
+  const userId = row.item.userId
+  if (selectedUserIds.value.includes(userId)) {
+    selectedUserIds.value = selectedUserIds.value.filter((id) => id !== userId)
+    return
+  }
+  selectedUserIds.value = [...selectedUserIds.value, userId]
 }
 
 function handleCardCheckbox(userId: string) {
