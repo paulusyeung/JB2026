@@ -320,6 +320,7 @@
                   :src="previewImageUrl"
                   :alt="t('jobForm.fields.preview')"
                   class="legacy-preview-image"
+                  @click="handlePreviewImageClick"
                 />
                 <v-icon v-else size="34" color="grey-darken-1">mdi-file-document-outline</v-icon>
               </div>
@@ -352,7 +353,7 @@ import type { VForm } from 'vuetify/components'
 import { useOrderTypeOptions } from '@/composables/useOrderTypeOptions'
 import { saveJob } from '@/services/jobs'
 import { getJobOrder, getJobPreviewBlob, getOrderTypeWorkflowAttributes } from '@/services/jobOrders'
-import type { JobDetail, JobOrderFormData, JobOrderRecord, OrderTypeWorkflowAttribute } from '@/types/api'
+import type { JobAttachment, JobDetail, JobOrderFormData, JobOrderRecord, OrderTypeWorkflowAttribute } from '@/types/api'
 
 // ---------------------------------------------------------------------------
 // Props / emits
@@ -702,6 +703,24 @@ function clearPreviewImage() {
   previewImageUrl.value = null
 }
 
+function handlePreviewImageClick() {
+  if (!props.job) return
+  const firstAttachment = props.job.attachments?.[0]
+  if (!firstAttachment?.fileName) return
+  openAttachmentInNewTab(firstAttachment)
+}
+
+async function openAttachmentInNewTab(attachment: JobAttachment) {
+  try {
+    const blob = await getJobPreviewBlob(props.job!.orderId, attachment.fileName, attachment.attachmentType)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch {
+    // Keep the form usable if the attachment cannot be opened.
+  }
+}
+
 function startDrag(event: PointerEvent) {
   if (event.button !== 0) {
     return
@@ -1015,6 +1034,7 @@ async function loadPreviewImage(job: JobDetail) {
   width: 100%;
   height: 140px;
   object-fit: contain;
+  cursor: pointer;
 }
 
 .legacy-form-surface :deep(.v-field-label),
