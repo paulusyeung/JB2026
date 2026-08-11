@@ -753,12 +753,8 @@ async function hydrateInvoiceSummaries(orderRows: JobOrderRecord[]) {
   )
 }
 
-async function onRowClick(_event: Event, payload: { item: JobOrderRecord }) {
-  if (checkboxMode.value) {
-    return
-  }
-
-  await openEdit(payload.item)
+function onRowClick(_event: Event, payload: { item: JobOrderRecord }) {
+  toggleExpandRow(payload.item)
 }
 
 function toggleColumn(columnKey: string) {
