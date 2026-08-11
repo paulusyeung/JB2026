@@ -220,13 +220,13 @@
           </template>
           <template #[`item.orderedOn`]="{ item }">{{ globalFormat.format(item.orderedOn) }}</template>
           <template #[`item.attachments`]="{ item }">
-            <v-icon v-if="item.attachmentProductCount && item.attachmentProductCount > 0" color="success" size="16">mdi-circle</v-icon>
+            <v-icon v-if="item.attachmentProductCount && item.attachmentProductCount > 0" color="success" size="16">mdi-paperclip</v-icon>
           </template>
           <template #[`header.customerAttachments`]>
-            <v-icon size="small">mdi-paperclip</v-icon>
+            <v-icon size="16">mdi-paperclip</v-icon>
           </template>
           <template #[`item.customerAttachments`]="{ item }">
-            <v-icon v-if="item.attachmentCustomerCount && item.attachmentCustomerCount > 0" color="error" size="16">mdi-circle-outline</v-icon>
+            <v-icon v-if="item.attachmentCustomerCount && item.attachmentCustomerCount > 0" color="error" size="16">mdi-paperclip</v-icon>
           </template>
           <template #[`item.requiredOn`]="{ item }">{{ globalFormat.format(item.requiredOn) }}</template>
           <template #[`item.modifiedOn`]="{ item }">{{ globalFormat.format(item.modifiedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
