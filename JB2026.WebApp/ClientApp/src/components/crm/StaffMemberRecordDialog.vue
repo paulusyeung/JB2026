@@ -172,13 +172,15 @@ function syncToCrm() {
   crmDialogOpen.value = true
 }
 
-const userRoleOptions = computed(() => [
-  { value: 0, title: t('admin.user.form.roles.guest') },
-  { value: 1, title: t('admin.user.form.roles.operator') },
-  { value: 2, title: t('admin.user.form.roles.supervisor') },
-  { value: 3, title: t('admin.user.form.roles.manager') },
-  { value: 4, title: t('admin.user.form.roles.admin') },
-])
+const userRoleOptions = computed(() =>
+  [
+    { value: 0, title: t('admin.user.form.roles.guest') },
+    { value: 1, title: t('admin.user.form.roles.operator') },
+    { value: 2, title: t('admin.user.form.roles.supervisor') },
+    { value: 3, title: t('admin.user.form.roles.manager') },
+    { value: 4, title: t('admin.user.form.roles.admin') },
+  ].sort((a, b) => a.title.localeCompare(b.title)),
+)
 
 const requiredUsername = (value: string) => value.trim().length > 0 || t('admin.user.form.requiredUsername')
 const requiredEmail = (value: string) => {
