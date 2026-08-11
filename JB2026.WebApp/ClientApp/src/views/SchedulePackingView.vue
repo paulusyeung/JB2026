@@ -101,13 +101,13 @@
 
           <v-divider vertical class="mx-1" />
 
-          <span class="text-caption text-medium-emphasis">@1:</span>
+          <span class="text-medium">@1:</span>
           <v-btn v-for="c in packingLightColors" :key="`p1-${c.code}`"
             icon size="x-small" density="compact" :color="c.color" variant="tonal"
             :disabled="selectedOrderIds.length === 0 || workflowActionLoading"
             :title="c.label"
             @click="applyWorkflow(0, c.code)">
-            <v-icon size="12">mdi-circle</v-icon>
+            <v-icon size="16">mdi-circle</v-icon>
           </v-btn>
 
           <v-divider vertical class="mx-1" />
@@ -226,19 +226,19 @@
 
           <template #[`item.step1Status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="14" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
+              <v-icon size="16" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
             </div>
           </template>
 
           <template #[`item.step2Status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="14" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
+              <v-icon size="16" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
             </div>
           </template>
 
           <template #[`item.step3Status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="14" :color="workflowColor(item.step3Status)">mdi-circle</v-icon>
+              <v-icon size="16" :color="workflowColor(item.step3Status)">mdi-circle</v-icon>
             </div>
           </template>
 
