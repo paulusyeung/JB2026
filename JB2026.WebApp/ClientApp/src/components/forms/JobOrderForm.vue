@@ -904,7 +904,7 @@ async function loadPreviewImage(job: JobDetail) {
 }
 
 .legacy-remarks-wrap {
-  width: calc(100% - 26px);
+  width: calc(100% - 0px);
   position: relative;
 }
 
