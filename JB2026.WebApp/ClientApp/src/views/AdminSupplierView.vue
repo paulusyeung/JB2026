@@ -182,10 +182,15 @@
           height="62vh"
           class="admin-supplier-table"
           @click:row="onRowClick"
-          @dblclick="openPopup"
         >
           <template #[`item.icon`]>
             <v-icon size="16" color="secondary">mdi-truck-delivery</v-icon>
+          </template>
+
+          <template #[`item.supplierName`]='{ item }'>
+            <v-btn variant="text" color="primary" density="compact" class="px-0 text-none" @click.stop="openPopup(item.supplierId)">
+              {{ item.supplierName }}
+            </v-btn>
           </template>
 
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
@@ -356,9 +361,16 @@ function toggleColumn(columnKey: string) {
 }
 
 function onRowClick(_event: Event, payload: { item: AdminSupplierListItem }) {
-  if (checkboxMode.value) return
-  selectedSupplierIds.value = [payload.item.supplierId]
-  openPopup(payload.item.supplierId)
+  const supplierId = payload.item.supplierId
+  if (checkboxMode.value) {
+    if (selectedSupplierIds.value.includes(supplierId)) {
+      selectedSupplierIds.value = selectedSupplierIds.value.filter((id) => id !== supplierId)
+    } else {
+      selectedSupplierIds.value = [...selectedSupplierIds.value, supplierId]
+    }
+    return
+  }
+  selectedSupplierIds.value = [supplierId]
 }
 
 function onMobileCardClick(item: AdminSupplierDisplayItem) {
