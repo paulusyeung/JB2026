@@ -102,22 +102,22 @@
           <v-divider vertical class="mx-1" />
 
           <!-- Workflow light actions (selection-gated, inline @1 / @2 circles + bells) -->
-          <span class="text-caption text-medium-emphasis">@1:</span>
+          <span class="text-title-medium">@1:</span>
           <v-btn v-for="c in pendingLightColors" :key="`p1-${c.code}`"
             icon size="x-small" density="compact" :color="c.color" variant="tonal"
             :disabled="selectedOrderIds.length === 0 || workflowActionLoading"
             :title="c.label"
             @click="applyWorkflow(0, c.code)">
-            <v-icon size="12">mdi-circle</v-icon>
+            <v-icon size="16">mdi-circle</v-icon>
           </v-btn>
           <v-divider vertical class="mx-1" />
-          <span class="text-caption text-medium-emphasis">@2:</span>
+          <span class="text-title-medium">@2:</span>
           <v-btn v-for="c in pendingLightColors" :key="`p2-${c.code}`"
             icon size="x-small" density="compact" :color="c.color" variant="tonal"
             :disabled="selectedOrderIds.length === 0 || workflowActionLoading"
             :title="c.label"
             @click="applyWorkflow(1, c.code)">
-            <v-icon size="12">mdi-circle</v-icon>
+            <v-icon size="16">mdi-circle</v-icon>
           </v-btn>
           <v-divider vertical class="mx-1" />
 
@@ -128,7 +128,7 @@
             :title="t('jobOrder.pending.actions.bellRed')"
             @click="applyUrgency('red')"
           >
-            <v-icon size="12">mdi-bell-alert</v-icon>
+            <v-icon size="16">mdi-bell-alert</v-icon>
           </v-btn>
           <v-btn
             icon size="x-small" density="compact" color="warning" variant="tonal"
@@ -136,7 +136,7 @@
             :title="t('jobOrder.pending.actions.bellYellow')"
             @click="applyUrgency('yellow')"
           >
-            <v-icon size="12">mdi-bell</v-icon>
+            <v-icon size="16">mdi-bell</v-icon>
           </v-btn>
 
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
@@ -268,31 +268,31 @@
 
           <template #[`item.step1Status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="14" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
+              <v-icon size="16" :color="workflowColor(item.step1Status)">mdi-circle</v-icon>
             </div>
           </template>
 
           <template #[`item.step2Status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="14" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
+              <v-icon size="16" :color="workflowColor(item.step2Status)">mdi-circle</v-icon>
             </div>
           </template>
 
           <template #[`item.step3Status`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon size="14" :color="workflowColor(item.step3Status)">mdi-circle</v-icon>
+              <v-icon size="16" :color="workflowColor(item.step3Status)">mdi-circle</v-icon>
             </div>
           </template>
 
           <template #[`item.urgencyLevel`]="{ item }">
             <div class="d-flex justify-center">
-              <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="14" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
+              <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="16" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
             </div>
           </template>
 
           <template #[`header.urgencyLevel`]>
             <div class="d-flex justify-center">
-              <v-icon size="14" color="grey-darken-2">mdi-bell</v-icon>
+              <v-icon size="16" color="grey-darken-2">mdi-bell</v-icon>
             </div>
           </template>
 
