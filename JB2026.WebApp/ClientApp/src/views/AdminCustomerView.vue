@@ -250,6 +250,12 @@
             >mdi-connection</v-icon>
           </template>
 
+          <template #[`item.customerName`]='{ item }'>
+            <a class="customer-name-link" href="javascript:void(0)" @click.stop="openPopup(item.customerId)">
+              {{ item.customerName }}
+            </a>
+          </template>
+
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
@@ -480,8 +486,12 @@ function toggleColumn(columnKey: string) {
 }
 
 function onRowClick(_event: Event, payload: { item: AdminCustomerListItem }) {
-  selectedCustomerIds.value = [payload.item.customerId]
-  openPopup(payload.item.customerId)
+  const id = payload.item.customerId
+  if (selectedCustomerIds.value.includes(id)) {
+    selectedCustomerIds.value = selectedCustomerIds.value.filter((customerId) => customerId !== id)
+    return
+  }
+  selectedCustomerIds.value = [...selectedCustomerIds.value, id]
 }
 
 function onMobileCardClick(item: AdminCustomerDisplayItem) {
@@ -738,6 +748,16 @@ async function syncSelectedCustomer() {
 .customer-card__body {
   display: grid;
   gap: 0.45rem;
+}
+
+.customer-name-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.customer-name-link:hover {
+  text-decoration: underline;
 }
 
 </style>
