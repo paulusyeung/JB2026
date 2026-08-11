@@ -148,7 +148,7 @@
       <v-sheet 
         v-if="mode !== 'create'"
         rounded="lg" 
-        border="primary sm opacity-100"
+        border="sm opacity-25"
         class="pa-4 mb-4 d-flex flex-column gap-2"
       >
         <div class="d-flex flex-wrap ga-2 mt-2 mb-3">
