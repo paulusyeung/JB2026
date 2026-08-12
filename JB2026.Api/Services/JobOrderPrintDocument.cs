@@ -122,7 +122,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
         var useCjkLabel = labelCjk || UseCjkFallback(label);
 
         table.Cell().Padding(1).AlignRight().Text(label)
-               .Style(useCjkLabel ? CjkTextStyle.SemiBold() : LatinTextStyle.SemiBold());
+               .Style(useCjkLabel ? CjkTextStyle : LatinTextStyle);
         table.Cell().Text(value ?? string.Empty)
              .Style(cjk ? CjkTextStyle : SelectTextStyle(UseCjkFallback(value)));
     }
