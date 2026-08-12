@@ -9,6 +9,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Fonts/Lato-Regular.ttf" />
     <EmbeddedResource Include="Fonts/NotoSansCJKsc-Regular.otf" />
+    <EmbeddedResource Include="Fonts/uming.ttc" />
   </ItemGroup>
 
   <ItemGroup>

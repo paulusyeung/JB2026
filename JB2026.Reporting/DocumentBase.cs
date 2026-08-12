@@ -12,9 +12,9 @@ public abstract class DocumentBase<TModel> : IDocument
 
     protected TModel Model { get; }
 
-    protected static TextStyle LatinTextStyle => TextStyle.Default.FontFamily(FontRegistry.LatinFontFamily).FontSize(10);
+    protected static TextStyle LatinTextStyle => TextStyle.Default.FontFamily(FontRegistry.LatinFontFamily).FontSize(14);
 
-    protected static TextStyle CjkTextStyle => TextStyle.Default.FontFamily(FontRegistry.CjkFontFamily).FontSize(10);
+    protected static TextStyle CjkTextStyle => TextStyle.Default.FontFamily(FontRegistry.CjkFontFamily).FontSize(14);
 
     protected static TextStyle SelectTextStyle(bool useCjkFallback)
     {

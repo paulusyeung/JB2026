@@ -7,7 +7,7 @@ namespace JB2026.Reporting;
 public static class FontRegistry
 {
     public const string LatinFontFamily = "Lato";
-    public const string CjkFontFamily = "Noto Sans CJK SC";
+    public const string CjkFontFamily = "AR PL UMing HK";
 
     private static int _initialized;
 
@@ -20,6 +20,7 @@ public static class FontRegistry
 
         RegisterEmbeddedFont("JB2026.Reporting.Fonts.Lato-Regular.ttf");
         RegisterEmbeddedFont("JB2026.Reporting.Fonts.NotoSansCJKsc-Regular.otf");
+        RegisterEmbeddedFont("JB2026.Reporting.Fonts.uming.ttc");
     }
 
     private static void RegisterEmbeddedFont(string resourceName)

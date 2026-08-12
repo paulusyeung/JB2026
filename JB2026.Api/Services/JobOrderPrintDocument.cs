@@ -11,12 +11,14 @@ namespace JB2026.Api.Services;
 
 public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 {
-    private const float LeftLabelWidth = 56f;
-    private const float MiddleLabelWidth = 74.7f;
-    private const float Col3LabelWidth = 130f;
-    private const float ContentLabelWidth = 44f;
-    private const float WorkInstLabelWidth = 60f;
-    private const float SectionLabelFontSize = 12f;
+    private const float HeaderLabelWidth1 = 74f;
+    private const float HeaderLabelWidth2 = 102f;
+    private const float HeaderLabelWidth3 = 102f;
+    private const float HeaderValueWidth1 = 150f;
+    private const float HeaderValueWidth2 = 50f;
+    private const float ContentLabelWidth = 58f;
+    private const float WorkInstLabelWidth = 74f;
+    private const float SectionLabelFontSize = 14f;
     private const float ImageMaxHeight = 280f;
 
     public JobOrderQuestDocument(JobOrderPrintDocument model)
@@ -37,11 +39,11 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
     {
         container.Page(page =>
         {
-            page.Size(new PageSize(PageLayout.Width, PageLayout.Height));
-            page.MarginLeft(PageLayout.MarginLeft);
-            page.MarginRight(PageLayout.MarginRight);
-            page.MarginTop(PageLayout.MarginTop);
-            page.MarginBottom(PageLayout.MarginBottom);
+            page.Size(PageSizes.A4);
+            page.MarginLeft(23);
+            page.MarginRight(17);
+            page.MarginTop(22);
+            page.MarginBottom(34);
             page.DefaultTextStyle(LatinTextStyle);
 
             page.Header().Column(header =>
@@ -50,24 +52,24 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                 {
                     row.RelativeItem()
                        .Text("生產單")
-                       .Style(CjkTextStyle.FontSize(16).Bold());
+                       .Style(CjkTextStyle.FontSize(20).Bold());
                 });
-                header.Item().Element(ComposeHeaderTable);
-                header.Item().BorderBottom(0.5f).PaddingBottom(2);
+                header.Item().PaddingTop(20).Element(ComposeHeaderTable);
+                header.Item().BorderBottom(0.5f);
             });
 
-            page.Content().PaddingTop(6).Column(body =>
+            page.Content().PaddingTop(10).Column(body =>
             {
                 body.Spacing(0);
                 body.Item().Element(ComposeContentSection);
-                body.Item().PaddingTop(8).Element(ComposeWorkInstructionsSection);
-                body.Item().PaddingTop(4).Element(ComposeRemarksSection);
+                body.Item().PaddingTop(20).Element(ComposeWorkInstructionsSection);
+                body.Item().PaddingTop(28).Element(ComposeRemarksSection);
             });
 
             page.Footer()
                 .AlignRight()
                 .Text(DateTime.Now.ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture))
-                .Style(LatinTextStyle.FontSize(8));
+                .Style(LatinTextStyle.FontSize(14));
         });
     }
 
@@ -75,53 +77,53 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private void ComposeHeaderTable(IContainer container)
     {
-        container.PaddingVertical(4).Table(table =>
+        container.Table(table =>
         {
             table.ColumnsDefinition(cols =>
             {
-                cols.ConstantColumn(LeftLabelWidth);
-                cols.RelativeColumn(2.4f);
-                cols.ConstantColumn(MiddleLabelWidth);
-                cols.RelativeColumn(2.4f);
-                cols.ConstantColumn(Col3LabelWidth);
-                cols.RelativeColumn(2.0f);
+                cols.ConstantColumn(HeaderLabelWidth1);
+                cols.ConstantColumn(HeaderValueWidth1);
+                cols.ConstantColumn(HeaderLabelWidth2);
+                cols.ConstantColumn(HeaderValueWidth2);
+                cols.ConstantColumn(HeaderLabelWidth3);
+                cols.RelativeColumn();
             });
 
             // Row 1: 工單編號 | 工單類別 | 制單日期
-            AddHeaderCell(table, "工單編號：", Model.OrderNumber);
-            AddHeaderCell(table, "工單類別：", Model.PaymentTerms);
-            AddHeaderCell(table, "制單日期：", FmtDate(Model.OrderedOn));
+            AddHeaderCell(table, "工單編號：", Model.OrderNumber, HeaderLabelWidth1);
+            AddHeaderCell(table, "工單類別：", Model.PaymentTerms, HeaderLabelWidth2);
+            AddHeaderCell(table, "制單日期：", FmtDate(Model.OrderedOn), HeaderLabelWidth3);
 
             // Row 2: 客戶姓名 | 經手人 | 修改日期
-            AddHeaderCell(table, "客戶姓名：", Model.CustomerName, cjk: UseCjkFallback(Model.CustomerName));
-            AddHeaderCell(table, "經手人：", Model.OrderedBy, cjk: UseCjkFallback(Model.OrderedBy));
-            AddHeaderCell(table, "修改日期：", FmtDate(Model.ModifiedOn));
+            AddHeaderCell(table, "客戶姓名：", Model.CustomerName, HeaderLabelWidth1, cjk: UseCjkFallback(Model.CustomerName));
+            AddHeaderCell(table, "經手人：", Model.OrderedBy, HeaderLabelWidth2, cjk: UseCjkFallback(Model.OrderedBy));
+            AddHeaderCell(table, "修改日期：", FmtDate(Model.ModifiedOn), HeaderLabelWidth3);
 
             // Row 3: 主題名稱 | (empty) | 要求出貨日期
-            AddHeaderCell(table, "主題名稱：", Model.OrderTitle, cjk: UseCjkFallback(Model.OrderTitle));
-            AddHeaderCell(table, string.Empty, string.Empty);
-            AddHeaderCell(table, "要求出貨日期：", FmtDate(Model.RequiredOn), labelCjk: true);
+            AddHeaderCell(table, "主題名稱：", Model.OrderTitle, HeaderLabelWidth1, cjk: UseCjkFallback(Model.OrderTitle));
+            AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth2);
+            AddHeaderCell(table, "要求出貨日期：", FmtDate(Model.RequiredOn), HeaderLabelWidth3, labelCjk: true);
 
             // Row 4: 採購訂單 | 數量 | (empty)
-            AddHeaderCell(table, "採購訂單：", Model.CustomerRef, cjk: UseCjkFallback(Model.CustomerRef));
-            AddHeaderCell(table, "數量：", FmtQty(Model.Qty));
-            AddHeaderCell(table, string.Empty, string.Empty);
+            AddHeaderCell(table, "採購訂單：", Model.CustomerRef, HeaderLabelWidth1, cjk: UseCjkFallback(Model.CustomerRef));
+            AddHeaderCell(table, "數量：", FmtQty(Model.Qty), HeaderLabelWidth2);
+            AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth3);
 
-            // Row 5: 成品代號 | 輸出檔案號碼 | (empty)
-            AddHeaderCell(table, "成品代號：", Model.ProductCode);
-            AddHeaderCell(table, "輸出檔案號碼：", Model.InvoiceRef, labelCjk: true);
-            AddHeaderCell(table, string.Empty, string.Empty);
+            // Row 5: 成品代號 | 輸出檔案編號 | (empty)
+            AddHeaderCell(table, "成品代號：", Model.ProductCode, HeaderLabelWidth1);
+            AddHeaderCell(table, "輸出檔案編號：", Model.InvoiceRef, HeaderLabelWidth2, labelCjk: true);
+            AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth3);
         });
     }
 
     private static void AddHeaderCell(TableDescriptor table, string label, string? value,
-        bool cjk = false, bool labelCjk = false)
+        float labelWidth, bool cjk = false, bool labelCjk = false)
     {
-           var useCjkLabel = labelCjk || UseCjkFallback(label);
+        var useCjkLabel = labelCjk || UseCjkFallback(label);
 
-        table.Cell().Padding(1).Text(label)
+        table.Cell().Padding(1).AlignRight().Text(label)
                .Style(useCjkLabel ? CjkTextStyle.SemiBold() : LatinTextStyle.SemiBold());
-        table.Cell().Padding(1).Text(value ?? string.Empty)
+        table.Cell().Text(value ?? string.Empty)
              .Style(cjk ? CjkTextStyle : SelectTextStyle(UseCjkFallback(value)));
     }
 
@@ -147,10 +149,10 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                         if (!string.IsNullOrWhiteSpace(plain))
                         {
                             var productTextStyle = SelectTextStyle(UseCjkFallback(plain))
-                                .FontSize(ResolveFontSizeFromHtml(Model.ProductDetails, 9f))
-                                .LineHeight(1.12f);
+                                .FontSize(ResolveFontSizeFromHtml(Model.ProductDetails, 14f))
+                                .LineHeight(1.4f);
 
-                            RenderFormattedMultiline(textCol, plain, productTextStyle, emphasizeSectionHeadings: true);
+                            RenderFormattedMultiline(textCol, plain, productTextStyle, emphasizeSectionHeadings: false);
                         }
                     }
 
@@ -161,7 +163,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                             var instr = NormalizePrintText(HtmlToPlainText(wf.WorkInstruction));
                             if (!string.IsNullOrWhiteSpace(instr))
                             {
-                                var instructionStyle = SelectTextStyle(UseCjkFallback(instr)).FontSize(9).LineHeight(1.12f);
+                                var instructionStyle = SelectTextStyle(UseCjkFallback(instr)).FontSize(14).LineHeight(1.4f);
                                 RenderFormattedMultiline(textCol, instr, instructionStyle, emphasizeSectionHeadings: false);
                             }
                         }
@@ -178,19 +180,18 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
         });
     }
 
-    // ── 工作指示 ────────────────────────────────────────────────────────────────
+    // ── 工作指引 ────────────────────────────────────────────────────────────────
 
     private void ComposeWorkInstructionsSection(IContainer container)
     {
         container.Column(section =>
         {
-            section.Item().Height(10);
             section.Item().BorderTop(0.5f);
 
-            section.Item().PaddingTop(4).Row(row =>
+            section.Item().PaddingTop(6).Row(row =>
             {
                 row.ConstantItem(WorkInstLabelWidth)
-                   .Text("工作指示：")
+                   .Text("工作指引：")
                    .Style(CjkTextStyle.FontSize(SectionLabelFontSize).SemiBold());
 
                 row.RelativeItem().MinHeight(48).Column(col =>
@@ -204,7 +205,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                             if (!string.IsNullOrWhiteSpace(notes))
                             {
                                 col.Item().Text(notes)
-                                   .Style(SelectTextStyle(UseCjkFallback(notes)).FontSize(9).LineHeight(1.12f));
+                                   .Style(SelectTextStyle(UseCjkFallback(notes)).FontSize(14).LineHeight(1.4f));
                             }
                         }
                     }
@@ -219,10 +220,9 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
     {
         container.Column(section =>
         {
-            section.Item().Height(10);
             section.Item().BorderTop(0.5f);
 
-            section.Item().PaddingTop(4).Row(row =>
+            section.Item().PaddingTop(8).Row(row =>
             {
                 row.ConstantItem(ContentLabelWidth)
                    .Text("備註：")
@@ -234,7 +234,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                     {
                         var remarks = NormalizePrintText(Model.Remarks);
                         col.Item().Text(remarks)
-                           .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(9).LineHeight(1.12f));
+                           .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(14).LineHeight(1.4f));
                     }
                 });
             });
