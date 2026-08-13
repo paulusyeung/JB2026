@@ -444,6 +444,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                     column.Item().Height(8);
                 }
                 style = style.SemiBold();
+                style = style.Underline();
             }
 
             column.Item().Text(line).Style(style);
