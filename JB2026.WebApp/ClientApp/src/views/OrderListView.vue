@@ -387,7 +387,9 @@
                   @click:row="onDetailRowClick"
                 >
                   <template #[`header.status`]>
-                    <v-icon size="14" color="primary">mdi-flag</v-icon>
+                    <div class="d-flex justify-center">
+                      <v-icon size="14" color="primary">mdi-flag</v-icon>
+                    </div>
                   </template>
 
                   <template #[`header.attachProduct`]>
