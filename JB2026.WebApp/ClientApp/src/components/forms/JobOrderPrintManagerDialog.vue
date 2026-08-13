@@ -139,7 +139,7 @@ const layoutOptions = computed(() => [
 
 const workflowItems = computed(() =>
   (props.styleTitles ?? []).map((title, index) => ({
-    label: title || `Workflow ${index + 1}`,
+    label: title || t('jobForm.dialogs.printManager.workflowFallback', { n: index + 1 }),
     index,
   })),
 )

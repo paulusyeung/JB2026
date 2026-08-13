@@ -75,6 +75,7 @@ export const jobFormMessages = {
           workflows: 'Workflows',
           selectAllWorkflows: 'Select All',
           noWorkflows: 'No workflows available for this order.',
+          workflowFallback: 'Workflow {n}',
           print: 'Print',
           cancel: 'Cancel',
         },

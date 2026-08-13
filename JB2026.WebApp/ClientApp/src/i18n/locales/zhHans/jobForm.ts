@@ -75,6 +75,7 @@ export const jobFormMessages = {
           workflows: '工序',
           selectAllWorkflows: '全选',
           noWorkflows: '该订单没有可用工序。',
+          workflowFallback: '工序 {n}',
           print: '打印',
           cancel: '取消',
         },
