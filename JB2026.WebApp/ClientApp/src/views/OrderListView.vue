@@ -607,11 +607,11 @@ const masterHeaders = computed(() => [
 const allHeaders = computed(() => [
   { title: '', key: 'expander', width: '42px', sortable: false },
   { title: t('jobOrder.record.fields.jobNumber'), key: 'orderNumber', width: '130px' },
-  { title: t('jobOrder.orderList.headers.status'), key: 'status', width: '70px' },
+  { title: t('jobOrder.orderList.headers.status'), key: 'status', width: '48px' },
   { title: t('jobOrder.orderList.headers.orderedOn'), key: 'orderedOn', width: '120px' },
   { title: t('jobOrder.orderList.headers.customer'), key: 'customerName', minWidth: '240px' },
   { title: t('jobOrder.orderList.headers.orderTitle'), key: 'orderTitle', minWidth: '280px' },
-  { title: '', key: 'attachProduct', width: '72px', sortable: false, icon: 'mdi-paperclip' },
+  { title: '', key: 'attachProduct', width: '48px', sortable: false, icon: 'mdi-paperclip' },
   { title: t('jobOrder.orderList.headers.customerRef'), key: 'customerRef', width: '160px' },
   { title: '', key: 'attachCustomer', width: '72px', sortable: false, icon: 'mdi-paperclip' },
   { title: t('jobOrder.orderList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
