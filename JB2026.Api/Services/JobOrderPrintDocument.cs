@@ -15,7 +15,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
     private const float HeaderLabelWidth2 = 102f;
     private const float HeaderLabelWidth3 = 102f;
     private const float HeaderValueWidth1 = 150f;
-    private const float HeaderValueWidth2 = 50f;
+    private const float HeaderValueWidth2 = 60f;
     private const float ContentLabelWidth = 58f;
     private const float WorkInstLabelWidth = 74f;
     private const float SectionLabelFontSize = 12f;
