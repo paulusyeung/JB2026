@@ -11,15 +11,32 @@ namespace JB2026.Api.Services;
 
 public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 {
-    private const float HeaderLabelWidth1 = 74f;
+    private const float HeaderLabelWidth1 = 64f;
     private const float HeaderLabelWidth2 = 102f;
     private const float HeaderLabelWidth3 = 102f;
     private const float HeaderValueWidth1 = 150f;
     private const float HeaderValueWidth2 = 50f;
     private const float ContentLabelWidth = 58f;
     private const float WorkInstLabelWidth = 74f;
-    private const float SectionLabelFontSize = 14f;
+    private const float SectionLabelFontSize = 12f;
     private const float ImageMaxHeight = 280f;
+
+    private static readonly Dictionary<string, string> TraditionalChineseValues = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Printing"] = "印刷",
+        ["PrintedLabel"] = "印刷標籤",
+        ["WovenLabel"] = "織標",
+        ["Other"] = "其他",
+        ["Net 7"] = "7 天付款",
+        ["Net 14"] = "14 天付款",
+        ["Net 30"] = "30 天付款",
+        ["Net 60"] = "60 天付款",
+        ["Cash on Delivery"] = "貨到付款",
+        ["COD"] = "貨到付款",
+        ["Prepaid"] = "預付",
+        ["30 days"] = "30 天付款",
+        ["45 days"] = "45 天付款",
+    };
 
     public JobOrderQuestDocument(JobOrderPrintDocument model)
         : base(model)
@@ -55,6 +72,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                        .Style(CjkTextStyle.FontSize(20).Bold());
                 });
                 header.Item().PaddingTop(20).Element(ComposeHeaderTable);
+                header.Item().PaddingBottom(4);
                 header.Item().BorderBottom(0.5f);
             });
 
@@ -69,7 +87,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
             page.Footer()
                 .AlignRight()
                 .Text(DateTime.Now.ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture))
-                .Style(LatinTextStyle.FontSize(14));
+                .Style(LatinTextStyle.FontSize(6));
         });
     }
 
@@ -90,41 +108,46 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
             });
 
             // Row 1: 工單編號 | 工單類別 | 制單日期
-            AddHeaderCell(table, "工單編號：", Model.OrderNumber, HeaderLabelWidth1);
-            AddHeaderCell(table, "工單類別：", Model.PaymentTerms, HeaderLabelWidth2);
+            AddHeaderCell(table, "工單編號：", Model.OrderNumber, HeaderLabelWidth1, labelAlignRight: false);
+            AddHeaderCell(table, "工單類別：", ToTraditionalChinese(Model.PaymentTerms), HeaderLabelWidth2, cjk: true);
             AddHeaderCell(table, "制單日期：", FmtDate(Model.OrderedOn), HeaderLabelWidth3);
 
             // Row 2: 客戶姓名 | 經手人 | 修改日期
-            AddHeaderCell(table, "客戶姓名：", Model.CustomerName, HeaderLabelWidth1, cjk: UseCjkFallback(Model.CustomerName));
+            AddHeaderCell(table, "客戶姓名：", Model.CustomerName, HeaderLabelWidth1, labelAlignRight: false, cjk: UseCjkFallback(Model.CustomerName));
             AddHeaderCell(table, "經手人：", Model.OrderedBy, HeaderLabelWidth2, cjk: UseCjkFallback(Model.OrderedBy));
             AddHeaderCell(table, "修改日期：", FmtDate(Model.ModifiedOn), HeaderLabelWidth3);
 
             // Row 3: 主題名稱 | (empty) | 要求出貨日期
-            AddHeaderCell(table, "主題名稱：", Model.OrderTitle, HeaderLabelWidth1, cjk: UseCjkFallback(Model.OrderTitle));
+            AddHeaderCell(table, "主題名稱：", Model.OrderTitle, HeaderLabelWidth1, labelAlignRight: false, cjk: UseCjkFallback(Model.OrderTitle));
             AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth2);
             AddHeaderCell(table, "要求出貨日期：", FmtDate(Model.RequiredOn), HeaderLabelWidth3, labelCjk: true);
 
             // Row 4: 採購訂單 | 數量 | (empty)
-            AddHeaderCell(table, "採購訂單：", Model.CustomerRef, HeaderLabelWidth1, cjk: UseCjkFallback(Model.CustomerRef));
+            AddHeaderCell(table, "採購訂單：", Model.CustomerRef, HeaderLabelWidth1, labelAlignRight: false, cjk: UseCjkFallback(Model.CustomerRef));
             AddHeaderCell(table, "數量：", FmtQty(Model.Qty), HeaderLabelWidth2);
             AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth3);
 
             // Row 5: 成品代號 | 輸出檔案編號 | (empty)
-            AddHeaderCell(table, "成品代號：", Model.ProductCode, HeaderLabelWidth1);
+            AddHeaderCell(table, "成品代號：", Model.ProductCode, HeaderLabelWidth1, labelAlignRight: false);
             AddHeaderCell(table, "輸出檔案編號：", Model.InvoiceRef, HeaderLabelWidth2, labelCjk: true);
             AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth3);
         });
     }
 
     private static void AddHeaderCell(TableDescriptor table, string label, string? value,
-        float labelWidth, bool cjk = false, bool labelCjk = false)
+        float labelWidth, bool cjk = false, bool labelCjk = false, bool labelAlignRight = true)
     {
         var useCjkLabel = labelCjk || UseCjkFallback(label);
 
-        table.Cell().Padding(1).AlignRight().Text(label)
-               .Style(useCjkLabel ? CjkTextStyle : LatinTextStyle);
+        var labelCell = table.Cell().Padding(1);
+        if (labelAlignRight)
+        {
+            labelCell = labelCell.AlignRight();
+        }
+
+        labelCell.Text(label).Style(useCjkLabel ? CjkTextStyle : LatinTextStyle).FontSize(12);
         table.Cell().Text(value ?? string.Empty)
-             .Style(cjk ? CjkTextStyle : SelectTextStyle(UseCjkFallback(value)));
+             .Style(cjk ? CjkTextStyle : SelectTextStyle(UseCjkFallback(value))).FontSize(12);
     }
 
     // ── Content (內容) ─────────────────────────────────────────────────────────
@@ -135,7 +158,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
         {
             outer.ConstantItem(ContentLabelWidth)
                  .Text("內容：")
-                 .Style(CjkTextStyle.SemiBold());
+                 .Style(CjkTextStyle.FontSize(SectionLabelFontSize));
 
             outer.RelativeItem().Row(inner =>
             {
@@ -149,10 +172,10 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                         if (!string.IsNullOrWhiteSpace(plain))
                         {
                             var productTextStyle = SelectTextStyle(UseCjkFallback(plain))
-                                .FontSize(ResolveFontSizeFromHtml(Model.ProductDetails, 14f))
-                                .LineHeight(1.4f);
+                                .FontSize(ResolveFontSizeFromHtml(Model.ProductDetails, 13f))
+                                .LineHeight(1.0f);
 
-                            RenderFormattedMultiline(textCol, plain, productTextStyle, emphasizeSectionHeadings: false);
+                            RenderFormattedMultiline(textCol, plain, productTextStyle, emphasizeSectionHeadings: true);
                         }
                     }
 
@@ -163,7 +186,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                             var instr = NormalizePrintText(HtmlToPlainText(wf.WorkInstruction));
                             if (!string.IsNullOrWhiteSpace(instr))
                             {
-                                var instructionStyle = SelectTextStyle(UseCjkFallback(instr)).FontSize(14).LineHeight(1.4f);
+                                var instructionStyle = SelectTextStyle(UseCjkFallback(instr)).FontSize(13).LineHeight(1.0f);
                                 RenderFormattedMultiline(textCol, instr, instructionStyle, emphasizeSectionHeadings: false);
                             }
                         }
@@ -192,7 +215,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
             {
                 row.ConstantItem(WorkInstLabelWidth)
                    .Text("工作指引：")
-                   .Style(CjkTextStyle.FontSize(SectionLabelFontSize).SemiBold());
+                   .Style(CjkTextStyle.FontSize(SectionLabelFontSize));
 
                 row.RelativeItem().MinHeight(48).Column(col =>
                 {
@@ -205,7 +228,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                             if (!string.IsNullOrWhiteSpace(notes))
                             {
                                 col.Item().Text(notes)
-                                   .Style(SelectTextStyle(UseCjkFallback(notes)).FontSize(14).LineHeight(1.4f));
+                                   .Style(SelectTextStyle(UseCjkFallback(notes)).FontSize(12).LineHeight(1.0f));
                             }
                         }
                     }
@@ -226,7 +249,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
             {
                 row.ConstantItem(ContentLabelWidth)
                    .Text("備註：")
-                   .Style(CjkTextStyle.FontSize(SectionLabelFontSize).SemiBold());
+                   .Style(CjkTextStyle.FontSize(SectionLabelFontSize));
 
                 row.RelativeItem().MinHeight(36).Column(col =>
                 {
@@ -234,7 +257,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
                     {
                         var remarks = NormalizePrintText(Model.Remarks);
                         col.Item().Text(remarks)
-                           .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(14).LineHeight(1.4f));
+                           .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(12).LineHeight(1.0f));
                     }
                 });
             });
@@ -242,6 +265,17 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
+
+    private static string ToTraditionalChinese(string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)
+            && TraditionalChineseValues.TryGetValue(value.Trim(), out var translated))
+        {
+            return translated;
+        }
+
+        return value ?? string.Empty;
+    }
 
     private static string FmtDate(DateTime? dt) =>
         dt?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
@@ -419,6 +453,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private static bool UseCjkFallback(string? value)
     {
+        return true; // Always use CJK fallback for now, as per the latest changes.
         if (string.IsNullOrWhiteSpace(value))
         {
             return false;
