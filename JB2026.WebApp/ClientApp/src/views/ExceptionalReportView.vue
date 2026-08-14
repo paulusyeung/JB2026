@@ -23,6 +23,11 @@
         <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
           {{ t('common.refresh') }}
         </v-btn>
+        <v-divider vertical class="align-self-stretch" />
+        <div v-if="rows.length > 0" class="d-flex flex-wrap ga-2">
+          <v-chip color="secondary" variant="tonal">{{ t('reports.exceptional.rows', { count: rows.length }) }}</v-chip>
+          <v-chip color="accent" variant="tonal">{{ t('reports.exceptional.totalInvoice', { amount: formatCurrency(totalInvoiceAmount) }) }}</v-chip>
+        </div>
       </v-card-title>
 
       <v-card-text class="pb-0">
@@ -93,11 +98,6 @@
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">
           {{ errorMessage }}
         </v-alert>
-
-        <div v-if="rows.length > 0" class="d-flex flex-wrap ga-2 mb-4">
-          <v-chip color="secondary" variant="tonal">{{ t('reports.exceptional.rows', { count: rows.length }) }}</v-chip>
-          <v-chip color="accent" variant="tonal">{{ t('reports.exceptional.totalInvoice', { amount: formatCurrency(totalInvoiceAmount) }) }}</v-chip>
-        </div>
 
         <div v-if="isCardView" class="exceptional-card-list mt-2">
           <v-card
