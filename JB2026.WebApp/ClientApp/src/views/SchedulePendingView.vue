@@ -230,8 +230,8 @@
           </v-card>
         </div>
 
+        <div v-else class="pending-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -240,7 +240,7 @@
           item-value="orderId"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="pending-list-table"
           @click:row="onRowClick"
         >
@@ -299,6 +299,7 @@
           <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
           <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
         </v-data-table>
+        </div>
 
         
       </v-card-text>
@@ -719,6 +720,14 @@ async function handleActionUpdated() {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.pending-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .pending-list-table {
