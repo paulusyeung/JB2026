@@ -301,8 +301,8 @@
           </template>
         </div>
 
+        <div v-else class="order-table-shell">
         <v-data-table
-          v-else
           :headers="masterHeaders"
           :items="masterRows"
           :loading="loading"
@@ -312,7 +312,7 @@
           item-value="orderId"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="order-list-table"
           @click:row="onRowClick"
         >
@@ -450,6 +450,7 @@
             </tr>
           </template>
         </v-data-table>
+        </div>
       </v-card-text>
     </v-card>
 
@@ -1149,6 +1150,14 @@ function billingStatusColor(row: JobOrderRecord) {
   white-space: nowrap;
   background-color: var(--order-list-header-bg) !important;
   color: var(--order-list-header-fg) !important;
+}
+
+.order-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .order-list-table {
