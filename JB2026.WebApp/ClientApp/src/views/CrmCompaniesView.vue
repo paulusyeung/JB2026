@@ -176,8 +176,8 @@
           </v-card>
         </div>
 
+        <div v-else class="companies-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -186,7 +186,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="companies-table"
         >
           <template #[`header.synced`]>
@@ -240,6 +240,7 @@
           <template #[`item.createdOn`]='{ item }'>{{ format(item.createdOn) }}</template>
           <template #[`item.updatedOn`]='{ item }'>{{ format(item.updatedOn) }}</template>
         </v-data-table>
+        </div>
 
       </v-card-text>
     </v-card>
@@ -491,6 +492,14 @@ function handleCardCheckbox(id: string) {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.companies-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .companies-table {

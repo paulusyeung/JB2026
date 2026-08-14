@@ -133,8 +133,8 @@
           </v-card>
         </div>
 
+        <div v-else class="exceptional-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="sortedRows"
           :loading="loading"
@@ -143,7 +143,7 @@
           item-value="orderId"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="exceptional-list-table"
         >
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
@@ -177,6 +177,7 @@
 
           
         </v-data-table>
+        </div>
       </v-card-text>
     </v-card>
   </section>
@@ -523,6 +524,14 @@ function invoiceNumberForRow(row: JobOrderRecord) {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.exceptional-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .exceptional-list-table {

@@ -236,7 +236,7 @@
             :show-select="checkboxMode"
             density="compact"
             fixed-header
-            height="62vh"
+            height="100%"
             class="stock-table"
             @click:row="onRowClick"
           >
@@ -717,6 +717,10 @@ function exportToCsv() {
 }
 
 .stock-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
   overflow-x: auto;
 }
 
