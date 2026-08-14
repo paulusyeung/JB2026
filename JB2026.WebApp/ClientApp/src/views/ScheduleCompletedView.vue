@@ -207,8 +207,8 @@
           </v-card>
         </div>
 
+        <div v-else class="completed-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -217,7 +217,7 @@
           item-value="orderId"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="completed-list-table"
           @click:row="onRowClick"
         >
@@ -245,6 +245,7 @@
           <template #[`item.scheduledOn`]="{ item }">{{ format(item.scheduledOn) }}</template>
           <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
         </v-data-table>
+        </div>
 
         
       </v-card-text>
@@ -610,6 +611,14 @@ async function handleActionUpdated() {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.completed-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .completed-list-table {
