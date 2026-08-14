@@ -8,5 +8,7 @@ public class PaperlessNgxOptions
 
     public string ApiToken { get; set; } = string.Empty;
 
+    public string DefaultUser { get; set; } = string.Empty;
+
     public int HttpClientTimeoutSeconds { get; set; } = 30;
 }
