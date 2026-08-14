@@ -348,7 +348,7 @@
             item-value="orderId"
             density="compact"
             fixed-header
-            height="62vh"
+            height="100%"
             class="job-list-table"
             @click:row="onRowClick"
           >
@@ -1249,6 +1249,10 @@ async function handleActionUpdated() {
 }
 
 .job-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
   overflow-x: auto;
 }
 
