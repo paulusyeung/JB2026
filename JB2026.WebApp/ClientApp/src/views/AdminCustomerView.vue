@@ -1,12 +1,12 @@
 <template>
   <section class="page-section admin-customer-page">
     <v-card rounded="xl" elevation="0" class="panel-card admin-customer-card">
-      <v-card-title class="d-flex flex-wrap align-center ga-3 pb-2">
+      <!-- <v-card-title class="d-flex flex-wrap align-center ga-3 pb-2">
         <div>
           <h3 class="text-h6 mb-1">{{ t('admin.customer.title') }}</h3>
           <p class="text-body-2 text-medium-emphasis mb-0">{{ t('admin.customer.subtitle') }}</p>
         </div>
-      </v-card-title>
+      </v-card-title> -->
 
       <v-card-text>
         <div class="filter-bar">
