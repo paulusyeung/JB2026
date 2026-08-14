@@ -222,7 +222,7 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
     private static string BuildCompositeOrderNumber(string? orderNumber, int? jobNumber)
     {
         var lhs = orderNumber ?? string.Empty;
-        return jobNumber.HasValue ? $"{lhs}-{jobNumber.Value:00}" : lhs;
+        return jobNumber.HasValue ? $"{lhs}-{jobNumber.Value}" : lhs;
     }
 
     private static string ExtractBaseOrderNumber(string? value)

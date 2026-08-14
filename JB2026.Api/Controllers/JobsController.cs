@@ -25,6 +25,7 @@ public sealed class JobsController : ControllerBase
     private readonly LegacyFilesOptions _legacyFiles;
     private readonly IJobOrderPrintComposer _jobOrderPrintComposer;
     private readonly IJobOrderPdfRenderer _jobOrderPdfRenderer;
+    private readonly IPaperlessNgxService _paperlessNgxService;
 
     public JobsController(
         IJobManagementRepository repository,
@@ -34,7 +35,8 @@ public sealed class JobsController : ControllerBase
         ILogger<JobsController> logger,
         IOptions<LegacyFilesOptions> legacyFiles,
         IJobOrderPrintComposer jobOrderPrintComposer,
-        IJobOrderPdfRenderer jobOrderPdfRenderer)
+        IJobOrderPdfRenderer jobOrderPdfRenderer,
+        IPaperlessNgxService paperlessNgxService)
     {
         _repository = repository;
         _jobAttachmentGateway = jobAttachmentGateway;
@@ -44,6 +46,7 @@ public sealed class JobsController : ControllerBase
         _legacyFiles = legacyFiles.Value;
         _jobOrderPrintComposer = jobOrderPrintComposer;
         _jobOrderPdfRenderer = jobOrderPdfRenderer;
+        _paperlessNgxService = paperlessNgxService;
     }
 
     [HttpGet("range")]
@@ -110,6 +113,52 @@ public sealed class JobsController : ControllerBase
             return Problem(
                 title: "Unable to generate job-order print PDF",
                 detail: "An unexpected error occurred while generating the job order print report.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpPost("{id:guid}/upload-to-dms")]
+    [ProducesResponseType(typeof(UploadToDmsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UploadJobOrderToDms(Guid id, [FromBody] JobOrderPrintRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var document = await _jobOrderPrintComposer.ComposeAsync(id, request, cancellationToken);
+            if (document is null)
+            {
+                return NotFound();
+            }
+
+            var pdfContent = _jobOrderPdfRenderer.Render(document);
+            var title = string.IsNullOrWhiteSpace(document.OrderNumber) ? id.ToString("N") : document.OrderNumber;
+            var fileName = $"job-order-{title}.pdf";
+
+            var currentUser = _currentUserProfileService.GetCurrentUser();
+            var tagName = currentUser?.DisplayName ?? currentUser?.Username;
+
+            var result = await _paperlessNgxService.UploadJobOrderAsync(
+                title,
+                fileName,
+                pdfContent,
+                document.CustomerName,
+                tagName,
+                cancellationToken);
+
+            return Ok(new UploadToDmsResponse
+            {
+                AlreadyExists = result.AlreadyExists,
+                DocumentId = result.DocumentId,
+                Title = title
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload job-order to DMS for order {OrderId}", id);
+            return Problem(
+                title: "Unable to upload job-order to DMS",
+                detail: "An unexpected error occurred while uploading the job order to the DMS.",
                 statusCode: StatusCodes.Status500InternalServerError);
         }
     }

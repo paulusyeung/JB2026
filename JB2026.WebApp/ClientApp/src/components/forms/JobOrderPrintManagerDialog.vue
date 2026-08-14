@@ -16,6 +16,7 @@
 
       <v-card-text>
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
+        <v-alert v-if="dmsSuccessMessage" type="success" variant="tonal" class="mb-3">{{ dmsSuccessMessage }}</v-alert>
 
         <v-form @submit.prevent>
           <v-row dense>
@@ -91,8 +92,11 @@
       <v-divider />
 
       <v-card-actions class="px-4 py-3 ga-2">
+        <v-btn v-if="paperlessConfigured" variant="outlined" :loading="uploading" :disabled="printing" @click="submitUploadToDms">
+          {{ t('jobForm.dialogs.printManager.uploadToDms') }}
+        </v-btn>
         <v-spacer />
-        <v-btn color="primary" :loading="printing" autofocus @click="submitPrint">
+        <v-btn variant="outlined" color="primary" :loading="printing" autofocus @click="submitPrint">
           {{ t('jobForm.dialogs.printManager.print') }}
         </v-btn>
         <v-btn variant="outlined" :disabled="printing" @click="closeDialog">
@@ -106,7 +110,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { printJobOrder } from '@/services/jobs'
+import { printJobOrder, uploadJobOrderToDms } from '@/services/jobs'
+import { getPaperlessNgxConfigStatus } from '@/services/config'
 import type { JobOrderPrintRequest } from '@/types/api'
 
 const props = defineProps<{
@@ -124,7 +129,10 @@ const emit = defineEmits<{
 const { t } = useI18n({ useScope: 'global' })
 
 const printing = ref(false)
+const uploading = ref(false)
 const errorMessage = ref('')
+const dmsSuccessMessage = ref('')
+const paperlessConfigured = ref(false)
 
 const form = reactive({
   layout: 'default',
@@ -162,12 +170,23 @@ watch(
   (open) => {
     if (open) {
       resetForm()
+      void refreshPaperlessConfig()
     }
   },
 )
 
+async function refreshPaperlessConfig() {
+  try {
+    const status = await getPaperlessNgxConfigStatus()
+    paperlessConfigured.value = status.configured
+  } catch {
+    paperlessConfigured.value = false
+  }
+}
+
 function resetForm() {
   errorMessage.value = ''
+  dmsSuccessMessage.value = ''
   form.layout = 'default'
   form.noPicture = false
   form.noProductDetails = false
@@ -206,6 +225,36 @@ async function submitPrint() {
     errorMessage.value = t('jobForm.messages.printFailed')
   } finally {
     printing.value = false
+  }
+}
+
+async function submitUploadToDms() {
+  if (!props.orderId) {
+    return
+  }
+
+  errorMessage.value = ''
+  dmsSuccessMessage.value = ''
+  uploading.value = true
+
+  try {
+    const request: JobOrderPrintRequest = {
+      layout: form.layout,
+      noPicture: form.noPicture,
+      noProductDetails: form.noProductDetails,
+      selectedWorkflowIndices: form.selectedWorkflowIndices,
+    }
+
+    const result = await uploadJobOrderToDms(props.orderId, request)
+    if (result.alreadyExists) {
+      errorMessage.value = t('jobForm.messages.dmsAlreadyExists', { title: result.title })
+    } else {
+      dmsSuccessMessage.value = t('jobForm.messages.dmsUploadSuccess', { title: result.title })
+    }
+  } catch {
+    errorMessage.value = t('jobForm.messages.dmsUploadFailed')
+  } finally {
+    uploading.value = false
   }
 }
 

@@ -23,7 +23,7 @@ public sealed class JobOrderPrintControllerTests
         return new JB5LegacyReadContext(options);
     }
 
-    private static JobsController CreateController(JB5LegacyReadContext context)
+    private static JobsController CreateController(JB5LegacyReadContext context, IPaperlessNgxService? paperlessNgxService = null)
     {
         var repository = new StubJobManagementRepository();
         var composer = new JobOrderPrintComposer(context, Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions()));
@@ -36,7 +36,8 @@ public sealed class JobOrderPrintControllerTests
             NullLogger<JobsController>.Instance,
             Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions()),
             composer,
-            renderer)
+            renderer,
+            paperlessNgxService ?? new StubPaperlessNgxService())
         {
             ControllerContext = new ControllerContext
             {
@@ -119,7 +120,7 @@ public sealed class JobOrderPrintControllerTests
 
         var file = Assert.IsType<FileContentResult>(result);
         Assert.Equal("application/pdf", file.ContentType);
-        Assert.Contains("JO-2026-01.pdf", file.FileDownloadName);
+        Assert.Contains("JO-2026-1.pdf", file.FileDownloadName);
         Assert.NotEmpty(file.FileContents);
     }
 
@@ -237,6 +238,65 @@ public sealed class JobOrderPrintControllerTests
         var content = ExtractText(file.FileContents);
 
         Assert.Contains("客戶名稱", content);
+    }
+
+    private sealed class StubPaperlessNgxService : IPaperlessNgxService
+    {
+        public bool AlreadyExists { get; set; }
+
+        public Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, string? searchText = null, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PaperlessNgxDocumentResponse>>([]);
+
+        public Task<PaperlessNgxUploadResult> UploadJobOrderAsync(string title, string fileName, byte[] pdfContent, string? customerName, string? tagName, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PaperlessNgxUploadResult { AlreadyExists = AlreadyExists, DocumentId = AlreadyExists ? null : 42 });
+    }
+
+    [Fact]
+    public async Task UploadJobOrderToDms_ReturnsOk_WithUploadedDocumentId()
+    {
+        using var context = CreateContext(nameof(UploadJobOrderToDms_ReturnsOk_WithUploadedDocumentId));
+        var order = SeedOrder(context, "JO-DMS", 2, "Acme Corp");
+
+        var controller = CreateController(context);
+        var request = new JobOrderPrintRequest();
+
+        var result = await controller.UploadJobOrderToDms(order.OrderId, request, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<UploadToDmsResponse>(ok.Value);
+        Assert.False(response.AlreadyExists);
+        Assert.Equal(42, response.DocumentId);
+        Assert.Equal("JO-DMS-2", response.Title);
+    }
+
+    [Fact]
+    public async Task UploadJobOrderToDms_ReportsAlreadyExists_WhenDuplicateFound()
+    {
+        using var context = CreateContext(nameof(UploadJobOrderToDms_ReportsAlreadyExists_WhenDuplicateFound));
+        var order = SeedOrder(context, "JO-DUP", 3);
+
+        var paperless = new StubPaperlessNgxService { AlreadyExists = true };
+        var controller = CreateController(context, paperless);
+        var request = new JobOrderPrintRequest();
+
+        var result = await controller.UploadJobOrderToDms(order.OrderId, request, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<UploadToDmsResponse>(ok.Value);
+        Assert.True(response.AlreadyExists);
+        Assert.Null(response.DocumentId);
+        Assert.Equal("JO-DUP-3", response.Title);
+    }
+
+    [Fact]
+    public async Task UploadJobOrderToDms_ReturnsNotFound_WhenOrderMissing()
+    {
+        using var context = CreateContext(nameof(UploadJobOrderToDms_ReturnsNotFound_WhenOrderMissing));
+        var controller = CreateController(context);
+
+        var result = await controller.UploadJobOrderToDms(Guid.NewGuid(), new JobOrderPrintRequest(), CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
     }
 
     private sealed class StubJobManagementRepository : IJobManagementRepository

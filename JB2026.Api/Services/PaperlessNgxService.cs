@@ -8,6 +8,14 @@ namespace JB2026.Api.Services;
 public interface IPaperlessNgxService
 {
     Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, string? searchText = null, CancellationToken cancellationToken = default);
+
+    Task<PaperlessNgxUploadResult> UploadJobOrderAsync(
+        string title,
+        string fileName,
+        byte[] pdfContent,
+        string? customerName,
+        string? tagName,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class PaperlessNgxService : IPaperlessNgxService
@@ -131,6 +139,149 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
 
         _logger.LogInformation("[PNGX] returning {Count} enriched docs for query={Query}", enriched.Count, query);
         return enriched.AsReadOnly();
+    }
+
+    public async Task<PaperlessNgxUploadResult> UploadJobOrderAsync(
+        string title,
+        string fileName,
+        byte[] pdfContent,
+        string? customerName,
+        string? tagName,
+        CancellationToken cancellationToken = default)
+    {
+        var cfg = _options.Value;
+        if (string.IsNullOrWhiteSpace(cfg.BaseUrl) || string.IsNullOrWhiteSpace(cfg.ApiToken))
+            return new PaperlessNgxUploadResult { AlreadyExists = false, DocumentId = null };
+
+        if (await DocumentExistsByTitleAsync(title, cancellationToken))
+        {
+            _logger.LogInformation("[PNGX] duplicate document found for title={Title}", title);
+            return new PaperlessNgxUploadResult { AlreadyExists = true, DocumentId = null };
+        }
+
+        var correspondentId = string.IsNullOrWhiteSpace(customerName)
+            ? null
+            : await ResolveLookupIdAsync<PaperlessNgxCorrespondent>(
+                "/api/correspondents/",
+                c => string.Equals(c.Name, customerName, StringComparison.OrdinalIgnoreCase),
+                cancellationToken);
+
+        var documentTypeId = await ResolveLookupIdAsync<PaperlessNgxDocumentType>(
+            "/api/document_types/",
+            d => d.Name.Contains("job order", StringComparison.OrdinalIgnoreCase),
+            cancellationToken);
+
+        var tagId = !string.IsNullOrWhiteSpace(tagName)
+            ? await ResolveLookupIdAsync<PaperlessNgxTag>(
+                "/api/tags/",
+                t => string.Equals(t.Name, tagName, StringComparison.OrdinalIgnoreCase),
+                cancellationToken)
+            : null;
+
+        if (tagId is null && !string.IsNullOrWhiteSpace(cfg.DefaultUser))
+        {
+            tagId = await ResolveLookupIdAsync<PaperlessNgxTag>(
+                "/api/tags/",
+                t => string.Equals(t.Name, cfg.DefaultUser, StringComparison.OrdinalIgnoreCase),
+                cancellationToken);
+        }
+
+        _logger.LogInformation(
+            "[PNGX] uploading document title={Title} correspondent={CorrespondentId} documentType={DocumentTypeId} tag={TagId}",
+            title, correspondentId, documentTypeId, tagId);
+
+        var documentId = await UploadDocumentAsync(title, fileName, pdfContent, correspondentId, documentTypeId, tagId, cancellationToken);
+        return new PaperlessNgxUploadResult { AlreadyExists = false, DocumentId = documentId };
+    }
+
+    private async Task<bool> DocumentExistsByTitleAsync(string title, CancellationToken cancellationToken)
+    {
+        var cfg = _options.Value;
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(cfg.BaseUrl.TrimEnd('/'));
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {cfg.ApiToken}");
+            client.Timeout = TimeSpan.FromSeconds(
+                cfg.HttpClientTimeoutSeconds > 0 ? cfg.HttpClientTimeoutSeconds : DefaultTimeoutSeconds);
+
+            var url = $"/api/documents/?query={Uri.EscapeDataString($"title:\"{title}\"")}&page_size=100";
+            var response = await client.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return false;
+
+            var body = await response.Content.ReadFromJsonAsync<PaperlessNgxSearchResult>(JsonOptions, cancellationToken);
+            return body?.Results?.Any(d => string.Equals(d.Title.Trim(), title, StringComparison.OrdinalIgnoreCase)) ?? false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[PNGX] existence check error for title={Title}: {Msg}", title, ex.Message);
+            return false;
+        }
+    }
+
+    private async Task<int?> ResolveLookupIdAsync<T>(string url, Func<T, bool> predicate, CancellationToken cancellationToken) where T : class
+    {
+        var items = await FetchLookupsAsync<T>(url, cancellationToken);
+        var match = items.FirstOrDefault(predicate);
+        if (match is null)
+            return null;
+
+        return match switch
+        {
+            PaperlessNgxCorrespondent c => c.Id,
+            PaperlessNgxDocumentType d => d.Id,
+            PaperlessNgxTag t => t.Id,
+            _ => null
+        };
+    }
+
+    private async Task<int?> UploadDocumentAsync(
+        string title,
+        string fileName,
+        byte[] pdfContent,
+        int? correspondentId,
+        int? documentTypeId,
+        int? tagId,
+        CancellationToken cancellationToken)
+    {
+        var cfg = _options.Value;
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(cfg.BaseUrl.TrimEnd('/'));
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {cfg.ApiToken}");
+            client.Timeout = TimeSpan.FromSeconds(
+                cfg.HttpClientTimeoutSeconds > 0 ? cfg.HttpClientTimeoutSeconds : DefaultTimeoutSeconds);
+
+            using var content = new MultipartFormDataContent();
+            content.Add(new ByteArrayContent(pdfContent), "document", fileName);
+            content.Add(new StringContent(title), "title");
+            content.Add(new StringContent(DateTime.UtcNow.ToString("yyyy-MM-dd")), "created");
+            if (correspondentId.HasValue)
+                content.Add(new StringContent(correspondentId.Value.ToString()), "correspondent");
+            if (documentTypeId.HasValue)
+                content.Add(new StringContent(documentTypeId.Value.ToString()), "document_type");
+            if (tagId.HasValue)
+                content.Add(new StringContent(tagId.Value.ToString()), "tags");
+
+            var response = await client.PostAsync("/api/documents/post_document/", content, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("[PNGX] upload failed status={StatusCode} body={Body}", (int)response.StatusCode, errorBody);
+                return null;
+            }
+
+            var created = await response.Content.ReadFromJsonAsync<PaperlessNgxDocument>(JsonOptions, cancellationToken);
+            _logger.LogInformation("[PNGX] uploaded document id={DocumentId} title={Title}", created?.Id, title);
+            return created?.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[PNGX] upload error for title={Title}: {Msg}", title, ex.Message);
+            return null;
+        }
     }
 
     private async Task<List<T>> FetchLookupsAsync<T>(string url, CancellationToken cancellationToken) where T : class
@@ -286,6 +437,13 @@ public sealed class PaperlessNgxLookupResult<T>
     [JsonPropertyName("next")]
     public string? Next { get; set; }
     public List<T> Results { get; set; } = [];
+}
+
+public sealed class PaperlessNgxUploadResult
+{
+    public bool AlreadyExists { get; init; }
+
+    public int? DocumentId { get; init; }
 }
 
 public sealed class PaperlessNgxCorrespondent

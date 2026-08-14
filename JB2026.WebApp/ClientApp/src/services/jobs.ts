@@ -93,6 +93,17 @@ export async function printJobOrder(id: string, options: JobOrderPrintRequest): 
   return response.data as Blob
 }
 
+export interface UploadToDmsResponse {
+  alreadyExists: boolean
+  documentId: number | null
+  title: string
+}
+
+export async function uploadJobOrderToDms(id: string, options: JobOrderPrintRequest): Promise<UploadToDmsResponse> {
+  const response = await apiClient.post<UploadToDmsResponse>(`/api/v2/jobs/${id}/upload-to-dms`, options)
+  return response.data
+}
+
 export async function uploadJobAttachment(orderId: string, file: File): Promise<void> {
   const formData = new FormData()
   formData.append('files', file)

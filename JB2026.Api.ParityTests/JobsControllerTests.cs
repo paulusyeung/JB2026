@@ -133,7 +133,8 @@ public sealed class JobsControllerTests
             NullLogger<JobsController>.Instance,
             Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions()),
             new JobOrderPrintComposer(readContext, Microsoft.Extensions.Options.Options.Create(new LegacyFilesOptions())),
-            new JobOrderPdfRenderer());
+            new JobOrderPdfRenderer(),
+            new StubPaperlessNgxService());
 
         controller.ControllerContext = new ControllerContext
         {
@@ -279,5 +280,14 @@ public sealed class JobsControllerTests
 
         public Task<bool> DeleteAsync(Guid attachmentId, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
+    }
+
+    private sealed class StubPaperlessNgxService : IPaperlessNgxService
+    {
+        public Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, string? searchText = null, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PaperlessNgxDocumentResponse>>([]);
+
+        public Task<PaperlessNgxUploadResult> UploadJobOrderAsync(string title, string fileName, byte[] pdfContent, string? customerName, string? tagName, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PaperlessNgxUploadResult { AlreadyExists = false, DocumentId = 1 });
     }
 }
