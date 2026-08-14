@@ -141,8 +141,8 @@
           :on-card-click="(item) => onMobileCardClick(item)"
         />
 
+        <div v-else class="quotation-item-table-shell">
         <v-data-table
-          v-else
           v-model="selectedItemIds"
           :headers="headers"
           :items="displayedRows"
@@ -151,7 +151,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="quotation-item-table"
           @click:row="onRowClick"
           @dblclick="openPopup"
@@ -164,6 +164,7 @@
           <template #[`item.createdOn`]='{ item }'>{{ formatDateTime(item.createdOn) }}</template>
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateTime(item.modifiedOn) }}</template>
         </v-data-table>
+        </div>
 
         <div class="text-caption text-medium-emphasis mt-2">
           {{ t('admin.quotationItem.rows', { count: displayedRows.length }) }}
@@ -540,6 +541,14 @@ function formatUnitCost(value: number) {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.quotation-item-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .quotation-item-table {

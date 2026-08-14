@@ -185,8 +185,8 @@
           </v-card>
         </div>
 
+        <div v-else class="billing-invoices-table-shell">
         <v-data-table
-          v-else
           v-model="selectedInvoiceIds"
           :headers="headers"
           :items="displayedInvoices"
@@ -195,7 +195,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="billing-invoices-table"
           @click:row="onRowClick"
         >
@@ -227,6 +227,7 @@
             {{ item.dueDate ? format(item.dueDate) : t('billing.invoices.labels.empty') }}
           </template>
         </v-data-table>
+        </div>
       </v-card-text>
     </v-card>
 
@@ -713,6 +714,14 @@ function statusColor(status: string) {
 .invoice-card__body,
 .invoice-card__footer {
   flex-wrap: wrap;
+}
+
+.billing-invoices-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .billing-invoices-table {

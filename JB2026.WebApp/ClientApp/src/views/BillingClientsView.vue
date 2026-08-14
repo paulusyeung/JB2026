@@ -179,8 +179,8 @@
           </v-card>
         </div>
 
+        <div v-else class="billing-clients-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -189,7 +189,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="billing-clients-table"
           @click:row="onRowClick"
         >
@@ -209,6 +209,7 @@
             <span class="billing-clients-balance">{{ formatOutstandingBalance(item.outstandingBalance) }}</span>
           </template>
         </v-data-table>
+        </div>
 
       </v-card-text>
     </v-card>
@@ -495,6 +496,14 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.billing-clients-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .billing-clients-table {

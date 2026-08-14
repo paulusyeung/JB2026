@@ -165,8 +165,8 @@
           </v-card>
         </div>
 
+        <div v-else class="sml-rtf-list-table-shell">
         <v-data-table
-          v-else
           v-model:expanded="expandedHeaderIds"
           :headers="masterHeaders"
           :items="displayedRows"
@@ -177,7 +177,7 @@
           item-value="headerId"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="invoice-list-table sml-rtf-list-table"
           @update:expanded="onExpandedChange"
         >
@@ -231,6 +231,7 @@
             </tr>
           </template>
         </v-data-table>
+        </div>
       </v-card-text>
     </v-card>
   </section>
@@ -529,6 +530,14 @@ function formatLineAmount(value: string | number | null | undefined, fractionDig
 
 .sml-rtf-list-page .filter-bar > * {
   flex: 1 1 220px;
+}
+
+.sml-rtf-list-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .invoice-list-table {

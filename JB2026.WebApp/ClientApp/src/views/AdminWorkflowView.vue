@@ -127,8 +127,8 @@
           :on-card-click="(item) => onMobileCardClick(item)"
         />
 
+        <div v-else class="workflow-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -137,7 +137,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="workflow-table"
           @click:row="onRowClick"
           @dblclick="openEdit"
@@ -146,6 +146,7 @@
             <v-icon size="14" color="secondary">mdi-cog</v-icon>
           </template>
         </v-data-table>
+        </div>
 
         <div class="text-caption text-medium-emphasis mt-2">
           {{ t('admin.workflow.rows', { count: displayedRows.length }) }}
@@ -392,6 +393,14 @@ function showUnavailable(actionKey: string) {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.workflow-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .workflow-table {

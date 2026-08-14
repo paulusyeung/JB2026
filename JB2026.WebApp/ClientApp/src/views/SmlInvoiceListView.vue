@@ -162,8 +162,8 @@
           </v-card>
         </div>
 
+        <div v-else class="sml-invoice-list-table-shell">
         <v-data-table
-          v-else
           :headers="masterHeaders"
           :items="displayedRows"
           :loading="loading"
@@ -172,7 +172,7 @@
           density="compact"
           fixed-header
           item-value="headerId"
-          height="62vh"
+          height="100%"
           class="invoice-list-table sml-invoice-list-table"
         >
           <template #item.rowNumber="{ item }">{{ item.rowNumber ?? '-' }}</template>
@@ -186,6 +186,7 @@
           <template #item.createdOn="{ item }">{{ format(item.createdOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
           <template #item.createdBy="{ item }">{{ item.createdBy || '-' }}</template>
         </v-data-table>
+        </div>
 
       </v-card-text>
     </v-card>
@@ -381,6 +382,14 @@ function formatAmount(value: number) {
 
 .sml-invoice-list-page .filter-bar > * {
   flex: 1 1 220px;
+}
+
+.sml-invoice-list-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .invoice-list-table {

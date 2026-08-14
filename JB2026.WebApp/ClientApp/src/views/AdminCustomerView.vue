@@ -229,8 +229,8 @@
           </v-card>
         </div>
 
+        <div v-else class="admin-customer-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -239,7 +239,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="admin-customer-table"
           @click:row="onRowClick"
         >
@@ -259,6 +259,7 @@
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
+        </div>
 
       </v-card-text>
     </v-card>
@@ -663,6 +664,14 @@ async function syncSelectedCustomer() {
 
 .sync-billing-btn.v-btn--disabled :is(.v-btn__loader, .v-progress-circular) {
   display: none !important;
+}
+
+.admin-customer-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .admin-customer-table {
