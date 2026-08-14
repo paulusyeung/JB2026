@@ -172,8 +172,8 @@
           </v-card>
         </div>
 
+        <div v-else class="staff-members-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -182,7 +182,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="staff-members-table"
           @click:row="onDataRowClick"
         >
@@ -201,6 +201,7 @@
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
+        </div>
 
       </v-card-text>
     </v-card>
@@ -515,6 +516,14 @@ function formatDateCell(value: string): string {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.staff-members-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .staff-members-table {

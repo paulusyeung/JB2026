@@ -175,8 +175,8 @@
           </v-card>
         </div>
 
+        <div v-else class="opportunities-table-shell">
         <v-data-table
-          v-else
           :headers="headers"
           :items="displayedRows"
           :loading="loading"
@@ -185,7 +185,7 @@
           :show-select="checkboxMode"
           density="compact"
           fixed-header
-          height="62vh"
+          height="100%"
           class="opportunities-table"
         >
           <template #[`item.name`]='{ item }'>
@@ -223,6 +223,7 @@
           <template #[`item.createdOn`]='{ item }'>{{ format(item.createdOn) }}</template>
           <template #[`item.updatedOn`]='{ item }'>{{ format(item.updatedOn) }}</template>
         </v-data-table>
+        </div>
 
       </v-card-text>
     </v-card>
@@ -488,6 +489,14 @@ async function handleSaved(opportunity: CrmOpportunity) {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.opportunities-table-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  overflow-x: auto;
 }
 
 .opportunities-table {
