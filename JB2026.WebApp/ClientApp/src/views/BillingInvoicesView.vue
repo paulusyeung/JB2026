@@ -2,12 +2,12 @@
   <section class="page-section billing-invoices-page">
     <v-card rounded="xl" elevation="0" class="panel-card billing-invoices-card">
       <v-card-text>
-        <div class="filter-bar">
+        <!-- <div class="filter-bar">
           <div class="view-heading">
             <div class="text-h6">{{ t('billing.invoices.title') }}</div>
             <div class="text-caption text-medium-emphasis">{{ t('billing.invoices.subtitle') }}</div>
           </div>
-        </div>
+        </div> -->
 
         <div class="search-bar">
           <v-text-field
