@@ -5,9 +5,9 @@
         <div class="legacy-title-row">
           <div class="legacy-drag-handle" @pointerdown="startDrag">
             <h2 class="text-h5">{{ isNew ? t('jobForm.newTitle') : t('jobForm.editTitle') }}</h2>
-            <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
+            <!-- <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
               {{ t('jobForm.subtitle') }}
-            </p>
+            </p> -->
           </div>
 
           <v-btn
