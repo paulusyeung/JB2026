@@ -501,7 +501,7 @@ function compareClients(left: BillingClientDisplayItem, right: BillingClientDisp
 .billing-clients-table-shell {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 250px);
+  height: calc(100vh - 320px);
   min-height: 400px;
   overflow-x: auto;
 }

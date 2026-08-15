@@ -535,7 +535,7 @@ async function handleSaved(person: CrmPerson) {
 .people-table-shell {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 250px);
+  height: calc(100vh - 290px);
   min-height: 400px;
   overflow-x: auto;
 }

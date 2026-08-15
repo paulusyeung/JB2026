@@ -890,7 +890,7 @@ function csvEscape(value: unknown): string {
   border: 1px solid var(--pivot-shell-border);
   border-radius: 10px;
   background: var(--pivot-shell-bg);
-  height: clamp(560px, calc(100vh - 340px), 720px);
+  height: clamp(560px, calc(100vh - 290px), none);
 }
 
 .pivot-shell--mobile {

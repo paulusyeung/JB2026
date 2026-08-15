@@ -494,7 +494,7 @@ async function handleSaved(opportunity: CrmOpportunity) {
 .opportunities-table-shell {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 250px);
+  height: calc(100vh - 260px);
   min-height: 400px;
   overflow-x: auto;
 }
