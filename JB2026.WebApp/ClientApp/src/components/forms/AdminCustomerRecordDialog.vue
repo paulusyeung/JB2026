@@ -51,6 +51,7 @@
             variant="outlined"
             density="compact"
             maxlength="64"
+            @update:model-value="val => draft.customerCode = String(val ?? '').toUpperCase()"
           />
         </v-col>
         <v-col cols="12" md="3">
