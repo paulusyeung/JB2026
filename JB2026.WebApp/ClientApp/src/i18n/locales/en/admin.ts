@@ -119,6 +119,7 @@ export const adminMessages = {
           deleteSuccess: 'Customer deleted.',
           saveFailed: 'Failed to save customer. Please try again.',
           deleteFailed: 'Failed to delete customer. Please try again.',
+          duplicateCustomerCode: 'Customer code is already in use by another record.',
           deleteConfirm: 'Delete this customer?',
           billingSynced: 'Synced with Invoice Ninja',
           billingError: 'Billing sync failed',

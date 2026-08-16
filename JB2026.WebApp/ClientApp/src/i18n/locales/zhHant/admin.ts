@@ -117,6 +117,7 @@ export const adminMessages = {
           deleteSuccess: '客戶已刪除。',
           saveFailed: '儲存客戶失敗，請再試一次。',
           deleteFailed: '刪除客戶失敗，請再試一次。',
+          duplicateCustomerCode: '客戶代號已被其他記錄使用。',
           deleteConfirm: '確定刪除此客戶？',
           billingSynced: '已同步至 Invoice Ninja',
           billingError: '帳單同步失敗',

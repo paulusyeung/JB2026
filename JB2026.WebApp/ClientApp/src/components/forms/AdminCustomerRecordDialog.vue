@@ -166,6 +166,7 @@ import {
   createAdminCustomer,
   deleteAdminCustomer,
   getAdminCustomer,
+  getAdminCustomers,
   updateAdminCustomer,
 } from '@/services/admin'
 import { listBillingGroups } from '@/services/billing'
@@ -370,6 +371,20 @@ async function handleSave(closeAfter = false) {
   errorMessage.value = ''
 
   try {
+    const customerCode = draft.customerCode.trim()
+    if (customerCode) {
+      const customers = await getAdminCustomers({ take: 1000 })
+      const isTaken = customers.some(
+        (customer) =>
+          customer.customerId !== props.customerId &&
+          customer.customerCode.trim().toUpperCase() === customerCode.toUpperCase(),
+      )
+      if (isTaken) {
+        errorMessage.value = t('admin.customer.messages.duplicateCustomerCode')
+        return
+      }
+    }
+
     const request = {
       customerName: draft.customerName.trim(),
       loginAccount: draft.loginAccount.trim(),
