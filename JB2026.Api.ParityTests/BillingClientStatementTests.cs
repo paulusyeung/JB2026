@@ -240,6 +240,7 @@ public sealed class BillingClientStatementTests
         var controller = new BillingController(
             billingService,
             new StubCurrentUserProfileService(),
+            new StubPaperlessNgxService(),
             NullLogger<BillingController>.Instance);
 
         controller.ControllerContext = new ControllerContext
@@ -270,6 +271,18 @@ public sealed class BillingClientStatementTests
                 Role = "Admin"
             };
         }
+    }
+
+    private sealed class StubPaperlessNgxService : IPaperlessNgxService
+    {
+        public Task<IReadOnlyList<PaperlessNgxDocumentResponse>> SearchDocumentsAsync(string query, string? searchText = null, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PaperlessNgxDocumentResponse>>([]);
+
+        public Task<PaperlessNgxUploadResult> UploadJobOrderAsync(string title, string fileName, byte[] pdfContent, string? customerName, string? tagName, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PaperlessNgxUploadResult { AlreadyExists = false, DocumentId = 1 });
+
+        public Task<PaperlessNgxUploadResult> UploadInvoiceAsync(string title, string fileName, byte[] pdfContent, string? clientName, string? tagName, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PaperlessNgxUploadResult { AlreadyExists = false, DocumentId = 1 });
     }
 
     private sealed class RecordingInvoiceNinjaHttpClient(InvoiceNinjaClientResponse? client = null) : IInvoiceNinjaHttpClient

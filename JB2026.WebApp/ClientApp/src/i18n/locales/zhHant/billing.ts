@@ -157,6 +157,7 @@ export const billingMessages = {
       newInvoice: '新增發票',
       markSent: '標記為已發送',
       download: '下載',
+      uploadToDms: '上傳至 DMS',
       invoicePdf: '發票',
       deliveryNote: '送貨單',
       confirmMarkSent: '確認標記為已發送',
@@ -203,6 +204,9 @@ export const billingMessages = {
       downloadInvoicePdfUnexpected: '下載發票 PDF 時發生未預期錯誤。',
       downloadDeliveryNoteFailed: '下載送貨單失敗。',
       downloadDeliveryNoteUnexpected: '下載送貨單時發生未預期錯誤。',
+      dmsUploadSuccess: '文件已上傳至 DMS「{title}」。',
+      dmsAlreadyExists: 'DMS 中已有標題為「{title}」的文件。',
+      dmsUploadFailed: '目前無法將文件上傳至 DMS。',
       markSentConfirm: '確定要將此發票標記為已發送到 Invoice Ninja 嗎？此操作無法復原。',
     },
     editor: {

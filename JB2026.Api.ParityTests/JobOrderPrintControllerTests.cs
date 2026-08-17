@@ -249,6 +249,9 @@ public sealed class JobOrderPrintControllerTests
 
         public Task<PaperlessNgxUploadResult> UploadJobOrderAsync(string title, string fileName, byte[] pdfContent, string? customerName, string? tagName, CancellationToken cancellationToken = default)
             => Task.FromResult(new PaperlessNgxUploadResult { AlreadyExists = AlreadyExists, DocumentId = AlreadyExists ? null : 42 });
+
+        public Task<PaperlessNgxUploadResult> UploadInvoiceAsync(string title, string fileName, byte[] pdfContent, string? clientName, string? tagName, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PaperlessNgxUploadResult { AlreadyExists = AlreadyExists, DocumentId = AlreadyExists ? null : 42 });
     }
 
     [Fact]

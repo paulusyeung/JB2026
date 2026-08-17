@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using JB2026.Api.Options;
@@ -14,6 +15,14 @@ public interface IPaperlessNgxService
         string fileName,
         byte[] pdfContent,
         string? customerName,
+        string? tagName,
+        CancellationToken cancellationToken = default);
+
+    Task<PaperlessNgxUploadResult> UploadInvoiceAsync(
+        string title,
+        string fileName,
+        byte[] pdfContent,
+        string? clientName,
         string? tagName,
         CancellationToken cancellationToken = default);
 }
@@ -141,13 +150,32 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
         return enriched.AsReadOnly();
     }
 
-    public async Task<PaperlessNgxUploadResult> UploadJobOrderAsync(
+    public Task<PaperlessNgxUploadResult> UploadJobOrderAsync(
         string title,
         string fileName,
         byte[] pdfContent,
         string? customerName,
         string? tagName,
         CancellationToken cancellationToken = default)
+        => UploadDocumentCoreAsync(title, fileName, pdfContent, customerName, "job order", tagName, cancellationToken);
+
+    public Task<PaperlessNgxUploadResult> UploadInvoiceAsync(
+        string title,
+        string fileName,
+        byte[] pdfContent,
+        string? clientName,
+        string? tagName,
+        CancellationToken cancellationToken = default)
+        => UploadDocumentCoreAsync(title, fileName, pdfContent, clientName, "invoice", tagName, cancellationToken);
+
+    private async Task<PaperlessNgxUploadResult> UploadDocumentCoreAsync(
+        string title,
+        string fileName,
+        byte[] pdfContent,
+        string? correspondentName,
+        string documentTypeSearchTerm,
+        string? tagName,
+        CancellationToken cancellationToken)
     {
         var cfg = _options.Value;
         if (string.IsNullOrWhiteSpace(cfg.BaseUrl) || string.IsNullOrWhiteSpace(cfg.ApiToken))
@@ -159,16 +187,21 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
             return new PaperlessNgxUploadResult { AlreadyExists = true, DocumentId = null };
         }
 
-        var correspondentId = string.IsNullOrWhiteSpace(customerName)
+        var correspondentId = string.IsNullOrWhiteSpace(correspondentName)
             ? null
             : await ResolveLookupIdAsync<PaperlessNgxCorrespondent>(
                 "/api/correspondents/",
-                c => string.Equals(c.Name, customerName, StringComparison.OrdinalIgnoreCase),
+                c => string.Equals(c.Name, correspondentName, StringComparison.OrdinalIgnoreCase),
                 cancellationToken);
+
+        if (correspondentId is null && !string.IsNullOrWhiteSpace(correspondentName))
+        {
+            correspondentId = await CreateCorrespondentAsync(correspondentName, cancellationToken);
+        }
 
         var documentTypeId = await ResolveLookupIdAsync<PaperlessNgxDocumentType>(
             "/api/document_types/",
-            d => d.Name.Contains("job order", StringComparison.OrdinalIgnoreCase),
+            d => d.Name.Contains(documentTypeSearchTerm, StringComparison.OrdinalIgnoreCase),
             cancellationToken);
 
         var tagId = !string.IsNullOrWhiteSpace(tagName)
@@ -236,6 +269,38 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
         };
     }
 
+    private async Task<int?> CreateCorrespondentAsync(string name, CancellationToken cancellationToken)
+    {
+        var cfg = _options.Value;
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(cfg.BaseUrl.TrimEnd('/'));
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {cfg.ApiToken}");
+            client.Timeout = TimeSpan.FromSeconds(
+                cfg.HttpClientTimeoutSeconds > 0 ? cfg.HttpClientTimeoutSeconds : DefaultTimeoutSeconds);
+
+            var json = JsonSerializer.Serialize(new { name, owner = (int?)null });
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/api/correspondents/", content, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("[PNGX] correspondent creation failed status={StatusCode} body={Body}", (int)response.StatusCode, errorBody);
+                return null;
+            }
+
+            var created = await response.Content.ReadFromJsonAsync<PaperlessNgxCorrespondent>(JsonOptions, cancellationToken);
+            _logger.LogInformation("[PNGX] created correspondent id={Id} name={Name}", created?.Id, created?.Name);
+            return created?.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[PNGX] correspondent creation error for name={Name}: {Msg}", name, ex.Message);
+            return null;
+        }
+    }
+
     private async Task<int?> UploadDocumentAsync(
         string title,
         string fileName,
@@ -273,7 +338,18 @@ public sealed class PaperlessNgxService : IPaperlessNgxService
                 return null;
             }
 
-            var created = await response.Content.ReadFromJsonAsync<PaperlessNgxDocument>(JsonOptions, cancellationToken);
+            PaperlessNgxDocument? created = null;
+            try
+            {
+                created = await response.Content.ReadFromJsonAsync<PaperlessNgxDocument>(JsonOptions, cancellationToken);
+            }
+            catch (JsonException)
+            {
+                // The DMS may accept the upload asynchronously and reply with a task id (UUID)
+                // instead of the created document. The document is still being created, so this
+                // is not a failure.
+            }
+
             _logger.LogInformation("[PNGX] uploaded document id={DocumentId} title={Title}", created?.Id, title);
             return created?.Id;
         }

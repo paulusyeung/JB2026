@@ -1,5 +1,6 @@
 namespace JB2026.Api.Controllers;
 
+using JB2026.Api.Models;
 using JB2026.Api.Models.Billing;
 using JB2026.Api.Services;
 using JB2026.Api.Services.Billing;
@@ -19,15 +20,18 @@ public class BillingController : ControllerBase
 {
     private readonly IBillingService _billingService;
     private readonly ICurrentUserProfileService _currentUserProfileService;
+    private readonly IPaperlessNgxService _paperlessNgxService;
     private readonly ILogger<BillingController> _logger;
 
     public BillingController(
         IBillingService billingService,
         ICurrentUserProfileService currentUserProfileService,
+        IPaperlessNgxService paperlessNgxService,
         ILogger<BillingController> logger)
     {
         _billingService = billingService;
         _currentUserProfileService = currentUserProfileService;
+        _paperlessNgxService = paperlessNgxService;
         _logger = logger;
     }
 
@@ -761,6 +765,107 @@ public class BillingController : ControllerBase
             {
                 ErrorCode = "DELIVERY_NOTE_DOWNLOAD_FAILED",
                 Message = $"Failed to download delivery note {externalInvoiceId}.",
+                Details = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Uploads the invoice PDF to the DMS (Paperless-ngx).
+    /// Skips upload if a document with the same title (invoice number) already exists.
+    /// </summary>
+    /// <param name="externalInvoiceId">The Invoice Ninja invoice ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Upload result indicating whether the document already existed.</returns>
+    /// <response code="200">Upload processed (may report already exists).</response>
+    /// <response code="404">Invoice not found.</response>
+    /// <response code="401">Unauthorized.</response>
+    [HttpPost("invoices/{externalInvoiceId}/upload-to-dms")]
+    [ProducesResponseType(typeof(UploadToDmsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BillingErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UploadToDmsResponse>> UploadInvoiceToDms(
+        string externalInvoiceId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(externalInvoiceId))
+        {
+            return BadRequest(new BillingErrorResponse
+            {
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Invoice ID is required."
+            });
+        }
+
+        _logger.LogInformation("Uploading invoice {ExternalInvoiceId} to DMS", externalInvoiceId);
+
+        try
+        {
+            var summary = await _billingService.GetInvoiceSummaryAsync(externalInvoiceId);
+            if (summary is null)
+            {
+                return NotFound(new BillingErrorResponse
+                {
+                    ErrorCode = "NOT_FOUND",
+                    Message = $"Invoice {externalInvoiceId} not found."
+                });
+            }
+
+            var pdfBytes = await _billingService.DownloadInvoicePdfAsync(externalInvoiceId);
+            var title = string.IsNullOrWhiteSpace(summary.InvoiceNumber)
+                ? externalInvoiceId
+                : summary.InvoiceNumber;
+            var fileName = $"invoice-{title}.pdf";
+
+            var currentUser = _currentUserProfileService.GetCurrentUser();
+            var tagName = currentUser?.DisplayName ?? currentUser?.Username;
+
+            var result = await _paperlessNgxService.UploadInvoiceAsync(
+                title,
+                fileName,
+                pdfBytes,
+                summary.ClientName,
+                tagName,
+                cancellationToken);
+
+            _logger.LogInformation("Invoice {ExternalInvoiceId} DMS upload result alreadyExists={AlreadyExists} documentId={DocumentId}",
+                externalInvoiceId, result.AlreadyExists, result.DocumentId);
+
+            return Ok(new UploadToDmsResponse
+            {
+                AlreadyExists = result.AlreadyExists,
+                DocumentId = result.DocumentId,
+                Title = title
+            });
+        }
+        catch (BillingException ex)
+        {
+            _logger.LogWarning(ex, "Failed to upload invoice {ExternalInvoiceId} to DMS: {ErrorCode}", externalInvoiceId, ex.ErrorCode);
+
+            var statusCode = ex.ErrorCode switch
+            {
+                "NOT_FOUND" => StatusCodes.Status404NotFound,
+                "INVALID_REQUEST" => StatusCodes.Status400BadRequest,
+                "INVALID_API_KEY" => StatusCodes.Status401Unauthorized,
+                "SERVICE_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
+                "RATE_LIMITED" => StatusCodes.Status429TooManyRequests,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            return StatusCode(statusCode, new BillingErrorResponse
+            {
+                ErrorCode = ex.ErrorCode,
+                Message = ex.Message,
+                Details = ex.Details
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload invoice {ExternalInvoiceId} to DMS: {ErrorMessage}", externalInvoiceId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, new BillingErrorResponse
+            {
+                ErrorCode = "INVOICE_DMS_UPLOAD_FAILED",
+                Message = $"Failed to upload invoice {externalInvoiceId} to DMS.",
                 Details = null
             });
         }

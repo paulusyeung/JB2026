@@ -22,6 +22,10 @@
           {{ errorMessage }}
         </v-alert>
 
+        <v-alert v-if="dmsSuccessMessage" type="success" variant="tonal" density="compact" class="mb-4">
+          {{ dmsSuccessMessage }}
+        </v-alert>
+
         <v-progress-linear v-if="loadingDetail" indeterminate color="primary" class="mb-4" />
 
         <v-form ref="formRef">
@@ -297,6 +301,9 @@
               </v-btn>
             </template>
             <v-list density="compact">
+              <v-list-item v-if="isUploadToDmsVisible" :loading="isUploadingToDms" @click="handleUploadToDms">
+                <v-list-item-title>{{ t('billing.invoices.actions.uploadToDms') }}</v-list-item-title>
+              </v-list-item>
               <v-list-item :disabled="isDownloading" @click="handleDownloadInvoicePdf">
                 <v-list-item-title>{{ t('billing.invoices.actions.invoicePdf') }}</v-list-item-title>
               </v-list-item>
@@ -387,6 +394,7 @@ import {
   sendInvoice,
   downloadInvoicePdf,
   downloadDeliveryNote,
+  uploadInvoiceToDms,
   type BillingClientOption,
   type InvoiceEditorAutofillLookupItem,
   type InvoiceEditorAutofillLookupStatus,
@@ -480,6 +488,16 @@ const canMarkSent = computed(
 )
 
 const canDownload = computed(() => !!props.externalInvoiceId)
+
+const invoiceStatus = ref<string | undefined>(undefined)
+
+/**
+ * Determines if the DMS upload option should be shown in the Download menu.
+ * Shown only when the invoice already exists (has an id) and is not a draft.
+ */
+const isUploadToDmsVisible = computed(
+  () => !!props.externalInvoiceId && invoiceStatus.value !== 'Draft',
+)
 
 const dialogTitle = computed(() => {
   if (props.mode === 'create') return t('billing.invoices.editor.titleCreate')
@@ -757,6 +775,7 @@ async function loadDetail() {
   errorMessage.value = ''
   try {
     const dto = await getInvoiceEditorDetail(props.externalInvoiceId)
+    invoiceStatus.value = dto.status
     form.value.client = dto.client ?? null
     form.value.invoiceDate = dto.invoiceDate ?? ''
     form.value.dueDate = dto.dueDate ?? toIsoDate(new Date())
@@ -806,6 +825,8 @@ watch(
   async (open) => {
     if (open) {
       errorMessage.value = ''
+      dmsSuccessMessage.value = ''
+      invoiceStatus.value = undefined
       isSaving.value = false
       markedSent.value = false
       showMarkSentConfirmation.value = false
@@ -1089,6 +1110,39 @@ async function performMarkSent() {
 }
 
 // ── Download ──────────────────────────────────────────────────────────────────
+
+const isUploadingToDms = ref(false)
+const dmsSuccessMessage = ref('')
+
+/**
+ * Uploads the invoice PDF to the DMS. If a document with the same title
+ * (invoice number) already exists, warns the user and stops.
+ */
+async function handleUploadToDms() {
+  if (!props.externalInvoiceId || isUploadingToDms.value) return
+  isUploadingToDms.value = true
+  errorMessage.value = ''
+  dmsSuccessMessage.value = ''
+  try {
+    const result = await uploadInvoiceToDms(props.externalInvoiceId)
+    if (result.alreadyExists) {
+      errorMessage.value = t('billing.invoices.messages.dmsAlreadyExists', { title: result.title })
+    } else {
+      dmsSuccessMessage.value = t('billing.invoices.messages.dmsUploadSuccess', { title: result.title })
+    }
+  } catch (e) {
+    console.error('Failed to upload invoice to DMS', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.dmsUploadFailed')
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message || t('billing.invoices.messages.dmsUploadFailed')
+    } else {
+      errorMessage.value = t('billing.invoices.messages.dmsUploadFailed')
+    }
+  } finally {
+    isUploadingToDms.value = false
+  }
+}
 
 function openPdfPreviewWindow(): Window | null {
   const previewWindow = window.open('', '_blank')

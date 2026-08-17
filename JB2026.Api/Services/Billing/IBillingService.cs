@@ -454,7 +454,7 @@ public class BillingService : IBillingService
     {
         try
         {
-            var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}");
+            var invoice = await _invoiceNinjaClient.GetAsync<InvoiceNinjaInvoiceResponse>($"/invoices/{externalInvoiceId}?include=client");
             if (invoice == null)
             {
                 _logger.LogWarning("Invoice {ExternalInvoiceId} not found in Invoice Ninja", externalInvoiceId);

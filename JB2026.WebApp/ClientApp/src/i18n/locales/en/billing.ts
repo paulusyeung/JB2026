@@ -157,6 +157,7 @@ export const billingMessages = {
       newInvoice: 'New Invoice',
       markSent: 'Mark Sent',
       download: 'Download',
+      uploadToDms: 'Upload to DMS',
       invoicePdf: 'Invoice',
       deliveryNote: 'Delivery Note',
       confirmMarkSent: 'Confirm Mark as Sent',
@@ -203,6 +204,9 @@ export const billingMessages = {
       downloadInvoicePdfUnexpected: 'An unexpected error occurred while downloading the invoice PDF.',
       downloadDeliveryNoteFailed: 'Failed to download delivery note.',
       downloadDeliveryNoteUnexpected: 'An unexpected error occurred while downloading the delivery note.',
+      dmsUploadSuccess: 'Document uploaded to DMS as "{title}".',
+      dmsAlreadyExists: 'A document with the title "{title}" already exists in the DMS.',
+      dmsUploadFailed: 'Unable to upload the document to the DMS right now.',
       markSentConfirm: 'Are you sure you want to mark this invoice as sent to Invoice Ninja? This action cannot be undone.',
     },
     editor: {

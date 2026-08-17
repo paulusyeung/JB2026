@@ -278,6 +278,29 @@ export async function downloadDeliveryNote(externalInvoiceId: string): Promise<B
   return response.data
 }
 
+/**
+ * Response from the DMS upload operation.
+ */
+export interface UploadToDmsResponse {
+  alreadyExists: boolean
+  documentId: number | null
+  title: string
+}
+
+/**
+ * Uploads the invoice PDF to the DMS (Paperless-ngx).
+ * The server skips the upload when a document with the same title (invoice number) already exists.
+ *
+ * @param externalInvoiceId Invoice Ninja invoice ID.
+ * @returns Upload result indicating whether the document already existed in the DMS.
+ */
+export async function uploadInvoiceToDms(externalInvoiceId: string): Promise<UploadToDmsResponse> {
+  const response = await apiClient.post<UploadToDmsResponse>(
+    `/api/v2/billing/invoices/${externalInvoiceId}/upload-to-dms`,
+  )
+  return response.data
+}
+
 // ── Invoice Editor Types & Functions ─────────────────────────────────────────
 
 /**

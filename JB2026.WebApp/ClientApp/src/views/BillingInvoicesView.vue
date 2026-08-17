@@ -39,6 +39,8 @@
 
         <v-alert v-if="errorMessage" type="warning" variant="tonal" class="mb-3">{{ errorMessage }}</v-alert>
 
+        <v-alert v-if="dmsSuccessMessage" type="success" variant="tonal" class="mb-3">{{ dmsSuccessMessage }}</v-alert>
+
         <div class="toolbar-bar mb-2">
           <v-menu location="bottom">
             <template #activator="{ props }">
@@ -130,6 +132,9 @@
               </v-btn>
             </template>
             <v-list density="compact" class="toolbar-menu-list">
+              <v-list-item v-if="isUploadToDmsVisible" :loading="isUploadingToDms" @click="handleUploadToDms">
+                <v-list-item-title>{{ t('billing.invoices.actions.uploadToDms') }}</v-list-item-title>
+              </v-list-item>
               <v-list-item @click="handleDownloadInvoicePdf">
                 <v-list-item-title>{{ t('billing.invoices.actions.invoicePdf') }}</v-list-item-title>
               </v-list-item>
@@ -265,7 +270,7 @@ import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
-import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
+import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, uploadInvoiceToDms, type InvoiceBillingSummary } from '@/services/billing'
 import BillingInvoiceEditorDialog from '@/components/billing/BillingInvoiceEditorDialog.vue'
 
 type BillingInvoicesViewMode = 'detail' | 'card'
@@ -282,6 +287,8 @@ const invoiceLookup = ref('')
 const selectedInvoiceIds = ref<string[]>([])
 const isSendingInvoice = ref(false)
 const showMarkSentConfirmation = ref(false)
+const isUploadingToDms = ref(false)
+const dmsSuccessMessage = ref('')
 
 // Invoice editor dialog state
 const showEditorDialog = ref(false)
@@ -350,6 +357,19 @@ const isDownloadEnabled = computed(() => {
     return false
   }
   return true
+})
+
+/**
+ * Determines if the DMS upload option should be shown in the Download menu.
+ * Shown only when exactly one invoice is selected and its status is not Draft.
+ */
+const isUploadToDmsVisible = computed(() => {
+  if (!checkboxMode.value || selectedInvoiceIds.value.length !== 1) {
+    return false
+  }
+  const selectedId = selectedInvoiceIds.value[0]
+  const selectedInvoice = invoices.value.find((inv) => inv.externalInvoiceId === selectedId)
+  return selectedInvoice ? selectedInvoice.status !== 'Draft' : false
 })
 
 const displayedInvoices = computed(() => {
@@ -535,6 +555,40 @@ async function handleDownloadDeliveryNote() {
     } else {
       errorMessage.value = t('billing.invoices.messages.downloadDeliveryNoteUnexpected')
     }
+  }
+}
+
+/**
+ * Handles the DMS upload menu selection.
+ * Uploads the selected invoice PDF to the DMS. If a document with the same
+ * title (invoice number) already exists, warns the user and stops.
+ */
+async function handleUploadToDms() {
+  const selectedId = selectedInvoiceIds.value[0]
+  if (!selectedId) return
+
+  isUploadingToDms.value = true
+  errorMessage.value = ''
+  dmsSuccessMessage.value = ''
+
+  try {
+    const result = await uploadInvoiceToDms(selectedId)
+    if (result.alreadyExists) {
+      errorMessage.value = t('billing.invoices.messages.dmsAlreadyExists', { title: result.title })
+    } else {
+      dmsSuccessMessage.value = t('billing.invoices.messages.dmsUploadSuccess', { title: result.title })
+    }
+  } catch (e) {
+    console.error('Failed to upload invoice to DMS', e)
+    if (axios.isAxiosError<{ message?: string }>(e)) {
+      errorMessage.value = e.response?.data?.message || e.message || t('billing.invoices.messages.dmsUploadFailed')
+    } else if (e instanceof Error) {
+      errorMessage.value = e.message || t('billing.invoices.messages.dmsUploadFailed')
+    } else {
+      errorMessage.value = t('billing.invoices.messages.dmsUploadFailed')
+    }
+  } finally {
+    isUploadingToDms.value = false
   }
 }
 
