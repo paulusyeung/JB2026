@@ -356,22 +356,22 @@
 
             <template #[`header.orderType`]>
               <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span>
-              <v-icon size="14" color="primary">mdi-tag-outline</v-icon>
+              <v-icon size="14" >mdi-tag-outline</v-icon>
             </template>
 
             <template #[`header.status`]>
               <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span>
-              <v-icon size="14" color="primary">mdi-flag</v-icon>
+              <v-icon size="14" >mdi-flag</v-icon>
             </template>
 
             <template #[`header.attachProduct`]>
               <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span>
-              <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+              <v-icon size="14" >mdi-paperclip</v-icon>
             </template>
 
             <template #[`header.attachCustomer`]>
               <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span>
-              <v-icon size="14" color="primary">mdi-paperclip</v-icon>
+              <v-icon size="14" >mdi-paperclip</v-icon>
             </template>
 
             <template #[`item.orderType`]="{ item }">
