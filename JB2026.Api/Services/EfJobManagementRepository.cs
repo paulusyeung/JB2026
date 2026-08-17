@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using JB2026.Api.Models;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
@@ -87,7 +88,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, string? lookupField = null)
     {
         var today = DateTime.Today;
 
@@ -126,11 +127,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         if (!string.IsNullOrWhiteSpace(lookup))
         {
-            query = query.Where(o =>
-                (o.OrderNumber != null && o.OrderNumber.Contains(lookup)) ||
-                (o.CustomerName != null && o.CustomerName.Contains(lookup)) ||
-                (o.CustomerRef != null && o.CustomerRef.Contains(lookup)) ||
-                (o.OrderTitle != null && o.OrderTitle.Contains(lookup)));
+            query = ApplyLookup(query, lookup, lookupField);
         }
 
         return query
@@ -141,7 +138,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null)
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null, string? lookupField = null)
     {
         var userDisplayNameLookup = BuildUserDisplayNameLookup();
         var today = DateTime.Today;
@@ -193,11 +190,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         if (!string.IsNullOrWhiteSpace(lookup))
         {
-            query = query.Where(o =>
-                (o.OrderNumber != null && o.OrderNumber.Contains(lookup)) ||
-                (o.CustomerName != null && o.CustomerName.Contains(lookup)) ||
-                (o.CustomerRef != null && o.CustomerRef.Contains(lookup)) ||
-                (o.OrderTitle != null && o.OrderTitle.Contains(lookup)));
+            query = ApplyLookup(query, lookup, lookupField);
         }
 
         return query
@@ -218,6 +211,35 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             .Take(take)
             .Select(order => MapOrder(order, userDisplayNameLookup))
             .ToList();
+    }
+
+    private static IQueryable<T> ApplyLookup<T>(IQueryable<T> query, string lookup, string? lookupField)
+        where T : class
+    {
+        var token = lookup;
+
+        var predicates = new Dictionary<string, Expression<Func<T, bool>>>
+        {
+            ["ordernumber"] = o => (EF.Property<string>(o, "OrderNumber") != null && EF.Property<string>(o, "OrderNumber")!.Contains(token)),
+            ["customername"] = o => (EF.Property<string>(o, "CustomerName") != null && EF.Property<string>(o, "CustomerName")!.Contains(token)),
+            ["customerref"] = o => (EF.Property<string>(o, "CustomerRef") != null && EF.Property<string>(o, "CustomerRef")!.Contains(token)),
+            ["ordertitle"] = o => (EF.Property<string>(o, "OrderTitle") != null && EF.Property<string>(o, "OrderTitle")!.Contains(token)),
+            ["orderedby"] = o => (EF.Property<string>(o, "OrderedBy") != null && EF.Property<string>(o, "OrderedBy")!.Contains(token)),
+        };
+
+        if (!string.IsNullOrWhiteSpace(lookupField) && predicates.TryGetValue(lookupField.Trim().ToLowerInvariant(), out var single))
+        {
+            return query.Where(single);
+        }
+
+        var parameter = Expression.Parameter(typeof(T), "o");
+        var body = predicates.Values
+            .Skip(1)
+            .Aggregate(
+                (Expression)Expression.Invoke(predicates.Values.First(), parameter),
+                (acc, predicate) => Expression.OrElse(acc, Expression.Invoke(predicate, parameter)));
+
+        return query.Where(Expression.Lambda<Func<T, bool>>(body, parameter));
     }
 
     public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn)

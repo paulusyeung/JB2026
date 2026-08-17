@@ -42,6 +42,7 @@ public sealed class JobOrdersController : ControllerBase
         [FromQuery] int? commonQuery,
         [FromQuery] string? startsWith,
         [FromQuery] string? listType,
+        [FromQuery] string? lookupField,
         [FromQuery] DateOnly? startOn,
         [FromQuery] DateOnly? endOn,
         [FromQuery] int? status)
@@ -59,11 +60,11 @@ public sealed class JobOrdersController : ControllerBase
         var requestedTake = take.GetValueOrDefault(defaultTake);
         var jobListTake = Math.Clamp(requestedTake, 1, maxTake);
         var orders = isJobList
-            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn, status)
+            ? _repository.GetJobList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn, status, lookupField)
             : isOrderList
-            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
+            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn, lookupField)
             : hasFilters
-            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn)
+            ? _repository.GetOrderList(lookup, commonQuery.GetValueOrDefault(), startsWith, jobListTake, startOn, endOn, lookupField)
             : _repository.GetJobOrders(requestedTake);
 
         return Ok(orders);

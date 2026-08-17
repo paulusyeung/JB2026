@@ -24,6 +24,10 @@ export const jobOrderMessages = {
         title: 'Order List',
         subtitle: 'Legacy-style order registry with shortcuts, common queries, and detail editing.',
         lookup: 'Lookup',
+        lookupField: 'Search In',
+        lookupFields: {
+          all: 'All Fields',
+        },
         commonQuery: 'Common Query',
         search: 'Search',
         rows: '{count} records',

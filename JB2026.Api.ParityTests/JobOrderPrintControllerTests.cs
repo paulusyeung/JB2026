@@ -308,8 +308,8 @@ public sealed class JobOrderPrintControllerTests
         public JobDetailResponse? GetJobDetail(Guid id) => null;
         public IReadOnlyList<string> GetStyleTitles(Guid orderId) => [];
         public IReadOnlyList<JobOrderResponse> GetJobOrders(int take) => [];
-        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null) => [];
-        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null) => [];
+        public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null, string? lookupField = null) => [];
+        public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, string? lookupField = null) => [];
         public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn) => [];
         public JobOrderResponse? GetJobOrder(Guid orderId) => null;
         public Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor) => throw new NotImplementedException();

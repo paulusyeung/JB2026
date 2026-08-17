@@ -32,7 +32,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return _jobs.TryGetValue(orderId, out var job) ? job.StyleTitles : Array.Empty<string>();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null)
+    public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, string? lookupField = null)
     {
         var today = DateTime.Today;
 
@@ -72,10 +72,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         if (!string.IsNullOrWhiteSpace(lookup))
         {
             var token = lookup.ToLowerInvariant();
-            query = query.Where(j =>
-                j.OrderNumber.Contains(token, StringComparison.OrdinalIgnoreCase) ||
-                j.CustomerName.Contains(token, StringComparison.OrdinalIgnoreCase) ||
-                j.CustomerRef.Contains(token, StringComparison.OrdinalIgnoreCase));
+            query = ApplyLookup(query, token, lookupField);
         }
 
         return query
@@ -86,7 +83,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             .ToList();
     }
 
-    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null)
+    public IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null, string? lookupField = null)
     {
         var today = DateTime.Today;
 
@@ -133,12 +130,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
 
         if (!string.IsNullOrWhiteSpace(lookup))
         {
-            query = query.Where(j =>
-                j.OrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
-                j.CompositeOrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
-                j.CustomerName.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
-                j.CustomerRef.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
-                j.OrderTitle.Contains(lookup, StringComparison.OrdinalIgnoreCase));
+            query = ApplyLookup(query, lookup, lookupField);
         }
 
         return query
@@ -156,6 +148,24 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             .Take(take)
             .Select(MapOrder)
             .ToList();
+    }
+
+    private static IEnumerable<JobRecord> ApplyLookup(IEnumerable<JobRecord> query, string lookup, string? lookupField)
+    {
+        return (lookupField ?? string.Empty).ToLowerInvariant() switch
+        {
+            "ordernumber" => query.Where(j => j.OrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+            "customername" => query.Where(j => j.CustomerName.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+            "customerref" => query.Where(j => j.CustomerRef.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+            "ordertitle" => query.Where(j => j.OrderTitle.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+            "orderedby" => query.Where(j => j.OrderedBy.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+            _ => query.Where(j =>
+                j.OrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.CustomerName.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.CustomerRef.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.OrderTitle.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                j.OrderedBy.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+        };
     }
 
     public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn)

@@ -46,6 +46,7 @@ export async function getJobOrders(): Promise<JobOrderRecord[]> {
 
 export async function getOrderList(params: {
   lookup?: string
+  lookupField?: string
   commonQuery?: number
   startsWith?: string
   take?: number
@@ -55,6 +56,7 @@ export async function getOrderList(params: {
   const response = await apiClient.get<JobOrderRecord[]>('/api/v2/job-orders', {
     params: {
       lookup: params.lookup,
+      lookupField: params.lookupField,
       commonQuery: params.commonQuery,
       startsWith: params.startsWith,
       take: params.take,
@@ -69,6 +71,7 @@ export async function getOrderList(params: {
 
 export async function getJobList(params: {
   lookup?: string
+  lookupField?: string
   startsWith?: string
   take?: number
   startOn?: string
@@ -78,6 +81,7 @@ export async function getJobList(params: {
   const response = await apiClient.get<JobOrderRecord[]>('/api/v2/job-orders', {
     params: {
       lookup: params.lookup,
+      lookupField: params.lookupField,
       startsWith: params.startsWith,
       take: params.take,
       startOn: params.startOn,

@@ -24,6 +24,10 @@ export const jobOrderMessages = {
         title: '訂單列表',
         subtitle: '沿用舊版習慣的訂單清單，支援快捷字首、常用查詢與記錄編輯。',
         lookup: '查詢',
+        lookupField: '搜尋欄位',
+        lookupFields: {
+          all: '全部欄位',
+        },
         commonQuery: '常用查詢',
         search: '搜尋',
         rows: '共 {count} 筆',

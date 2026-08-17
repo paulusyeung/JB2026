@@ -24,6 +24,10 @@ export const jobOrderMessages = {
         title: '订单列表',
         subtitle: '沿用旧版习惯的订单清单，支持快捷字首、常用查询与记录编辑。',
         lookup: '查询',
+        lookupField: '搜索字段',
+        lookupFields: {
+          all: '全部字段',
+        },
         commonQuery: '常用查询',
         search: '搜索',
         rows: '共 {count} 条',

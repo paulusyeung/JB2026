@@ -5,6 +5,18 @@
 
       <v-card-text>
         <div class="filter-bar">
+          <v-select
+            v-model="lookupField"
+            :items="lookupFieldOptions"
+            item-title="label"
+            item-value="value"
+            :label="t('jobOrder.orderList.lookupField')"
+            variant="solo-filled"
+            density="comfortable"
+            hide-details
+            class="filter-bar__field"
+          />
+
           <v-text-field
             v-model="lookup"
             density="comfortable"
@@ -525,6 +537,7 @@ const cardViewPreparing = ref(false)
 const errorMessage = ref('')
 const snackbarOpen = ref(false)
 const lookup = ref('')
+const lookupField = ref('')
 const commonQuery = ref(0)
 const selectedOrderIds = ref<string[]>([])
 const expandedMasterIds = ref<string[]>([])
@@ -592,6 +605,19 @@ const commonQueryItems = computed(() => [
   { value: 3, label: t('jobOrder.orderList.commonQueryItems.required7') },
   { value: 4, label: t('jobOrder.orderList.commonQueryItems.required30') },
 ])
+
+const lookupFieldOptions = computed(() => {
+  const searchable = new Set(['orderNumber', 'customerName', 'orderTitle', 'customerRef', 'orderedBy'])
+  return [
+    { value: '', label: t('jobOrder.orderList.lookupFields.all') },
+    ...allHeaders.value
+      .filter((h) => searchable.has(String(h.key)))
+      .map((h) => ({
+        value: String(h.key).toLowerCase(),
+        label: h.key === 'orderedBy' ? t('jobOrder.orderList.headers.salesRep') : String(h.title),
+      })),
+  ]
+})
 
 const masterHeaders = computed(() => [
   { title: '', key: 'expander', width: '42px', sortable: false },
@@ -718,6 +744,7 @@ async function load() {
   try {
     rows.value = await getOrderList({
       lookup: lookup.value.trim() || undefined,
+      lookupField: lookupField.value || undefined,
       commonQuery: commonQuery.value,
       take: 500,
     })
@@ -736,6 +763,7 @@ async function applyLookup() {
 
 async function refreshList() {
   lookup.value = ''
+  lookupField.value = ''
   commonQuery.value = 0
   await load()
 }
@@ -1128,7 +1156,7 @@ function billingStatusColor(row: JobOrderRecord) {
 .filter-bar {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto auto;
+  grid-template-columns: minmax(150px, 220px) minmax(240px, 1fr) minmax(180px, 260px) auto auto;
   align-items: center;
   margin-bottom: 16px;
 }

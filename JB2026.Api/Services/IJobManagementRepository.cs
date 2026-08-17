@@ -12,9 +12,9 @@ public interface IJobManagementRepository
 
     IReadOnlyList<JobOrderResponse> GetJobOrders(int take);
 
-    IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null);
+    IReadOnlyList<JobOrderResponse> GetJobList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, int? status = null, string? lookupField = null);
 
-    IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null);
+    IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, string? lookupField = null);
 
     IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn);
 
