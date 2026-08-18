@@ -466,7 +466,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="formOpen" max-width="min(100%, 1080px)" scrollable>
+    <v-dialog v-model="formOpen" max-width="min(100%, 960px)" scrollable>
       <OrderRecordDialog
         v-if="formOpen"
         :order="formJob ?? undefined"
@@ -480,7 +480,7 @@
       />
     </v-dialog>
 
-    <v-dialog v-model="jobFormOpen" max-width="min(100%, 1200px)" scrollable>
+    <v-dialog v-model="jobFormOpen" max-width="min(100%, 960px)" scrollable>
       <JobOrderForm
         v-if="jobFormOpen"
         :job="jobFormJob"
