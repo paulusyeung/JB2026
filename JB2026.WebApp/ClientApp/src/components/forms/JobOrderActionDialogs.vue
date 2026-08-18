@@ -392,10 +392,10 @@ watch(
 
 function defaultRemarksTable(): string {
   const rows = Array.from({ length: 4 })
-    .map(() => '<tr><td>&nbsp;</td><td style="text-align: right;">&nbsp;</td></tr>')
+    .map(() => '<tr><td>&nbsp;</td><td style="text-align: right;">&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>')
     .join('')
   return (
-    '<table><thead><tr><th>成本分析</th><th style="text-align: right;">金額</th></tr></thead>' +
+    '<table><thead><tr><th>成本分析</th><th style="text-align: right;">金額</th><th>日期</th><th>供應商</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>'
   )
 }
