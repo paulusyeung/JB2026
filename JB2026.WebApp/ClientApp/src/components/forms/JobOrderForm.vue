@@ -920,6 +920,24 @@ async function loadPreviewImage(job: JobDetail) {
   white-space: normal;
 }
 
+.legacy-remarks-html :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: auto;
+  min-width: 0;
+}
+
+.legacy-remarks-html :deep(table th),
+.legacy-remarks-html :deep(table td) {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.28);
+  padding: 6px 10px;
+}
+
+.legacy-remarks-html :deep(table th) {
+  background: rgba(var(--v-theme-on-surface), 0.08);
+  font-weight: 600;
+}
+
 .legacy-remarks-html :deep(table td:nth-child(2)),
 .legacy-remarks-html :deep(table th:nth-child(2)) {
   text-align: right;
@@ -963,6 +981,24 @@ async function loadPreviewImage(job: JobDetail) {
   z-index: 1;
   display: flex;
   justify-content: flex-end;
+}
+
+.legacy-product-details-html :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: auto;
+  min-width: 0;
+}
+
+.legacy-product-details-html :deep(table th),
+.legacy-product-details-html :deep(table td) {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.28);
+  padding: 6px 10px;
+}
+
+.legacy-product-details-html :deep(table th) {
+  background: rgba(var(--v-theme-on-surface), 0.08);
+  font-weight: 600;
 }
 
 .legacy-attribute-grid {

@@ -500,7 +500,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="formOpen" max-width="min(100%, 760px)" scrollable>
+    <v-dialog v-model="formOpen" max-width="min(100%, 960px)" scrollable>
       <JobOrderForm
         v-if="formOpen"
         :job="formJob"
