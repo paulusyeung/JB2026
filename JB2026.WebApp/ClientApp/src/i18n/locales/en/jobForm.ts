@@ -72,6 +72,7 @@ export const jobFormMessages = {
           layoutDefault: 'Job Order (Default)',
           noPicture: 'No Picture',
           noProductDetails: 'No Product Details',
+          noRemarks: 'No Remarks',
           workflows: 'Workflows',
           selectAllWorkflows: 'Select All',
           noWorkflows: 'No workflows available for this order.',

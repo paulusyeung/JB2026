@@ -72,6 +72,7 @@ export const jobFormMessages = {
           layoutDefault: '工單（預設）',
           noPicture: '不含圖片',
           noProductDetails: '不含產品內容',
+          noRemarks: '不含備註',
           workflows: '工序',
           selectAllWorkflows: '全選',
           noWorkflows: '此訂單沒有可用工序。',

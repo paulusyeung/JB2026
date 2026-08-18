@@ -224,6 +224,70 @@ public sealed class JobOrderPrintControllerTests
     }
 
     [Fact]
+    public async Task PrintJobOrder_RendersHtmlRemarks_AsFormattedContent()
+    {
+        using var context = CreateContext(nameof(PrintJobOrder_RendersHtmlRemarks_AsFormattedContent));
+        var order = SeedOrder(context, "JO-RMK");
+        order.Remarks = "<p>Important <strong>note</strong> about this order.</p><ul><li>first item</li><li>second item</li></ul>";
+        context.SaveChanges();
+
+        var controller = CreateController(context);
+        var request = new JobOrderPrintRequest();
+
+        var result = await controller.PrintJobOrder(order.OrderId, request, CancellationToken.None);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        var content = ExtractText(file.FileContents);
+
+        Assert.Contains("Important", content);
+        Assert.Contains("note", content);
+        Assert.Contains("first", content);
+        Assert.Contains("second", content);
+        Assert.DoesNotContain("<p>", content);
+        Assert.DoesNotContain("<strong>", content);
+        Assert.DoesNotContain("<ul>", content);
+    }
+
+    [Fact]
+    public async Task PrintJobOrder_RendersPlainTextRemarks_WhenNoHtml()
+    {
+        using var context = CreateContext(nameof(PrintJobOrder_RendersPlainTextRemarks_WhenNoHtml));
+        var order = SeedOrder(context, "JO-RMK2");
+        order.Remarks = "Plain text remark";
+        context.SaveChanges();
+
+        var controller = CreateController(context);
+        var request = new JobOrderPrintRequest();
+
+        var result = await controller.PrintJobOrder(order.OrderId, request, CancellationToken.None);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        var content = ExtractText(file.FileContents);
+
+        Assert.Contains("Plain", content);
+        Assert.Contains("remark", content);
+    }
+
+    [Fact]
+    public async Task PrintJobOrder_OmitsRemarksSection_WhenNoRemarksSet()
+    {
+        using var context = CreateContext(nameof(PrintJobOrder_OmitsRemarksSection_WhenNoRemarksSet));
+        var order = SeedOrder(context, "JO-NORMK");
+        order.Remarks = "Secret-remark-xyz";
+        context.SaveChanges();
+
+        var controller = CreateController(context);
+        var request = new JobOrderPrintRequest { NoRemarks = true };
+
+        var result = await controller.PrintJobOrder(order.OrderId, request, CancellationToken.None);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        var content = ExtractText(file.FileContents);
+
+        Assert.DoesNotContain("Secret-remark-xyz", content);
+    }
+
+    [Fact]
     public async Task PrintJobOrder_PreservesCjkText_InPdfContent()
     {
         using var context = CreateContext(nameof(PrintJobOrder_PreservesCjkText_InPdfContent));

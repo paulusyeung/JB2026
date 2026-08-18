@@ -520,6 +520,7 @@ export interface JobOrderPrintRequest {
   layout: string
   noPicture: boolean
   noProductDetails: boolean
+  noRemarks: boolean
   selectedWorkflowIndices: number[]
 }
 

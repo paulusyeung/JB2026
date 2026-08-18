@@ -60,6 +60,15 @@
               />
             </v-col>
 
+            <v-col cols="12" sm="6">
+              <v-checkbox
+                v-model="form.noRemarks"
+                :label="t('jobForm.dialogs.printManager.noRemarks')"
+                density="comfortable"
+                hide-details
+              />
+            </v-col>
+
             <v-col cols="12">
               <div class="text-subtitle-2 mb-1">{{ t('jobForm.dialogs.printManager.workflows') }}</div>
               <div v-if="workflowItems.length === 0" class="text-body-2 text-medium-emphasis py-2">
@@ -138,6 +147,7 @@ const form = reactive({
   layout: 'default',
   noPicture: false,
   noProductDetails: false,
+  noRemarks: false,
   selectedWorkflowIndices: [] as number[],
 })
 
@@ -190,6 +200,7 @@ function resetForm() {
   form.layout = 'default'
   form.noPicture = false
   form.noProductDetails = false
+  form.noRemarks = false
   form.selectedWorkflowIndices = workflowItems.value.map((_, i) => i)
 }
 
@@ -206,6 +217,7 @@ async function submitPrint() {
       layout: form.layout,
       noPicture: form.noPicture,
       noProductDetails: form.noProductDetails,
+      noRemarks: form.noRemarks,
       selectedWorkflowIndices: form.selectedWorkflowIndices,
     }
 
@@ -242,6 +254,7 @@ async function submitUploadToDms() {
       layout: form.layout,
       noPicture: form.noPicture,
       noProductDetails: form.noProductDetails,
+      noRemarks: form.noRemarks,
       selectedWorkflowIndices: form.selectedWorkflowIndices,
     }
 

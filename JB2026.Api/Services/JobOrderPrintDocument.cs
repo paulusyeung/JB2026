@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
+using HTMLQuestPDF.Extensions;
 using JB2026.Api.Models;
 using JB2026.Reporting;
 using QuestPDF.Fluent;
@@ -253,11 +254,26 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
                 row.RelativeItem().MinHeight(36).Column(col =>
                 {
-                    if (!string.IsNullOrWhiteSpace(Model.Remarks))
+                    if (Model.NoRemarks || string.IsNullOrWhiteSpace(Model.Remarks))
+                    {
+                        return;
+                    }
+
+                    var remarksBaseStyle = SelectTextStyle(UseCjkFallback(Model.Remarks))
+                        .FontSize(12)
+                        .LineHeight(1.0f);
+
+                    if (LooksLikeHtml(Model.Remarks))
+                    {
+                        col.Item()
+                           .DefaultTextStyle(remarksBaseStyle)
+                           .Element(container => container.HTML(handler => handler.SetHtml(Model.Remarks)));
+                    }
+                    else
                     {
                         var remarks = NormalizePrintText(Model.Remarks);
                         col.Item().Text(remarks)
-                           .Style(SelectTextStyle(UseCjkFallback(remarks)).FontSize(12).LineHeight(1.0f));
+                           .Style(remarksBaseStyle);
                     }
                 });
             });
@@ -282,6 +298,9 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private static string FmtQty(decimal? qty) =>
         qty.HasValue ? qty.Value.ToString("#,##0.##", CultureInfo.InvariantCulture) : string.Empty;
+
+    private static bool LooksLikeHtml(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value, @"<[^>]+>");
 
     private static string HtmlToPlainText(string? html)
     {

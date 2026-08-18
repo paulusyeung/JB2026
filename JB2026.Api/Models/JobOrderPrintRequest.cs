@@ -8,5 +8,7 @@ public sealed class JobOrderPrintRequest
 
     public bool NoProductDetails { get; init; }
 
+    public bool NoRemarks { get; init; }
+
     public IReadOnlyList<int> SelectedWorkflowIndices { get; init; } = Array.Empty<int>();
 }

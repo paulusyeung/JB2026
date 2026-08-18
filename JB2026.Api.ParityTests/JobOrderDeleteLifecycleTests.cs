@@ -2,6 +2,7 @@ using JB2026.EfCore.Models;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace JB2026.Api.ParityTests;
 
@@ -212,7 +213,7 @@ public sealed class JobOrderDeleteLifecycleTests
     // ─── helpers ──────────────────────────────────────────────────────────────
 
     private static EfJobManagementRepository CreateRepository(JB5LegacyReadContext readContext, JB5LegacyWriteContext writeContext)
-        => new(readContext, writeContext);
+        => new(readContext, writeContext, NullLogger<EfJobManagementRepository>.Instance);
 
     private static JobOrder CreateTestJobOrder(Guid orderId, JobOrder template, string orderNumber, int? jobNumber = null)
     {

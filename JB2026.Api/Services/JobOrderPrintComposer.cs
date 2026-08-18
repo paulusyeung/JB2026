@@ -72,6 +72,7 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
             Qty = order.Qty,
             NoPicture = request.NoPicture,
             NoProductDetails = request.NoProductDetails,
+            NoRemarks = request.NoRemarks,
             ImageBytes = imageBytes,
             Workflows = selectedWorkflows.Select(w => new JobOrderPrintWorkflow
             {
