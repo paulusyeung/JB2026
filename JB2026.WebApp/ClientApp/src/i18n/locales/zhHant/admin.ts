@@ -500,9 +500,8 @@ export const adminMessages = {
         },
         options: {
           printing: '印刷',
-          printedLabel: '印刷標籤',
-          wovenLabel: '織標',
-          other: '其他',
+          digitalPrinting: '數碼印刷',
+          others: '其他',
         },
         messages: {
           loadFailed: '無法載入訂單類型工作流程，請確認 API 可用性。',

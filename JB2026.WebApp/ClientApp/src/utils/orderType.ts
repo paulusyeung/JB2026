@@ -1,20 +1,18 @@
 export const ORDER_TYPE = {
   Printing: 0,
-  PrintedLabel: 1,
-  WovenLabel: 2,
-  Other: 3,
+  DigitalPrinting: 1,
+  Others: 2,
 } as const
 
 export const ORDER_TYPE_VALUES = [
   ORDER_TYPE.Printing,
-  ORDER_TYPE.PrintedLabel,
-  ORDER_TYPE.WovenLabel,
-  ORDER_TYPE.Other,
+  ORDER_TYPE.DigitalPrinting,
+  ORDER_TYPE.Others,
 ] as const
 
 export type OrderTypeValue = (typeof ORDER_TYPE_VALUES)[number]
 
-export type OrderTypeI18nKey = 'printing' | 'printedLabel' | 'wovenLabel' | 'other'
+export type OrderTypeI18nKey = 'printing' | 'digitalPrinting' | 'others'
 
 export interface OrderTypeMeta {
   value: OrderTypeValue
@@ -29,20 +27,15 @@ const ORDER_TYPE_META: Record<OrderTypeValue, Omit<OrderTypeMeta, 'value'>> = {
     color: 'success',
     i18nKey: 'printing',
   },
-  [ORDER_TYPE.PrintedLabel]: {
+  [ORDER_TYPE.DigitalPrinting]: {
     icon: 'mdi-tag-text-outline',
     color: 'error',
-    i18nKey: 'printedLabel',
+    i18nKey: 'digitalPrinting',
   },
-  [ORDER_TYPE.WovenLabel]: {
-    icon: 'mdi-label-outline',
-    color: 'warning',
-    i18nKey: 'wovenLabel',
-  },
-  [ORDER_TYPE.Other]: {
+  [ORDER_TYPE.Others]: {
     icon: 'mdi-shape-outline',
     color: 'secondary',
-    i18nKey: 'other',
+    i18nKey: 'others',
   },
 }
 

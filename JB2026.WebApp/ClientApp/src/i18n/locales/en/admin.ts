@@ -502,9 +502,8 @@ export const adminMessages = {
         },
         options: {
           printing: 'Printing',
-          printedLabel: 'Printed Label',
-          wovenLabel: 'Woven Label',
-          other: 'Other',
+          digitalPrinting: 'Digital Printing',
+          others: 'Others',
         },
         messages: {
           loadFailed: 'Unable to load order type workflows. Please verify API availability.',

@@ -500,9 +500,8 @@ export const adminMessages = {
         },
         options: {
           printing: '印刷',
-          printedLabel: '印刷标签',
-          wovenLabel: '织标',
-          other: '其他',
+          digitalPrinting: '数码印刷',
+          others: '其他',
         },
         messages: {
           loadFailed: '无法加载订单类型工作流程，请确认 API 可用性。',
