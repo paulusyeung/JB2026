@@ -1,5 +1,6 @@
 export const routesMessages = {
       dashboard: '儀表板',
+      dashboardOperator: '儀表板 (操作員)',
       jobs: '作業',
       quotations: '報價單',
       login: '登入',

@@ -22,7 +22,6 @@
       nav
       density="comfortable"
       prepend-gap="8"
-      v-model:opened="openedGroups"
     >
       <v-tooltip
         v-for="item in items"
@@ -50,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import MenuItemRenderer from './MenuItemRenderer.vue'
@@ -74,14 +73,12 @@ const showCollapsedTooltips = computed(() => !props.isMobile && props.isCollapse
 
 const items = computed(() => [
   { title: t('routes.dashboard'), to: '/dashboard', icon: 'mdi-view-dashboard-outline' },
+  { title: t('routes.dashboardOperator'), to: '/dashboard/operator', icon: 'mdi-view-dashboard-outline' },
 ])
 
 const legacyMenuItems = computed(() => {
   return buildLegacyMenuItems(t, sessionStore.profile?.role)
 })
-
-// Track which menu groups are opened - default to first group expanded
-const openedGroups = ref<string[]>(['group-0'])
 
 function handleDrawerModelUpdate(nextValue: boolean) {
   if (!props.isMobile) {

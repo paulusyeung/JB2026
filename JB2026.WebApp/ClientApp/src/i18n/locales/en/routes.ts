@@ -1,5 +1,6 @@
 export const routesMessages = {
       dashboard: 'Dashboard',
+      dashboardOperator: 'Dashboard (Operator)',
       jobs: 'Jobs',
       quotations: 'Quotations',
       login: 'Sign In',

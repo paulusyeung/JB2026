@@ -71,6 +71,12 @@ const router = createRouter({
       meta: { requiresAuth: true, titleKey: 'routes.dashboard' },
     },
     {
+      path: '/dashboard/operator',
+      name: 'dashboard-operator',
+      component: () => import('@/views/DashboardOperatorView.vue'),
+      meta: { requiresAuth: true, titleKey: 'routes.dashboardOperator' },
+    },
+    {
       path: '/jobs',
       name: 'jobs',
       component: () => import('@/views/JobsView.vue'),
