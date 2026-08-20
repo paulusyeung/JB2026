@@ -54,5 +54,6 @@ export const routesMessages = {
       public: 'Public',
       settings: 'Settings',
   settingsSystemParameters: 'System Parameters',
+      systemMonitor: 'System Monitor',
       help: 'Help',
     } as const

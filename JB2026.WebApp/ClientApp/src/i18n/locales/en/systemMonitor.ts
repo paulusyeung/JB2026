@@ -1,0 +1,20 @@
+export const systemMonitorMessages = {
+      refresh: 'Refresh',
+      configured: 'Configured',
+      notConfigured: 'Not Configured',
+      loadFailed: 'Failed to load system monitor settings.',
+      crmTitle: 'CRM Settings',
+      dmsTitle: 'DMS Settings',
+      emailTitle: 'Email Settings',
+      fields: {
+        baseUrl: 'Base URL',
+        apiKey: 'API Key',
+        apiToken: 'API Token',
+        defaultUser: 'Default User',
+        httpClientTimeoutSeconds: 'HTTP Client Timeout (s)',
+        fallbackAccountEmail: 'Fallback Account Email',
+        fallbackAccountPassword: 'Fallback Account Password',
+        imapPort: 'IMAP Port',
+        useSsl: 'Use SSL',
+      },
+    } as const

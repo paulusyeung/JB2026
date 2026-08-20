@@ -106,7 +106,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       icon: 'mdi-cog-outline',
       roles: ['Admin'],
       children: [
-        { title: t('routes.billingSettings'), to: '/billing/settings', icon: 'mdi-cog-outline' },
+        { title: t('routes.systemMonitor'), to: '/settings/system-monitor', icon: 'mdi-monitor-dashboard' },
         { title: t('routes.settingsSystemParameters'), to: '/settings/system-parameters', icon: 'mdi-tune-vertical-variant' },
       ],
     },

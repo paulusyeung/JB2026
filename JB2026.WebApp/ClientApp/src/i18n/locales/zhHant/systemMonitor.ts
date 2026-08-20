@@ -1,0 +1,20 @@
+export const systemMonitorMessages = {
+      refresh: '重新整理',
+      configured: '已設定',
+      notConfigured: '未設定',
+      loadFailed: '載入系統監控設定失敗。',
+      crmTitle: 'CRM 設定',
+      dmsTitle: 'DMS 設定',
+      emailTitle: '電子郵件設定',
+      fields: {
+        baseUrl: '基礎 URL',
+        apiKey: 'API 金鑰',
+        apiToken: 'API 權杖',
+        defaultUser: '預設使用者',
+        httpClientTimeoutSeconds: 'HTTP 用戶端逾時（秒）',
+        fallbackAccountEmail: '後備帳戶信箱',
+        fallbackAccountPassword: '後備帳戶密碼',
+        imapPort: 'IMAP 連接埠',
+        useSsl: '使用 SSL',
+      },
+    } as const

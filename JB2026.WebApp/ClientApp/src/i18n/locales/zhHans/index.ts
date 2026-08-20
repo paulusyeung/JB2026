@@ -25,6 +25,7 @@ import { themeMessages } from './theme'
 import { crmMessages } from './crm'
 import { customer360Messages } from './customer360'
 import { visualizationMessages } from './visualization'
+import { systemMonitorMessages } from './systemMonitor'
 
 export const zhHansMessages = {
   app: appMessages,
@@ -54,4 +55,5 @@ export const zhHansMessages = {
   crm: crmMessages,
   customer360: customer360Messages,
   visualization: visualizationMessages,
+  systemMonitor: systemMonitorMessages,
 } as const

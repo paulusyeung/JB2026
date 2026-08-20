@@ -54,5 +54,6 @@ export const routesMessages = {
       public: '公共',
       settings: '設定',
   settingsSystemParameters: '系統參數',
+      systemMonitor: '系統監控',
       help: '說明',
     } as const

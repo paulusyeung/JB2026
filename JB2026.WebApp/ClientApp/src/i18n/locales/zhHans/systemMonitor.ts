@@ -1,0 +1,20 @@
+export const systemMonitorMessages = {
+      refresh: '刷新',
+      configured: '已配置',
+      notConfigured: '未配置',
+      loadFailed: '加载系统监控设置失败。',
+      crmTitle: 'CRM 设置',
+      dmsTitle: 'DMS 设置',
+      emailTitle: '电子邮件设置',
+      fields: {
+        baseUrl: '基础 URL',
+        apiKey: 'API 密钥',
+        apiToken: 'API 令牌',
+        defaultUser: '默认用户',
+        httpClientTimeoutSeconds: 'HTTP 客户端超时（秒）',
+        fallbackAccountEmail: '回退账户邮箱',
+        fallbackAccountPassword: '回退账户密码',
+        imapPort: 'IMAP 端口',
+        useSsl: '使用 SSL',
+      },
+    } as const
