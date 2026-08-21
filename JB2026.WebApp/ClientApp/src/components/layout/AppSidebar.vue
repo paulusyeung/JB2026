@@ -24,7 +24,7 @@
       prepend-gap="8"
     >
       <v-tooltip
-        v-for="item in items"
+        v-for="item in visibleItems"
         :key="item.to"
         :disabled="!showCollapsedTooltips"
         location="right"
@@ -43,7 +43,7 @@
       </v-tooltip>
 
       <v-list-subheader class="mt-2">{{ t('sidebar.legacyCoreModules') }}</v-list-subheader>
-      <MenuItemRenderer :items="legacyMenuItems" :show-tooltips="showCollapsedTooltips" />
+      <MenuItemRenderer :items="visibleLegacyMenuItems" :show-tooltips="showCollapsedTooltips" />
     </v-list>
   </v-navigation-drawer>
 </template>
@@ -53,7 +53,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import MenuItemRenderer from './MenuItemRenderer.vue'
-import { buildLegacyMenuItems } from './menuHelper'
+import { buildLegacyMenuItems, filterMenuByAccess } from './menuHelper'
 
 const props = defineProps<{
   modelValue: boolean
@@ -79,6 +79,13 @@ const items = computed(() => [
 const legacyMenuItems = computed(() => {
   return buildLegacyMenuItems(t, sessionStore.profile?.role)
 })
+
+const effectiveRbac = computed(() => sessionStore.rbac)
+
+const visibleItems = computed(() => filterMenuByAccess(items.value, effectiveRbac.value))
+
+const visibleLegacyMenuItems = computed(() =>
+  filterMenuByAccess(legacyMenuItems.value, effectiveRbac.value))
 
 function handleDrawerModelUpdate(nextValue: boolean) {
   if (!props.isMobile) {

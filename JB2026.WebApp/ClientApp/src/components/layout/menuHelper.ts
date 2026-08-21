@@ -108,6 +108,7 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
       children: [
         { title: t('routes.systemMonitor'), to: '/settings/system-monitor', icon: 'mdi-monitor-dashboard' },
         { title: t('routes.settingsSystemParameters'), to: '/settings/system-parameters', icon: 'mdi-tune-vertical-variant' },
+        { title: t('routes.settingsRbacEditor'), to: '/settings/rbac-editor', icon: 'mdi-shield-key-outline' },
       ],
     },
   ]
@@ -117,6 +118,53 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
 
 export function hasChildren(item: MenuItem): boolean {
   return Array.isArray(item.children) && item.children.length > 0
+}
+
+// Dashboard routes, in preferred display order. Used to pick the landing route
+// after login: the first one the user is allowed to see (per effective RBAC).
+export const DASHBOARD_ROUTES = ['/dashboard', '/dashboard/operator']
+
+export function resolveDashboardLandingRoute(
+  values: Record<string, boolean> | null | undefined,
+): string {
+  for (const route of DASHBOARD_ROUTES) {
+    if (!values || values[route] !== false) {
+      return route
+    }
+  }
+
+  return DASHBOARD_ROUTES[0] ?? '/dashboard'
+}
+
+// Filters the menu tree by effective RBAC values (route path -> allowed).
+// A leaf is visible when its value is true, or when it has no stored value
+// (fail-open so new/unmapped items remain accessible). A group is visible
+// only when it has at least one visible child. `null`/`undefined` values
+// means "no restrictions" and returns the menu unchanged.
+export function filterMenuByAccess(
+  items: MenuItem[],
+  values: Record<string, boolean> | null | undefined,
+): MenuItem[] {
+  if (!values) {
+    return items
+  }
+
+  const result: MenuItem[] = []
+
+  for (const item of items) {
+    if (hasChildren(item)) {
+      const visibleChildren = filterMenuByAccess(item.children!, values)
+      if (visibleChildren.length > 0) {
+        result.push({ ...item, children: visibleChildren })
+      }
+    } else if (item.to) {
+      if (values[item.to] !== false) {
+        result.push(item)
+      }
+    }
+  }
+
+  return result
 }
 
 export function filterMenuItems(items: MenuItem[], role: string | number | undefined): MenuItem[] {

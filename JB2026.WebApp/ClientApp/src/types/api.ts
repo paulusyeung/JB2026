@@ -801,6 +801,10 @@ export interface AppSettings {
   dateFormatPreference: string
 }
 
+export interface RbacValues {
+  values: Record<string, boolean>
+}
+
 export interface PublicContentItem {
   slug: string
   title: string

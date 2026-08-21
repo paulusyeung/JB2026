@@ -54,6 +54,7 @@ export const routesMessages = {
       public: 'Public',
       settings: 'Settings',
   settingsSystemParameters: 'System Parameters',
+  settingsRbacEditor: 'RBAC Editor',
       systemMonitor: 'System Monitor',
       help: 'Help',
     } as const

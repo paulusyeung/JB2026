@@ -43,6 +43,7 @@ export interface AdminUsersQuery {
   lookup?: string
   take?: number
   excludeGuest?: boolean
+  role?: string
 }
 
 export async function getAdminUsers(query: AdminUsersQuery = {}): Promise<AdminUser[]> {
@@ -51,6 +52,7 @@ export async function getAdminUsers(query: AdminUsersQuery = {}): Promise<AdminU
       lookup: query.lookup ?? '',
       take: query.take ?? 500,
       excludeGuest: query.excludeGuest ?? false,
+      role: query.role ?? '',
     },
   })
   return response.data

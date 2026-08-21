@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { watch } from 'vue'
 import { useSessionStore } from '@/stores/session'
+import { resolveDashboardLandingRoute } from '@/components/layout/menuHelper'
 import { i18n } from '@/i18n'
 
 const legacyLeafRoutes = [
@@ -28,6 +29,7 @@ const legacyLeafRoutes = [
   { path: '/admin/quotation/item', name: 'admin-quotation-item', titleKey: 'routes.adminQuotationItem' },
   { path: '/admin/fcm-console', name: 'admin-fcm-console', titleKey: 'routes.adminFcmConsole' },
   { path: '/settings/system-parameters', name: 'settings-system-parameters', titleKey: 'routes.settingsSystemParameters' },
+  { path: '/settings/rbac-editor', name: 'settings-rbac-editor', titleKey: 'routes.settingsRbacEditor' },
   { path: '/settings/system-monitor', name: 'settings-system-monitor', titleKey: 'routes.systemMonitor' },
   { path: '/billing/invoices', name: 'billing-invoices', titleKey: 'routes.billingInvoices' },
   { path: '/billing/statement', name: 'billing-statement', titleKey: 'routes.billingStatement' },
@@ -63,7 +65,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/dashboard',
+      redirect: () => resolveDashboardLandingRoute(useSessionStore().rbac),
     },
     {
       path: '/dashboard',
@@ -204,6 +206,8 @@ const router = createRouter({
           ? () => import('@/views/AdminQuotationItemView.vue')
         : route.path === '/settings/system-parameters'
           ? () => import('@/views/SettingsView.vue')
+        : route.path === '/settings/rbac-editor'
+          ? () => import('@/views/RbacEditorView.vue')
         : route.path === '/settings/system-monitor'
           ? () => import('@/views/SystemMonitorView.vue')
         : route.path === '/billing/invoices'
@@ -250,8 +254,12 @@ router.beforeEach(async (to) => {
   applyDocumentTitle(typeof to.meta.titleKey === 'string' ? to.meta.titleKey : undefined)
 
   const sessionStore = useSessionStore()
-  if (sessionStore.isAuthenticated && !sessionStore.profile) {
-    await sessionStore.bootstrapProfile()
+  if (sessionStore.isAuthenticated) {
+    if (!sessionStore.profile) {
+      await sessionStore.bootstrapProfile()
+    } else if (!sessionStore.rbac) {
+      await sessionStore.loadRbac()
+    }
   }
 
   if (to.meta.requiresAuth && !sessionStore.isAuthenticated) {
@@ -260,6 +268,14 @@ router.beforeEach(async (to) => {
 
   if (to.name === 'login' && sessionStore.isAuthenticated) {
     return { name: 'dashboard' }
+  }
+
+  // Land on the dashboard variant the user is actually allowed to see.
+  if (to.name === 'dashboard') {
+    const landing = resolveDashboardLandingRoute(sessionStore.rbac)
+    if (landing !== '/dashboard') {
+      return landing
+    }
   }
 
   // Role checking

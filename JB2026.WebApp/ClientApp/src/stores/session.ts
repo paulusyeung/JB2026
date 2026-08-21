@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import { getCurrentUser, signIn, revokeToken } from '@/services/auth'
+import { getEffectiveRbac } from '@/services/rbac'
 import type { TokenResponse, UserProfile } from '@/types/api'
 
 const SESSION_STORAGE_KEY = 'jb2026.sessionProfile'
@@ -12,6 +13,7 @@ export const useSessionStore = defineStore('session', () => {
   const accessToken = ref(localStorage.getItem(TOKEN_STORAGE_KEY) ?? '')
   const refreshToken = ref(localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
   const profile = ref<UserProfile | null>(readStoredProfile())
+  const rbac = ref<Record<string, boolean> | null>(null)
   const loading = ref(false)
   const errorKey = ref('')
 
@@ -24,6 +26,7 @@ export const useSessionStore = defineStore('session', () => {
     try {
       const response = await signIn(username, password, keepMeSignedIn)
       applyTokenResponse(response)
+      await loadRbac()
       return response
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -45,6 +48,7 @@ export const useSessionStore = defineStore('session', () => {
   async function bootstrapProfile() {
     if (!isAuthenticated.value) {
       profile.value = null
+      rbac.value = null
       return null
     }
 
@@ -52,10 +56,21 @@ export const useSessionStore = defineStore('session', () => {
       const currentUser = await getCurrentUser()
       profile.value = currentUser
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(currentUser))
+      await loadRbac()
       return currentUser
     } catch {
       logout()
       return null
+    }
+  }
+
+  async function loadRbac() {
+    try {
+      const response = await getEffectiveRbac()
+      rbac.value = response.values
+    } catch {
+      // If RBAC cannot be resolved, fall back to showing everything.
+      rbac.value = null
     }
   }
 
@@ -90,6 +105,7 @@ export const useSessionStore = defineStore('session', () => {
     accessToken.value = ''
     refreshToken.value = ''
     profile.value = null
+    rbac.value = null
     errorKey.value = ''
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
@@ -100,10 +116,12 @@ export const useSessionStore = defineStore('session', () => {
     accessToken,
     refreshToken,
     profile,
+    rbac,
     loading,
     errorKey,
     isAuthenticated,
     bootstrapProfile,
+    loadRbac,
     login,
     loginWithDevelopmentDefaults,
     logout,

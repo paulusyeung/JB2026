@@ -37,6 +37,7 @@ public sealed class AdminController : ControllerBase
         [FromQuery] string? lookup,
         [FromQuery] int take = 500,
         [FromQuery] bool excludeGuest = false,
+        [FromQuery] string? role = null,
         CancellationToken cancellationToken = default)
     {
         if (take is <= 0 or > 1000)
@@ -55,6 +56,12 @@ public sealed class AdminController : ControllerBase
             query = query.Where(user => user.UserRole != 0);
         }
 
+        var roleFilter = MapRoleNameToId(role);
+        if (roleFilter.HasValue)
+        {
+            query = query.Where(user => user.UserRole == roleFilter.Value);
+        }
+
         if (!string.IsNullOrWhiteSpace(normalizedLookup))
         {
             query = query.Where(user =>
@@ -62,9 +69,13 @@ public sealed class AdminController : ControllerBase
                 (user.UserAlias ?? string.Empty).Contains(normalizedLookup));
         }
 
-        var rawData = await query
-            .OrderBy(user => user.UserAlias)
-            .Take(take)
+        // When a specific role is requested (e.g. the RBAC editor) we return the
+        // complete membership of that role instead of capping at `take`, since the
+        // role filter already bounds the result and the CRM email check is skipped.
+        var orderedQuery = query.OrderBy(user => user.UserAlias);
+        var resultsQuery = roleFilter.HasValue ? orderedQuery : orderedQuery.Take(take);
+
+        var rawData = await resultsQuery
             .SelectMany(
                 v => readContext.UserInfos
                     .AsNoTracking()
@@ -95,7 +106,10 @@ public sealed class AdminController : ControllerBase
                 .ContinueWith(t => (Email: u.Email, Exists: t.IsCompletedSuccessfully && t.Result), cancellationToken))
             .ToArray();
 
-        if (emailCheckTasks.Length > 0)
+        // The CRM email check is only meaningful for the full staff list. When a
+        // specific role is requested (e.g. the RBAC editor) we skip it to avoid
+        // scaling the per-user external call with the result set.
+        if (roleFilter is null && emailCheckTasks.Length > 0)
         {
             var results = await Task.WhenAll(emailCheckTasks);
             var emailExistsMap = results
@@ -338,6 +352,24 @@ public sealed class AdminController : ControllerBase
             3 => "Manager",
             4 => "Admin",
             _ => role.ToString(),
+        };
+    }
+
+    private static int? MapRoleNameToId(string? role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            return null;
+        }
+
+        return role.Trim().ToLowerInvariant() switch
+        {
+            "guest" => 0,
+            "operator" => 1,
+            "supervisor" => 2,
+            "manager" => 3,
+            "admin" => 4,
+            _ => null,
         };
     }
 

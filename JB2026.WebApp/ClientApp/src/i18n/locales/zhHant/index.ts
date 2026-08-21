@@ -26,6 +26,7 @@ import { crmMessages } from './crm'
 import { customer360Messages } from './customer360'
 import { visualizationMessages } from './visualization'
 import { systemMonitorMessages } from './systemMonitor'
+import { rbacEditorMessages } from './rbacEditor'
 
 export const zhHantMessages = {
   app: appMessages,
@@ -56,4 +57,5 @@ export const zhHantMessages = {
   customer360: customer360Messages,
   visualization: visualizationMessages,
   systemMonitor: systemMonitorMessages,
+  rbacEditor: rbacEditorMessages,
 } as const

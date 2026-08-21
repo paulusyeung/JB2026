@@ -132,6 +132,7 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddScoped<IUserInfoStoredProcedureGateway, UserInfoStoredProcedureGateway>();
 	builder.Services.AddScoped<ISystemInfoStoredProcedureGateway, SystemInfoStoredProcedureGateway>();
 	builder.Services.AddScoped<ISettingsService, SystemInfoSettingsService>();
+	builder.Services.AddScoped<IRbacService, RbacService>();
 	builder.Services.AddScoped<AISummaryService>();
 	builder.Services.AddScoped<CustomerSummaryService>();
 }

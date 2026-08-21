@@ -41,6 +41,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
+import { resolveDashboardLandingRoute } from '@/components/layout/menuHelper'
 
 const router = useRouter()
 const route = useRoute()
@@ -54,6 +55,6 @@ const keepMeSignedIn = ref(false)
 
 async function handleSubmit() {
   await session.login(username.value, password.value, keepMeSignedIn.value)
-  await router.replace(String(route.query.redirect ?? '/dashboard'))
+  await router.replace(String(route.query.redirect ?? resolveDashboardLandingRoute(session.rbac)))
 }
 </script>

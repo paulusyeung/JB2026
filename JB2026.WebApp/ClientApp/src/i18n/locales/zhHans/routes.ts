@@ -53,6 +53,7 @@ export const routesMessages = {
       public: '公共',
       settings: '设置',
   settingsSystemParameters: '系统参数',
+  settingsRbacEditor: 'RBAC 编辑器',
       systemMonitor: '系统监控',
       help: '帮助',
     } as const
