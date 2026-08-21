@@ -44,7 +44,7 @@
                 <v-btn
                   v-bind="tooltipProps"
                   icon="mdi-pencil"
-                  variant="text"
+                  variant="tonal"
                   color="primary"
                   :disabled="!selectedRole"
                   :loading="loading && mode === 'group'"
@@ -79,7 +79,7 @@
                 <v-btn
                   v-bind="tooltipProps"
                   icon="mdi-pencil"
-                  variant="text"
+                  variant="tonal"
                   color="primary"
                   :disabled="!selectedUserId"
                   :loading="loading && mode === 'user'"
