@@ -347,9 +347,29 @@ async function editUserRbac() {
   savedMessage.value = ''
 
   try {
-    const response = await getUserRbac(selectedUserId.value)
+    const userRbac = await getUserRbac(selectedUserId.value)
+    const hasUserValues = hasAnyEnabled(userRbac.values)
+
+    if (hasUserValues) {
+      mode.value = 'user'
+      selectedIds.value = applyStoredValues(treeItems.value, userRbac.values)
+      return
+    }
+
+    let values = userRbac.values
+    if (selectedRole.value) {
+      try {
+        const groupRbac = await getGroupRbac(selectedRole.value)
+        if (hasAnyEnabled(groupRbac.values)) {
+          values = groupRbac.values
+        }
+      } catch {
+        values = userRbac.values
+      }
+    }
+
     mode.value = 'user'
-    selectedIds.value = applyStoredValues(treeItems.value, response.values)
+    selectedIds.value = applyStoredValues(treeItems.value, values)
   } catch {
     errorMessage.value = t('rbacEditor.messages.loadFailed')
   } finally {
@@ -421,6 +441,10 @@ function findFirstLeafId(nodes: RbacTreeNode[]): string | undefined {
   }
 
   return undefined
+}
+
+function hasAnyEnabled(values: Record<string, boolean>): boolean {
+  return Object.values(values ?? {}).some((value) => value === true)
 }
 
 function applyStoredValues(nodes: RbacTreeNode[], values: Record<string, boolean>): string[] {
