@@ -49,7 +49,7 @@
           class="topbar-locale"
           @update:model-value="handleLocaleChange"
         />
-        <div class="text-right topbar-identity" v-if="session.profile" @click="openProfileEditor">
+        <div class="text-left topbar-identity" v-if="session.profile" @click="openProfileEditor">
           <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
           <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
         </div>

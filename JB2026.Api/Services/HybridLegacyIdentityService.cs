@@ -1,5 +1,6 @@
 using System.Globalization;
 using JB2026.Api.Options;
+using JB2026.DataAccess;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
@@ -120,7 +121,8 @@ public sealed class HybridLegacyIdentityService : ILegacyIdentityService
             Username = username,
             Password = user.UserPassword ?? string.Empty,
             DisplayName = string.IsNullOrWhiteSpace(user.UserAlias) ? username : user.UserAlias,
-            Role = user.UserRole.ToString(CultureInfo.InvariantCulture)
+            Role = Enum.GetName(typeof(JB2026.DataAccess.Common.Enums.UserRole), user.UserRole)
+                   ?? user.UserRole.ToString(CultureInfo.InvariantCulture)
         };
     }
 }
