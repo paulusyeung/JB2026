@@ -9,7 +9,7 @@
       <v-card-title class="d-flex align-center ga-2">
         <div class="text-h6">{{ t('jobForm.dialogs.printManager.title') }}</div>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" :disabled="printing" @click="closeDialog" />
+        <v-btn icon="mdi-close" variant="tonal" :disabled="printing" @click="closeDialog" />
       </v-card-title>
 
       <v-divider />

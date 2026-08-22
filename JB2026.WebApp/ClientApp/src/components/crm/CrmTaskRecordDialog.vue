@@ -10,7 +10,7 @@
         </p>
       </div>
       <v-spacer />
-      <v-btn variant="text" icon="mdi-close" @click="emit('cancel')" />
+      <v-btn variant="tonal" icon="mdi-close" @click="emit('cancel')" />
     </v-card-title>
 
     <v-card-text class="pt-2">

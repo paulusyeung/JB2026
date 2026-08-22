@@ -13,7 +13,7 @@
         </div>
         <v-chip size="small" color="primary" variant="tonal">{{ isEditMode ? t('stock.record.modeEdit') : t('stock.record.modeCreate') }}</v-chip>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="closeDialog" />
+        <v-btn icon="mdi-close" variant="tonal" @click="closeDialog" />
       </v-card-title>
 
       <v-divider />

@@ -11,7 +11,7 @@
         <span class="text-h6">{{ t('billing.statement.dialog.title') }}</span>
         <v-spacer />
         <v-btn
-          variant="text"
+          variant="tonal"
           icon="mdi-close"
           size="small"
           :aria-label="t('billing.statement.dialog.actions.close')"

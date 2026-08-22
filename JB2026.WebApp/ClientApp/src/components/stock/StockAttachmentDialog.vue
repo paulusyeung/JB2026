@@ -10,7 +10,7 @@
         <div class="text-h6">{{ t('stock.attachments.title') }}</div>
         <v-chip size="small" color="primary" variant="tonal">{{ stockNumber || '-' }}</v-chip>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="closeDialog" />
+        <v-btn icon="mdi-close" variant="tonal" @click="closeDialog" />
       </v-card-title>
 
       <v-divider />

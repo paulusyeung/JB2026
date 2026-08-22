@@ -7,7 +7,7 @@
         <p class="text-body-2 text-medium-emphasis mb-0">{{ userEmail }}</p>
       </div>
       <v-spacer />
-      <v-btn variant="text" icon="mdi-close" @click="emit('cancel')" />
+      <v-btn variant="tonal" icon="mdi-close" @click="emit('cancel')" />
     </v-card-title>
 
     <v-card-text class="pt-2">

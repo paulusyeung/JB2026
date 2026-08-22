@@ -12,7 +12,7 @@
         <span class="text-h6">{{ dialogTitle }}</span>
         <v-chip size="small" variant="tonal" :color="modeBadgeColor" class="ml-1">{{ modeBadge }}</v-chip>
         <v-spacer />
-        <v-btn variant="text" icon="mdi-close" size="small" @click="close" />
+        <v-btn variant="tonal" icon="mdi-close" size="small" @click="close" />
       </v-card-title>
 
       <v-divider />
