@@ -245,7 +245,13 @@
             </template>
 
             <template #[`item.stockNumber`]="{ item }">
-              {{ formatStockNumber(item.stockNumber) }}
+              <a
+                href="javascript:void(0)"
+                class="stock-number-link"
+                @click.stop="openEditDialog(item.productId)"
+              >
+                {{ formatStockNumber(item.stockNumber) }}
+              </a>
             </template>
 
             <template #[`item.attachment`]="{ item }">
@@ -537,7 +543,7 @@ function onRowClick(_event: Event, payload: unknown) {
     return
   }
 
-  openEditDialog(productId)
+  toggleSelected(productId)
 }
 
 async function onDialogSaved() {
@@ -783,6 +789,17 @@ function exportToCsv() {
 
 .stock-table :deep(tbody td) {
   font-size: 12px;
+}
+
+.stock-number-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.stock-number-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 960px) {
