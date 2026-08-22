@@ -293,6 +293,15 @@ router.beforeEach(async (to) => {
     }
   }
 
+  // Fine-grained RBAC enforcement. Mirror the fail-open behavior used by
+  // filterMenuByAccess in the sidebar: a route is denied only when its path
+  // is explicitly set to false. A missing key (or no RBAC loaded) means
+  // "no restriction", so new/unmapped routes remain accessible.
+  const rbac = sessionStore.rbac
+  if (rbac && rbac[to.path] === false) {
+    return { name: 'dashboard' }
+  }
+
   return true
 })
 
