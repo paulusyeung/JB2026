@@ -8,7 +8,7 @@
             {{ mode === 'create' ? t('jobOrder.record.createSubtitle') : t('jobOrder.record.subtitle', { order: order?.orderNumber }) }}
           </p>
         </div>
-        <v-btn icon="mdi-close" size="small" variant="text" @click="emit('cancel')" />
+        <v-btn icon="mdi-close" size="small" variant="tonal" @click="emit('cancel')" />
       </div>
     </v-card-title>
 
