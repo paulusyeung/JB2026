@@ -42,7 +42,7 @@ export function useLocaleFormatters() {
   }
 
   function formatCurrency(value: number, currency = 'USD'): string {
-    return formatNumber(value, { style: 'currency', currency })
+    return formatNumber(value, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' })
   }
 
   return {

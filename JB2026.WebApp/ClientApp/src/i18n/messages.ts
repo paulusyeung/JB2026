@@ -1,6 +1,7 @@
 import { enMessages } from './locales/en'
 import { zhHansMessages } from './locales/zhHans'
 import { zhHantMessages } from './locales/zhHant'
+import { en as enVuetify, zhHans as zhHansVuetify, zhHant as zhHantVuetify } from 'vuetify/locale'
 
 export const localeStorageKey = 'jb2026.locale'
 
@@ -20,7 +21,7 @@ export const localeOptions: LocaleOption[] = [
 ]
 
 export const messages = {
-  en: enMessages,
-  'zh-Hans': zhHansMessages,
-  'zh-Hant': zhHantMessages,
-} as const
+  en: { ...enMessages, $vuetify: enVuetify },
+  'zh-Hans': { ...zhHansMessages, $vuetify: zhHansVuetify },
+  'zh-Hant': { ...zhHantMessages, $vuetify: zhHantVuetify },
+}
