@@ -58,7 +58,6 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
     {
       title: t('routes.billing'),
       icon: 'mdi-cash-multiple',
-      roles: ['Admin'],
       children: [
         { title: t('routes.billingInvoices'), to: '/billing/invoices', icon: 'mdi-receipt-text-check-outline' },
         { title: t('routes.billingStatement'), to: '/billing/statement', icon: 'mdi-file-document-outline' },
@@ -82,7 +81,6 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
     {
       title: t('routes.admin'),
       icon: 'mdi-shield-account-outline',
-      roles: ['Admin'],
       children: [
         // { title: t('routes.adminWorkflow'), to: '/admin/workflow', icon: 'mdi-source-branch' },
         // { title: t('routes.adminWorkflowForms'), to: '/admin/workflow-forms', icon: 'mdi-file-tree-outline' },
@@ -104,7 +102,6 @@ export function buildLegacyMenuItems(t: ComposerTranslation, userRole: string | 
     {
       title: t('routes.settings'),
       icon: 'mdi-cog-outline',
-      roles: ['Admin'],
       children: [
         { title: t('routes.systemMonitor'), to: '/settings/system-monitor', icon: 'mdi-monitor-dashboard' },
         { title: t('routes.settingsSystemParameters'), to: '/settings/system-parameters', icon: 'mdi-tune-vertical-variant' },

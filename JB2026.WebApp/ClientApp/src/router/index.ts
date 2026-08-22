@@ -137,7 +137,7 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/AdminView.vue'),
-      meta: { requiresAuth: true, titleKey: 'routes.admin', roles: ['Admin'] },
+      meta: { requiresAuth: true, titleKey: 'routes.admin' },
     },
     {
       path: '/public',
@@ -149,7 +149,7 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),
-      meta: { requiresAuth: true, titleKey: 'routes.settings', roles: ['Admin'] },
+      meta: { requiresAuth: true, titleKey: 'routes.settings' },
     },
     {
       path: '/help',
@@ -240,7 +240,6 @@ const router = createRouter({
       meta: { 
         requiresAuth: true, 
         titleKey: route.titleKey,
-        roles: route.path.startsWith('/admin') || route.path.startsWith('/settings') || route.path.startsWith('/billing') ? ['Admin'] : undefined
       },
     })),
     {
