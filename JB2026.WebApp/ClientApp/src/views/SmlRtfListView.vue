@@ -179,6 +179,8 @@
           fixed-header
           height="100%"
           class="invoice-list-table sml-rtf-list-table"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @update:expanded="onExpandedChange"
         >
           <template #item.expander="{ item }">
@@ -264,6 +266,7 @@ const {
   sortDirection,
   checkboxMode,
   viewMode,
+  itemsPerPage,
 } = useViewSettings('smlrtflist', {
   visibleColumns: [
     'expander',
@@ -284,6 +287,7 @@ const {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 
 const commonQueryItems = computed(() => [

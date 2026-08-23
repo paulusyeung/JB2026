@@ -202,6 +202,8 @@
           fixed-header
           height="100%"
           class="billing-invoices-table"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onRowClick"
         >
           <template #[`item.invoiceNumber`]="{ item }">
@@ -300,12 +302,14 @@ const viewSettings = useViewSettings('billing-invoices', {
   sortDirection: 'desc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
+const itemsPerPage = viewSettings.itemsPerPage
 
 const isCardView = computed(() => viewMode.value === 'card')
 

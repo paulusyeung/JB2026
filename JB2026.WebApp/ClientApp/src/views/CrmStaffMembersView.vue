@@ -184,6 +184,8 @@
           fixed-header
           height="100%"
           class="staff-members-table"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onDataRowClick"
         >
           <template #[`item.icon`]='{ item }'>
@@ -261,12 +263,14 @@ const viewSettings = useViewSettings('staff-members', {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
+const itemsPerPage = viewSettings.itemsPerPage
 const selectedUserIds = ref<string[]>([])
 const dialogOpen = ref(false)
 const editingUserId = ref<string | null>(null)

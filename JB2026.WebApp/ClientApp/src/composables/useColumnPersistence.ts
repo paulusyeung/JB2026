@@ -10,9 +10,11 @@ interface ViewSettings {
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
   viewMode?: 'detail' | 'card' | 'table'
+  itemsPerPage?: number
 }
 
 const SAVE_DEBOUNCE_MS = 500
+const DEFAULT_ITEMS_PER_PAGE = 10
 
 /**
  * Composable to persist view settings with a local-first migration path.
@@ -31,6 +33,7 @@ export function useViewSettings(viewId: string, defaults: {
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
   viewMode?: 'detail' | 'card' | 'table'
+  itemsPerPage?: number
 }) {
   const storageKey = `${STORAGE_PREFIX}${viewId}`
   const objectId = getViewObjectId(viewId)
@@ -41,6 +44,7 @@ export function useViewSettings(viewId: string, defaults: {
   const sortDirection = ref<'asc' | 'desc' | undefined>(defaults.sortDirection)
   const checkboxMode = ref<boolean | undefined>(defaults.checkboxMode)
   const viewMode = ref<'detail' | 'card' | 'table' | undefined>(defaults.viewMode)
+  const itemsPerPage = ref<number | undefined>(defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE)
 
   function parseSettings(raw: string | null): ViewSettings | null {
     if (!raw) {
@@ -57,6 +61,7 @@ export function useViewSettings(viewId: string, defaults: {
         sortDirection: parsed.sortDirection ?? defaults.sortDirection,
         checkboxMode: parsed.checkboxMode ?? defaults.checkboxMode,
         viewMode: parsed.viewMode ?? defaults.viewMode,
+        itemsPerPage: parsed.itemsPerPage ?? defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
       }
     } catch {
       return null
@@ -76,6 +81,7 @@ export function useViewSettings(viewId: string, defaults: {
       sortDirection: defaults.sortDirection,
       checkboxMode: defaults.checkboxMode,
       viewMode: defaults.viewMode,
+      itemsPerPage: defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
     }
   }
 
@@ -89,6 +95,7 @@ export function useViewSettings(viewId: string, defaults: {
     sortDirection.value = settings.sortDirection
     checkboxMode.value = settings.checkboxMode
     viewMode.value = settings.viewMode
+    itemsPerPage.value = settings.itemsPerPage
   }
 
   async function loadFromServerAndOverlay() {
@@ -139,7 +146,7 @@ export function useViewSettings(viewId: string, defaults: {
 
   // Watch for changes and save
   watch(
-    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode],
+    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage],
     () => {
       const settings: ViewSettings = {
         visibleColumns: visibleColumns.value,
@@ -147,6 +154,7 @@ export function useViewSettings(viewId: string, defaults: {
         sortDirection: sortDirection.value,
         checkboxMode: checkboxMode.value,
         viewMode: viewMode.value,
+        itemsPerPage: itemsPerPage.value,
       }
 
       saveToLocalStorage(settings)
@@ -155,5 +163,5 @@ export function useViewSettings(viewId: string, defaults: {
     { deep: true }
   )
 
-  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode }
+  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage }
 }

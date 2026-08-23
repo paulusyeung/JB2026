@@ -145,6 +145,8 @@
           fixed-header
           height="100%"
           class="exceptional-list-table"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[10, 15, 20, 25, 50, -1]"
         >
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
           <template #[`item.orderNumber`]="{ item }">
@@ -256,6 +258,7 @@ const {
   sortDirection,
   checkboxMode,
   viewMode,
+  itemsPerPage,
 } = useViewSettings('exceptional-report', {
   visibleColumns: [
     'ln',
@@ -278,6 +281,7 @@ const {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()

@@ -201,6 +201,8 @@
           fixed-header
           height="100%"
           class="tasks-table"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[10, 15, 20, 25, 50, -1]"
         >
           <template #[`item.title`]='{ item }'>
             <a class="text-body-2 text-primary text-decoration-none cursor-pointer" @click.stop="openPopup(item.id)">{{ item.title }}</a>
@@ -298,12 +300,14 @@ const viewSettings = useViewSettings('crm-tasks', {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
+const itemsPerPage = viewSettings.itemsPerPage
 const selectedIds = ref<string[]>([])
 const dialogOpen = ref(false)
 const editingTaskId = ref<string | null>(null)

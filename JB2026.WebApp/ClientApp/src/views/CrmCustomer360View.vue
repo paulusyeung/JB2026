@@ -366,6 +366,8 @@
                   density="compact"
                   fixed-header
                   height="45vh"
+                  v-model:items-per-page="joItemsPerPage"
+                  :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="job-orders-table"
                   @click:row="onJoRowClick"
                 >
@@ -678,6 +680,8 @@
                   density="compact"
                   fixed-header
                   height="45vh"
+                  v-model:items-per-page="invItemsPerPage"
+                  :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="invoices-table"
                   @click:row="onInvRowClick"
                 >
@@ -904,6 +908,8 @@
                   density="compact"
                   fixed-header
                   height="45vh"
+                  v-model:items-per-page="oppItemsPerPage"
+                  :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="opportunities-table"
                 >
                   <template #[`item.name`]='{ item }'>
@@ -1150,6 +1156,8 @@
                   density="compact"
                   fixed-header
                   height="45vh"
+                  v-model:items-per-page="taskItemsPerPage"
+                  :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="tasks-table"
                 >
                   <template #[`item.title`]='{ item }'>
@@ -1397,6 +1405,8 @@
                   density="compact"
                   fixed-header
                   height="45vh"
+                  v-model:items-per-page="filesItemsPerPage"
+                  :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="files-table"
                 >
                   <template #[`item.archiveSerialNumber`]="{ value }">
@@ -1633,6 +1643,8 @@
                   density="compact"
                   fixed-header
                   height="45vh"
+                  v-model:items-per-page="emailItemsPerPage"
+                  :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="emails-table"
                   @click:row="onEmailRowClick"
                 >
@@ -2099,12 +2111,14 @@ const oppViewSettings = useViewSettings('crm-customer360-opportunities', {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const oppVisibleColumnKeys = oppViewSettings.visibleColumns
 const oppSortKey = oppViewSettings.sortKey
 const oppSortDirection = oppViewSettings.sortDirection
 const oppCheckboxMode = oppViewSettings.checkboxMode
 const oppViewMode = oppViewSettings.viewMode
+const oppItemsPerPage = oppViewSettings.itemsPerPage
 
 const { isPhoneLayout, isColumnVisible: oppIsColumnVisible } = useResponsiveList()
 const { format: oppFormat } = useGlobalDateFormatter()
@@ -2293,12 +2307,14 @@ const taskViewSettings = useViewSettings('crm-customer360-tasks', {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const taskVisibleColumnKeys = taskViewSettings.visibleColumns
 const taskSortKey = taskViewSettings.sortKey
 const taskSortDirection = taskViewSettings.sortDirection
 const taskCheckboxMode = taskViewSettings.checkboxMode
 const taskViewMode = taskViewSettings.viewMode
+const taskItemsPerPage = taskViewSettings.itemsPerPage
 
 const { format: taskFormat } = useGlobalDateFormatter()
 
@@ -2497,12 +2513,14 @@ const joViewSettings = useViewSettings('crm-customer360-job-orders', {
   sortDirection: 'desc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const joVisibleColumnKeys = joViewSettings.visibleColumns
 const joSortKey = joViewSettings.sortKey
 const joSortDirection = joViewSettings.sortDirection
 const joCheckboxMode = joViewSettings.checkboxMode
 const joViewMode = joViewSettings.viewMode
+const joItemsPerPage = joViewSettings.itemsPerPage
 
 const isJoCardView = computed(() => joViewMode.value === 'card')
 const joCardLimit = ref(50)
@@ -2873,12 +2891,14 @@ const invViewSettings = useViewSettings('crm-customer360-invoices', {
   sortDirection: 'desc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const invVisibleColumnKeys = invViewSettings.visibleColumns
 const invSortKey = invViewSettings.sortKey
 const invSortDirection = invViewSettings.sortDirection
 const invCheckboxMode = invViewSettings.checkboxMode
 const invViewMode = invViewSettings.viewMode
+const invItemsPerPage = invViewSettings.itemsPerPage
 
 const { format: invFormat } = useGlobalDateFormatter()
 const { formatCurrency: invFormatCurrency } = useLocaleFormatters()
@@ -3181,12 +3201,14 @@ const filesViewSettings = useViewSettings('crm-customer360-files', {
   sortDirection: 'desc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const filesVisibleColumnKeys = filesViewSettings.visibleColumns
 const filesSortKey = filesViewSettings.sortKey
 const filesSortDirection = filesViewSettings.sortDirection
 const filesCheckboxMode = filesViewSettings.checkboxMode
 const filesViewMode = filesViewSettings.viewMode
+const filesItemsPerPage = filesViewSettings.itemsPerPage
 
 const isFilesCardView = computed(() => filesViewMode.value === 'card')
 const filesCardLimit = ref(50)
@@ -3302,12 +3324,14 @@ const emailViewSettings = useViewSettings('crm-customer360-emails', {
   sortDirection: 'desc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 const emailVisibleColumnKeys = emailViewSettings.visibleColumns
 const emailSortKey = emailViewSettings.sortKey
 const emailSortDirection = emailViewSettings.sortDirection
 const emailCheckboxMode = emailViewSettings.checkboxMode
 const emailViewMode = emailViewSettings.viewMode
+const emailItemsPerPage = emailViewSettings.itemsPerPage
 
 const { format: emailFormat } = useGlobalDateFormatter()
 

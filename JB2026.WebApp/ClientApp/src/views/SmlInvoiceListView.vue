@@ -173,6 +173,8 @@
           fixed-header
           item-value="headerId"
           height="100%"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           class="invoice-list-table sml-invoice-list-table"
         >
           <template #item.rowNumber="{ item }">{{ item.rowNumber ?? '-' }}</template>
@@ -219,6 +221,7 @@ const {
   sortDirection,
   checkboxMode,
   viewMode,
+  itemsPerPage,
 } = useViewSettings('smlinvoicelist', {
   visibleColumns: [
     'invoiceNumber',
@@ -234,6 +237,7 @@ const {
   sortDirection: 'asc',
   checkboxMode: false,
   viewMode: 'detail',
+  itemsPerPage: 10,
 })
 
 const commonQueryItems = computed(() => [
