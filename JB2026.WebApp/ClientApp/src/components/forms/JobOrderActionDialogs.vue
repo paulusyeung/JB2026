@@ -5,7 +5,7 @@
         <div class="text-h6">{{ t('jobForm.dialogs.attachmentsTitle') }}</div>
         <v-chip size="small" color="primary" variant="tonal">{{ job?.orderNumber || '-' }}</v-chip>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="tonal" @click="attachmentModel = false" />
+        <v-btn size="small" icon="mdi-close" variant="tonal" @click="attachmentModel = false" />
       </v-card-title>
 
       <v-divider />
@@ -144,7 +144,11 @@
 
   <v-dialog v-model="productDetailsModel" max-width="min(100%, 760px)" scrollable>
     <v-card>
-      <v-card-title>{{ t('jobForm.dialogs.productDetailsTitle') }}</v-card-title>
+      <v-card-title class="d-flex align-center ga-2 flex-wrap">
+        <div class="text-h6">{{ t('jobForm.dialogs.productDetailsTitle') }}</div>
+        <v-spacer />
+        <v-btn size="small" icon="mdi-close" variant="tonal" :disabled="savingProductDetails" @click="productDetailsModel = false" />
+      </v-card-title>
       <v-card-text>
         <v-alert type="info" variant="tonal" class="mb-3">
           {{ t('jobForm.dialogs.productDetailsHint') }}
@@ -174,7 +178,11 @@
 
   <v-dialog v-model="remarksModel" max-width="min(100%, 760px)" scrollable>
     <v-card>
-      <v-card-title>{{ t('jobForm.dialogs.remarksTitle') }}</v-card-title>
+      <v-card-title class="d-flex align-center ga-2 flex-wrap">
+        <div class="text-h6">{{ t('jobForm.dialogs.remarksTitle') }}</div>
+        <v-spacer />
+        <v-btn size="small" icon="mdi-close" variant="tonal" :disabled="savingRemarks" @click="remarksModel = false" />
+      </v-card-title>
       <v-card-text>
         <v-alert type="info" variant="tonal" class="mb-3">
           {{ t('jobForm.dialogs.remarksHint') }}
