@@ -5,7 +5,7 @@
         <div class="text-h6">{{ t('jobForm.dialogs.attachmentsTitle') }}</div>
         <v-chip size="small" color="primary" variant="tonal">{{ job?.orderNumber || '-' }}</v-chip>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="attachmentModel = false" />
+        <v-btn icon="mdi-close" variant="tonal" @click="attachmentModel = false" />
       </v-card-title>
 
       <v-divider />
