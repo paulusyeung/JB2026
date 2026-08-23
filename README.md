@@ -240,4 +240,97 @@ Tag and metadata policy:
 1. Disable the workflow in GitHub Actions or revert `.github/workflows/jb2026-api-docker.yml`
 2. Redeploy using a previously known-good image tag (prefer SHA or semver tag)
 3. Keep `latest` for non-production convenience only; use pinned tags for production rollbacks
+
+---
+
+## JB2026 Docker Hub images (backend + frontend)
+
+JB2026 ships as **two separate images** so the API and the Vue SPA can be
+deployed, scaled, and updated independently. The database is expected to live
+on a separate SQL Server — neither image bundles a database.
+
+| Image | Contents | Default port |
+| --- | --- | --- |
+| `<user>/jb2026-backend` | .NET 8 REST API (from `Dockerfile`) | `8080` |
+| `<user>/jb2026-frontend` | Vue 3 SPA served by Nginx (from `JB2026.WebApp/ClientApp/Dockerfile`) | `80` |
+
+### Build and publish
+
+Use the helper script, passing your Docker Hub username and an image tag:
+
+```bash
+./build_push_cmd.sh youruser v1.0.0     # publishes :v1.0.0 of both images
+# or
+./build_push_cmd.sh youruser            # publishes :latest of both images
+```
+
+This builds `jb2026-backend` and `jb2026-frontend`, then pushes both to
+Docker Hub. You must run `docker login` once before pushing.
+
+### Required runtime configuration
+
+- **Backend** needs a SQL Server connection string and a JWT signing key:
+  - `ConnectionStrings__Primary` (required) — points at your external SQL Server
+  - `Jwt__Key` (required) — at least 32 characters
+  - Optional: `Jwt__Issuer`, `Jwt__Audience`, `Cors__AllowedOrigins`,
+    `Billing__BaseUrl`, `TwentyCrm__BaseUrl`, `Ollama__BaseUrl`,
+    `PaperlessNgx__BaseUrl`
+- **Frontend** needs to know where the backend lives:
+  - `BACKEND_URL` (optional, defaults to `http://backend:8080`) — set this to
+    the reachable backend URL, e.g. `http://api.example.com:8080`
+
+### Example: run both images with `docker run`
+
+```bash
+# Backend — point at your external SQL Server
+docker run -d --name jb2026-backend -p 8080:8080 \
+  -e ConnectionStrings__Primary="Server=db.example.com,1433;Database=JB2026;User Id=jb2026;Password=ChangeMe;TrustServerCertificate=True" \
+  -e Jwt__Key="a-secure-random-key-thats-at-least-32-characters-long" \
+  youruser/jb2026-backend:v1.0.0
+
+# Frontend — tell Nginx where the backend is
+docker run -d --name jb2026-frontend -p 80:80 \
+  -e BACKEND_URL="http://host.docker.internal:8080" \
+  youruser/jb2026-frontend:v1.0.0
+```
+
+Replace `host.docker.internal` with the backend host reachable from the
+frontend container (a fixed IP, Docker service name, or ingress hostname).
+
+### Example: `docker-compose.yml` for published images
+
+```yaml
+services:
+  backend:
+    image: youruser/jb2026-backend:v1.0.0
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Primary=${DB_CONNECTION_STRING}
+      - Jwt__Key=${JWT_KEY}
+      - Cors__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost}
+    restart: unless-stopped
+
+  frontend:
+    image: youruser/jb2026-frontend:v1.0.0
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_URL=http://backend:8080   # service name when both run in compose
+    depends_on:
+      - backend
+    restart: unless-stopped
+```
+
+With this compose file the default `BACKEND_URL` (`http://backend:8080`)
+resolves via the compose network, so you can omit it entirely and just run
+`docker compose up -d`.
+
+### Notes
+
+- Pin production deployments to a semantic version tag (`v1.0.0`), not `latest`.
+- The backend refuses to start without `ConnectionStrings__Primary`.
+- `BACKEND_URL` is substituted into the Nginx config at container start; the
+  frontend image is otherwise identical regardless of backend location.
    

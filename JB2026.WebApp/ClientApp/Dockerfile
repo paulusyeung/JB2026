@@ -20,9 +20,12 @@ RUN pnpm run build
 # ---- Runtime stage -------------------------------------------------------
 FROM nginx:alpine AS runtime
 
-# Replace the default nginx server block with one that handles the /app/
-# base path and falls back to index.html for client-side routing.
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy the templated nginx config and a drop-in script that substitutes the
+# BACKEND_URL environment variable at container start. The official nginx
+# image runs everything in /docker-entrypoint.d/ before launching nginx.
+COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
+COPY docker-entrypoint.sh /docker-entrypoint.d/40-jb2026-backend-url.sh
+RUN chmod +x /docker-entrypoint.d/40-jb2026-backend-url.sh
 
 # Copy the built static assets from the build stage.
 COPY --from=build /app/wwwroot/app /usr/share/nginx/html/app
