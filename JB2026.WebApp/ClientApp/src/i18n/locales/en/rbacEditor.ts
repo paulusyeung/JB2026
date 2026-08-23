@@ -6,6 +6,7 @@ export const rbacEditorMessages = {
   editGroupRbac: 'Edit Group RBAC',
   editUserRbac: 'Edit User RBAC',
   toggleAll: 'Toggle All',
+  reset: 'Reset',
   save: 'Save',
   accessControl: 'Access Control',
   placeholderHint: 'Select a user role and click Edit Group RBAC, or pick a user and click Edit User RBAC.',

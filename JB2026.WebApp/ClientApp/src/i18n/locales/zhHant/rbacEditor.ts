@@ -6,6 +6,7 @@ export const rbacEditorMessages = {
   editGroupRbac: '編輯群組 RBAC',
   editUserRbac: '編輯使用者 RBAC',
   toggleAll: '全部切換',
+  reset: '重設',
   save: '儲存',
   accessControl: '存取控制',
   placeholderHint: '選擇使用者角色後點擊「編輯群組 RBAC」，或選擇使用者後點擊「編輯使用者 RBAC」。',

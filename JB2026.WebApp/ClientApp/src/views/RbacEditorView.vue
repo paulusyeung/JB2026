@@ -104,21 +104,23 @@
               class="text-body-2 text-medium-emphasis"
             >{{ editingLabel }}</span>
             <v-spacer />
-            <v-tooltip
-              :text="t('rbacEditor.toggleAll')"
-              location="top"
+            <v-btn
+              :prepend-icon="allSelected ? 'mdi-checkbox-marked-outline' : 'mdi-checkbox-blank-outline'"
+              variant="tonal"
+              color="primary"
+              :disabled="!mode"
+              @click="toggleAll"
             >
-              <template #activator="{ props: tooltipProps }">
-                <v-btn
-                  v-bind="tooltipProps"
-                  :icon="allSelected ? 'mdi-checkbox-marked-outline' : 'mdi-checkbox-blank-outline'"
-                  variant="text"
-                  color="primary"
-                  :disabled="!mode"
-                  @click="toggleAll"
-                />
-              </template>
-            </v-tooltip>
+              {{ t('rbacEditor.toggleAll') }}
+            </v-btn>
+            <v-btn
+              prepend-icon="mdi-refresh"
+              variant="tonal"
+              :disabled="!mode"
+              @click="resetRbac"
+            >
+              {{ t('rbacEditor.reset') }}
+            </v-btn>
             <v-btn
               color="primary"
               :loading="saving"
@@ -379,6 +381,17 @@ async function editUserRbac() {
 
 function toggleAll() {
   selectedIds.value = allSelected.value ? [] : [...allLeafIds.value]
+}
+
+async function resetRbac() {
+  errorMessage.value = ''
+  savedMessage.value = ''
+
+  if (mode.value === 'group' && selectedRole.value) {
+    await editGroupRbac()
+  } else if (mode.value === 'user' && selectedUserId.value) {
+    await editUserRbac()
+  }
 }
 
 async function save() {
