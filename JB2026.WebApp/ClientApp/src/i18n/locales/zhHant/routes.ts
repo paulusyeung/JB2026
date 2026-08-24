@@ -16,7 +16,7 @@ export const routesMessages = {
   jobOrderScheduleScheduled: '已排程',
   jobOrderScheduleCompleted: '已完成',
     jobOrderSchedulePacking: '包裝',
-  jobOrderSchedulePackingOnAir: '包裝 (OnAir)',
+  jobOrderSchedulePackingOnAir: '包裝 (進行中)',
       sml: 'SML',
   smlRtfList: 'RTF 列表',
   smlInvoiceList: '發票列表',

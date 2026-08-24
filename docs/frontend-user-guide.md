@@ -103,16 +103,151 @@ throughput) to support supervision and planning.
 
 ### 4.4 Job Schedule
 
-A schedule breakdown by workflow stage. Each sub-item is a focused view of jobs
-in that state:
+A breakdown of jobs by where they are in the production flow. It has five
+sub-views, each a focused list of jobs in one state:
 
-- **Pending** — jobs awaiting scheduling/start.
-- **Schedule** — jobs that are scheduled.
-- **Completed** — finished jobs.
+- **Pending** — jobs waiting to be scheduled or started.
+- **Schedule** — jobs that have been placed on a machine's schedule.
+- **Completed** — finished jobs (read-only history).
 - **Packing** — jobs in the packing stage.
-- **Packing (OnAir)** — packing jobs flagged as "on air" / in active dispatch.
+- **Packing (OnAir)** — packing jobs flagged as actively being dispatched.
 
-<!-- SCREENSHOT: Job Order > Job Schedule (e.g. Pending) -->
+Across these views you will see small **colored circle buttons** (the "status
+lights") and **bell buttons**. These are quick tags you click to show where a
+job stands:
+
+- The circles come in four colors — red, yellow, green, blue — representing the
+  stages of a workflow step (for example, not-started, in-progress, done, or a
+  special state). Your administrator defines what each color means for each
+  step. They are grouped as **@1**, **@2**, and **@3** (the three workflow
+  steps a job moves through).
+- The **red bell** and **yellow bell** mark a job as *urgent* (red = critical,
+  yellow = high priority) so it stands out on everyone's screen.
+
+> Most of these quick-tag buttons only work after you have **selected one or
+> more jobs** (turn on the bulk-select checkbox, then tick the jobs). The
+> buttons stay greyed out until something is selected.
+
+Clicking a job's **order number** (or its row/card) anywhere in these views
+opens that job's detail form, where you can edit it, change any workflow step,
+add remarks, attach files, and print.
+
+#### 4.4.1 Pending
+
+A list of jobs waiting to be scheduled.
+
+- **Search box + quick-filter dropdown + Search / Refresh** — find jobs by
+  order number or customer, or pick a preset filter (e.g. "this week") and
+  refresh the list.
+- **Standard toolbar** — show/hide **Columns**, **Sort** the list, turn on
+  **bulk-select** (checkbox), switch **View** (table or card), and **Export**
+  the list.
+- **@1 status lights** (selection required) — set the first workflow step for
+  the selected jobs.
+- **@2 status lights** (selection required) — set the second workflow step for
+  the selected jobs.
+- **Red / yellow urgency bells** (selection required) — flag the selected jobs
+  as critical / high priority.
+
+<!-- SCREENSHOT: Job Order > Job Schedule > Pending -->
+
+#### 4.4.2 Schedule (Scheduled)
+
+A two-panel planner: **Available** jobs on the left, **Scheduled** jobs on the
+right. You place jobs from Available onto a machine's schedule, arrange their
+running order, then save.
+
+**How to schedule jobs (walkthrough):**
+
+1. The left panel lists jobs not yet scheduled. Tick the jobs you want to
+   schedule (or turn on the bulk-select checkbox to grab several at once).
+2. Press one of the **machine buttons M1–M5** in the middle column to move the
+   selected jobs into the right panel and assign them to that machine.
+3. In the right panel, use the **action column** to put the jobs in running
+   order (top / up / down / bottom) and, if needed, reassign a job to a
+   different machine with its M1–M5 buttons.
+4. As work happens, tag progress with the **@1 / @2 status lights** and the
+   **urgency bells**, or press the **green check** to mark jobs **Completed**.
+5. Press **Save** to commit the schedule. Nothing is stored on the server until
+   you save — closing the screen without saving discards your changes.
+
+> **The machine filter does two jobs.** The **All / M1–M5** toggle at the top
+> both *filters* the right panel (so you only see one machine's scheduled jobs)
+> **and** acts as the target for the **→→ (move all)** button: jobs moved with
+> "move all" are assigned to whatever machine is selected in that filter (or M1
+> when "All" is chosen).
+
+> The **@1 / @2 circles and red / yellow bells** here are the same status lights
+> described in §4.4.1 (Pending) — only here they are applied to jobs that are
+> already on the schedule.
+
+- **Transfer buttons** (between the two panels):
+  - **Machine buttons M1–M5** — move the selected Available jobs into Scheduled
+    and assign them to that machine.
+  - **→→ (move all)** — move every Available job into Scheduled, assigned to the
+    machine currently chosen in the machine filter (or M1 if "All").
+  - **← (send back)** — move the selected Scheduled jobs back to Available.
+  - **←← (send all back)** — move every Scheduled job back to Available.
+  - **Minus button** — discard your unsaved changes and reload the lists.
+- **Scheduled-panel "light toolbar"** (selection required): @1 circles set the
+  first step, @2 circles set the second step, and the red / yellow bells mark
+  urgency — all applied to the checked Scheduled jobs.
+- **Action column** (on each Scheduled job):
+  - **Move to top / up / down / bottom** — reorder the selected Scheduled jobs
+    to set the running sequence.
+  - **Machine buttons M1–M5** — change which machine the selected Scheduled
+    jobs are assigned to.
+  - **Green check** — mark the selected Scheduled jobs as **Completed** (they
+    leave the schedule and are saved as finished).
+- **Top toolbar** — **Save** (commit the schedule you built), a **machine
+  filter** toggle (All / M1–M5), and **Refresh**.
+- **On a phone** — an **Available** button opens the available list as a sheet,
+  and an **Update Status** button opens a sheet to set the workflow lights and
+  urgency.
+
+<!-- SCREENSHOT: Job Order > Job Schedule > Schedule (Scheduled) -->
+
+#### 4.4.3 Packing
+
+A list of jobs in the packing stage.
+
+- **Search box + quick-filter dropdown + Search / Refresh** — locate packing
+  jobs and refresh.
+- **Standard toolbar** — **Columns**, **Sort** (ascending / descending),
+  **bulk-select** checkbox, **View** mode (Detail table or Card), and
+  **Export to CSV** (download the current list).
+- **@1 status lights** (selection required) — set the first workflow step for
+  the selected packing jobs. (The @2 and @3 steps show as read-only tags here;
+  open the job to change them.)
+- Clicking a row / order number / card opens the job's detail form.
+
+<!-- SCREENSHOT: Job Order > Job Schedule > Packing -->
+
+#### 4.4.4 Packing (OnAir)
+
+A two-list dispatcher for packing that is actively being sent out.
+
+- **Two lists** — **Available** (not yet on-air) on the left and **Selected**
+  (the on-air packing queue) on the right.
+- **Move buttons** (between the lists):
+  - **→** move the selected Available jobs into Selected.
+  - **→→** move all Available jobs into Selected.
+  - **←** move the selected Selected jobs back to Available.
+  - **←←** move all Selected jobs back to Available.
+- **Reorder buttons** (on the Selected list) — move the selected jobs to the
+  **top / up / down / bottom** to arrange the packing sequence.
+- **Green check** — mark the selected jobs as **Completed**.
+- **Save** — commit the on-air packing queue.
+- Clicking an order number opens its detail form.
+
+<!-- SCREENSHOT: Job Order > Job Schedule > Packing (OnAir) -->
+
+#### 4.4.5 Completed
+
+A read-only list of finished jobs, with the standard list toolbar (search,
+show/hide columns, sort, bulk-select, export) for reviewing history.
+
+<!-- SCREENSHOT: Job Order > Job Schedule > Completed -->
 
 ### 4.5 Reports
 
@@ -166,11 +301,69 @@ financial oversight.
 
 ### 6.4 Clients
 
-Lists billing clients (from Invoice Ninja). Shows sync status for each client
-and provides access to client records. Use the client record dialog to
-**Migrate** (create) or **Update** a client in Invoice Ninja when needed.
+A read-only list of **billing clients sourced from Invoice Ninja**. Use it to
+browse clients, see their outstanding balance, and open a client's record to
+view or link it to a JB2026 customer.
 
-<!-- SCREENSHOT: Billing > Clients -->
+- **Filter bar:** a lookup box plus **Search** (and Enter-to-search).
+- **Toolbar:** Columns, Sort, Checkbox (bulk-select), View mode (Detail table /
+  Card), and a primary **+ New Client** button. On phones these collapse into a
+  "More" menu.
+- **Columns:** an icon, a row number `#`, **Client Name** (a link), **Client
+  Code**, **External Client ID** (the Invoice Ninja ID), and **Outstanding
+  Balance** (formatted as a currency amount).
+- **Card / mobile view:** shows the name, code, external ID, and balance.
+- **Open a record:** click the client name (or a row) to open the **client
+  record dialog**. The screen tries to find the matching JB2026 customer (by
+  Invoice Ninja client ID, then by name) and, if found, lets you **Migrate**
+  (create) or **Update** that client in Invoice Ninja. After a save the list
+  reloads and a success message appears.
+- **+ New Client:** opens the **New Client** dialog to push a JB2026 customer
+  into Invoice Ninja as a client (detailed below).
+
+#### Inside the "+ New Client" dialog
+
+Despite the label, **"+ New Client" does not let you type a free-form client**.
+It opens the *New Client* dialog whose real purpose is to **migrate an existing
+JB2026 customer into Invoice Ninja as a client** — the client's data always
+originates from a JB2026 customer record.
+
+How it works:
+
+1. **Migrate Customer panel (top).** An autocomplete labeled *"Select a JB2026
+   customer to migrate"*. Typing searches JB2026 customers (debounced); each
+   option shows a connection icon that is colored when that customer is already
+   linked to an Invoice Ninja client.
+2. **Read-only customer summary.** Once a customer is selected, the dialog loads
+   its record and shows *Customer Name*, *Customer Code*, *Group* (resolved from
+   the billing group list), *Bill To*, and *Ship To* addresses. These fields are
+   **read-only** here.
+3. **Migration Readiness checklist.** Verifies three required fields exist on the
+   JB2026 customer: **Customer name**, **Customer code**, and **Bill To address**.
+   Each shows a green check (present) or red alert (missing).
+4. **Already-synced behavior.** If the chosen customer is already synced (status
+   "success" with an Invoice Ninja client ID), an info notice appears and the
+   action button switches from **Migrate** (cloud-upload icon) to **Update**
+   (cloud-sync icon) — updating the existing Invoice Ninja client rather than
+   creating a new one.
+5. **Edit Customer.** If required data is missing, a pencil **Edit Customer**
+   button opens the Admin Customer record dialog so you can complete the
+   customer, then return. All data fixes happen there, not in this dialog.
+6. **Migrate / Update** (primary button) is enabled only when a customer is
+   selected **and** all readiness checks pass. It calls the sync service, which
+   **creates** (`POST /clients`) or **updates** (`PUT /clients/{id}`) the client
+   in Invoice Ninja, mapping name → `name`, code → `id_number`, Bill To / Ship To
+   → custom fields, and group → `group_settings_id`. On success the list reloads
+   and a "Customer synced to Invoice Ninja successfully." message appears.
+
+> Important: a client that is **not** backed by a JB2026 customer cannot be
+> created from this screen — the integration is customer-driven. To simply view
+> an already-synced client, open it from the list instead (which uses the same
+> dialog in *Client Record* mode, pre-filled from the matched customer).
+
+<!-- SCREENSHOT: Billing > Clients (list with toolbar) -->
+<!-- SCREENSHOT: Billing > Clients (New Client / Migrate Customer dialog) -->
+<!-- SCREENSHOT: Billing > Clients (Migrate readiness checklist + Edit Customer) -->
 
 ---
 
@@ -197,12 +390,69 @@ is for viewing, not for linking/syncing (linking is done from **Companies**).
 
 ### 7.3 Companies
 
-The companies list in Twenty CRM. Create a **New Company** (pushed to Twenty
-CRM), edit existing companies, and — when creating — optionally **Migrate
-Customer** to link a JB2026 customer (which flags it as synced). Synced
-companies show a green link icon.
+The list of **companies in Twenty CRM**. This is the primary screen for pushing
+companies to Twenty CRM and for linking them to JB2026 customers.
 
-<!-- SCREENSHOT: CRM > Companies -->
+- **Filter bar:** lookup box plus **Search** and **Refresh**.
+- **Toolbar:** Columns, Sort, Checkbox (bulk-select), View mode (Detail table /
+  Card), and a primary **+ New Company** button.
+- **Columns:** a **Synced** indicator, **Name** (link), **Account Owner**,
+  **Domain**, **Address**, **People** (chips), **Opportunities** (chips),
+  **Created/Updated** On & By.
+- **Synced indicator:** a green `mdi-link-variant` icon appears when the company
+  matches a JB2026 customer flagged `SyncedToCRM` (i.e., it was created from or
+  linked to a JB2026 customer).
+- **Open / edit:** click the company name (or card) to open the **company record
+  dialog** for viewing and editing in Twenty CRM. Within that dialog you can
+  **Migrate Customer** to pick a matching JB2026 customer; saving pushes the
+  company to Twenty CRM and links the customer.
+- **+ New Company:** opens the **company record dialog** in *new* mode (detailed
+  below). Unlike the billing client dialog, the fields here are **editable** and
+  you may create a standalone company **or** link a JB2026 customer.
+
+#### Inside the "+ New Company" dialog
+
+The dialog (titled *Edit Company* for both new and existing records) is fully
+editable. For a new company it offers an optional **Migrate Customer** step, then
+editable company fields and relationship pickers.
+
+1. **Migrate Customer panel (only in new mode).** An autocomplete *"Select
+   JB2026 Customer"* lists JB2026 customers available to migrate. Selecting one
+   **prefills** the company **Name** (from the customer name) and the **Address**
+   (parsed from the customer's Bill To; if no country is found it defaults to
+   *Hong Kong*). The option shows a connection icon colored when the customer is
+   already billing-synced. If you skip this, you create a plain Twenty CRM
+   company with no JB2026 link.
+2. **Company fields (editable):**
+   - **Name** — required (`Company name is required`), max 256 chars.
+   - **Domain** — optional, max 256 chars.
+   - **Address** — Address Line 1/2, City, State, Postcode, and **Country**
+     (a dropdown of ~60 countries; if the current value isn't in the list it is
+     kept and shown first).
+   - **Account Owner** — a dropdown of Twenty CRM workspace members
+     (`getCrmMembers`); leave empty or pick an owner.
+3. **People.** A chip list of linked people plus an autocomplete to add existing
+   people (from the CRM people catalog). A `+` button opens the **New Person**
+   dialog (which reloads the people list on save) so you can create a person and
+   link it in one step. Chips are removable.
+4. **Opportunities.** Same pattern as People: chips for linked opportunities, an
+   autocomplete to add existing opportunities, and a `+` button to create a new
+   opportunity (pre-linked to this company via `initial-company-id`) and link it.
+5. **Save / Save & Close.** Two buttons: **Save** creates the company and keeps
+   the dialog open; **Save & Close** creates then closes. The create payload
+   includes `customerId` = the selected Migrate Customer (when set), so the
+   backend flags that JB2026 customer `SyncedToCRM = "1"`. If no customer was
+   selected, a standalone company is created. Editing an existing company instead
+   calls **update** with name, domain, address, owner, and the people/opportunity
+   ID lists.
+
+> Note: the company dialog is the opposite of the billing client dialog — here
+> the data is editable inline (no separate customer-edit step is required), and a
+> company can exist without a JB2026 customer.
+
+<!-- SCREENSHOT: CRM > Companies (list with synced link icon) -->
+<!-- SCREENSHOT: CRM > Companies (New Company dialog: Migrate Customer + fields) -->
+<!-- SCREENSHOT: CRM > Companies (People/Opportunities chips + add) -->
 
 ### 7.4 People
 
@@ -227,11 +477,51 @@ members and linking them to companies/people/opportunities.
 
 ### 7.7 Staff Members
 
-Lists workspace members from Twenty CRM (used as account owners/assignees) and
-lets you run an email existence check ("Sync to CRM") for a staff member. This is
-a read-only check, not a data push.
+This screen reuses the **JB2026 user list** (the same data as *Admin → User*)
+but is surfaced under CRM so you can check each user against Twenty CRM. It is
+**read-oriented** — there is no user-creation here (create/edit users in
+*Admin → User*).
 
-<!-- SCREENSHOT: CRM > Staff Members -->
+- **Filter bar:** lookup box plus **Search** and **Refresh**.
+- **Toolbar:** Columns, Sort, Checkbox (bulk-select), View mode (Detail table /
+  Card), and a primary **Sync to CRM** button (cloud-sync icon).
+- **Sync to CRM** is available once you select exactly one person who has an
+  email address (otherwise the button stays greyed out). The same button also
+  appears inside a person's **record dialog**, so you can use it from either
+  place.
+
+#### About the "Sync to CRM" button
+
+**Where to find it.** On the *CRM → Staff Members* screen, the **Sync to CRM**
+button sits in the toolbar — it becomes clickable once you have selected a single
+person with an email address. You will also see the same button when you open a
+person's record. Either way opens the same small confirmation window.
+
+**What it is meant to do.** Its job is to check whether the selected staff
+member's email address is already known to Twenty CRM — in other words, "is this
+person already in our CRM?" It does **not** copy or change any information; it
+simply tells you whether the email is already there. (Despite the "Sync" name, it
+does not send or create anything.)
+
+**A note about the current version.** In this version, the button is not yet
+connected to Twenty CRM. When you open the confirmation window you will see the
+person's email and the question *"Sync user <email> to Twenty CRM?"*, but the
+**Proceed** button is disabled and does nothing — you can only close the window.
+So using it right now has no effect. This is expected to become active in a
+future update; until then, please treat it as a placeholder.
+
+**Setup needed (for administrators).** For the check to work once it is enabled,
+the connection to Twenty CRM must first be set up by an administrator. If that
+connection is missing, the check cannot run.
+- **Columns / cards:** an icon that is color-coded — **pink** (`mdi-account-sync`)
+  when the user is CRM-synced, **amber** (`mdi-account-key`) when the user is a
+  primary record, otherwise **grey** (`mdi-account`); plus **Username** (link),
+  **Alias**, **Email**, **Role**, and **Created/Modified** On & By.
+- **Open a record:** click the username (or a row) to open the **staff member
+  record dialog** (view/edit the user; deletion is also available there).
+
+<!-- SCREENSHOT: CRM > Staff Members > Staff Members (list with Sync to CRM) -->
+<!-- SCREENSHOT: CRM > Staff Members (Sync to CRM dialog) -->
 
 ---
 
@@ -242,9 +532,41 @@ managed under *Settings*, not here.)
 
 ### 8.1 Order Type
 
-Maintain the catalog of order types used to classify orders/jobs.
+Despite the name, this screen is **not** a customer-facing catalog editor. It is
+the **Order Type Workflow Assignment** tool: it defines which **workflows** are
+available for each order type, and in what order they appear when a job of that
+type is created.
 
-<!-- SCREENSHOT: Admin > Order Type -->
+JB2026 has three fixed order types (each shown with its own icon/color across
+the app): **Printing** (0), **Digital Printing** (1), and **Others** (2).
+
+How to use it:
+
+1. Pick an **Order Type** from the dropdown at the top. On open, the first order
+   type is selected automatically and its current mapping is loaded.
+2. Two side-by-side lists appear:
+   - **Available Workflow** — workflows not currently assigned to this order type.
+   - **Selected Workflow** — workflows assigned to this order type (the ones
+     that will show on a job of this type).
+3. Move workflows between the lists with the arrow buttons between the panels:
+   - `▶` / `⏩` move the selected (or all) workflows from Available → Selected.
+   - `◀` / `⏪` move them back from Selected → Available.
+4. Within **Selected Workflow**, reorder with the up/down arrows on the right:
+   `⏫` / `▲` move an item up (top), `▼` / `⏬` move it down (bottom). The order
+   here is the order users will see when creating a job of this type.
+5. Click **Save** to persist the mapping. You must have at least one workflow
+   selected (otherwise a "Please select at least one workflow" warning appears).
+   Success/failure are shown as banners; the list reloads after a successful save.
+
+Effect elsewhere: when a user creates a job in the **Job Order** module and
+chooses an order type, the workflows/attributes assigned here determine which
+workflow steps and fields appear on that job form.
+
+> Note: the order-type *definitions* (Printing / Digital Printing / Others) are
+> fixed in code; this screen only manages the workflow assignment per type, not
+> the list of order types itself.
+
+<!-- SCREENSHOT: Admin > Order Type (dual-list workflow assignment) -->
 
 ### 8.2 User
 
@@ -291,9 +613,9 @@ thresholds and integration options).
 
 ### 9.3 RBAC Editor
 
-The Role-Based Access Control editor. From here an administrator edits **Group
-RBAC** (per role) and **individual User RBAC**, controlling which menu/route
-each role or user can access. See the *RBAC* section for the precedence rules.
+The access-control editor. From here an administrator sets which pages each
+role, or each individual person, can open. See the *RBAC* section for how the
+two work together.
 
 <!-- SCREENSHOT: Settings > RBAC Editor -->
 
@@ -349,59 +671,60 @@ List footers provide standard pagination:
 
 ### 11.1 Relationship
 
-JB2026 integrates with **Invoice Ninja** as its **billing/invoincing system of
-record**. The division of responsibility is:
+JB2026 works together with **Invoice Ninja**, which it uses to handle invoicing
+and billing. Here is how the two share the work:
 
-- **JB2026 → Invoice Ninja (push):** Customers are synced into Invoice Ninja as
-  **clients**. When you create or update a client, JB2026 calls the Invoice
-  Ninja API (`POST /clients` to create, `PUT /clients/{id}` to update) and
-  reconciles by Customer Code when no stored client ID exists.
-- **Invoice Ninja → JB2026 (pull, read-only):** Invoices, invoice status, and
-  client statements are **read from** Invoice Ninja. JB2026 stores only
-  reference IDs (`externalClientId`, `externalInvoiceId`); the canonical data
-  lives in Invoice Ninja.
+- **From JB2026 to Invoice Ninja:** Your customers are sent across to Invoice
+  Ninja as *clients*. When you add or update a client in JB2026, the same client
+  is created or updated in Invoice Ninja (matched by the customer code when one
+  already exists there).
+- **From Invoice Ninja to JB2026:** Invoices, their status, and customer
+  statements are read from Invoice Ninja and shown in JB2026. JB2026 keeps only
+  a link to each invoice or client rather than a full copy of the details.
 
-There is **no background/automatic sync** — every sync is triggered on demand by
-a user action.
+Nothing happens automatically in the background — you start every update yourself
+by clicking a button.
 
-**Field mapping** (configurable custom fields in Invoice Ninja):
+**What gets copied across** (the billing administrator sets up matching fields
+in Invoice Ninja):
 
-| JB2026 | Invoice Ninja |
+| In JB2026 | In Invoice Ninja (the client) |
 | --- | --- |
-| Customer name | Client `name` |
-| Customer code | Client `id_number` |
-| Bill To | Client custom field (e.g. `custom_value1`) |
-| Ship To | Client custom field |
-| Group | Client `group_settings_id` |
-| Job No. (on invoice) | Invoice custom field |
-| P.O. No. (line item) | Product custom field |
+| Customer name | Client name |
+| Customer code | Client reference number |
+| Bill To | A custom field you set up (such as "Bill To") |
+| Ship To | A custom field you set up |
+| Group | Client group |
+| Job No. (on an invoice) | A custom field on the invoice |
+| P.O. No. (on a line item) | A custom field on the product |
 
-### 11.2 Required configuration
+### 11.2 Required setup
 
-The integration must be configured on the backend (`Billing:InvoiceNinja`
-section / `Billing__BaseUrl` and an API key). If not configured, billing
-screens show "not configured" errors and the **Billing Settings → Check
-Connectivity** button reports Not Connected.
+The link to Invoice Ninja must be set up by an administrator — they provide the
+Invoice Ninja address and an access key. If it isn't set up, the billing screens
+will show a "not configured" message, and the **Billing Settings → Check
+Connectivity** button will report "Not Connected".
 
-### 11.3 How to sync a customer to Invoice Ninja
+### 11.3 How to link a customer to Invoice Ninja
 
 1. Open **Admin → Customer** and select a customer that has a **Customer Code**.
 2. Click **Sync Billing** (cloud-upload icon, or the overflow menu). A spinner
    shows progress.
-3. On success, the connection icon turns colored and the status reads
-   "synced"; the Invoice Ninja client ID and sync time are stored on the
-   customer. On failure, a red chip shows the error.
-4. (Alternative) When creating an invoice for a not-yet-synced client, use
-   **New Client → Migrate** in the invoice editor to push the client first.
+3. On success, the connection icon turns colored and the status reads "synced";
+   JB2026 notes that the customer is now linked and records the time. On failure,
+   a red message shows the error.
+4. (Alternative) When creating an invoice for a client that isn't linked yet, use
+   **New Client → Migrate** in the invoice editor to link the client first.
 
 ### 11.4 Invoices and statements
 
-- **Invoices:** create in **Billing → Invoices → New Invoice**; line items can
-  be autofilled from JB2026 job numbers. Then **Mark Sent**, **Download PDF**,
-  or **Upload to DMS**.
-- **Statement:** in **Billing → Statement**, select a client, click
-  **Statement → Proceed** to generate and preview the Invoice Ninja PDF.
-- Verify health any time via **Billing Settings → Check Connectivity**.
+- **Invoices:** create one in **Billing → Invoices → New Invoice**; the line
+  items can be filled in automatically from JB2026 job numbers. Then **Mark
+  Sent**, **Download PDF**, or **Upload to DMS** (the document storage system).
+- **Statement:** in **Billing → Statement**, select a client, then click
+  **Statement → Proceed** to create and preview the PDF from Invoice Ninja.
+- You can check the connection at any time via **Billing Settings → Check
+  Connectivity**.
 
 <!-- SCREENSHOT: Admin > Customer sync status chip -->
 <!-- SCREENSHOT: Billing > Invoices list -->
@@ -412,92 +735,92 @@ Connectivity** button reports Not Connected.
 
 ### 12.1 Relationship
 
-JB2026 integrates with **Twenty CRM** for customer-relationship data. The flow
-is **user-triggered** (no automatic background sync):
+JB2026 works together with **Twenty CRM** to keep customer-relationship
+information. You start every update yourself — there is no automatic background
+sync.
 
-- **JB2026 → Twenty CRM (push):** Companies, People, Opportunities, and Tasks
-  created/edited in JB2026 are pushed to Twenty CRM via its GraphQL API.
-- **Twenty CRM → JB2026 (pull, read-only):** JB2026 reads companies, people,
-  opportunities, tasks, timelines, and workspace members to display them.
-- The only data persisted on the JB2026 side is a **`SyncedToCRM` flag** on the
-  JB2026 **customer** record. It is a *link indicator* (set when a Twenty
-  company is created from a JB2026 customer), not a two-way sync engine.
+- **From JB2026 to Twenty CRM:** When you add or change a company, person,
+  opportunity, or task in JB2026, that information is sent to Twenty CRM.
+- **From Twenty CRM to JB2026:** JB2026 reads companies, people, opportunities,
+  tasks, timelines, and member lists from Twenty CRM and displays them.
+- When you link a JB2026 customer to a company in Twenty CRM, JB2026 simply
+  marks that customer as "linked". This is only a note showing the two are
+  connected — it does not keep the two systems constantly in sync.
 
-### 12.2 Required configuration
+### 12.2 Required setup
 
-Configure `TwentyCrm:ApiKey` and `TwentyCrm:BaseUrl` (env `TwentyCrm__ApiKey`,
-`TwentyCrm__BaseUrl`). When unconfigured, every CRM screen simply shows empty
-lists (no error), because the service short-circuits.
+An administrator must set up the connection to Twenty CRM (an address and an
+access key). If that is missing, the CRM screens will simply appear empty, with
+no error message.
 
-### 12.3 How to sync / link to Twenty CRM
+### 12.3 How to link to Twenty CRM
 
-1. Ensure `TwentyCrm:ApiKey` and `TwentyCrm:BaseUrl` are set.
+1. Make sure the Twenty CRM connection is set up (see above).
 2. Open **CRM → Companies** and click **New Company**.
 3. (Optional) In the dialog, use **Migrate Customer** to pick the matching
-   JB2026 customer. Saving pushes the company to Twenty CRM and, if a customer
-   was chosen, flags that customer `SyncedToCRM = "1"`.
-4. Edit existing companies with the pencil action; changes update Twenty CRM.
-5. Push **People / Opportunities / Tasks** via their respective **New** buttons,
-   linking them to a company within the dialog.
-6. Verify the green "Synced to Twenty CRM" link icon on the company in the
-   Companies list.
+   JB2026 customer. Saving sends the company to Twenty CRM and, if you chose a
+   customer, marks that customer as linked.
+4. To change an existing company, use the pencil action; your changes are sent to
+   Twenty CRM.
+5. Add **People / Opportunities / Tasks** using their **New** buttons, linking
+   them to a company within the dialog.
+6. You'll see a green "Synced to Twenty CRM" link icon on the company in the
+   Companies list once it's linked.
 
-> Note: **CRM → Customer 360** is a read-only viewer (no sync action).
-> **CRM → Staff Members → Sync to CRM** performs only an email existence check
-> against Twenty CRM workspace members, not a data push.
+> Note: **CRM → Customer 360** is for looking only — you can't link or sync from
+> there. The **Staff Members → Sync to CRM** button (described earlier) only
+> checks whether an email is already in Twenty CRM; it does not send any data.
 
 <!-- SCREENSHOT: CRM > Companies with "Migrate Customer" dialog -->
 <!-- SCREENSHOT: CRM > Companies synced link icon -->
 
 ---
 
-## 13. RBAC: Groups vs. Individual Users
+## 13. RBAC: Roles vs. Individual People
 
-JB2026 controls access with **Role-Based Access Control** at two levels:
+JB2026 controls who can see what using **role-based access** — that is, what a
+person can open is decided by their role. There are two layers:
 
-- **Group RBAC** — permissions defined for a whole **role** (Guest, Operator,
-  Supervisor, Manager, Admin). Stored once per role and applied to everyone in
-  that role.
-- **Individual User RBAC** — permissions defined for a **single user**,
-  overriding the role baseline.
+- **Role access** — settings applied to a whole role (Guest, Operator,
+  Supervisor, Manager, Admin). Everyone with that role gets the same access.
+- **Individual access** — settings applied to one specific person, which can
+  differ from their role.
 
-Both levels describe **route/page access** (which menu items and pages a role or
-user may open); they do not govern feature toggles or data scopes.
+Both layers decide **which pages and menu items a person can open**. They do not
+control individual buttons or which data someone sees.
 
-### 13.1 How the two relate (precedence)
+### 13.1 How the two layers work together
 
-Effective permissions follow a **"first non-empty wins"** rule:
+1. If a person has their own individual settings, those settings are used on
+   their own and completely replace the role's settings.
+2. If a person has no individual settings, the role's settings are used.
+3. If neither is set, everything is shown (the safest default).
 
-1. If the user has **any** stored individual RBAC entries, **those entries
-   fully replace the group/role permissions**. The role's settings are ignored
-   entirely for that user.
-2. If the user has **no** individual entries, the **role's Group RBAC** applies.
-3. If neither is set, access is **fail-open** — everything is visible.
+Worth remembering: because a person's own settings replace the role's settings
+entirely (rather than mixing them together), a restriction set at the role level
+will not block someone who has their own settings — only that person's own
+choices matter. Any page not specifically mentioned in their settings is shown by
+default.
 
-Important: because a user's own entries *replace* the group set wholesale (they
-are not merged key-by-key), a group **deny** does **not** block a user who has
-their own entries — only the user's explicit values matter. Any route not present
-in the user's set defaults to visible.
-
-### 13.2 Managing RBAC
+### 13.2 Managing access
 
 Open **Settings → RBAC Editor**:
 
-- Pick a **role** → **Edit Group RBAC** to set page access for everyone in that
-  role (a tree of menu routes with per-page checkboxes, plus Toggle All / Reset
-  / Save).
-- Pick a **user** (scoped to a role) → **Edit User RBAC** to override access for
-  that individual. When a user has no entries yet, the editor seeds it from the
-  group's values as a starting point (the backend still applies the
-  user-wins rule above).
+- Choose a **role**, then **Edit Group Access** to set which pages everyone in
+  that role can open (a list of menu items with checkboxes, plus Select All /
+  Reset / Save).
+- Choose a **person** (filtered by role), then **Edit User Access** to set
+  different access for that one person. If the person has no settings yet, the
+  editor starts them off with a copy of the role's settings (but the rule above
+  still applies — the person's own choices win).
 
-User **role assignment** (which group a user belongs to) is done in **Admin →
-User**, not in the RBAC Editor.
+A person's **role** (which group they belong to) is set in **Admin → User**, not
+here.
 
-The resulting effective permission set drives:
-- which **sidebar menu items** are visible,
-- which **route** you can navigate to (others are blocked),
-- your **landing dashboard** after sign-in.
+The final access settings decide:
+- which **menu items** appear in the sidebar,
+- which **pages** you can open (others are blocked),
+- which **dashboard** you land on after signing in.
 
 <!-- SCREENSHOT: Settings > RBAC Editor (role tree) -->
 <!-- SCREENSHOT: Settings > RBAC Editor (user override) -->

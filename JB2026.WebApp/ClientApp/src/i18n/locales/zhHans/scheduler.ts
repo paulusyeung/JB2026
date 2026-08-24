@@ -46,7 +46,7 @@ export const schedulerMessages = {
         },
       },
       packingOnAir: {
-        title: '作业排程 - 包装 (OnAir)',
+        title: '作业排程 - 包装 (进行中)',
         loadFailed: '无法加载包装队列，请确认 API 可用性。',
         saveFailed: '无法保存包装队列，请重试。',
         saveConfirm: '保存包装队列？',
