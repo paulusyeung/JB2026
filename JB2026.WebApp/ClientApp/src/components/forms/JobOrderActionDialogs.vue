@@ -150,9 +150,9 @@
         <v-btn size="small" icon="mdi-close" variant="tonal" :disabled="savingProductDetails" @click="productDetailsModel = false" />
       </v-card-title>
       <v-card-text>
-        <v-alert type="info" variant="tonal" class="mb-3">
+        <!-- <v-alert type="info" variant="tonal" class="mb-3">
           {{ t('jobForm.dialogs.productDetailsHint') }}
-        </v-alert>
+        </v-alert> -->
 
           <div class="product-details-editor" :class="{ 'product-details-editor--disabled': savingProductDetails || !job }">
             <Ckeditor :editor="htmlEditor" v-model="productDetails" :config="editorConfig" />
@@ -184,9 +184,9 @@
         <v-btn size="small" icon="mdi-close" variant="tonal" :disabled="savingRemarks" @click="remarksModel = false" />
       </v-card-title>
       <v-card-text>
-        <v-alert type="info" variant="tonal" class="mb-3">
+        <!-- <v-alert type="info" variant="tonal" class="mb-3">
           {{ t('jobForm.dialogs.remarksHint') }}
-        </v-alert>
+        </v-alert> -->
 
         <div class="remarks-editor" :class="{ 'remarks-editor--disabled': savingRemarks || !job }">
           <Ckeditor :editor="htmlEditor" v-model="remarks" :config="remarksEditorConfig" />
