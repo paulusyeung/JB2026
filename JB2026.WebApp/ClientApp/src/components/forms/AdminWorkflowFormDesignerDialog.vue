@@ -5,7 +5,7 @@
         <h2 class="text-h6 mb-1">{{ t('admin.workflowForms.designer.title') }} ({{ record.formName }})</h2>
       </div>
       <v-spacer />
-      <v-btn variant="text" icon="mdi-close" @click="emit('cancel')" />
+      <v-btn variant="tonal" icon="mdi-close" @click="emit('cancel')" />
     </v-card-title>
 
     <v-card-text class="pa-2">

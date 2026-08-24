@@ -3,7 +3,7 @@
     <v-card-title class="legacy-titlebar d-flex align-center py-2 px-3">
       <span class="text-subtitle-1">{{ isNew ? t('admin.workflow.form.newTitle') : t('admin.workflow.form.editTitle') }}</span>
       <v-spacer />
-      <v-btn size="small" variant="text" icon="mdi-close" @click="emit('cancel')" />
+      <v-btn size="small" variant="tonal" icon="mdi-close" @click="emit('cancel')" />
     </v-card-title>
 
     <v-card-text class="pa-3 legacy-content">
