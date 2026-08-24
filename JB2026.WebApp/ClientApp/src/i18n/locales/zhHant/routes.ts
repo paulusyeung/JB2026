@@ -45,7 +45,7 @@ export const routesMessages = {
   adminWorkflow: '工作流',
   adminWorkflowForms: '工作流程表單',
   adminOrderType: '訂單類型',
-  adminUser: '使用者',
+  adminUser: '用戶',
   adminCustomer: '客戶',
   adminSupplier: '供應商',
     adminQuotationItemGroup: '項目群組',
