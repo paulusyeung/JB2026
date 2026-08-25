@@ -381,7 +381,11 @@ export const jobOrderMessages = {
         },
         importJobsUnavailable: 'Import jobs is not available yet in the modern app.',
         deleteConfirm: 'Delete order {order}? This action cannot be undone.',
+        deleteOrderWithIdConfirm: 'Are you sure you want to delete Order #{orderNumber} (ID: {orderId})?',
         deleteSelectedConfirm: 'Delete {count} selected order(s)? This action cannot be undone.',
+        deleteItemSelectedLine: 'Order #{orderNumber} (ID: {orderId})',
+        deleteSelectedListConfirm: 'Are you sure you want to delete these {count} item(s)?\n\n{items}',
+        deleteLastJobConfirm: 'This is the last job for Order #{orderNumber}. Deleting it would remove the entire order.\n\nInstead, it will be reset to the order record ({orderNumber}-0) with job-specific fields cleared. Continue?',
         deleteFailed: 'Unable to delete the selected order.',
         saveFailed: 'Unable to save order changes.',
         validation: {

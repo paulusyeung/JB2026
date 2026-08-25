@@ -381,7 +381,11 @@ export const jobOrderMessages = {
         },
         importJobsUnavailable: '現代化介面尚未提供匯入作業功能。',
         deleteConfirm: '確定刪除訂單 {order}？此操作無法復原。',
+        deleteOrderWithIdConfirm: '確定要刪除訂單 #{orderNumber}（ID：{orderId}）？',
         deleteSelectedConfirm: '確定刪除 {count} 個所選訂單？此操作無法復原。',
+        deleteItemSelectedLine: '訂單 #{orderNumber}（ID：{orderId}）',
+        deleteSelectedListConfirm: '確定要刪除這 {count} 個項目？\n\n{items}',
+        deleteLastJobConfirm: '這是訂單 #{orderNumber} 的最後一個作業，刪除後將會移除整張訂單。\n\n系統會改為將其重設為訂單記錄（{orderNumber}-0）並清除作業專屬欄位。是否繼續？',
         deleteFailed: '無法刪除所選訂單。',
         saveFailed: '無法儲存訂單變更。',
         validation: {

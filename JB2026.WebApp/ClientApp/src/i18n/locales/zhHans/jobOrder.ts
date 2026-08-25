@@ -380,7 +380,11 @@ export const jobOrderMessages = {
         },
         importJobsUnavailable: '现代化界面暂未提供导入作业功能。',
         deleteConfirm: '确定删除订单 {order}？此操作无法撤销。',
+        deleteOrderWithIdConfirm: '确定要删除订单 #{orderNumber}（ID：{orderId}）？',
         deleteSelectedConfirm: '确定删除 {count} 个所选订单？此操作无法撤销。',
+        deleteItemSelectedLine: '订单 #{orderNumber}（ID：{orderId}）',
+        deleteSelectedListConfirm: '确定要删除这 {count} 个项目？\n\n{items}',
+        deleteLastJobConfirm: '这是订单 #{orderNumber} 的最后一个作业，删除后将移除整张订单。\n\n系统会改为将其重置为订单记录（{orderNumber}-0）并清除作业专属字段。是否继续？',
         deleteFailed: '无法删除所选订单。',
         saveFailed: '无法保存订单变更。',
         validation: {

@@ -729,9 +729,11 @@ async function handleSave(closeAfterSave = false) {
 
 async function handleDelete() {
   if (!props.order) return
-  // const confirmed = window.confirm(t('jobOrder.record.deleteConfirm', { order: props.order.orderNumber }))
   const confirmed = window.confirm(
-    `Are you sure you want to delete Order #${props.order.orderNumber} (ID: ${props.order.orderId})?`
+    t('jobOrder.record.deleteOrderWithIdConfirm', {
+      orderNumber: props.order.orderNumber,
+      orderId: props.order.orderId,
+    }),
   )
   if (!confirmed) return
 
@@ -754,9 +756,15 @@ async function handleDeleteSelected() {
   // Get the specific items selected from the table
   const items = relatedOrders.value.filter((r) => selectedIds.value.has(r.orderId))
 
-  // Create a list string that includes both Order Number and ID
-  // Using \n for line breaks so it's readable in the confirm box
-  const itemsList = items.map(item => `Order #${item.orderNumber} (ID: ${item.orderId})`).join('\n')
+  // Build the localized list of selected items (Order Number + ID), one per line.
+  const itemsList = items
+    .map(item =>
+      t('jobOrder.record.deleteItemSelectedLine', {
+        orderNumber: item.orderNumber,
+        orderId: item.orderId,
+      }),
+    )
+    .join('\n')
 
   const remainingCount = relatedOrders.value.length - items.length
 
@@ -768,8 +776,11 @@ async function handleDeleteSelected() {
 
   const confirmed = window.confirm(
     isLastJobScenario
-      ? `This is the last job for Order #${props.order!.orderNumber}. Deleting it would remove the entire order.\n\nInstead, it will be reset to the order record (${props.order!.orderNumber}-0) with job-specific fields cleared. Continue?`
-      : `Are you sure you want to delete these ${selectedIds.value.size} item(s)?\n\n${itemsList}`,
+      ? t('jobOrder.record.deleteLastJobConfirm', { orderNumber: props.order!.orderNumber })
+      : t('jobOrder.record.deleteSelectedListConfirm', {
+          count: selectedIds.value.size,
+          items: itemsList,
+        }),
   )
 
   if (!confirmed) return
