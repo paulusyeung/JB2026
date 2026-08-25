@@ -37,6 +37,10 @@ interface UpdateJobOrderRequest {
   invoiceAmount?: number
   soNumber?: string
   originalSONumber?: string
+  outputRef?: string
+  productDetails?: string
+  productCode?: string
+  productStyle?: string
 }
 
 export async function getJobOrders(): Promise<JobOrderRecord[]> {

@@ -256,6 +256,7 @@ import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { getAdminCustomers, getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
+import { deleteJobAttachments, getJobDetail } from '@/services/jobs'
 import { getSettings, updateSettings } from '@/services/settings'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
 import { statusIcon, statusColor } from '@/composables/useJobStatus'
@@ -751,14 +752,24 @@ async function handleDeleteSelected() {
   if (selectedIds.value.size === 0) return
 
   // Get the specific items selected from the table
-  const selectedItems = relatedOrders.value.filter((r) => selectedIds.value.has(r.orderId))
-  
+  const items = relatedOrders.value.filter((r) => selectedIds.value.has(r.orderId))
+
   // Create a list string that includes both Order Number and ID
   // Using \n for line breaks so it's readable in the confirm box
-  const itemsList = selectedItems.map(item => `Order #${item.orderNumber} (ID: ${item.orderId})`).join('\n')
+  const itemsList = items.map(item => `Order #${item.orderNumber} (ID: ${item.orderId})`).join('\n')
+
+  const remainingCount = relatedOrders.value.length - items.length
+
+  // When the selected items are the only remaining jobs for the order, deleting them
+  // would also remove the order itself (the [Order Number]-1 and [Order Number]-0 records
+  // share the same data). Instead of deleting, reset the first selected record to the
+  // order record (jobNumber 0) with job-specific fields cleared, then delete the rest.
+  const isLastJobScenario = remainingCount === 0
 
   const confirmed = window.confirm(
-    `Are you sure you want to delete these ${selectedIds.value.size} item(s)?\n\n${itemsList}`
+    isLastJobScenario
+      ? `This is the last job for Order #${props.order!.orderNumber}. Deleting it would remove the entire order.\n\nInstead, it will be reset to the order record (${props.order!.orderNumber}-0) with job-specific fields cleared. Continue?`
+      : `Are you sure you want to delete these ${selectedIds.value.size} item(s)?\n\n${itemsList}`,
   )
 
   if (!confirmed) return
@@ -767,9 +778,17 @@ async function handleDeleteSelected() {
   errorMessage.value = ''
 
   try {
-    const items = relatedOrders.value.filter((r) => selectedIds.value.has(r.orderId))
-    for (const item of items) {
-      await deleteJobOrder(item.orderId)
+    if (isLastJobScenario) {
+      const resetItem = items[0]
+      if (!resetItem) return
+      await resetJobToOrder(resetItem)
+      for (const item of items.slice(1)) {
+        await deleteJobOrder(item.orderId)
+      }
+    } else {
+      for (const item of items) {
+        await deleteJobOrder(item.orderId)
+      }
     }
     selectedIds.value = new Set()
     emit('saved', props.order!.orderId)
@@ -783,6 +802,44 @@ async function handleDeleteSelected() {
 
 function onRelatedRowClick(_event: Event, payload: { item: JobOrderRecord }) {
   emit('open-order', payload.item.orderId)
+}
+
+// Reset a job record to the order record (jobNumber 0) by keeping the core order
+// fields and clearing the job-specific values so the order survives without jobs.
+async function resetJobToOrder(item: JobOrderRecord) {
+  // Clear any job/product attachments.
+  try {
+    const detail = await getJobDetail(item.orderId)
+    const attachmentIds = (detail.attachments ?? []).map((a) => a.attachmentId)
+    if (attachmentIds.length > 0) {
+      await deleteJobAttachments(item.orderId, attachmentIds)
+    }
+  } catch {
+    // Attachment cleanup is best-effort; continue resetting the record regardless.
+  }
+
+  await updateJobOrder(item.orderId, {
+    orderNumber: item.orderNumber,
+    customerName: item.customerName,
+    customerRef: '',
+    orderTitle: item.orderTitle,
+    orderedOn: item.orderedOn?.slice(0, 10) ?? '',
+    requiredOn: item.requiredOn?.slice(0, 10) ?? '',
+    qty: 1,
+    paymentTerms: item.paymentTerms || 'Net 30',
+    remarks: '',
+    status: item.status,
+    orderType: 0,
+    jobNumber: '0',
+    invoiceRef: '',
+    invoiceAmount: 0,
+    soNumber: '',
+    originalSONumber: '',
+    outputRef: '',
+    productDetails: '',
+    productCode: '',
+    productStyle: '',
+  })
 }
 
 function handleImportJobs() {
