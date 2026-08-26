@@ -12,6 +12,8 @@ User=jb2026
 WorkingDirectory=/opt/jb2026/current/api
 ExecStart=/usr/bin/dotnet /opt/jb2026/current/api/JB2026.Api.dll
 EnvironmentFile=/etc/jb2026/env
+# Bind privately; Nginx is the only public entry point (see nginx-jb2026.conf).
+Environment=ASPNETCORE_URLS=http://127.0.0.1:8080
 Restart=on-failure
 RestartSec=5
 SyslogIdentifier=jb2026-api

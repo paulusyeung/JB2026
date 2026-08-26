@@ -5,8 +5,10 @@
 # Run ONCE on the fresh server as root, BEFORE provision-server.sh:
 #   sudo ./setup-user.sh <username> <public-key-file>
 #
-# Example (from your build machine, the key is usually ~/.ssh/id_ed25519.pub):
-#   sudo ./setup-user.sh deploy ~/.ssh/id_ed25519.pub
+# Example (from your build machine):
+#   scp ops/deploy/setup-user.sh ~/.ssh/id_ed25519.pub root@<VM-IP>:~
+#   ssh root@<VM-IP>
+#   sudo ./setup-user.sh deploy ~/id_ed25519.pub
 #
 # If you don't have a key yet, generate one on the build machine first:
 #   ssh-keygen -t ed25519 -C "jb2026-deploy"

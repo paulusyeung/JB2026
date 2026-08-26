@@ -25,6 +25,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OUT="$REPO_ROOT/artifacts"
 TARBALL="/tmp/jb2026-${VERSION}.tar.gz"
 APP_HOME=/opt/jb2026
+REMOTE_STAGING="jb2026-${VERSION}.tar.gz"
 
 [ -d "$OUT/api" ] && [ -d "$OUT/web/app" ] || {
   echo "ERROR: artifacts missing. Run ./build.sh first." >&2
@@ -34,16 +35,27 @@ APP_HOME=/opt/jb2026
 echo "==> Packaging version $VERSION"
 tar czf "$TARBALL" -C "$OUT" api web
 
-echo "==> Shipping to $HOST:$APP_HOME/tmp"
-scp "$TARBALL" "${HOST}:${APP_HOME}/tmp/"
+# Stage under the SSH user's home — deploy cannot write to $APP_HOME/tmp
+# (owned by jb2026). The remote sudo step moves it into place.
+echo "==> Shipping to $HOST:~/$REMOTE_STAGING"
+scp "$TARBALL" "${HOST}:~/${REMOTE_STAGING}"
 
 echo "==> Installing on remote (sudo password may be requested)"
-ssh -t "$HOST" sudo bash -s -- "$VERSION" "$APP_HOME" <<'REMOTE'
+ssh -t "$HOST" sudo bash -s -- "$VERSION" "$APP_HOME" "$REMOTE_STAGING" <<'REMOTE'
 set -euo pipefail
 VERSION="$1"
 APP_HOME="$2"
+STAGING_NAME="$3"
+# Resolve the invoking user's home (sudo -u keeps SUDO_USER)
+INVOKER="${SUDO_USER:-$USER}"
+INVOKER_HOME="$(getent passwd "$INVOKER" | cut -d: -f6)"
+STAGING="${INVOKER_HOME}/${STAGING_NAME}"
 TARBALL="${APP_HOME}/tmp/jb2026-${VERSION}.tar.gz"
 DEST="${APP_HOME}/releases/${VERSION}"
+
+[ -f "$STAGING" ] || { echo "ERROR: staged tarball not found: $STAGING"; exit 1; }
+mkdir -p "${APP_HOME}/tmp"
+mv -f "$STAGING" "$TARBALL"
 
 mkdir -p "$DEST"
 tar xzf "$TARBALL" -C "$DEST"
@@ -61,12 +73,16 @@ mv -Tf "${APP_HOME}/current.new" "${APP_HOME}/current"
 
 systemctl restart jb2026-api
 nginx -s reload
+rm -f "$TARBALL"
 echo "Deployed $VERSION"
 REMOTE
 
+HOST_ONLY="${HOST#*@}"
 echo ""
 echo "Deploy $VERSION complete."
 echo "Verify:"
-echo "  curl -f http://${HOST#*@}/healthz     # backend health"
-echo "  curl -I http://${HOST#*@}/app/         # SPA"
-echo "Rollback: ./rollback.sh $HOST $VERSION"
+echo "  curl -fsS http://${HOST_ONLY}/healthz     # backend health (200 JSON)"
+echo "  curl -fsSI http://${HOST_ONLY}/app/       # SPA (200)"
+echo "  curl -fsSI http://${HOST_ONLY}/           # root redirect (302 -> /app/)"
+echo "Rollback: ./rollback.sh $HOST <previous-version>"
+echo "List releases: ssh $HOST 'ls /opt/jb2026/releases'"
