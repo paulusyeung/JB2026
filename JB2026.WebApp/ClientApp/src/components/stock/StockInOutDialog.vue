@@ -9,7 +9,7 @@
       <v-card-title class="d-flex align-center ga-2">
         <div class="text-h6">{{ t('stock.stockInOut.title') }}</div>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="tonal" @click="closeDialog" />
+        <v-btn size="small" icon="mdi-close" variant="tonal" @click="closeDialog" />
       </v-card-title>
 
       <v-divider />
