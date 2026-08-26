@@ -1,0 +1,20 @@
+[Unit]
+Description=JB2026 API
+After=network.target
+# Wait for the external shared storage (job attachments etc.) to be mounted.
+RequiresMountsFor=/srv/jb2026
+
+[Service]
+# Type=simple: the app does NOT call UseSystemd(), so notify is unsupported.
+# If you add UseSystemd() to Program.cs, switch this to Type=notify.
+Type=simple
+User=jb2026
+WorkingDirectory=/opt/jb2026/current/api
+ExecStart=/usr/bin/dotnet /opt/jb2026/current/api/JB2026.Api.dll
+EnvironmentFile=/etc/jb2026/env
+Restart=on-failure
+RestartSec=5
+SyslogIdentifier=jb2026-api
+
+[Install]
+WantedBy=multi-user.target
