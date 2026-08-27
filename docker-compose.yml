@@ -27,6 +27,11 @@
 #   TWENTY_CRM_BASE_URL   Twenty CRM endpoint
 #   OLLAMA_BASE_URL       Ollama LLM endpoint (e.g. http://host.docker.internal:11434)
 #   PAPERLESS_NGX_BASE_URL  Paperless-ngx endpoint
+#   ATTACHMENTS_HOST_PATH  Host mountpoint of the Windows SMB share for uploads
+#                         (default: /mnt/jb2026-attachments); bind-mounted into
+#                         the backend at /data/attachments.
+#   SMB_SHARE / SMB_USER / SMB_PASSWORD  Only if using Option B (Compose-mounted
+#                         SMB volume) instead of a host /etc/fstab mount.
 #   SQL_SA_PASSWORD       SQL Server SA password (only if sql-server service is enabled)
 #   SQL_PORT              SQL Server host port (default: 1433)
 #
@@ -50,6 +55,18 @@ services:
   backend:
     image: ${DOCKER_HUB_USERNAME:-youruser}/jb2026-backend:${IMAGE_TAG:-latest}
     container_name: jb2026-backend
+    # ── Attachments on a Windows Server shared folder (SMB/CIFS) ────────────
+    # The backend stores uploaded files under LegacyFiles:CloudDiskRoot (and
+    # LegacyFiles:SmlFileRoot). Mount that external share into the container:
+    #
+    # Option A (recommended): mount the SMB share on the host via /etc/fstab,
+    #   then bind it here. Set ATTACHMENTS_HOST_PATH in .env to that mountpoint.
+    # Option B: let Compose mount the SMB share directly — uncomment the
+    #   "jb2026-attachments" volume below and the commented volume mount line.
+    volumes:
+      - ${ATTACHMENTS_HOST_PATH:-/mnt/jb2026-attachments}:/data/attachments
+      # - jb2026-attachments:/data/attachments   # Option B (see volumes: below)
+
     # HARDENING: bind to loopback only so the API is not reachable from other
     # hosts. Traffic should enter via frontend Nginx (/api/). For local debug
     # from another machine, change to "${BACKEND_PORT:-8080}:8080" (all interfaces)
@@ -76,6 +93,10 @@ services:
       - TwentyCrm__BaseUrl=${TWENTY_CRM_BASE_URL:-}
       - Ollama__BaseUrl=${OLLAMA_BASE_URL:-}
       - PaperlessNgx__BaseUrl=${PAPERLESS_NGX_BASE_URL:-}
+      # Uploaded attachments live here — MUST point at the mounted SMB share
+      # above (see also LegacyFiles:SmlFileRoot for legacy SML files).
+      - LegacyFiles__CloudDiskRoot=/data/attachments
+      - LegacyFiles__SmlFileRoot=/data/attachments
     # HARDENING: resolve host.docker.internal on Linux so Ollama/etc. on the
     # host are reachable (Docker Desktop already provides this on Mac/Windows).
     extra_hosts:
@@ -165,6 +186,16 @@ services:
 volumes:
   mssql-data:
     driver: local
+  # Option B: have Compose mount the Windows SMB share directly (uncomment the
+  # "- jb2026-attachments:/data/attachments" line under backend.volumes, then
+  # set SMB_SHARE / SMB_USER / SMB_PASSWORD in .env). Requires cifs support on
+  # the host (apt-get install cifs-utils).
+  # jb2026-attachments:
+  #   driver: local
+  #   driver_opts:
+  #     type: cifs
+  #     o: "username=${SMB_USER},password=${SMB_PASSWORD},vers=3.0,uid=1000,gid=1000"
+  #     device: "${SMB_SHARE:-//winserver/share}"
 
 networks:
   jb2026:

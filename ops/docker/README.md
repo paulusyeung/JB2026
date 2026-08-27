@@ -424,6 +424,72 @@ Set `CORS_ALLOWED_ORIGINS` to that origin (and any native/mobile origins).
 
 ---
 
+## Section 7.5 — Storing uploaded attachments on a Windows Server share (SMB/CIFS)
+
+The backend stores uploaded files (CloudDisk compatibility uploads, job/product
+attachments) under the path set by `LegacyFiles:CloudDiskRoot` (and legacy SML
+files under `LegacyFiles:SmlFileRoot`). The Docker image does **not** mount that
+share by itself — you wire it up at runtime. Both config keys are mapped to
+`/data/attachments` inside the backend container by the stock compose file.
+
+### Option A — mount on the host, bind into the container (recommended)
+
+On the target server, mount the Windows share once (persists across reboots via
+`/etc/fstab`):
+
+```bash
+sudo apt-get install -y cifs-utils
+sudo mkdir -p /mnt/jb2026-attachments
+# test mount:
+sudo mount -t cifs //winserver/share /mnt/jb2026-attachments \
+  -o username=svc_jb,password=SECRET,vers=3.0,uid=1000,gid=1000
+```
+
+Add to `/etc/fstab` so it survives reboot:
+
+```fstab
+//winserver/share  /mnt/jb2026-attachments  cifs  username=svc_jb,password=SECRET,vers=3.0,uid=1000,gid=1000,_netdev  0  0
+```
+
+Then point compose at it in `.env`:
+
+```bash
+ATTACHMENTS_HOST_PATH=/mnt/jb2026-attachments
+```
+
+The `backend` service already bind-mounts that path to `/data/attachments` and
+sets `LegacyFiles__CloudDiskRoot` / `LegacyFiles__SmlFileRoot` to it.
+
+### Option B — let Compose mount the SMB share directly
+
+Uncomment the `jb2026-attachments` volume definition and the
+`- jb2026-attachments:/data/attachments` line under `backend.volumes` in
+`docker-compose.yml`, then set in `.env`:
+
+```bash
+SMB_SHARE=//winserver/share
+SMB_USER=svc_jb
+SMB_PASSWORD=SECRET
+```
+
+> **Permissions:** the share must be writable by the container's user. The
+> `uid=1000,gid=1000` in the mount options above usually suffices; adjust to
+> match the image's runtime user if uploads fail with permission errors.
+
+### Verify
+
+After `docker compose up -d`, confirm the backend sees the share:
+
+```bash
+docker compose exec backend ls -la /data/attachments
+docker compose exec backend printenv | grep LegacyFiles   # careful: no secrets here
+```
+
+If `LegacyFiles:CloudDiskRoot` is empty, the CloudDisk upload endpoints return
+a "Set configuration key…" error — so this mount is required for uploads to work.
+
+---
+
 ## Section 8 — Optional SQL Server in Compose
 
 Only for **dev/lab**. Production: external SQL + remove/disable the service.
