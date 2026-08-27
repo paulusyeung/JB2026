@@ -28,8 +28,9 @@
 #   OLLAMA_BASE_URL       Ollama LLM endpoint (e.g. http://host.docker.internal:11434)
 #   PAPERLESS_NGX_BASE_URL  Paperless-ngx endpoint
 #   ATTACHMENTS_HOST_PATH  Host mountpoint of the Windows SMB share for uploads
-#                         (default: /mnt/jb2026-attachments); bind-mounted into
-#                         the backend at /data/attachments.
+#                         (default: /mnt/jb5); bind-mounted into the backend at
+#                         /data/attachments. Must be mounted via /etc/fstab
+#                         (see ops/docker/README.md §7.5, Option A).
 #   SMB_SHARE / SMB_USER / SMB_PASSWORD  Only if using Option B (Compose-mounted
 #                         SMB volume) instead of a host /etc/fstab mount.
 #   SQL_SA_PASSWORD       SQL Server SA password (only if sql-server service is enabled)
@@ -64,7 +65,7 @@ services:
     # Option B: let Compose mount the SMB share directly — uncomment the
     #   "jb2026-attachments" volume below and the commented volume mount line.
     volumes:
-      - ${ATTACHMENTS_HOST_PATH:-/mnt/jb2026-attachments}:/data/attachments
+      - ${ATTACHMENTS_HOST_PATH:-/mnt/jb5}:/data/attachments
       # - jb2026-attachments:/data/attachments   # Option B (see volumes: below)
 
     # HARDENING: bind to loopback only so the API is not reachable from other

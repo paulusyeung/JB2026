@@ -434,31 +434,78 @@ share by itself — you wire it up at runtime. Both config keys are mapped to
 
 ### Option A — mount on the host, bind into the container (recommended)
 
-On the target server, mount the Windows share once (persists across reboots via
-`/etc/fstab`):
+On the target server:
+
+**1. Install the CIFS helper and create the mountpoint**
 
 ```bash
+sudo apt-get update
 sudo apt-get install -y cifs-utils
-sudo mkdir -p /mnt/jb2026-attachments
-# test mount:
-sudo mount -t cifs //winserver/share /mnt/jb2026-attachments \
-  -o username=svc_jb,password=SECRET,vers=3.0,uid=1000,gid=1000
+sudo mkdir -p /mnt/jb5
 ```
 
-Add to `/etc/fstab` so it survives reboot:
+**2. Create the credentials file (root-only, `chmod 600`)**
+
+```bash
+sudo mkdir -p /etc/smbcredentials
+sudo touch /etc/smbcredentials/jb5shared.cred
+sudo chmod 600 /etc/smbcredentials/jb5shared.cred
+sudo chown root:root /etc/smbcredentials/jb5shared.cred
+sudo nano /etc/smbcredentials/jb5shared.cred
+```
+
+Contents of `/etc/smbcredentials/jb5shared.cred` (the password never sits in
+shell history or `/etc/fstab` this way):
+
+```ini
+username=jb5svc
+password=SECRET
+domain=
+```
+
+(Leave `domain=` empty for a share-local account, or set it to your AD domain.)
+
+**3. Test the mount** (validates everything before relying on fstab):
+
+```bash
+sudo mount -t cifs //10.0.1.11/JB5 /mnt/jb5 \
+  -o credentials=/etc/smbcredentials/jb5shared.cred,vers=3.0,uid=1001,gid=1001,file_mode=0777,dir_mode=0777,nounix,noserverino,nofail
+
+# Confirm it mounted and is writable, then unmount the test
+mount | grep jb5
+touch /mnt/jb5/.writetest && echo "write OK" && rm /mnt/jb5/.writetest
+sudo umount /mnt/jb5
+```
+
+**4. Add to `/etc/fstab`** so it survives reboot. `x-systemd.automount` defers
+the mount until first access (avoids boot hangs if the share is slow/unreachable):
 
 ```fstab
-//winserver/share  /mnt/jb2026-attachments  cifs  username=svc_jb,password=SECRET,vers=3.0,uid=1000,gid=1000,_netdev  0  0
+//10.0.1.11/JB5  /mnt/jb5  cifs  credentials=/etc/smbcredentials/jb5shared.cred,vers=3.0,uid=1001,gid=1001,file_mode=0777,dir_mode=0777,nounix,noserverino,nofail,x-systemd.automount  0  0
+```
+
+Trigger the automount without a reboot and verify:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart remote-fs.target
+ls /mnt/jb5
 ```
 
 Then point compose at it in `.env`:
 
 ```bash
-ATTACHMENTS_HOST_PATH=/mnt/jb2026-attachments
+ATTACHMENTS_HOST_PATH=/mnt/jb5
 ```
 
 The `backend` service already bind-mounts that path to `/data/attachments` and
 sets `LegacyFiles__CloudDiskRoot` / `LegacyFiles__SmlFileRoot` to it.
+
+> **Why `uid=1001,gid=1001` + `file_mode=0777,dir_mode=0777`?** The share is
+> mounted owned by host uid/gid `1001`; combined with world-rw mode bits, the
+> backend container (whatever its internal uid) can read/write uploaded files.
+> `nounix`/`noserverino` keep CIFS from advertising Unix semantics that confuse
+> some Windows-server shares.
 
 ### Option B — let Compose mount the SMB share directly
 
@@ -472,9 +519,10 @@ SMB_USER=svc_jb
 SMB_PASSWORD=SECRET
 ```
 
-> **Permissions:** the share must be writable by the container's user. The
-> `uid=1000,gid=1000` in the mount options above usually suffices; adjust to
-> match the image's runtime user if uploads fail with permission errors.
+> **Permissions:** for Option B the share must be writable by the container's
+> user. `uid=1001,gid=1001` (matching the host mount above) with
+> `file_mode=0777,dir_mode=0777` usually suffices; adjust if uploads fail with
+> permission errors.
 
 ### Verify
 
