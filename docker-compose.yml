@@ -15,19 +15,33 @@
 #
 # Optional .env variables:
 #
-#   IMAGE_TAG             Image tag (default: latest)
+#   IMAGE_TAG             Image tag — pin semver in prod (default: latest)
 #   FRONTEND_PORT         Host port for frontend (default: 80)
-#   BACKEND_PORT          Host port for backend  (default: 8080)
+#   BACKEND_PORT          Host loopback port for backend (default: 8080)
+#   BACKEND_URL           Nginx upstream for /api/ (default: http://backend:8080)
 #   JWT_ISSUER            JWT issuer   (default: jb2026-api)
 #   JWT_AUDIENCE          JWT audience (default: jb2026-clients)
 #   CORS_ALLOWED_ORIGINS  Comma-separated allowed origins (default: http://localhost)
+#   SWAGGER_ENABLED       true to expose /swagger in Production (default: false)
 #   BILLING_BASE_URL      Invoice Ninja / billing endpoint
 #   TWENTY_CRM_BASE_URL   Twenty CRM endpoint
 #   OLLAMA_BASE_URL       Ollama LLM endpoint (e.g. http://host.docker.internal:11434)
 #   PAPERLESS_NGX_BASE_URL  Paperless-ngx endpoint
 #   SQL_SA_PASSWORD       SQL Server SA password (only if sql-server service is enabled)
 #   SQL_PORT              SQL Server host port (default: 1433)
+#
+# Hardening notes (see also ops/docker/README.md):
+#   - Backend is bound to 127.0.0.1 only — browsers hit the API via frontend /api/.
+#   - Pin IMAGE_TAG; do not ship production on :latest.
+#   - Put TLS (Caddy/Nginx/Traefik) in front of FRONTEND_PORT.
 # =============================================================================
+
+x-logging: &default-logging
+  # Cap log growth on disk (json-file is the Engine default driver).
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   # -------------------------------------------------------------------------
@@ -36,27 +50,39 @@ services:
   backend:
     image: ${DOCKER_HUB_USERNAME:-youruser}/jb2026-backend:${IMAGE_TAG:-latest}
     container_name: jb2026-backend
+    # HARDENING: bind to loopback only so the API is not reachable from other
+    # hosts. Traffic should enter via frontend Nginx (/api/). For local debug
+    # from another machine, change to "${BACKEND_PORT:-8080}:8080" (all interfaces)
+    # or remove this block entirely to keep the API compose-network-only.
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      # HARDENING: Swagger/OpenAPI off by default in Production.
+      # Set SWAGGER_ENABLED=true in .env for trusted LAN access to /swagger
+      # (also requires reaching the backend — SSH tunnel or temporarily publish the port).
+      - Swagger__Enabled=${SWAGGER_ENABLED:-false}
       # Primary database connection (required — the API refuses to start without it)
       - ConnectionStrings__Primary=${DB_CONNECTION_STRING:?Set DB_CONNECTION_STRING in .env}
       # JWT configuration (defaults exist in code, override here for production)
       - Jwt__Key=${JWT_KEY:?Set JWT_KEY in .env}
       - Jwt__Issuer=${JWT_ISSUER:-jb2026-api}
       - Jwt__Audience=${JWT_AUDIENCE:-jb2026-clients}
-      # CORS — comma-separated list of allowed origins (the frontend Nginx proxies
-      # /api/ so same-origin is typical, but set this if you expose the backend
-      # on a different host/port, e.g. for direct API access from a mobile app)
+      # CORS — set to your real public origin(s), e.g. https://app.example.com
+      # (default http://localhost is only suitable for local smoke tests)
       - Cors__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost}
       # External service endpoints (optional — omit to use in-memory defaults)
       - Billing__BaseUrl=${BILLING_BASE_URL:-}
       - TwentyCrm__BaseUrl=${TWENTY_CRM_BASE_URL:-}
       - Ollama__BaseUrl=${OLLAMA_BASE_URL:-}
       - PaperlessNgx__BaseUrl=${PAPERLESS_NGX_BASE_URL:-}
+    # HARDENING: resolve host.docker.internal on Linux so Ollama/etc. on the
+    # host are reachable (Docker Desktop already provides this on Mac/Windows).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       sql-server:
+        # Prefer service_healthy once sql-server is uncommented (see that block).
         condition: service_started
         required: false   # if you comment out sql-server, the API falls back to in-memory
     healthcheck:
@@ -65,6 +91,9 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 3
+    # HARDENING: prevent a runaway process from eating the whole host.
+    mem_limit: 768m
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - jb2026
@@ -75,11 +104,26 @@ services:
   frontend:
     image: ${DOCKER_HUB_USERNAME:-youruser}/jb2026-frontend:${IMAGE_TAG:-latest}
     container_name: jb2026-frontend
+    # Public HTTP entry (put TLS termination in front for production).
+    # If Caddy/Nginx on the host terminates TLS, prefer:
+    #   ports: ["127.0.0.1:${FRONTEND_PORT:-80}:80"]
     ports:
       - "${FRONTEND_PORT:-80}:80"
+    environment:
+      # Upstream the SPA's Nginx uses for /api/ and /healthz (compose DNS name).
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8080}
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      # busybox wget is present in nginx:alpine; /app/ must return 2xx/3xx.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/app/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    mem_limit: 128m
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - jb2026
@@ -87,11 +131,13 @@ services:
   # -------------------------------------------------------------------------
   # SQL Server — optional; uncomment to run the database in Docker.
   # For production, point DB_CONNECTION_STRING at an external SQL Server
-  # and remove this service.
+  # and leave this service commented out.
   # -------------------------------------------------------------------------
   # sql-server:
   #   image: mcr.microsoft.com/mssql/server:2022-latest
   #   container_name: jb2026-sql
+  #   # HARDENING: prefer loopback-only if you only need host-side tools:
+  #   #   ports: ["127.0.0.1:${SQL_PORT:-1433}:1433"]
   #   ports:
   #     - "${SQL_PORT:-1433}:1433"
   #   environment:
@@ -106,6 +152,12 @@ services:
   #     timeout: 5s
   #     start_period: 30s
   #     retries: 5
+  #   # When enabling this service, change backend.depends_on to:
+  #   #   sql-server:
+  #   #     condition: service_healthy
+  #   #     required: false
+  #   mem_limit: 2g
+  #   logging: *default-logging
   #   restart: unless-stopped
   #   networks:
   #     - jb2026

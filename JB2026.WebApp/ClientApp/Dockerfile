@@ -32,4 +32,9 @@ COPY --from=build /app/wwwroot/app /usr/share/nginx/html/app
 
 EXPOSE 80
 
+# HARDENING: container-level health (Compose also defines a healthcheck).
+# busybox wget ships with nginx:alpine.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --spider -q http://127.0.0.1/app/ || exit 1
+
 CMD ["nginx", "-g", "daemon off;"]

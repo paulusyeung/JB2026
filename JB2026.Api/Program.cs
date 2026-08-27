@@ -146,8 +146,15 @@ else
 var app = builder.Build();
 app.UseJb2026Foundation();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// HARDENING: Swagger is off in Production unless explicitly enabled.
+// Set Swagger__Enabled=true (e.g. trusted LAN) to expose /swagger; leave unset/false on internet-facing hosts.
+// Non-Production defaults to enabled so local/Staging keep working without extra config.
+var swaggerEnabled = app.Configuration.GetValue("Swagger:Enabled", !app.Environment.IsProduction());
+if (swaggerEnabled)
+{
+	app.UseSwagger();
+	app.UseSwaggerUI();
+}
 
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new { Service = "JB2026.Api", Status = "Running" }));
