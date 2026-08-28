@@ -74,8 +74,11 @@ That script:
 
 - creates user `deploy` with sudo
 - installs your public key into `/home/deploy/.ssh/authorized_keys`
-- disables password SSH (`PasswordAuthentication no`)
-- keeps pubkey SSH on
+- fixes ownership of `/home/deploy/.ssh` to `deploy` (required — sshd runs as
+  `deploy` and cannot read a root-owned `.ssh`)
+- enables public-key SSH via a drop-in (`/etc/ssh/sshd_config.d/00-jb2026-ssh.conf`,
+  which overrides Ubuntu's cloud-init drop-in)
+- leaves **password SSH enabled** for now, as a safety net
 - restarts `sshd`
 
 #### Step 4 — Verify key login works (build machine)
@@ -86,15 +89,18 @@ ssh deploy@<VM-IP>
 
 - **No password prompt** (or only your key passphrase) → success. Type `exit`.
 - **Still asks for a password / permission denied** → the `.pub` did not land in
-  `authorized_keys`. Re-check Step 2–3; do not continue to 1.2 until this works.
+  `authorized_keys` **or** `/home/deploy/.ssh` is owned by `root` (a known
+  `setup-user.sh` pitfall). Fix ownership with
+  `sudo chown deploy:deploy /home/deploy/.ssh` and retry. Do not continue to 1.2
+  until key login works.
 
-After Step 4, password SSH is off. Future logins and `./ops/deploy/deploy.sh`
-use this key automatically (`scp`/`ssh` read `~/.ssh/id_ed25519`).
+Leave password SSH enabled for now — harden at the end of Section 1 (Step 1.6),
+once provisioning, storage, and secrets are verified.
 
 #### Optional later
 
-- Set `PermitRootLogin no` in `/etc/ssh/sshd_config` once `deploy` works.
-- Grant `deploy` passwordless sudo only for the commands deploy/restart need.
+- Grant `deploy` passwordless sudo **only** for the commands deploy/restart need,
+  instead of full sudo (limits blast radius if the deploy key ever leaks).
 
 <details>
 <summary>Alternatives (manual paste / ssh-copy-id)</summary>
@@ -194,9 +200,33 @@ Before Section 2:
 - [ ] `/etc/jb2026/env` has a real connection string + JWT key (≥ 32 chars)
 - [ ] `mountpoint /srv/jb2026` is true; subfolders exist
 - [ ] SQL is reachable from the VM (`nc -vz <sql-host> 1433` or equivalent)
+- [ ] `ssh deploy@<VM-IP>` works (key auth)
+- [ ] `/etc/jb2026/env` has a real connection string + JWT key (≥ 32 chars)
+- [ ] `mountpoint /srv/jb2026` is true; subfolders exist
+- [ ] SQL is reachable from the VM (`nc -vz <sql-host> 1433` or equivalent)
 - [ ] UFW shows 22/80/443 allowed (`sudo ufw status`)
 
 Then run Section 2 from the build machine.
+
+### 1.6 Harden SSH (disable password auth + lock root)
+
+Only now — after key login is verified (Step 4), the server is provisioned
+(1.2), storage is mounted (1.3), secrets are set (1.4), and the checklist above
+passes — should you disable password SSH. Keeping it on through all the setup
+steps above leaves a recovery path if anything goes wrong.
+
+```bash
+# on the VM, as root (from ~/deploy):
+sudo ./harden-ssh.sh
+```
+
+`harden-ssh.sh` refuses to run unless a sudo user exists, writes the drop-in
+(`PasswordAuthentication no`, `PermitRootLogin no`), restarts `sshd`, and leaves
+you with key-only access. Keep another terminal logged in while you run it so you
+can recover if anything goes wrong.
+
+Future logins and `./ops/deploy/deploy.sh` use this key automatically
+(`scp`/`ssh` read `~/.ssh/id_ed25519`).
 
 ---
 

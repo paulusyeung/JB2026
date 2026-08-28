@@ -31,14 +31,23 @@ usermod -aG sudo "$USER"
 echo "==> Installing SSH public key"
 mkdir -p "/home/$USER/.ssh"
 chmod 700 "/home/$USER/.ssh"
+# The script runs as root (sudo), so the .ssh dir would be root-owned and sshd
+# (running as $USER) could not read authorized_keys. Chown it explicitly.
+chown "$USER:$USER" "/home/$USER/.ssh"
 install -m 600 -o "$USER" -g "$USER" "$KEYFILE" "/home/$USER/.ssh/authorized_keys"
 
-echo "==> Hardening sshd (disable password auth)"
-sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
-sed -i 's/^#\?PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+echo "==> Enabling public-key authentication (drop-in wins over cloud-init)"
+mkdir -p /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/00-jb2026-ssh.conf <<CONF
+# Managed by JB2026 setup-user.sh.
+# Password auth is deliberately LEFT ENABLED until key login is verified
+# (Step 4), then disabled by harden-ssh.sh. The 00- prefix makes this file
+# take precedence over Ubuntu's /etc/ssh/sshd_config.d/50-cloud-init.conf.
+PubkeyAuthentication yes
+CONF
 systemctl restart ssh
 
 echo ""
 echo "User '$USER' is ready. Log in with:  ssh $USER@<VM-IP>"
-echo "Password SSH is now disabled; only your key works."
+echo "Password SSH is still enabled as a safety net until you verify key login,"
+echo "then run harden-ssh.sh to disable password auth and lock root."
