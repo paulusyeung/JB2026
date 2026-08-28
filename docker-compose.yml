@@ -102,11 +102,16 @@ services:
     # host are reachable (Docker Desktop already provides this on Mac/Windows).
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    depends_on:
-      sql-server:
-        # Prefer service_healthy once sql-server is uncommented (see that block).
-        condition: service_started
-        required: false   # if you comment out sql-server, the API falls back to in-memory
+    #
+    # The entire depends_on block is commented out
+    # "service backend depends on undefined service sql-server". Uncomment both
+    # blocks together when enabling the SQL Server backend.
+    #
+    # depends_on:
+    #   sql-server:
+    #     # Prefer service_healthy once sql-server is uncommented (see that block).
+    #     condition: service_started
+    #     required: false   # if you comment out sql-server, the API falls back to in-memory
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/healthz"]
       interval: 30s
