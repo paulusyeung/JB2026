@@ -221,6 +221,9 @@ Important: the repo's `appsettings.json` contains real-looking secrets
 
 Also ensure the VM can reach SQL Server (typically TCP `1433`) from this host
 before the first deploy.
+``` bash
+timeout 3 bash -c '</dev/tcp/<server_ip>/1433' && echo "Port is Open" || echo "Port is Closed"
+```
 
 ### 1.5 Post-provision checklist
 
