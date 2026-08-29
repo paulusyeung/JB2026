@@ -29,9 +29,20 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 echo "==> Installing base packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y --no-install-recommends \
+if ! apt-get install -y --no-install-recommends \
   curl wget git unzip ca-certificates gnupg lsb-release \
-  apt-transport-https ufw nginx cifs-utils nfs-common
+  apt-transport-https ufw nginx cifs-utils nfs-common; then
+  echo "!! apt reported errors during install."
+  echo "   If nginx failed to start, it is usually the default vhost listening on"
+  echo "   IPv6 ([::]:80) while this host has IPv6 disabled. The default vhost is"
+  echo "   removed below and nginx reconfigured, so this is non-fatal."
+fi
+
+# The nginx package's default vhost listens on [::]:80; on hosts without IPv6
+# that makes nginx fail to start and leaves the package half-configured. Remove
+# the default vhost (we install our own) and finish configuration.
+rm -f /etc/nginx/sites-enabled/default
+dpkg --configure -a >/dev/null 2>&1 || true
 
 echo "==> Installing .NET 8 ASP.NET Core runtime"
 if ! dpkg -s aspnetcore-runtime-8.0 >/dev/null 2>&1; then
