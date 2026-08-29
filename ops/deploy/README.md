@@ -157,6 +157,21 @@ What the script installs / creates:
 Result: the VM exposes only `:80` publicly. The API listens privately on
 `127.0.0.1:8080` and is reached through Nginx (`/api/`, `/healthz`).
 
+> **Expected warning — benign nginx error during install.** If the host has IPv6
+> disabled, `apt-get install nginx` prints
+> `nginx: [emerg] socket() [::]:80 failed (Address family not supported by protocol)`
+> and the nginx package's post-install fails. This is **expected and harmless**:
+> the stock nginx *default* vhost listens on `[::]:80`, which the kernel rejects.
+> The script removes that default vhost, runs `dpkg --configure -a` to finish the
+> package, and at the end does `systemctl enable --now nginx` explicitly — so
+> provision keeps going and finishes with `Provisioning complete.`
+>
+> Verify the outcome (don't be alarmed by the error above):
+> ```bash
+> systemctl status nginx --no-pager   # expect: active (running)
+> curl -I http://127.0.0.1/           # expect: 302 -> /app/
+> ```
+
 ### 1.3 Mount external shared storage
 
 The backend reads paths from the `LegacyFiles` config section and **fails to
@@ -333,3 +348,37 @@ cd /opt/jb2026/releases
   `ConnectionStrings__Primary` at a new database.
 - **systemd notify:** the unit uses `Type=simple` because `Program.cs` does not
   call `UseSystemd()`. Switch to `Type=notify` if you add it.
+
+---
+
+## Troubleshooting
+
+- **`apt-get install nginx` shows `socket() [::]:80 failed (Address family not
+  supported by protocol)`** — expected and harmless on hosts with IPv6 disabled
+  (see the note in Section 1.2). The script removes the stock default vhost and
+  finishes nginx via `systemctl enable --now nginx`. Provision still ends with
+  `Provisioning complete.` Verify with `systemctl status nginx` (active) and
+  `curl -I http://127.0.0.1/` (302 → `/app/`).
+
+- **`ssh deploy@<VM-IP>` asks for a password or says permission denied** — the
+  key is being rejected. The usual cause is `/home/deploy/.ssh` owned by `root`
+  (the setup script runs as root, so `mkdir .ssh` creates it root-owned; it must
+  be `deploy`-owned for sshd to read `authorized_keys`). Fix:
+  ```bash
+  sudo chown -R deploy:deploy /home/deploy/.ssh
+  sudo chmod 700 /home/deploy/.ssh
+  ```
+
+- **`sudo` prompts for a password or fails** — `deploy` is created with no
+  password, so password-based sudo cannot work. `setup-user.sh` grants
+  passwordless sudo via `/etc/sudoers.d/deploy`. If that file is missing (e.g. an
+  older script was used), recreate it:
+  ```bash
+  echo 'deploy ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/deploy
+  sudo chmod 440 /etc/sudoers.d/deploy
+  ```
+
+- **Provision aborts early / skips steps** — if you ever see the nginx error and
+  provision does *not* print `Provisioning complete.`, you are running a script
+  version before this fix. Re-run the current `provision-server.sh`; it tolerates
+  the nginx post-install error and continues.

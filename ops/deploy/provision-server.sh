@@ -95,7 +95,9 @@ cp "$SCRIPT_DIR/nginx-jb2026.conf" /etc/nginx/sites-available/jb2026
 ln -sf /etc/nginx/sites-available/jb2026 /etc/nginx/sites-enabled/jb2026
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
-systemctl reload-or-restart nginx
+# Explicitly enable + start (don't rely on the nginx package postinst, which
+# can fail earlier if the default vhost's IPv6 listen is unavailable).
+systemctl enable --now nginx
 
 echo ""
 echo "Provisioning complete."
