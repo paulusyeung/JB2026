@@ -179,22 +179,34 @@ store attachments if `FileAgentRoot` is empty**. A helper script mounts a
 CIFS/NFS share and creates the expected subfolders:
 
 ```bash
-# on the server, as root (from ~/deploy):
-export SHARE_TYPE=cifs                      # or nfs
-export SHARE_SRC="//fileserver/jb2026"      # cifs: //host/share | nfs: host:/path
-# for CIFS, create the credentials file first (do NOT commit it):
+# Run from ~/deploy as the deploy user (passwordless sudo). These are console
+# commands — mount-storage.sh already exists; you are NOT creating a new script.
+# Pass SHARE_TYPE/SHARE_SRC on the sudo line, because sudo clears the environment.
+cd ~/deploy
+
+# For CIFS, create the credentials file first (do NOT commit it):
 sudo install -m 640 -o root -g jb2026 /dev/stdin /etc/jb2026/storage.creds <<'CRED'
 username=jb2026
 password=CHANGE_ME
 domain=WORKGROUP
 CRED
-sudo ./mount-storage.sh
+
+# Then mount (replace with your real server/share). For NFS use
+# SHARE_TYPE=nfs SHARE_SRC="host:/export/path" and skip the credentials file.
+sudo SHARE_TYPE=cifs SHARE_SRC="//fileserver/jb2026" ./mount-storage.sh
 ```
 
-The script adds the share to `/etc/fstab` (`_netdev`) and creates
-`/srv/jb2026/{attachments,cloud,products,sml,...}` owned by `jb2026`.
-The systemd unit already has `RequiresMountsFor=/srv/jb2026` so the API
-waits for the mount at boot.
+The script adds the share to `/etc/fstab` (`_netdev,nofail`) and creates the
+expected subfolders under `/srv/jb2026`, owned by `jb2026`. This **persists
+across reboots**: systemd reads `fstab` at boot, `_netdev` waits for the
+network, and `nofail` avoids hanging the boot if the share is temporarily
+unreachable. The `jb2026-api.service` unit also has `RequiresMountsFor=/srv/jb2026`,
+so the API is held until the mount is present.
+
+Because the mount is owned `jb2026:jb2026` (mode `770`) and the API runs as
+`jb2026`, the backend has full read/write access to the storage. (CIFS is
+case-insensitive, so the lowercase `LegacyFiles__*` paths in `/etc/jb2026/env`
+resolve to the share's mixed-case folders such as `DropBox`/`InBox`.)
 
 ### 1.4 Fill secrets + storage env
 

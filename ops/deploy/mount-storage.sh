@@ -38,11 +38,11 @@ if [ "$SHARE_TYPE" = "cifs" ]; then
   [ -f "$CRED_FILE" ] || { echo "ERROR: CIFS credentials file missing: $CRED_FILE"; exit 1; }
   chown root:"$APP_USER" "$CRED_FILE"
   chmod 640 "$CRED_FILE"
-  FSTAB_LINE="${SHARE_SRC} ${MOUNT_POINT} cifs credentials=${CRED_FILE},uid=${APP_USER},gid=${APP_USER},file_mode=0770,dir_mode=0770,iocharset=utf8,vers=3.0,_netdev 0 0"
+  FSTAB_LINE="${SHARE_SRC} ${MOUNT_POINT} cifs credentials=${CRED_FILE},uid=${APP_USER},gid=${APP_USER},file_mode=0770,dir_mode=0770,iocharset=utf8,nounix,noserverino,vers=3.0,_netdev,nofail 0 0"
 else
   echo "==> Installing nfs-common"
   apt-get install -y --no-install-recommends nfs-common
-  FSTAB_LINE="${SHARE_SRC} ${MOUNT_POINT} nfs defaults,_netdev 0 0"
+  FSTAB_LINE="${SHARE_SRC} ${MOUNT_POINT} nfs defaults,_netdev,nofail 0 0"
 fi
 
 if ! grep -qs "$MOUNT_POINT" /etc/fstab; then
