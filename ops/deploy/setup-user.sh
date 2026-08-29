@@ -28,6 +28,12 @@ else
 fi
 usermod -aG sudo "$USER"
 
+# Passwordless sudo for this automation user. Authentication is the SSH key
+# (deploy has no password), and the deploy/rollback scripts run `sudo` with no
+# TTY password prompt. Scoped to this user only.
+echo "$USER ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/$USER"
+chmod 440 "/etc/sudoers.d/$USER"
+
 echo "==> Installing SSH public key"
 mkdir -p "/home/$USER/.ssh"
 chmod 700 "/home/$USER/.ssh"

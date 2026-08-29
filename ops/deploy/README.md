@@ -66,7 +66,7 @@ You'll be asked for the **root password** of the VM.
 ```bash
 ssh root@<VM-IP>          # root password again
 sudo ./setup-user.sh deploy ~/id_ed25519.pub
-rm -f ~/id_ed25519.pub    # staged copy; safe to delete on the VM
+rm -f ~/id_ed25519.pub ~/setup-user.sh   # staged bootstrap files; safe to delete
 exit
 ```
 
@@ -97,10 +97,13 @@ ssh deploy@<VM-IP>
 Leave password SSH enabled for now — harden at the end of Section 1 (Step 1.6),
 once provisioning, storage, and secrets are verified.
 
-#### Optional later
+#### Note
 
-- Grant `deploy` passwordless sudo **only** for the commands deploy/restart need,
-  instead of full sudo (limits blast radius if the deploy key ever leaks).
+`deploy` is given **passwordless sudo** by `setup-user.sh` (via
+`/etc/sudoers.d/deploy`). Authentication is the SSH key — `deploy` has no
+password — and the deploy/rollback scripts rely on non-interactive `sudo`. If you
+later want to tighten this, replace that sudoers file with a scoped one, but the
+deploy scripts currently run `sudo bash -s` and need broad rights.
 
 <details>
 <summary>Alternatives (manual paste / ssh-copy-id)</summary>

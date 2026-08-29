@@ -9,8 +9,8 @@
 # Usage:
 #   ./deploy.sh <user@host> [version]
 #
-#   <user@host>  SSH destination (the user must have sudo rights; you will be
-#                prompted for the sudo password via an allocated TTY).
+#   <user@host>  SSH destination (the user must have passwordless sudo rights;
+#                the SSH key is the only auth factor, so no password is prompted).
 #   [version]    Release label (default: git describe, else timestamp).
 #
 # Secrets (/etc/jb2026/env) and server config are NEVER touched by this script.

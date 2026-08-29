@@ -84,7 +84,7 @@ cp "$SCRIPT_DIR/nginx-jb2026.conf" /etc/nginx/sites-available/jb2026
 ln -sf /etc/nginx/sites-available/jb2026 /etc/nginx/sites-enabled/jb2026
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
-systemctl reload nginx
+systemctl reload-or-restart nginx
 
 echo ""
 echo "Provisioning complete."
