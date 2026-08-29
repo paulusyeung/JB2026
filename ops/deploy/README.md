@@ -212,8 +212,12 @@ resolve to the share's mixed-case folders such as `DropBox`/`InBox`.)
 
 ```bash
 sudo nano /etc/jb2026/env      # fill ConnectionStrings__Primary, Jwt__Key,
-                              # and confirm LegacyFiles__* paths
+                               # and confirm LegacyFiles__* paths
 ```
+
+The `Jwt__Key` is a plain shared secret (the app reads it as UTF-8 bytes, **not**
+Base64) — use a random string of at least 32 characters, e.g.
+`openssl rand -base64 32` (paste the output as the literal value).
 
 Important: the repo's `appsettings.json` contains real-looking secrets
 (Twenty CRM key, Paperless token, Invoice Ninja key, Mailcow password). Do
