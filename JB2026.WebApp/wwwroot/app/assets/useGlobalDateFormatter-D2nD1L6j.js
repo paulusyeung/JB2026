@@ -1,1 +1,0 @@
-import{co as m,aY as c,cp as n,l as u}from"./index-DpgVPIdd.js";import{u as F}from"./useLocaleFormatters-Dg0Ua8Ce.js";function L(){const r=m(),{activeLocale:a}=F();return{currentFormat:u({get:()=>r.currentFormat,set:t=>r.setCurrentFormat(t)}),format:(t,o,s)=>{const e=s||a.value;return o?n(t,o,e):r.format(t,e)},setFormat:t=>{r.setCurrentFormat(t)},DATE_FORMATS:c}}export{L as u};
