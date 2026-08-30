@@ -286,9 +286,10 @@ Produces `artifacts/`:
 ### 2.2 Deploy
 
 ```bash
-./ops/deploy/deploy.sh <user@host> [version]
+./ops/deploy/deploy.sh deploy@<VM-IP> [version]
 ```
 
+- The `deploy` user is created in Section 1 with the SSH key and passwordless sudo — the deploy/rollback scripts rely on both
 - Packages `artifacts/` into `/tmp/jb2026-<version>.tar.gz`.
 - `scp`s to the SSH user's home (not `/opt/...` — that tree is owned by
   `jb2026`), then the remote sudo step moves it into `/opt/jb2026/tmp`.
@@ -318,7 +319,7 @@ sudo nginx -t
 ### 2.4 Rollback
 
 ```bash
-./ops/deploy/rollback.sh <user@host> <previous-version>
+./ops/deploy/rollback.sh deploy@<VM-IP> <previous-version>
 ```
 
 Re-points `current` to a previously installed release and restarts. List
