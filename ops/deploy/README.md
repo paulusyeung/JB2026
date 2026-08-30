@@ -339,6 +339,44 @@ cd /opt/jb2026/releases
 # inspect, then: sudo rm -rf <old-version>
 ```
 
+### 2.5 Update (since last deploy)
+
+After changing backend or frontend code on the build machine, redeploy with the
+one-liner workflow:
+
+```bash
+./ops/deploy/build.sh                        # 1. rebuild artifacts/
+./ops/deploy/deploy.sh deploy@<VM-IP>        # 2. ship, swap symlink, restart
+curl -fsS  http://<VM-IP>/healthz            # 3. backend health (200 JSON)
+curl -fsSI http://<VM-IP>/app/               # 4. SPA (200)
+```
+
+Rules and gotchas:
+
+- `deploy.sh` only ships `artifacts/` from the last `build.sh` — it does not
+  rebuild. Always run `build.sh` first after changing code, or the server gets
+  stale binaries.
+- Give the release a readable label with `deploy.sh deploy@<VM-IP> 1.0.1`.
+  The default is `git describe --tags --always`; without tags Git falls back
+  to a short hash. Tag releases so rollback targets are meaningful.
+- `/etc/jb2026/env` (secrets + `LegacyFiles__*` paths) is never overwritten by
+  deploy, so server config survives redeploys — edit it in place the odd time
+  it needs to change (e.g. the `LegacyFiles__InBox` fix) and restart the unit:
+  ```bash
+  sudo systemctl restart jb2026-api
+  ```
+- Database migrations are **not** run by deploy. Apply schema/SQL changes to
+  the database separately, then deploy the code that expects them.
+- Need to update the client browsers? The SPA is served by Nginx from the new
+  `current` web assets with content-hashed filenames — a normal page refresh
+  picks it up. Users on an old hash just fetch the new `index.html`.
+- Failed after `current` swapped? Roll back to the last good version
+  (Section 2.4):
+  ```bash
+  ssh deploy@<VM-IP> 'ls -1 /opt/jb2026/releases'
+  ./ops/deploy/rollback.sh deploy@<VM-IP> <previous-version>
+  ```
+
 ---
 
 ## Layout on the server
