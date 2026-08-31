@@ -1,5 +1,6 @@
 export const orderTypesMessages = {
-  printing: 'Printing',
-  digitalPrinting: 'Digital Printing',
+  offsetPrint: 'Offset Print',
+  digitalPrint: 'Digital Print',
+  wovenLabel: 'Woven Label',
   others: 'Others',
 } as const
