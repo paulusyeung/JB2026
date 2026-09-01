@@ -3,6 +3,10 @@ using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Services;
 
+/// <summary>
+/// Identity service for config-based users only.
+/// Config-based users do not have database rows, so 2FA is not supported.
+/// </summary>
 public sealed class ConfiguredLegacyIdentityService : ILegacyIdentityService
 {
     private readonly IReadOnlyList<LegacyIdentityUser> _users;
@@ -48,4 +52,19 @@ public sealed class ConfiguredLegacyIdentityService : ILegacyIdentityService
     {
         return _users;
     }
+
+    // 2FA is not supported for config-based users (no database row for MetadataXml)
+    public Task<bool> GetTwoFactorStatusAsync(Guid userId) => Task.FromResult(false);
+
+    public Task EnableTwoFactorAsync(Guid userId, string secret, string recoveryCodes) =>
+        throw new NotSupportedException("2FA is not supported for config-based users.");
+
+    public Task DisableTwoFactorAsync(Guid userId) =>
+        throw new NotSupportedException("2FA is not supported for config-based users.");
+
+    public Task<bool> ValidateTwoFactorCodeAsync(Guid userId, string code) => Task.FromResult(false);
+
+    public Task<bool> UseRecoveryCodeAsync(Guid userId, string code) => Task.FromResult(false);
+
+    public Task<string?> GetUserInfoMetadataAsync(Guid userId) => Task.FromResult<string?>(null);
 }

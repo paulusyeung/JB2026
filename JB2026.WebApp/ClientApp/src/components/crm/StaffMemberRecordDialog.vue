@@ -102,6 +102,38 @@
           />
         </v-col>
       </v-row>
+
+      <v-divider class="my-4" />
+
+      <div class="d-flex align-center ga-3 mb-3">
+        <v-icon icon="mdi-shield-lock" color="primary" />
+        <div>
+          <h3 class="text-subtitle-1 font-weight-bold">{{ twoFactorEnabled ? t('auth.twoFactor.status.enabled') : t('auth.twoFactor.status.disabled') }}</h3>
+        </div>
+        <v-spacer />
+        <v-btn
+          v-if="!twoFactorEnabled"
+          size="small"
+          variant="tonal"
+          color="primary"
+          prepend-icon="mdi-shield-plus"
+          :disabled="isNew"
+          @click="twoFactorSetupDialogOpen = true"
+        >
+          {{ t('auth.twoFactor.status.enableButton') }}
+        </v-btn>
+        <v-btn
+          v-else
+          size="small"
+          variant="tonal"
+          color="error"
+          prepend-icon="mdi-shield-minus"
+          :disabled="isNew"
+          @click="twoFactorDisableDialogOpen = true"
+        >
+          {{ t('auth.twoFactor.status.disableButton') }}
+        </v-btn>
+      </div>
     </v-card-text>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mx-6 mb-2">
@@ -123,6 +155,85 @@
         @done="crmDialogOpen = false; loadRecord(props.userId)"
       />
     </v-dialog>
+
+    <v-dialog v-model="twoFactorSetupDialogOpen" max-width="480px">
+      <v-card>
+        <v-card-title>{{ t('auth.twoFactor.setup.title') }}</v-card-title>
+        <v-card-text>
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            {{ t('auth.twoFactor.setup.description') }}
+          </p>
+          <div v-if="twoFactorSetupData" class="text-center mb-4">
+            <qrcode-vue :value="twoFactorSetupData.provisioningUri" :size="200" level="M" />
+            <p class="text-body-2 mt-2">{{ t('auth.twoFactor.setup.scanQr') }}</p>
+          </div>
+          <v-alert v-if="twoFactorSetupData?.recoveryCodes" type="info" variant="tonal" class="mb-4">
+            <p class="text-body-2 font-weight-bold mb-2">{{ t('auth.twoFactor.setup.recoveryCodes') }}</p>
+            <p class="text-body-2 font-family-monospace">{{ twoFactorSetupData.recoveryCodes.join(', ') }}</p>
+          </v-alert>
+          <v-otp-input
+            v-model="twoFactorConfirmCode"
+            :length="6"
+            variant="outlined"
+            class="mb-4"
+          />
+          <v-alert v-if="twoFactorError" type="error" variant="tonal" class="mb-4">
+            {{ twoFactorError }}
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="twoFactorSetupDialogOpen = false">{{ t('auth.twoFactor.cancel') }}</v-btn>
+          <v-btn
+            color="primary"
+            :loading="twoFactorLoading"
+            :disabled="twoFactorConfirmCode.length !== 6"
+            @click="handleTwoFactorConfirm"
+          >
+            {{ t('auth.twoFactor.setup.confirm') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="twoFactorDisableDialogOpen" max-width="480px">
+      <v-card>
+        <v-card-title>{{ t('auth.twoFactor.disable.title') }}</v-card-title>
+        <v-card-text>
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            {{ t('auth.twoFactor.disable.description') }}
+          </p>
+          <v-text-field
+            v-model="twoFactorDisablePassword"
+            :label="t('auth.twoFactor.disable.password')"
+            variant="outlined"
+            type="password"
+            class="mb-4"
+          />
+          <v-otp-input
+            v-model="twoFactorDisableCode"
+            :length="6"
+            variant="outlined"
+            class="mb-4"
+          />
+          <v-alert v-if="twoFactorError" type="error" variant="tonal" class="mb-4">
+            {{ twoFactorError }}
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="twoFactorDisableDialogOpen = false">{{ t('auth.twoFactor.cancel') }}</v-btn>
+          <v-btn
+            color="error"
+            :loading="twoFactorLoading"
+            :disabled="!twoFactorDisablePassword || twoFactorDisableCode.length !== 6"
+            @click="handleTwoFactorDisable"
+          >
+            {{ t('auth.twoFactor.disable.disable') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 
@@ -135,8 +246,10 @@ import {
   getAdminUser,
   updateAdminUser,
 } from '@/services/admin'
+import { setupTwoFactor, confirmTwoFactor, disableTwoFactor, getTwoFactorStatus } from '@/services/auth'
 import SyncCrmDialog from '@/components/crm/SyncCrmDialog.vue'
-import type { AdminUserRecord } from '@/types/api'
+import QrcodeVue from 'qrcode.vue'
+import type { AdminUserRecord, TwoFactorSetupResponse } from '@/types/api'
 
 const props = defineProps<{
   userId: string | null
@@ -154,6 +267,15 @@ const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
 const crmDialogOpen = ref(false)
+const twoFactorEnabled = ref(false)
+const twoFactorSetupDialogOpen = ref(false)
+const twoFactorDisableDialogOpen = ref(false)
+const twoFactorSetupData = ref<TwoFactorSetupResponse | null>(null)
+const twoFactorConfirmCode = ref('')
+const twoFactorDisablePassword = ref('')
+const twoFactorDisableCode = ref('')
+const twoFactorLoading = ref(false)
+const twoFactorError = ref('')
 
 const draft = reactive({
   username: '',
@@ -218,6 +340,24 @@ watch(
   { immediate: true },
 )
 
+watch(twoFactorSetupDialogOpen, (isOpen) => {
+  if (isOpen) {
+    handleTwoFactorSetup()
+  } else {
+    twoFactorSetupData.value = null
+    twoFactorConfirmCode.value = ''
+    twoFactorError.value = ''
+  }
+})
+
+watch(twoFactorDisableDialogOpen, (isOpen) => {
+  if (!isOpen) {
+    twoFactorDisablePassword.value = ''
+    twoFactorDisableCode.value = ''
+    twoFactorError.value = ''
+  }
+})
+
 async function loadRecord(userId: string | null) {
   errorMessage.value = ''
 
@@ -227,6 +367,7 @@ async function loadRecord(userId: string | null) {
     draft.userPassword = ''
     draft.userRole = 0
     draft.email = ''
+    twoFactorEnabled.value = false
     return
   }
 
@@ -237,8 +378,69 @@ async function loadRecord(userId: string | null) {
     draft.userPassword = user.userPassword
     draft.userRole = user.userRole
     draft.email = user.email
+
+    // Load 2FA status
+    try {
+      const status = await getTwoFactorStatus()
+      twoFactorEnabled.value = status.enabled
+    } catch {
+      // 2FA status might not be available for all users
+      twoFactorEnabled.value = false
+    }
   } catch {
     errorMessage.value = t('admin.user.messages.loadRecordFailed')
+  }
+}
+
+async function handleTwoFactorSetup() {
+  twoFactorLoading.value = true
+  twoFactorError.value = ''
+
+  try {
+    const response = await setupTwoFactor()
+    twoFactorSetupData.value = response
+  } catch {
+    twoFactorError.value = t('auth.errors.apiUnavailable')
+  } finally {
+    twoFactorLoading.value = false
+  }
+}
+
+async function handleTwoFactorConfirm() {
+  if (twoFactorConfirmCode.value.length !== 6) return
+
+  twoFactorLoading.value = true
+  twoFactorError.value = ''
+
+  try {
+    await confirmTwoFactor(twoFactorConfirmCode.value)
+    twoFactorEnabled.value = true
+    twoFactorSetupDialogOpen.value = false
+    twoFactorSetupData.value = null
+    twoFactorConfirmCode.value = ''
+  } catch {
+    twoFactorError.value = t('auth.errors.invalidTwoFactorCode')
+  } finally {
+    twoFactorLoading.value = false
+  }
+}
+
+async function handleTwoFactorDisable() {
+  if (!twoFactorDisablePassword.value || twoFactorDisableCode.value.length !== 6) return
+
+  twoFactorLoading.value = true
+  twoFactorError.value = ''
+
+  try {
+    await disableTwoFactor(twoFactorDisablePassword.value, twoFactorDisableCode.value)
+    twoFactorEnabled.value = false
+    twoFactorDisableDialogOpen.value = false
+    twoFactorDisablePassword.value = ''
+    twoFactorDisableCode.value = ''
+  } catch {
+    twoFactorError.value = t('auth.errors.invalidTwoFactorCode')
+  } finally {
+    twoFactorLoading.value = false
   }
 }
 

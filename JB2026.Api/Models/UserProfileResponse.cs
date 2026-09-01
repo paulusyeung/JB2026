@@ -9,4 +9,6 @@ public sealed class UserProfileResponse
     public required string DisplayName { get; init; }
 
     public required string Role { get; init; }
+
+    public bool TwoFactorEnabled { get; init; }
 }

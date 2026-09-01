@@ -25,9 +25,10 @@ function processQueue(token: string | null) {
 }
 
 apiClient.interceptors.request.use((config) => {
-  const isAuth = config.url?.includes('/api/v2/auth/')
+  // Skip auth header for login/refresh/revoke endpoints, but NOT for 2FA management endpoints
+  const isUnauthenticatedAuthEndpoint = config.url?.match(/\/api\/v2\/auth\/(token|refresh|revoke)/)
   const token = localStorage.getItem('jb2026.accessToken')
-  if (token && !isAuth) {
+  if (token && !isUnauthenticatedAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`
   }
 

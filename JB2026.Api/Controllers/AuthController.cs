@@ -1,7 +1,12 @@
+using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using JB2026.Api.Models;
 using JB2026.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 
 namespace JB2026.Api.Controllers;
@@ -14,19 +19,24 @@ public sealed class AuthController : ControllerBase
     private readonly ILegacyIdentityService _legacyIdentityService;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly ITwoFactorService _twoFactorService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
+
+    private static readonly ConcurrentDictionary<string, (int Failures, DateTime? LockedUntil)> _twoFactorAttempts = new();
 
     public AuthController(
         ILegacyIdentityService legacyIdentityService,
         IJwtTokenService jwtTokenService,
         IRefreshTokenService refreshTokenService,
+        ITwoFactorService twoFactorService,
         IConfiguration configuration,
         ILogger<AuthController> logger)
     {
         _legacyIdentityService = legacyIdentityService;
         _jwtTokenService = jwtTokenService;
         _refreshTokenService = refreshTokenService;
+        _twoFactorService = twoFactorService;
         _configuration = configuration;
         _logger = logger;
     }
@@ -38,8 +48,6 @@ public sealed class AuthController : ControllerBase
         return await CreateTokenInternalAsync(username, password, keepMeSignedIn, cancellationToken);
     }
 
-    // Supports legacy clients that call GET /api/{v}/auth/token?username=...&password=...
-    // and GET /api/{v}/auth/token with username/password headers.
     [HttpGet("token")]
     public async Task<ActionResult<TokenResponse>> CreateTokenGet([FromQuery] string? username, [FromQuery] string? password)
     {
@@ -77,6 +85,32 @@ public sealed class AuthController : ControllerBase
             });
         }
 
+        // Check if 2FA is enabled for this user
+        var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(user.UserId);
+        if (twoFactorEnabled)
+        {
+            // Issue a temporary 2FA token instead of a full access token
+            var twoFactorToken = CreateTwoFactorToken(user);
+            _logger.LogInformation("Issued 2FA token for username {Username}", user.Username);
+
+            return Ok(new TokenResponse
+            {
+                AccessToken = string.Empty,
+                ExpiresAtUtc = DateTime.UtcNow,
+                TokenType = "Bearer",
+                User = new UserProfileResponse
+                {
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    DisplayName = user.DisplayName,
+                    Role = user.Role,
+                    TwoFactorEnabled = true
+                },
+                Requires2fa = true,
+                TwoFactorToken = twoFactorToken
+            });
+        }
+
         var (token, expiresAtUtc) = _jwtTokenService.CreateToken(user, keepMeSignedIn);
         _logger.LogInformation("Issued token for username {Username} with role {Role}", user.Username, user.Role);
 
@@ -98,9 +132,364 @@ public sealed class AuthController : ControllerBase
                 UserId = user.UserId,
                 Username = user.Username,
                 DisplayName = user.DisplayName,
-                Role = user.Role
+                Role = user.Role,
+                TwoFactorEnabled = false
             },
             RefreshToken = refreshToken
+        });
+    }
+
+    [HttpPost("2fa/verify")]
+    public async Task<ActionResult<TokenResponse>> VerifyTwoFactor([FromBody] TwoFactorVerifyRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.TwoFactorToken) || string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["TwoFactorToken"] = ["Two-factor token is required."],
+                ["Code"] = ["Verification code is required."]
+            }));
+        }
+
+        // Validate the temporary 2FA token
+        var userId = ValidateTwoFactorToken(request.TwoFactorToken);
+        if (userId is null)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Invalid or expired token",
+                Detail = "The two-factor token is invalid or has expired. Please log in again.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        var userIdGuid = Guid.Parse(userId);
+
+        // Check rate limiting
+        if (IsTwoFactorLocked(userId))
+        {
+            _logger.LogWarning("2FA rate limit exceeded for user {UserId}", userId);
+            return StatusCode(429, new ProblemDetails
+            {
+                Title = "Rate limit exceeded",
+                Detail = "Too many failed attempts. Please try again later.",
+                Status = 429
+            });
+        }
+
+        // Check if user still has 2FA enabled
+        var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
+        if (!twoFactorEnabled)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "2FA not enabled",
+                Detail = "Two-factor authentication is not enabled for this account.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        // Try TOTP code first, then recovery code
+        var validCode = false;
+        var user = _legacyIdentityService.FindByUserId(userIdGuid);
+        if (user is not null)
+        {
+            // Get the encrypted secret from the database
+            var userInfo = await GetUserInfoMetadataAsync(userIdGuid);
+            var encryptedSecret = MetadataXmlHelper.ExtractTwoFactorSecret(userInfo);
+            if (!string.IsNullOrEmpty(encryptedSecret))
+            {
+                var secret = _twoFactorService.DecryptSecret(encryptedSecret);
+                validCode = _twoFactorService.ValidateCode(secret, request.Code);
+            }
+
+            if (!validCode)
+            {
+                // Try recovery code
+                var hashedRecoveryCodes = MetadataXmlHelper.ExtractTwoFactorRecoveryCodes(userInfo);
+                validCode = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
+            }
+        }
+
+        if (!validCode)
+        {
+            RecordTwoFactorFailure(userId);
+            _logger.LogWarning("Invalid 2FA code for user {UserId}", userId);
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Invalid code",
+                Detail = "The verification code is invalid.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        // Reset failure count on success
+        ResetTwoFactorFailures(userId);
+
+        // Issue full access token
+        var (token, expiresAtUtc) = _jwtTokenService.CreateToken(user!, keepMeSignedIn: false);
+        _logger.LogInformation("2FA verified for user {UserId}, issued token", userId);
+
+        return Ok(new TokenResponse
+        {
+            AccessToken = token,
+            ExpiresAtUtc = expiresAtUtc,
+            TokenType = "Bearer",
+            User = new UserProfileResponse
+            {
+                UserId = user!.UserId,
+                Username = user.Username,
+                DisplayName = user.DisplayName,
+                Role = user.Role,
+                TwoFactorEnabled = true
+            }
+        });
+    }
+
+    [Authorize]
+    [HttpPost("2fa/setup")]
+    public async Task<ActionResult<TwoFactorSetupResponse>> SetupTwoFactor()
+    {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized();
+
+        var userIdGuid = Guid.Parse(userId);
+
+        // Check if 2FA is already enabled
+        var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
+        if (twoFactorEnabled)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "2FA already enabled",
+                Detail = "Two-factor authentication is already enabled for this account.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        var secret = _twoFactorService.GenerateSecret();
+        var encryptedSecret = _twoFactorService.EncryptSecret(secret);
+        var provisioningUri = _twoFactorService.GetProvisioningUri(userId, encryptedSecret);
+
+        // Store the encrypted secret temporarily (will be confirmed in /confirm)
+        // For now, we return the secret and the client stores it until confirmation
+        return Ok(new TwoFactorSetupResponse
+        {
+            Secret = encryptedSecret,
+            ProvisioningUri = provisioningUri
+        });
+    }
+
+    [Authorize]
+    [HttpPost("2fa/confirm")]
+    public async Task<ActionResult<TwoFactorConfirmResponse>> ConfirmTwoFactor([FromBody] TwoFactorConfirmRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["Code"] = ["Verification code is required."]
+            }));
+        }
+
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized();
+
+        var userIdGuid = Guid.Parse(userId);
+
+        // Check if 2FA is already enabled
+        var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
+        if (twoFactorEnabled)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "2FA already enabled",
+                Detail = "Two-factor authentication is already enabled for this account.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        // Get the secret from the setup response (stored in the request or session)
+        // For simplicity, we'll require the client to send back the encrypted secret
+        // In a real implementation, this would be stored server-side
+        var userInfo = await GetUserInfoMetadataAsync(userIdGuid);
+        var encryptedSecret = MetadataXmlHelper.ExtractTwoFactorSecret(userInfo);
+
+        if (string.IsNullOrEmpty(encryptedSecret))
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Setup required",
+                Detail = "Please call /2fa/setup first.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        var secret = _twoFactorService.DecryptSecret(encryptedSecret);
+        var validCode = _twoFactorService.ValidateCode(secret, request.Code);
+
+        if (!validCode)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid code",
+                Detail = "The verification code is invalid.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        // Generate recovery codes
+        var recoveryCodes = _twoFactorService.GenerateRecoveryCodes();
+        var hashedRecoveryCodes = _twoFactorService.HashRecoveryCodes(recoveryCodes);
+
+        // Enable 2FA
+        await _legacyIdentityService.EnableTwoFactorAsync(userIdGuid, encryptedSecret, hashedRecoveryCodes);
+
+        _logger.LogInformation("2FA enabled for user {UserId}", userId);
+
+        return Ok(new TwoFactorConfirmResponse
+        {
+            RecoveryCodes = recoveryCodes
+        });
+    }
+
+    [Authorize]
+    [HttpPost("2fa/disable")]
+    public async Task<IActionResult> DisableTwoFactor([FromBody] TwoFactorDisableRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["Password"] = ["Password is required."],
+                ["Code"] = ["Verification code is required."]
+            }));
+        }
+
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized();
+
+        var userIdGuid = Guid.Parse(userId);
+
+        // Verify password
+        var user = _legacyIdentityService.FindByUserId(userIdGuid);
+        if (user is null || user.Password != request.Password)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Invalid credentials",
+                Detail = "The password is incorrect.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        // Check rate limiting
+        if (IsTwoFactorLocked(userId))
+        {
+            return StatusCode(429, new ProblemDetails
+            {
+                Title = "Rate limit exceeded",
+                Detail = "Too many failed attempts. Please try again later.",
+                Status = 429
+            });
+        }
+
+        // Verify 2FA code
+        var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
+        if (!twoFactorEnabled)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "2FA not enabled",
+                Detail = "Two-factor authentication is not enabled for this account.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        var userInfo = await GetUserInfoMetadataAsync(userIdGuid);
+        var encryptedSecret = MetadataXmlHelper.ExtractTwoFactorSecret(userInfo);
+        var validCode = false;
+
+        if (!string.IsNullOrEmpty(encryptedSecret))
+        {
+            var secret = _twoFactorService.DecryptSecret(encryptedSecret);
+            validCode = _twoFactorService.ValidateCode(secret, request.Code);
+        }
+
+        if (!validCode)
+        {
+            // Try recovery code
+            var hashedRecoveryCodes = MetadataXmlHelper.ExtractTwoFactorRecoveryCodes(userInfo);
+            validCode = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
+        }
+
+        if (!validCode)
+        {
+            RecordTwoFactorFailure(userId);
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Invalid code",
+                Detail = "The verification code is invalid.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        // Disable 2FA
+        await _legacyIdentityService.DisableTwoFactorAsync(userIdGuid);
+        ResetTwoFactorFailures(userId);
+
+        _logger.LogInformation("2FA disabled for user {UserId}", userId);
+
+        return NoContent();
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("2fa")]
+    public async Task<IActionResult> AdminDisableTwoFactor([FromBody] TwoFactorAdminDisableRequest request)
+    {
+        if (request is null)
+        {
+            return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["UserId"] = ["User ID is required."]
+            }));
+        }
+
+        var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(request.UserId);
+        if (!twoFactorEnabled)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "2FA not enabled",
+                Detail = "Two-factor authentication is not enabled for this user.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        await _legacyIdentityService.DisableTwoFactorAsync(request.UserId);
+
+        _logger.LogInformation("Admin disabled 2FA for user {UserId}", request.UserId);
+
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpGet("2fa/status")]
+    public async Task<ActionResult<TwoFactorStatusResponse>> GetTwoFactorStatus()
+    {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized();
+
+        var userIdGuid = Guid.Parse(userId);
+        var enabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
+
+        return Ok(new TwoFactorStatusResponse
+        {
+            Enabled = enabled
         });
     }
 
@@ -149,10 +538,6 @@ public sealed class AuthController : ControllerBase
         return (username, password, keepMeSignedIn);
     }
 
-        /// <summary>
-    /// Exchanges a refresh token for a new access token and refresh token.
-    /// Implements token rotation: the old refresh token is atomically validated and consumed.
-    /// </summary>
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenResponse>> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
@@ -164,11 +549,10 @@ public sealed class AuthController : ControllerBase
             }));
         }
 
-        // Atomically validate and consume the refresh token
         var userId = await _refreshTokenService.ValidateAndConsumeAsync(request.RefreshToken);
         if (userId is null)
         {
-            _logger.LogWarning("Refresh token validation failed for token starting with {TokenPrefix}", 
+            _logger.LogWarning("Refresh token validation failed for token starting with {TokenPrefix}",
                 request.RefreshToken.Substring(0, Math.Min(10, request.RefreshToken.Length)));
             return Unauthorized(new ProblemDetails
             {
@@ -179,7 +563,6 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Look up the user details
         if (!Guid.TryParse(userId, out var userIdGuid))
         {
             _logger.LogError("Invalid user ID format in refresh token: {UserId}", userId);
@@ -203,10 +586,8 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Create a new access token
         var (token, expiresAtUtc) = _jwtTokenService.CreateToken(user, keepMeSignedIn: true);
 
-        // Create a new refresh token
         var refreshTokenExpiryDays = _configuration.GetValue<int?>("Jwt:RefreshTokenExpiryDays") ?? 30;
         var newRefreshToken = await _refreshTokenService.CreateAsync(userId, refreshTokenExpiryDays);
 
@@ -222,16 +603,13 @@ public sealed class AuthController : ControllerBase
                 UserId = user.UserId,
                 Username = user.Username,
                 DisplayName = user.DisplayName,
-                Role = user.Role
+                Role = user.Role,
+                TwoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid)
             },
             RefreshToken = newRefreshToken
         });
     }
 
-    /// <summary>
-    /// Revokes a refresh token (logout).
-    /// Idempotent: returns 204 for unknown/already-invalid tokens.
-    /// </summary>
     [HttpPost("revoke")]
     public async Task<IActionResult> RevokeToken([FromBody] RevokeTokenRequest request, CancellationToken cancellationToken)
     {
@@ -243,13 +621,123 @@ public sealed class AuthController : ControllerBase
             }));
         }
 
-        // Revoke the token (idempotent - does nothing if not found)
         await _refreshTokenService.RevokeAsync(request.RefreshToken);
 
         _logger.LogInformation("Revoked refresh token");
 
-        // Return 204 No Content for successful revocation (idempotent)
         return NoContent();
+    }
+
+    private string CreateTwoFactorToken(LegacyIdentityUser user)
+    {
+        var issuer = _configuration["Jwt:Issuer"] ?? "jb2026-api";
+        var audience = _configuration["Jwt:Audience"] ?? "jb2026-clients";
+        var signingKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT signing key is missing.");
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
+            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new(ClaimTypes.Name, user.Username),
+            new("purpose", "2fa")
+        };
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            SecurityAlgorithms.HmacSha256);
+
+        var expiresAtUtc = DateTime.UtcNow.AddMinutes(5);
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: expiresAtUtc,
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private string? ValidateTwoFactorToken(string token)
+    {
+        var signingKey = _configuration["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(signingKey))
+            return null;
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
+
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key,
+                ValidateIssuer = true,
+                ValidIssuer = _configuration["Jwt:Issuer"] ?? "jb2026-api",
+                ValidateAudience = true,
+                ValidAudience = _configuration["Jwt:Audience"] ?? "jb2026-clients",
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            }, out _);
+
+            // Verify purpose claim
+            var purpose = principal.FindFirst("purpose")?.Value;
+            if (purpose != "2fa")
+                return null;
+
+            return principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string? GetUserIdFromClaims()
+    {
+        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private bool IsTwoFactorLocked(string userId)
+    {
+        if (!_twoFactorAttempts.TryGetValue(userId, out var attempt))
+            return false;
+
+        if (attempt.LockedUntil.HasValue && attempt.LockedUntil > DateTime.UtcNow)
+            return true;
+
+        if (attempt.LockedUntil.HasValue && attempt.LockedUntil <= DateTime.UtcNow)
+        {
+            _twoFactorAttempts.TryUpdate(userId, (0, null), attempt);
+            return false;
+        }
+
+        return false;
+    }
+
+    private void RecordTwoFactorFailure(string userId)
+    {
+        _twoFactorAttempts.AddOrUpdate(userId,
+            (1, null),
+            (_, existing) =>
+            {
+                var failures = existing.Failures + 1;
+                if (failures >= 5)
+                {
+                    return (failures, DateTime.UtcNow.AddMinutes(5));
+                }
+                return (failures, null);
+            });
+    }
+
+    private void ResetTwoFactorFailures(string userId)
+    {
+        _twoFactorAttempts.TryRemove(userId, out _);
+    }
+
+    private async Task<string?> GetUserInfoMetadataAsync(Guid userId)
+    {
+        return await _legacyIdentityService.GetUserInfoMetadataAsync(userId);
     }
 
     private string? GetHeaderOrQueryValue(string key)

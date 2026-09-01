@@ -82,6 +82,7 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<ICurrentUserProfileService, HttpContextCurrentUserProfileService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 
 var primaryConnectionString = builder.Configuration.GetConnectionString("Primary");
 if (isRunningInContainer && string.IsNullOrWhiteSpace(primaryConnectionString))

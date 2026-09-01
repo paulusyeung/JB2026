@@ -3,6 +3,7 @@ export interface UserProfile {
   username: string
   displayName: string
   role: string
+  twoFactorEnabled?: boolean
 }
 
 export interface CrmRelationItem {
@@ -476,6 +477,31 @@ export interface TokenResponse {
   tokenType: string
   user: UserProfile
   refreshToken?: string
+  requires2fa?: boolean
+  twoFactorToken?: string
+}
+
+export interface TwoFactorSetupResponse {
+  secret: string
+  provisioningUri: string
+}
+
+export interface TwoFactorConfirmResponse {
+  recoveryCodes: string[]
+}
+
+export interface TwoFactorVerifyRequest {
+  twoFactorToken: string
+  code: string
+}
+
+export interface TwoFactorDisableRequest {
+  password: string
+  code: string
+}
+
+export interface TwoFactorStatusResponse {
+  enabled: boolean
 }
 
 export interface JobListItem {

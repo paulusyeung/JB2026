@@ -1,5 +1,10 @@
 namespace JB2026.Api.Options;
 
+/// <summary>
+/// Configuration for legacy identity users defined in appsettings.
+/// Config-based users do not have a database row, so 2FA is not available for them.
+/// 2FA is only supported for users stored in the UserInfo database table.
+/// </summary>
 public sealed class LegacyIdentityOptions
 {
     public const string SectionName = "LegacyIdentity";

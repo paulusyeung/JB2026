@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { getCurrentUser, signIn, revokeToken } from '@/services/auth'
+import { getCurrentUser, signIn, revokeToken, verifyTwoFactor } from '@/services/auth'
 import { getEffectiveRbac } from '@/services/rbac'
 import type { TokenResponse, UserProfile } from '@/types/api'
 
@@ -16,6 +16,8 @@ export const useSessionStore = defineStore('session', () => {
   const rbac = ref<Record<string, boolean> | null>(null)
   const loading = ref(false)
   const errorKey = ref('')
+  const twoFactorToken = ref<string | null>(null)
+  const requiresTwoFactor = ref(false)
 
   const isAuthenticated = computed(() => accessToken.value.length > 0)
 
@@ -25,6 +27,14 @@ export const useSessionStore = defineStore('session', () => {
 
     try {
       const response = await signIn(username, password, keepMeSignedIn)
+
+      // Check if 2FA is required
+      if (response.requires2fa && response.twoFactorToken) {
+        twoFactorToken.value = response.twoFactorToken
+        requiresTwoFactor.value = true
+        return response
+      }
+
       applyTokenResponse(response)
       await loadRbac()
       return response
@@ -43,6 +53,56 @@ export const useSessionStore = defineStore('session', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  async function verifyTwoFactorCode(code: string) {
+    if (!twoFactorToken.value) {
+      errorKey.value = 'auth.errors.twoFactorRequired'
+      return
+    }
+
+    loading.value = true
+    errorKey.value = ''
+
+    try {
+      const response = await verifyTwoFactor(twoFactorToken.value, code)
+
+      // Clear 2FA state
+      twoFactorToken.value = null
+      requiresTwoFactor.value = false
+
+      // Apply the full token response
+      applyTokenResponse(response)
+      await loadRbac()
+      return response
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          errorKey.value = 'auth.errors.invalidTwoFactorCode'
+        } else if (error.response?.status === 429) {
+          errorKey.value = 'auth.errors.twoFactorRateLimit'
+        } else if (error.response?.status === 401 && error.response?.data?.detail?.includes('expired')) {
+          // Token expired - need to restart login
+          twoFactorToken.value = null
+          requiresTwoFactor.value = false
+          errorKey.value = 'auth.errors.twoFactorTokenExpired'
+        } else {
+          errorKey.value = 'auth.errors.apiUnavailable'
+        }
+      } else {
+        errorKey.value = 'auth.errors.invalidTwoFactorCode'
+      }
+
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function clearTwoFactorState() {
+    twoFactorToken.value = null
+    requiresTwoFactor.value = false
+    errorKey.value = ''
   }
 
   async function bootstrapProfile() {
@@ -107,6 +167,8 @@ export const useSessionStore = defineStore('session', () => {
     profile.value = null
     rbac.value = null
     errorKey.value = ''
+    twoFactorToken.value = null
+    requiresTwoFactor.value = false
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
     localStorage.removeItem(SESSION_STORAGE_KEY)
@@ -119,10 +181,14 @@ export const useSessionStore = defineStore('session', () => {
     rbac,
     loading,
     errorKey,
+    twoFactorToken,
+    requiresTwoFactor,
     isAuthenticated,
     bootstrapProfile,
     loadRbac,
     login,
+    verifyTwoFactorCode,
+    clearTwoFactorState,
     loginWithDevelopmentDefaults,
     logout,
   }
