@@ -164,7 +164,9 @@
             {{ t('auth.twoFactor.setup.description') }}
           </p>
           <div v-if="twoFactorSetupData" class="text-center mb-4">
-            <qrcode-vue :value="twoFactorSetupData.provisioningUri" :size="200" level="M" />
+            <div class="d-inline-block pa-2 bg-white rounded">
+              <qrcode-vue :value="twoFactorSetupData.provisioningUri" :size="200" level="M" render-as="svg" />
+            </div>
             <p class="text-body-2 mt-2">{{ t('auth.twoFactor.setup.scanQr') }}</p>
           </div>
           <v-alert v-if="twoFactorRecoveryCodes.length > 0" type="warning" variant="tonal" class="mb-4">
