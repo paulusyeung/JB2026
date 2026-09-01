@@ -7,6 +7,11 @@ public sealed class TwoFactorVerifyRequest
     public required string Code { get; init; }
 }
 
+public sealed class TwoFactorSetupRequest
+{
+    public Guid? UserId { get; init; }
+}
+
 public sealed class TwoFactorSetupResponse
 {
     public required string Secret { get; init; }
@@ -17,6 +22,8 @@ public sealed class TwoFactorSetupResponse
 public sealed class TwoFactorConfirmRequest
 {
     public required string Code { get; init; }
+
+    public Guid? UserId { get; init; }
 }
 
 public sealed class TwoFactorConfirmResponse
@@ -29,6 +36,8 @@ public sealed class TwoFactorDisableRequest
     public required string Password { get; init; }
 
     public required string Code { get; init; }
+
+    public Guid? UserId { get; init; }
 }
 
 public sealed class TwoFactorAdminDisableRequest

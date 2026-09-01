@@ -169,6 +169,9 @@
             </div>
             <p class="text-body-2 mt-2">{{ t('auth.twoFactor.setup.scanQr') }}</p>
           </div>
+          <v-alert v-if="twoFactorRecoveryCodes.length > 0" type="success" variant="tonal" class="mb-4">
+            {{ t('auth.twoFactor.setup.success') }}
+          </v-alert>
           <v-alert v-if="twoFactorRecoveryCodes.length > 0" type="warning" variant="tonal" class="mb-4">
             <p class="text-body-2 font-weight-bold mb-2">{{ t('auth.twoFactor.setup.recoveryCodes') }}</p>
             <p class="text-body-2 font-family-monospace mb-2">{{ twoFactorRecoveryCodes.join(', ') }}</p>
@@ -188,12 +191,20 @@
           <v-spacer />
           <v-btn variant="text" @click="twoFactorSetupDialogOpen = false">{{ t('auth.twoFactor.cancel') }}</v-btn>
           <v-btn
+            v-if="twoFactorRecoveryCodes.length === 0"
             color="primary"
             :loading="twoFactorLoading"
             :disabled="twoFactorConfirmCode.length !== 6"
             @click="handleTwoFactorConfirm"
           >
             {{ t('auth.twoFactor.setup.confirm') }}
+          </v-btn>
+          <v-btn
+            v-else
+            color="primary"
+            @click="twoFactorSetupDialogOpen = false"
+          >
+            {{ t('auth.twoFactor.setup.done') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -386,7 +397,7 @@ async function loadRecord(userId: string | null) {
 
     // Load 2FA status
     try {
-      const status = await getTwoFactorStatus()
+      const status = await getTwoFactorStatus(props.userId ?? undefined)
       twoFactorEnabled.value = status.enabled
     } catch {
       // 2FA status might not be available for all users
@@ -402,7 +413,7 @@ async function handleTwoFactorSetup() {
   twoFactorError.value = ''
 
   try {
-    const response = await setupTwoFactor()
+    const response = await setupTwoFactor(props.userId ?? undefined)
     twoFactorSetupData.value = response
   } catch {
     twoFactorError.value = t('auth.errors.apiUnavailable')
@@ -418,7 +429,7 @@ async function handleTwoFactorConfirm() {
   twoFactorError.value = ''
 
   try {
-    const response = await confirmTwoFactor(twoFactorConfirmCode.value)
+    const response = await confirmTwoFactor(twoFactorConfirmCode.value, props.userId ?? undefined)
     twoFactorEnabled.value = true
     twoFactorRecoveryCodes.value = response.recoveryCodes
     twoFactorConfirmCode.value = ''
@@ -436,7 +447,7 @@ async function handleTwoFactorDisable() {
   twoFactorError.value = ''
 
   try {
-    await disableTwoFactor(twoFactorDisablePassword.value, twoFactorDisableCode.value)
+    await disableTwoFactor(twoFactorDisablePassword.value, twoFactorDisableCode.value, props.userId ?? undefined)
     twoFactorEnabled.value = false
     twoFactorDisableDialogOpen.value = false
     twoFactorDisablePassword.value = ''

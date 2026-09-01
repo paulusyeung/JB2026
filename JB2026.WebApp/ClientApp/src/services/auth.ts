@@ -46,26 +46,32 @@ export async function verifyTwoFactor(twoFactorToken: string, code: string): Pro
   return response.data
 }
 
-export async function setupTwoFactor(): Promise<TwoFactorSetupResponse> {
-  const response = await apiClient.post<TwoFactorSetupResponse>('/api/v2/auth/2fa/setup')
-  return response.data
-}
-
-export async function confirmTwoFactor(code: string): Promise<TwoFactorConfirmResponse> {
-  const response = await apiClient.post<TwoFactorConfirmResponse>('/api/v2/auth/2fa/confirm', {
-    code,
+export async function setupTwoFactor(userId?: string): Promise<TwoFactorSetupResponse> {
+  const response = await apiClient.post<TwoFactorSetupResponse>('/api/v2/auth/2fa/setup', {
+    userId: userId ?? null,
   })
   return response.data
 }
 
-export async function disableTwoFactor(password: string, code: string): Promise<void> {
+export async function confirmTwoFactor(code: string, userId?: string): Promise<TwoFactorConfirmResponse> {
+  const response = await apiClient.post<TwoFactorConfirmResponse>('/api/v2/auth/2fa/confirm', {
+    code,
+    userId: userId ?? null,
+  })
+  return response.data
+}
+
+export async function disableTwoFactor(password: string, code: string, userId?: string): Promise<void> {
   await apiClient.post('/api/v2/auth/2fa/disable', {
     password,
     code,
+    userId: userId ?? null,
   })
 }
 
-export async function getTwoFactorStatus(): Promise<TwoFactorStatusResponse> {
-  const response = await apiClient.get<TwoFactorStatusResponse>('/api/v2/auth/2fa/status')
+export async function getTwoFactorStatus(userId?: string): Promise<TwoFactorStatusResponse> {
+  const response = await apiClient.get<TwoFactorStatusResponse>('/api/v2/auth/2fa/status', {
+    params: userId ? { userId } : {},
+  })
   return response.data
 }

@@ -258,13 +258,15 @@ public sealed class AuthController : ControllerBase
     [Authorize]
     [HttpPost("2fa/setup")]
     public async Task<ActionResult<TwoFactorSetupResponse>> SetupTwoFactor(
+        [FromBody] TwoFactorSetupRequest? request,
         [FromServices] JB5LegacyWriteContext writeContext)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
+        var currentUserId = GetUserIdFromClaims();
+        if (currentUserId is null)
             return Unauthorized();
 
-        var userIdGuid = Guid.Parse(userId);
+        if (!TryResolveTargetUserId(request?.UserId, out var userIdGuid))
+            return Forbid();
 
         // Check if 2FA is already enabled
         var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
@@ -280,7 +282,7 @@ public sealed class AuthController : ControllerBase
 
         var secret = _twoFactorService.GenerateSecret();
         var encryptedSecret = _twoFactorService.EncryptSecret(secret);
-        var provisioningUri = _twoFactorService.GetProvisioningUri(userId, secret);
+        var provisioningUri = _twoFactorService.GetProvisioningUri(userIdGuid.ToString(), secret);
 
         // Save the encrypted secret to database (Enabled=false until confirmed)
         var userInfo = await writeContext.UserInfos.FirstOrDefaultAsync(u => u.UserId == userIdGuid);
@@ -316,11 +318,8 @@ public sealed class AuthController : ControllerBase
             }));
         }
 
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized();
-
-        var userIdGuid = Guid.Parse(userId);
+        if (!TryResolveTargetUserId(request.UserId, out var userIdGuid))
+            return Forbid();
 
         // Check if 2FA is already enabled
         var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
@@ -334,9 +333,6 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Get the secret from the setup response (stored in the request or session)
-        // For simplicity, we'll require the client to send back the encrypted secret
-        // In a real implementation, this would be stored server-side
         var userInfo = await GetUserInfoMetadataAsync(userIdGuid);
         var encryptedSecret = MetadataXmlHelper.ExtractTwoFactorSecret(userInfo);
 
@@ -363,14 +359,12 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Generate recovery codes
         var recoveryCodes = _twoFactorService.GenerateRecoveryCodes();
         var hashedRecoveryCodes = _twoFactorService.HashRecoveryCodes(recoveryCodes);
 
-        // Enable 2FA
         await _legacyIdentityService.EnableTwoFactorAsync(userIdGuid, encryptedSecret, hashedRecoveryCodes);
 
-        _logger.LogInformation("2FA enabled for user {UserId}", userId);
+        _logger.LogInformation("2FA enabled for user {UserId}", userIdGuid);
 
         return Ok(new TwoFactorConfirmResponse
         {
@@ -391,13 +385,9 @@ public sealed class AuthController : ControllerBase
             }));
         }
 
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized();
+        if (!TryResolveTargetUserId(request.UserId, out var userIdGuid))
+            return Forbid();
 
-        var userIdGuid = Guid.Parse(userId);
-
-        // Verify password
         var user = _legacyIdentityService.FindByUserId(userIdGuid);
         if (user is null || user.Password != request.Password)
         {
@@ -409,8 +399,7 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Check rate limiting
-        if (IsTwoFactorLocked(userId))
+        if (IsTwoFactorLocked(userIdGuid.ToString()))
         {
             return StatusCode(429, new ProblemDetails
             {
@@ -420,7 +409,6 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Verify 2FA code
         var twoFactorEnabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
         if (!twoFactorEnabled)
         {
@@ -444,7 +432,6 @@ public sealed class AuthController : ControllerBase
 
         if (!validCode)
         {
-            // Try recovery code (don't save updated codes since we're about to disable 2FA)
             var hashedRecoveryCodes = MetadataXmlHelper.ExtractTwoFactorRecoveryCodes(userInfo);
             var (success, _) = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
             validCode = success;
@@ -452,7 +439,7 @@ public sealed class AuthController : ControllerBase
 
         if (!validCode)
         {
-            RecordTwoFactorFailure(userId);
+            RecordTwoFactorFailure(userIdGuid.ToString());
             return Unauthorized(new ProblemDetails
             {
                 Title = "Invalid code",
@@ -461,11 +448,10 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        // Disable 2FA
         await _legacyIdentityService.DisableTwoFactorAsync(userIdGuid);
-        ResetTwoFactorFailures(userId);
+        ResetTwoFactorFailures(userIdGuid.ToString());
 
-        _logger.LogInformation("2FA disabled for user {UserId}", userId);
+        _logger.LogInformation("2FA disabled for user {UserId}", userIdGuid);
 
         return NoContent();
     }
@@ -502,13 +488,11 @@ public sealed class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("2fa/status")]
-    public async Task<ActionResult<TwoFactorStatusResponse>> GetTwoFactorStatus()
+    public async Task<ActionResult<TwoFactorStatusResponse>> GetTwoFactorStatus([FromQuery] Guid? userId)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized();
+        if (!TryResolveTargetUserId(userId, out var userIdGuid))
+            return Forbid();
 
-        var userIdGuid = Guid.Parse(userId);
         var enabled = await _legacyIdentityService.GetTwoFactorStatusAsync(userIdGuid);
 
         return Ok(new TwoFactorStatusResponse
@@ -720,6 +704,29 @@ public sealed class AuthController : ControllerBase
     private string? GetUserIdFromClaims()
     {
         return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private bool TryResolveTargetUserId(Guid? requestedUserId, out Guid targetUserId)
+    {
+        targetUserId = Guid.Empty;
+
+        var currentUserId = GetUserIdFromClaims();
+        if (currentUserId is null)
+            return false;
+
+        var currentUserGuid = Guid.Parse(currentUserId);
+
+        if (!requestedUserId.HasValue || requestedUserId.Value == currentUserGuid)
+        {
+            targetUserId = currentUserGuid;
+            return true;
+        }
+
+        if (!User.IsInRole("Admin"))
+            return false;
+
+        targetUserId = requestedUserId.Value;
+        return true;
     }
 
     private bool IsTwoFactorLocked(string userId)

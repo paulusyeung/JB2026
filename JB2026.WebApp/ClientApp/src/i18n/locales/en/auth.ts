@@ -30,6 +30,7 @@ export const authMessages = {
           recoveryCodes: 'Recovery Codes',
           recoveryCodesWarning: 'Save these codes in a safe place. You can use each code once if you lose access to your authenticator.',
           success: 'Two-factor authentication has been enabled.',
+          done: 'Done',
         },
         disable: {
           title: 'Disable Two-Factor Authentication',

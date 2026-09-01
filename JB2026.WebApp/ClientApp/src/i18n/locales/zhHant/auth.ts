@@ -30,6 +30,7 @@ export const authMessages = {
           recoveryCodes: '復原代碼',
           recoveryCodesWarning: '請將這些代碼保存在安全的地方。如果您遺失了驗證器，可以使用每個代碼一次。',
           success: '雙因素驗證已啟用。',
+          done: '完成',
         },
         disable: {
           title: '停用雙因素驗證',

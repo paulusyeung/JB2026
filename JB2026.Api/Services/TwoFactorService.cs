@@ -42,7 +42,7 @@ public sealed class TwoFactorService : ITwoFactorService
         var codes = new List<string>(count);
         for (var i = 0; i < count; i++)
         {
-            var randomBytes = RandomNumberGenerator.GetBytes(6);
+            var randomBytes = RandomNumberGenerator.GetBytes(9);
             var code = Convert.ToBase64String(randomBytes)
                 .Replace("+", "A")
                 .Replace("/", "B")
