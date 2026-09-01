@@ -78,14 +78,16 @@ export const useSessionStore = defineStore('session', () => {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
-          errorKey.value = 'auth.errors.invalidTwoFactorCode'
+          if (error.response?.data?.detail?.includes('expired')) {
+            // Token expired - need to restart login
+            twoFactorToken.value = null
+            requiresTwoFactor.value = false
+            errorKey.value = 'auth.errors.twoFactorTokenExpired'
+          } else {
+            errorKey.value = 'auth.errors.invalidTwoFactorCode'
+          }
         } else if (error.response?.status === 429) {
           errorKey.value = 'auth.errors.twoFactorRateLimit'
-        } else if (error.response?.status === 401 && error.response?.data?.detail?.includes('expired')) {
-          // Token expired - need to restart login
-          twoFactorToken.value = null
-          requiresTwoFactor.value = false
-          errorKey.value = 'auth.errors.twoFactorTokenExpired'
         } else {
           errorKey.value = 'auth.errors.apiUnavailable'
         }

@@ -27,7 +27,8 @@ export const authMessages = {
           scanQr: 'Scan this QR code',
           enterCode: 'Enter the code from your app to confirm',
           confirm: 'Confirm & Enable',
-          recoveryCodes: 'Save these recovery codes in a safe place. You can use each code once if you lose access to your authenticator.',
+          recoveryCodes: 'Recovery Codes',
+          recoveryCodesWarning: 'Save these codes in a safe place. You can use each code once if you lose access to your authenticator.',
           success: 'Two-factor authentication has been enabled.',
         },
         disable: {

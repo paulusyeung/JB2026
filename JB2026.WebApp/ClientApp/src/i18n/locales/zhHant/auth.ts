@@ -27,7 +27,8 @@ export const authMessages = {
           scanQr: '掃描此 QR 碼',
           enterCode: '輸入應用程式中的代碼以確認',
           confirm: '確認並啟用',
-          recoveryCodes: '請將這些復原代碼保存在安全的地方。如果您遺失了驗證器，可以使用每個代碼一次。',
+          recoveryCodes: '復原代碼',
+          recoveryCodesWarning: '請將這些代碼保存在安全的地方。如果您遺失了驗證器，可以使用每個代碼一次。',
           success: '雙因素驗證已啟用。',
         },
         disable: {

@@ -12,7 +12,7 @@ public static class MetadataXmlHelper
             return false;
         try
         {
-            var xml = XElement.Parse(metadataXml);
+            var xml = XDocument.Parse(metadataXml).Root!;
             var enabled = xml.Element("TwoFactor")?.Element("Enabled")?.Value;
             return enabled == "true";
         }
@@ -28,7 +28,7 @@ public static class MetadataXmlHelper
             return string.Empty;
         try
         {
-            var xml = XElement.Parse(metadataXml);
+            var xml = XDocument.Parse(metadataXml).Root!;
             return xml.Element("TwoFactor")?.Element("Secret")?.Value?.Trim() ?? string.Empty;
         }
         catch
@@ -43,7 +43,7 @@ public static class MetadataXmlHelper
             return string.Empty;
         try
         {
-            var xml = XElement.Parse(metadataXml);
+            var xml = XDocument.Parse(metadataXml).Root!;
             return xml.Element("TwoFactor")?.Element("RecoveryCodes")?.Value?.Trim() ?? string.Empty;
         }
         catch
@@ -63,7 +63,7 @@ public static class MetadataXmlHelper
         {
             try
             {
-                xml = XElement.Parse(metadataXml);
+                xml = XDocument.Parse(metadataXml).Root!;
             }
             catch
             {
@@ -96,7 +96,7 @@ public static class MetadataXmlHelper
         {
             try
             {
-                xml = XElement.Parse(metadataXml);
+                xml = XDocument.Parse(metadataXml).Root!;
             }
             catch
             {

@@ -46,6 +46,12 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // Skip refresh logic for 2FA verify endpoint (invalid code, not expired session)
+      const is2faVerifyEndpoint = originalRequest.url?.includes('/api/v2/auth/2fa/verify')
+      if (is2faVerifyEndpoint) {
+        return Promise.reject(error)
+      }
+
       if (isRefreshing) {
         console.log('[Auth] queueing request')
         return new Promise((resolve, reject) => {

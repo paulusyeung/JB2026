@@ -12,7 +12,7 @@ public interface ITwoFactorService
 
     string HashRecoveryCodes(List<string> codes);
 
-    bool VerifyRecoveryCode(string hashedCodes, string inputCode);
+    (bool Success, string? UpdatedHashedCodes) VerifyRecoveryCode(string hashedCodes, string inputCode);
 
     string EncryptSecret(string secret);
 

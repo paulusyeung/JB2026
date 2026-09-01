@@ -4,8 +4,10 @@ using System.Security.Claims;
 using System.Text;
 using JB2026.Api.Models;
 using JB2026.Api.Services;
+using JB2026.EfCore.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 
@@ -207,7 +209,14 @@ public sealed class AuthController : ControllerBase
             {
                 // Try recovery code
                 var hashedRecoveryCodes = MetadataXmlHelper.ExtractTwoFactorRecoveryCodes(userInfo);
-                validCode = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
+                var (success, updatedCodes) = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
+                validCode = success;
+
+                if (success && !string.IsNullOrEmpty(updatedCodes))
+                {
+                    // Save the updated recovery codes (with used code removed)
+                    await _legacyIdentityService.EnableTwoFactorAsync(userIdGuid, encryptedSecret, updatedCodes);
+                }
             }
         }
 
@@ -248,7 +257,8 @@ public sealed class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("2fa/setup")]
-    public async Task<ActionResult<TwoFactorSetupResponse>> SetupTwoFactor()
+    public async Task<ActionResult<TwoFactorSetupResponse>> SetupTwoFactor(
+        [FromServices] JB5LegacyWriteContext writeContext)
     {
         var userId = GetUserIdFromClaims();
         if (userId is null)
@@ -270,10 +280,23 @@ public sealed class AuthController : ControllerBase
 
         var secret = _twoFactorService.GenerateSecret();
         var encryptedSecret = _twoFactorService.EncryptSecret(secret);
-        var provisioningUri = _twoFactorService.GetProvisioningUri(userId, encryptedSecret);
+        var provisioningUri = _twoFactorService.GetProvisioningUri(userId, secret);
 
-        // Store the encrypted secret temporarily (will be confirmed in /confirm)
-        // For now, we return the secret and the client stores it until confirmation
+        // Save the encrypted secret to database (Enabled=false until confirmed)
+        var userInfo = await writeContext.UserInfos.FirstOrDefaultAsync(u => u.UserId == userIdGuid);
+        if (userInfo is null)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "User not found",
+                Detail = "User record not found in database.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        userInfo.MetadataXml = MetadataXmlHelper.SetTwoFactorInMetadata(userInfo.MetadataXml, false, encryptedSecret, string.Empty);
+        await writeContext.SaveChangesAsync();
+
         return Ok(new TwoFactorSetupResponse
         {
             Secret = encryptedSecret,
@@ -421,9 +444,10 @@ public sealed class AuthController : ControllerBase
 
         if (!validCode)
         {
-            // Try recovery code
+            // Try recovery code (don't save updated codes since we're about to disable 2FA)
             var hashedRecoveryCodes = MetadataXmlHelper.ExtractTwoFactorRecoveryCodes(userInfo);
-            validCode = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
+            var (success, _) = _twoFactorService.VerifyRecoveryCode(hashedRecoveryCodes, request.Code);
+            validCode = success;
         }
 
         if (!validCode)

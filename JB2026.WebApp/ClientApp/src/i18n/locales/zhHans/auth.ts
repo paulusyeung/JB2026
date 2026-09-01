@@ -27,7 +27,8 @@ export const authMessages = {
           scanQr: '扫描此二维码',
           enterCode: '输入应用中的代码以确认',
           confirm: '确认并启用',
-          recoveryCodes: '请将这些恢复代码保存在安全的地方。如果您丢失了认证器，可以使用每个代码一次。',
+          recoveryCodes: '恢复代码',
+          recoveryCodesWarning: '请将这些代码保存在安全的地方。如果您丢失了认证器，可以使用每个代码一次。',
           success: '双因素认证已启用。',
         },
         disable: {

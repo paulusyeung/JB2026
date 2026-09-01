@@ -167,9 +167,10 @@
             <qrcode-vue :value="twoFactorSetupData.provisioningUri" :size="200" level="M" />
             <p class="text-body-2 mt-2">{{ t('auth.twoFactor.setup.scanQr') }}</p>
           </div>
-          <v-alert v-if="twoFactorSetupData?.recoveryCodes" type="info" variant="tonal" class="mb-4">
+          <v-alert v-if="twoFactorRecoveryCodes.length > 0" type="warning" variant="tonal" class="mb-4">
             <p class="text-body-2 font-weight-bold mb-2">{{ t('auth.twoFactor.setup.recoveryCodes') }}</p>
-            <p class="text-body-2 font-family-monospace">{{ twoFactorSetupData.recoveryCodes.join(', ') }}</p>
+            <p class="text-body-2 font-family-monospace mb-2">{{ twoFactorRecoveryCodes.join(', ') }}</p>
+            <p class="text-body-2 text-medium-emphasis">{{ t('auth.twoFactor.setup.recoveryCodesWarning') }}</p>
           </v-alert>
           <v-otp-input
             v-model="twoFactorConfirmCode"
@@ -271,6 +272,7 @@ const twoFactorEnabled = ref(false)
 const twoFactorSetupDialogOpen = ref(false)
 const twoFactorDisableDialogOpen = ref(false)
 const twoFactorSetupData = ref<TwoFactorSetupResponse | null>(null)
+const twoFactorRecoveryCodes = ref<string[]>([])
 const twoFactorConfirmCode = ref('')
 const twoFactorDisablePassword = ref('')
 const twoFactorDisableCode = ref('')
@@ -345,6 +347,7 @@ watch(twoFactorSetupDialogOpen, (isOpen) => {
     handleTwoFactorSetup()
   } else {
     twoFactorSetupData.value = null
+    twoFactorRecoveryCodes.value = []
     twoFactorConfirmCode.value = ''
     twoFactorError.value = ''
   }
@@ -413,10 +416,9 @@ async function handleTwoFactorConfirm() {
   twoFactorError.value = ''
 
   try {
-    await confirmTwoFactor(twoFactorConfirmCode.value)
+    const response = await confirmTwoFactor(twoFactorConfirmCode.value)
     twoFactorEnabled.value = true
-    twoFactorSetupDialogOpen.value = false
-    twoFactorSetupData.value = null
+    twoFactorRecoveryCodes.value = response.recoveryCodes
     twoFactorConfirmCode.value = ''
   } catch {
     twoFactorError.value = t('auth.errors.invalidTwoFactorCode')

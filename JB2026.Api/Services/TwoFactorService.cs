@@ -65,13 +65,12 @@ public sealed class TwoFactorService : ITwoFactorService
         return string.Join(",", hashedCodes);
     }
 
-    public bool VerifyRecoveryCode(string hashedCodes, string inputCode)
+    public (bool Success, string? UpdatedHashedCodes) VerifyRecoveryCode(string hashedCodes, string inputCode)
     {
         if (string.IsNullOrWhiteSpace(hashedCodes) || string.IsNullOrWhiteSpace(inputCode))
-            return false;
+            return (false, null);
 
         var storedHashes = hashedCodes.Split(",", StringSplitOptions.RemoveEmptyEntries);
-        var inputCodeHashes = new List<string>();
 
         for (var i = 0; i < storedHashes.Length; i++)
         {
@@ -87,11 +86,11 @@ public sealed class TwoFactorService : ITwoFactorService
             {
                 // Remove the used recovery code
                 var remainingCodes = storedHashes.Where((_, index) => index != i).ToList();
-                return true;
+                return (true, string.Join(",", remainingCodes));
             }
         }
 
-        return false;
+        return (false, null);
     }
 
     public string EncryptSecret(string secret)
@@ -118,6 +117,11 @@ public sealed class TwoFactorService : ITwoFactorService
     public string DecryptSecret(string encryptedSecret)
     {
         var encryptedBytes = Convert.FromBase64String(encryptedSecret);
+        if (encryptedBytes.Length < 17) // IV (16 bytes) + at least 1 byte of ciphertext
+        {
+            throw new ArgumentException("Invalid encrypted secret format.", nameof(encryptedSecret));
+        }
+
         var iv = new byte[16];
         var cipher = new byte[encryptedBytes.Length - 16];
         Buffer.BlockCopy(encryptedBytes, 0, iv, 0, 16);
