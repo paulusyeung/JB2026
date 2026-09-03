@@ -16,6 +16,14 @@
             @keydown.enter="applyLookup"
           />
 
+          <v-checkbox
+            v-model="ignoreGuest"
+            :label="t('admin.user.actions.ignoreGuest')"
+            density="comfortable"
+            hide-details
+            @update:model-value="load"
+          />
+
           <v-btn color="primary" prepend-icon="mdi-magnify" :loading="loading" @click="applyLookup">
             {{ t('common.search') }}
           </v-btn>
@@ -256,6 +264,7 @@ const viewSettings = useViewSettings('admin-user', {
   checkboxMode: false,
   viewMode: 'detail',
   itemsPerPage: 10,
+  ignoreGuest: true,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
 const sortKey = viewSettings.sortKey
@@ -263,6 +272,7 @@ const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
 const itemsPerPage = viewSettings.itemsPerPage
+const ignoreGuest = viewSettings.ignoreGuest
 const selectedUserIds = ref<string[]>([])
 const dialogOpen = ref(false)
 const editingUserId = ref<string | null>(null)
@@ -349,6 +359,7 @@ async function load() {
     rows.value = await getAdminUsers({
       lookup: lookup.value.trim(),
       take: 500,
+      excludeGuest: ignoreGuest.value,
     })
   } catch {
     errorMessage.value = t('admin.user.messages.loadFailed')
@@ -465,7 +476,7 @@ function formatDateCell(value: string): string {
 .filter-bar {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(260px, 1fr) auto auto;
+  grid-template-columns: minmax(260px, 1fr) auto auto auto;
   align-items: center;
   margin-bottom: 16px;
 }

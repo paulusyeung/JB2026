@@ -39,6 +39,7 @@ export const adminMessages = {
           asc: '升冪',
           desc: '降冪',
           selected: '已選 {count} 筆',
+          ignoreGuest: '忽略訪客',
         },
         messages: {
           loadFailed: '無法載入用戶，請確認 API 可用性。',

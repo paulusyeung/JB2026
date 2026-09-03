@@ -41,6 +41,7 @@ export const adminMessages = {
           asc: 'Asc',
           desc: 'Desc',
           selected: '{count} selected',
+          ignoreGuest: 'Ignore Guest',
         },
         messages: {
           loadFailed: 'Unable to load users. Please verify API availability.',

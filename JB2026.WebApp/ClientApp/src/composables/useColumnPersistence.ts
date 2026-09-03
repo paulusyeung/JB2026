@@ -11,6 +11,7 @@ interface ViewSettings {
   checkboxMode?: boolean
   viewMode?: 'detail' | 'card' | 'table'
   itemsPerPage?: number
+  ignoreGuest?: boolean
 }
 
 const SAVE_DEBOUNCE_MS = 500
@@ -34,6 +35,7 @@ export function useViewSettings(viewId: string, defaults: {
   checkboxMode?: boolean
   viewMode?: 'detail' | 'card' | 'table'
   itemsPerPage?: number
+  ignoreGuest?: boolean
 }) {
   const storageKey = `${STORAGE_PREFIX}${viewId}`
   const objectId = getViewObjectId(viewId)
@@ -45,6 +47,7 @@ export function useViewSettings(viewId: string, defaults: {
   const checkboxMode = ref<boolean | undefined>(defaults.checkboxMode)
   const viewMode = ref<'detail' | 'card' | 'table' | undefined>(defaults.viewMode)
   const itemsPerPage = ref<number | undefined>(defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE)
+  const ignoreGuest = ref<boolean | undefined>(defaults.ignoreGuest)
 
   function parseSettings(raw: string | null): ViewSettings | null {
     if (!raw) {
@@ -62,6 +65,7 @@ export function useViewSettings(viewId: string, defaults: {
         checkboxMode: parsed.checkboxMode ?? defaults.checkboxMode,
         viewMode: parsed.viewMode ?? defaults.viewMode,
         itemsPerPage: parsed.itemsPerPage ?? defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
+        ignoreGuest: parsed.ignoreGuest ?? defaults.ignoreGuest,
       }
     } catch {
       return null
@@ -82,6 +86,7 @@ export function useViewSettings(viewId: string, defaults: {
       checkboxMode: defaults.checkboxMode,
       viewMode: defaults.viewMode,
       itemsPerPage: defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
+      ignoreGuest: defaults.ignoreGuest,
     }
   }
 
@@ -96,6 +101,7 @@ export function useViewSettings(viewId: string, defaults: {
     checkboxMode.value = settings.checkboxMode
     viewMode.value = settings.viewMode
     itemsPerPage.value = settings.itemsPerPage
+    ignoreGuest.value = settings.ignoreGuest
   }
 
   async function loadFromServerAndOverlay() {
@@ -146,7 +152,7 @@ export function useViewSettings(viewId: string, defaults: {
 
   // Watch for changes and save
   watch(
-    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage],
+    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest],
     () => {
       const settings: ViewSettings = {
         visibleColumns: visibleColumns.value,
@@ -155,6 +161,7 @@ export function useViewSettings(viewId: string, defaults: {
         checkboxMode: checkboxMode.value,
         viewMode: viewMode.value,
         itemsPerPage: itemsPerPage.value,
+        ignoreGuest: ignoreGuest.value,
       }
 
       saveToLocalStorage(settings)
@@ -163,5 +170,5 @@ export function useViewSettings(viewId: string, defaults: {
     { deep: true }
   )
 
-  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage }
+  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest }
 }

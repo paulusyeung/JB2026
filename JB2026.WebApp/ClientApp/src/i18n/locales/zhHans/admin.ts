@@ -39,6 +39,7 @@ export const adminMessages = {
           asc: '升序',
           desc: '降序',
           selected: '已选 {count} 条',
+          ignoreGuest: '忽略访客',
         },
         messages: {
           loadFailed: '无法加载用户，请确认 API 可用性。',
