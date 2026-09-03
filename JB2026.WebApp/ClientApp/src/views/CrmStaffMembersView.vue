@@ -195,7 +195,7 @@
           </template>
 
           <template #[`item.username`]='{ item }'>
-            <v-btn variant="text" color="primary" density="compact" class="px-0 text-none" @click.stop="openPopup(item.userId)">
+            <v-btn variant="text" color="primary" density="compact" class="px-0 text-none" style="min-width: auto" @click.stop="openPopup(item.userId)">
               {{ item.username }}
             </v-btn>
           </template>
