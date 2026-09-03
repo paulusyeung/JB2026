@@ -64,9 +64,17 @@ public sealed class AdminController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(normalizedLookup))
         {
-            query = query.Where(user =>
-                (user.UserName ?? string.Empty).Contains(normalizedLookup) ||
-                (user.UserAlias ?? string.Empty).Contains(normalizedLookup));
+            if (normalizedLookup.Length == 1 && char.IsLetter(normalizedLookup[0]))
+            {
+                query = query.Where(user =>
+                    (user.UserName ?? string.Empty).StartsWith(normalizedLookup));
+            }
+            else
+            {
+                query = query.Where(user =>
+                    (user.UserName ?? string.Empty).Contains(normalizedLookup) ||
+                    (user.UserAlias ?? string.Empty).Contains(normalizedLookup));
+            }
         }
 
         // When a specific role is requested (e.g. the RBAC editor) we return the
@@ -416,9 +424,17 @@ public sealed class AdminController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(normalizedLookup))
         {
-            rawQuery = rawQuery.Where(row =>
-                row.SupplierName.Contains(normalizedLookup) ||
-                row.LoginAccount.Contains(normalizedLookup));
+            if (normalizedLookup.Length == 1 && char.IsLetter(normalizedLookup[0]))
+            {
+                rawQuery = rawQuery.Where(row =>
+                    row.SupplierName.StartsWith(normalizedLookup));
+            }
+            else
+            {
+                rawQuery = rawQuery.Where(row =>
+                    row.SupplierName.Contains(normalizedLookup) ||
+                    row.LoginAccount.Contains(normalizedLookup));
+            }
         }
 
         var rows = await rawQuery
@@ -786,9 +802,18 @@ public sealed class AdminController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(normalizedLookup))
         {
-            rawQuery = rawQuery.Where(row =>
-                row.CustomerName.Contains(normalizedLookup) ||
-                row.LoginAccount.Contains(normalizedLookup));
+            if (normalizedLookup.Length == 1)
+            {
+                rawQuery = rawQuery.Where(row =>
+                    row.CustomerName.StartsWith(normalizedLookup) ||
+                    row.LoginAccount.StartsWith(normalizedLookup));
+            }
+            else
+            {
+                rawQuery = rawQuery.Where(row =>
+                    row.CustomerName.Contains(normalizedLookup) ||
+                    row.LoginAccount.Contains(normalizedLookup));
+            }
         }
 
         var rows = await rawQuery

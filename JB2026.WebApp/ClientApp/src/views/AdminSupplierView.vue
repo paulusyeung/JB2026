@@ -222,7 +222,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
@@ -329,6 +329,16 @@ const displayedRows = computed<AdminSupplierDisplayItem[]>(() => {
 })
 
 const selectedSupplierId = computed(() => selectedSupplierIds.value[0] ?? null)
+
+let lookupDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(lookup, () => {
+  if (lookup.value.trim().length <= 1) return
+  if (lookupDebounceTimer) clearTimeout(lookupDebounceTimer)
+  lookupDebounceTimer = setTimeout(() => {
+    load()
+  }, 300)
+})
 
 onMounted(async () => {
   await load()
