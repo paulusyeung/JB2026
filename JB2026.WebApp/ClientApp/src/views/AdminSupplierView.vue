@@ -190,7 +190,7 @@
           </template>
 
           <template #[`item.supplierName`]='{ item }'>
-            <v-btn variant="text" color="primary" density="compact" class="px-0 text-none" @click.stop="openPopup(item.supplierId)">
+            <v-btn variant="text" color="primary" density="compact" class="px-0 text-none" style="min-width: auto" @click.stop="openPopup(item.supplierId)">
               {{ item.supplierName }}
             </v-btn>
           </template>
