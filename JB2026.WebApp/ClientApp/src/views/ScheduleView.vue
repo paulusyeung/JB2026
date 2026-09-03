@@ -159,7 +159,7 @@
           </div>
 
           <!-- Transfer button column -->
-          <div :class="['transfer-col', { 'transfer-col--phone': isPhoneLayout }, 'd-flex', 'flex-column', 'align-center', 'justify-center', 'ga-1']">
+          <div :class="['transfer-col', { 'transfer-col--phone': isPhoneLayout }, 'd-flex', 'flex-column', 'align-center', 'justify-top', 'ga-1']">
             <v-tooltip v-for="mc in [1,2,3,4,5]" :key="mc" :text="`→ M${mc}`" location="right">
               <template #activator="{ props }">
                 <v-btn v-bind="props" icon size="small" variant="flat" density="compact" :color="machineColor(String(mc))"
@@ -177,6 +177,7 @@
                 </v-btn>
               </template>
             </v-tooltip>
+            <v-divider class="my-1 w-100" />
             <v-tooltip :text="t('scheduler.schedule.actions.unselectOne')" location="right">
               <template #activator="{ props }">
                 <v-btn v-bind="props" icon size="small" variant="outlined" density="compact" @click="moveToAvailable(false)">
