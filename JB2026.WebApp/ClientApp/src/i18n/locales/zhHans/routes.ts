@@ -12,7 +12,7 @@ export const routesMessages = {
   jobOrderJobStats: '作业统计',
   jobOrderSchedule: '作业排程',
   jobOrderSchedulePending: '待处理',
-  jobOrderScheduleScheduled: '已排程',
+  jobOrderScheduleScheduled: '排程',
   jobOrderScheduleCompleted: '已完成',
     jobOrderSchedulePacking: '包装',
   jobOrderSchedulePackingOnAir: '包装 (进行中)',

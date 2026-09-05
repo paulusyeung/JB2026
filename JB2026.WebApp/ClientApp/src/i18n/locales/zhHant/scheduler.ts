@@ -8,7 +8,7 @@ export const schedulerMessages = {
       noSchedulesSample: '找不到排程 - 範例事件',
       fallbackEvent: '排程回退事件',
       schedule: {
-        title: '作業排程 - 排排程',
+        title: '作業排程 - 排程',
         loadFailed: '無法載入排程資料，請確認 API 可用性。',
         saveFailed: '無法儲存排程，請再試一次。',
         saveConfirm: '儲存排程？',

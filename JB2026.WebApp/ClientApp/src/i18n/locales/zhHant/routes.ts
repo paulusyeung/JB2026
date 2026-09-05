@@ -13,7 +13,7 @@ export const routesMessages = {
   jobOrderJobStats: '作業統計',
   jobOrderSchedule: '作業排程',
   jobOrderSchedulePending: '待處理',
-  jobOrderScheduleScheduled: '已排程',
+  jobOrderScheduleScheduled: '排程',
   jobOrderScheduleCompleted: '已完成',
     jobOrderSchedulePacking: '包裝',
   jobOrderSchedulePackingOnAir: '包裝 (進行中)',
