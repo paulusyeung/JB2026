@@ -4,7 +4,7 @@ export const authMessages = {
       description: 'The web app uses JWT bearer tokens from the ASP.NET Core API and persists them for subsequent slice navigation.',
       username: 'Username',
       password: 'Password',
-      keepMeSignedIn: 'Keep me signed in for this device',
+      keepMeSignedIn: 'Keep me signed in for this device (10 hours)',
       signIn: 'Sign In',
       useDevDefaults: 'Use Dev Defaults',
       errors: {

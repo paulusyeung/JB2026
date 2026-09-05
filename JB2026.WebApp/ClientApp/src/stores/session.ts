@@ -18,20 +18,22 @@ export const useSessionStore = defineStore('session', () => {
   const errorKey = ref('')
   const twoFactorToken = ref<string | null>(null)
   const requiresTwoFactor = ref(false)
+  const keepMeSignedIn = ref(false)
 
   const isAuthenticated = computed(() => accessToken.value.length > 0)
 
-  async function login(username: string, password: string, keepMeSignedIn: boolean = false) {
+  async function login(username: string, password: string, keepSignedIn: boolean = false) {
     loading.value = true
     errorKey.value = ''
 
     try {
-      const response = await signIn(username, password, keepMeSignedIn)
+      const response = await signIn(username, password, keepSignedIn)
 
       // Check if 2FA is required
       if (response.requires2fa && response.twoFactorToken) {
         twoFactorToken.value = response.twoFactorToken
         requiresTwoFactor.value = true
+        keepMeSignedIn.value = keepSignedIn
         return response
       }
 
@@ -65,7 +67,7 @@ export const useSessionStore = defineStore('session', () => {
     errorKey.value = ''
 
     try {
-      const response = await verifyTwoFactor(twoFactorToken.value, code)
+      const response = await verifyTwoFactor(twoFactorToken.value, code, keepMeSignedIn.value)
 
       // Clear 2FA state
       twoFactorToken.value = null
@@ -104,6 +106,7 @@ export const useSessionStore = defineStore('session', () => {
   function clearTwoFactorState() {
     twoFactorToken.value = null
     requiresTwoFactor.value = false
+    keepMeSignedIn.value = false
     errorKey.value = ''
   }
 
@@ -171,6 +174,7 @@ export const useSessionStore = defineStore('session', () => {
     errorKey.value = ''
     twoFactorToken.value = null
     requiresTwoFactor.value = false
+    keepMeSignedIn.value = false
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
     localStorage.removeItem(SESSION_STORAGE_KEY)
@@ -185,6 +189,7 @@ export const useSessionStore = defineStore('session', () => {
     errorKey,
     twoFactorToken,
     requiresTwoFactor,
+    keepMeSignedIn,
     isAuthenticated,
     bootstrapProfile,
     loadRbac,

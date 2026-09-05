@@ -119,8 +119,8 @@ public sealed class AuthController : ControllerBase
         string? refreshToken = null;
         if (keepMeSignedIn)
         {
-            var refreshTokenExpiryDays = _configuration.GetValue<int?>("Jwt:RefreshTokenExpiryDays") ?? 30;
-            refreshToken = await _refreshTokenService.CreateAsync(user.UserId.ToString(), refreshTokenExpiryDays);
+            var refreshTokenExpiryHours = _configuration.GetValue<int?>("Jwt:RefreshTokenExpiryHours") ?? 10;
+            refreshToken = await _refreshTokenService.CreateAsync(user.UserId.ToString(), TimeSpan.FromHours(refreshTokenExpiryHours));
             _logger.LogInformation("Issued refresh token for username {Username}", user.Username);
         }
 
@@ -236,8 +236,16 @@ public sealed class AuthController : ControllerBase
         ResetTwoFactorFailures(userId);
 
         // Issue full access token
-        var (token, expiresAtUtc) = _jwtTokenService.CreateToken(user!, keepMeSignedIn: false);
+        var (token, expiresAtUtc) = _jwtTokenService.CreateToken(user!, keepMeSignedIn: request.KeepMeSignedIn);
         _logger.LogInformation("2FA verified for user {UserId}, issued token", userId);
+
+        string? refreshToken = null;
+        if (request.KeepMeSignedIn)
+        {
+            var refreshTokenExpiryHours = _configuration.GetValue<int?>("Jwt:RefreshTokenExpiryHours") ?? 10;
+            refreshToken = await _refreshTokenService.CreateAsync(user!.UserId.ToString(), TimeSpan.FromHours(refreshTokenExpiryHours));
+            _logger.LogInformation("Issued refresh token for user {UserId}", userId);
+        }
 
         return Ok(new TokenResponse
         {
@@ -251,7 +259,8 @@ public sealed class AuthController : ControllerBase
                 DisplayName = user.DisplayName,
                 Role = user.Role,
                 TwoFactorEnabled = true
-            }
+            },
+            RefreshToken = refreshToken
         });
     }
 
@@ -596,8 +605,8 @@ public sealed class AuthController : ControllerBase
 
         var (token, expiresAtUtc) = _jwtTokenService.CreateToken(user, keepMeSignedIn: true);
 
-        var refreshTokenExpiryDays = _configuration.GetValue<int?>("Jwt:RefreshTokenExpiryDays") ?? 30;
-        var newRefreshToken = await _refreshTokenService.CreateAsync(userId, refreshTokenExpiryDays);
+        var refreshTokenExpiryHours = _configuration.GetValue<int?>("Jwt:RefreshTokenExpiryHours") ?? 10;
+        var newRefreshToken = await _refreshTokenService.CreateAsync(userId, TimeSpan.FromHours(refreshTokenExpiryHours));
 
         _logger.LogInformation("Refreshed token for user {UserId}", userId);
 

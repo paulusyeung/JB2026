@@ -5,6 +5,8 @@ public sealed class TwoFactorVerifyRequest
     public required string TwoFactorToken { get; init; }
 
     public required string Code { get; init; }
+
+    public bool KeepMeSignedIn { get; init; }
 }
 
 public sealed class TwoFactorSetupRequest

@@ -4,7 +4,7 @@ export const authMessages = {
       description: 'Web 应用使用来自 ASP.NET Core API 的 JWT Bearer 令牌，并将其持久化用于后续切片导航。',
       username: '用户名',
       password: '密码',
-      keepMeSignedIn: '在此设备上保持登录状态',
+      keepMeSignedIn: '在此设备上保持登录状态（10 小时）',
       signIn: '登录',
       useDevDefaults: '使用开发默认值',
       errors: {

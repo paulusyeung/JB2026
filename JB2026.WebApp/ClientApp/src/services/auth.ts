@@ -38,10 +38,11 @@ export async function getCurrentUser(): Promise<UserProfile> {
   return response.data
 }
 
-export async function verifyTwoFactor(twoFactorToken: string, code: string): Promise<TokenResponse> {
+export async function verifyTwoFactor(twoFactorToken: string, code: string, keepMeSignedIn: boolean = false): Promise<TokenResponse> {
   const response = await apiClient.post<TokenResponse>('/api/v2/auth/2fa/verify', {
     twoFactorToken,
     code,
+    keepMeSignedIn,
   })
   return response.data
 }

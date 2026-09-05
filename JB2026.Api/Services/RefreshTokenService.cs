@@ -15,14 +15,14 @@ namespace JB2026.Api.Services
         /// <summary>
         /// Creates a new refresh token for the specified user.
         /// </summary>
-        public async Task<string> CreateAsync(string userId, int expiryDays)
+        public async Task<string> CreateAsync(string userId, TimeSpan expiry)
         {
             var token = GenerateTokenString();
             var record = new Models.RefreshTokenRecord
             {
                 Token = token,
                 UserId = userId,
-                ExpiresAtUtc = DateTime.UtcNow.AddDays(expiryDays),
+                ExpiresAtUtc = DateTime.UtcNow.Add(expiry),
                 IsUsed = false,
                 CreatedAtUtc = DateTime.UtcNow
             };

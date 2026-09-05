@@ -10,9 +10,9 @@ namespace JB2026.Api.Services
         /// Creates a new refresh token for the specified user.
         /// </summary>
         /// <param name="userId">The user ID for which the token is being created.</param>
-        /// <param name="expiryDays">The number of days until the token expires.</param>
+        /// <param name="expiry">The duration until the token expires.</param>
         /// <returns>A task that returns the newly created refresh token string.</returns>
-        Task<string> CreateAsync(string userId, int expiryDays);
+        Task<string> CreateAsync(string userId, TimeSpan expiry);
 
         /// <summary>
         /// Validates a refresh token and returns the associated user ID if valid.
