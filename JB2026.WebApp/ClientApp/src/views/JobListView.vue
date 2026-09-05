@@ -562,6 +562,7 @@ import { deleteJobOrder, getJobList } from '@/services/jobOrders'
 import {
   generateInvoice,
   getInvoiceSummary,
+  isValidInvoiceRef,
   previewInvoice,
   type InvoiceBillingSummary,
   type PreviewInvoiceResponse,
@@ -782,7 +783,7 @@ async function load() {
 }
 
 async function hydrateInvoiceSummaries(jobRows: JobOrderRecord[]) {
-  const withInvoiceRefs = jobRows.filter((row) => !!row.invoiceRef)
+  const withInvoiceRefs = jobRows.filter((row) => isValidInvoiceRef(row.invoiceRef))
   await Promise.all(
     withInvoiceRefs.map(async (row) => {
       try {

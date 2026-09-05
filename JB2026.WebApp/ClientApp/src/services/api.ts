@@ -104,7 +104,6 @@ apiClient.interceptors.response.use(
         console.log('[Auth] refresh failed:', refreshError)
         clearSessionAndRedirectToLogin()
         processQueue(null)
-        isRefreshing = false
         return Promise.reject(refreshError)
       }
     }

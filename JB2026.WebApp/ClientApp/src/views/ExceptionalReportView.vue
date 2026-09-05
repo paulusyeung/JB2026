@@ -229,7 +229,7 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import { getJobList } from '@/services/jobOrders'
-import { getInvoiceSummary, type InvoiceBillingSummary } from '@/services/billing'
+import { getInvoiceSummary, isValidInvoiceRef, type InvoiceBillingSummary } from '@/services/billing'
 import { getJobDetail } from '@/services/jobs'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
@@ -368,7 +368,7 @@ async function refreshList() {
 }
 
 async function hydrateInvoiceSummaries(jobRows: JobOrderRecord[]) {
-  const withInvoiceRefs = jobRows.filter((row) => !!row.invoiceRef)
+  const withInvoiceRefs = jobRows.filter((row) => isValidInvoiceRef(row.invoiceRef))
   await Promise.all(
     withInvoiceRefs.map(async (row) => {
       try {

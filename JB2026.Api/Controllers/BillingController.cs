@@ -415,7 +415,7 @@ public class BillingController : ControllerBase
 
             if (summary == null)
             {
-                _logger.LogWarning("Invoice {ExternalInvoiceId} not found", externalInvoiceId);
+                _logger.LogDebug("Invoice {ExternalInvoiceId} not found", externalInvoiceId);
                 return NotFound(new BillingErrorResponse
                 {
                     ErrorCode = "INVOICE_NOT_FOUND",

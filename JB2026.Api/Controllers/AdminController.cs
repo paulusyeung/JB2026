@@ -1658,13 +1658,14 @@ public sealed class AdminController : ControllerBase
             .Distinct()
             .ToList();
 
-        var validFormIds = await readContext.Z_Forms
+        // EF Core 8 translates Contains() to OPENJSON where '$' gets parameterized.
+        // Load all forms and validate in-memory (few forms exist).
+        var allFormIds = await readContext.Z_Forms
             .AsNoTracking()
-            .Where(form => normalizedFormIds.Contains(form.FormId))
             .Select(form => form.FormId)
             .ToListAsync(cancellationToken);
 
-        var validFormIdSet = validFormIds.ToHashSet();
+        var validFormIdSet = new HashSet<Guid>(allFormIds);
         var finalFormIds = normalizedFormIds.Where(formId => validFormIdSet.Contains(formId)).ToList();
 
         var existingRows = await readContext.Z_WorkflowForms
@@ -2477,13 +2478,18 @@ public sealed class AdminController : ControllerBase
 
         var distinctWorkflowIds = request.WorkflowIds.Distinct().ToArray();
 
-        var validWorkflowIds = await writeContext.Z_Workflows
+        // EF Core 8 translates Contains() on arrays to OPENJSON(...'$') where
+        // the '$' path gets parameterized, causing "Incorrect syntax near '$'".
+        // Load all valid ids and validate in-memory (few workflows exist).
+        var allWorkflowIds = await writeContext.Z_Workflows
             .AsNoTracking()
-            .Where(workflow => distinctWorkflowIds.Contains(workflow.WorkflowId))
             .Select(workflow => workflow.WorkflowId)
             .ToListAsync(cancellationToken);
 
-        if (validWorkflowIds.Count != distinctWorkflowIds.Length)
+        var validSet = new HashSet<Guid>(allWorkflowIds);
+        var invalidIds = distinctWorkflowIds.Where(id => !validSet.Contains(id)).ToArray();
+
+        if (invalidIds.Length > 0)
         {
             return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
             {

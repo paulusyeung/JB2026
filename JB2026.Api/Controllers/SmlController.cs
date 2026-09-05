@@ -866,17 +866,22 @@ FROM [dbo].[vwInvoiceList]")
                 .ToArray();
 
             // Get HeaderIds for line item query
-            var headerIds = filtered.Select(row => row.HeaderId).ToList();
+            var headerIdSet = filtered.Select(row => row.HeaderId).ToHashSet();
 
             // Query line items from InvoiceItem and InvoiceSubItem tables
             var lineItemsLookup = new Dictionary<Guid, IReadOnlyList<SmlInvoiceListItemResponse>>();
             
             try
             {
-                var lineItemsByHeaderId = await _readContext.InvoiceItems
+                // EF Core 8 translates Contains() to OPENJSON where '$' gets parameterized.
+                // Load all items and filter in-memory.
+                var allLineItems = await _readContext.InvoiceItems
                     .AsNoTracking()
-                    .Where(item => headerIds.Contains(item.HeaderId))
                     .Include(item => item.InvoiceSubItems)
+                    .ToListAsync(cancellationToken);
+
+                var lineItemsByHeaderId = allLineItems
+                    .Where(item => headerIdSet.Contains(item.HeaderId))
                     .SelectMany(item => item.InvoiceSubItems.Select(subItem => new
                     {
                         HeaderId = item.HeaderId,
@@ -891,7 +896,7 @@ FROM [dbo].[vwInvoiceList]")
                     .OrderBy(x => x.HeaderId)
                     .ThenBy(x => x.LineNumber)
                     .ThenBy(x => x.SubLineNumber)
-                    .ToListAsync(cancellationToken);
+                    .ToList();
 
                 // Group line items by HeaderId
                 lineItemsLookup = lineItemsByHeaderId

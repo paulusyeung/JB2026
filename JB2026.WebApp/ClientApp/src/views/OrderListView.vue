@@ -523,7 +523,7 @@ import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
-import { getInvoiceSummary, type InvoiceBillingSummary } from '@/services/billing'
+import { getInvoiceSummary, isValidInvoiceRef, type InvoiceBillingSummary } from '@/services/billing'
 import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
@@ -773,7 +773,7 @@ async function refreshList() {
 }
 
 async function hydrateInvoiceSummaries(orderRows: JobOrderRecord[]) {
-  const withInvoiceRefs = orderRows.filter((row) => !!row.invoiceRef)
+  const withInvoiceRefs = orderRows.filter((row) => isValidInvoiceRef(row.invoiceRef))
   await Promise.all(
     withInvoiceRefs.map(async (row) => {
       try {

@@ -208,6 +208,19 @@ export async function listInvoices(lookup?: string, invoiceLookup?: string): Pro
 }
 
 /**
+ * Checks if a string looks like a valid Invoice Ninja invoice ID.
+ * Valid IDs are either numeric strings (e.g. "99773") or UUIDs (e.g. "550e8400-e29b-41d4-a716-446655440000").
+ * Filters out legacy placeholder values like "Sample".
+ */
+export function isValidInvoiceRef(value: string): boolean {
+  if (!value) return false
+  const trimmed = value.trim()
+  if (/^\d+$/.test(trimmed)) return true
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) return true
+  return false
+}
+
+/**
  * Retrieves the billing summary for an Invoice Ninja invoice by its external ID.
  * Used for displaying invoice status in billing and job/order screens.
  *

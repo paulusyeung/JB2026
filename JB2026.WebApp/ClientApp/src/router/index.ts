@@ -254,10 +254,12 @@ router.beforeEach(async (to) => {
 
   const sessionStore = useSessionStore()
   if (sessionStore.isAuthenticated) {
-    if (!sessionStore.profile) {
+    // Always validate the token against the server. A cached profile in
+    // localStorage does not prove the access token is still valid; an
+    // expired token would let the guard pass, causing a flood of 401s
+    // from every view that fires API calls on mount.
+    if (!sessionStore.profile || !sessionStore.rbac) {
       await sessionStore.bootstrapProfile()
-    } else if (!sessionStore.rbac) {
-      await sessionStore.loadRbac()
     }
   }
 
