@@ -8,7 +8,7 @@
 #   sudo ./provision-server.sh
 #
 # What it does:
-#   1. Installs base packages + Nginx + .NET 8 ASP.NET Core runtime
+#   1. Installs base packages + Nginx + .NET 8 ASP.NET Core runtime + Chinese fonts
 #   2. Configures the UFW firewall (SSH, 80, 443)
 #   3. Creates a dedicated 'jb2026' service account and /opt/jb2026 layout
 #   4. Creates the secrets file /etc/jb2026/env (from env.template)
@@ -31,7 +31,8 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 if ! apt-get install -y --no-install-recommends \
   curl wget git unzip ca-certificates gnupg lsb-release \
-  apt-transport-https ufw nginx cifs-utils nfs-common; then
+  apt-transport-https ufw nginx cifs-utils nfs-common \
+  fonts-arphic-uming; then
   echo "!! apt reported errors during install."
   echo "   If nginx failed to start, it is usually the default vhost listening on"
   echo "   IPv6 ([::]:80) while this host has IPv6 disabled. The default vhost is"
