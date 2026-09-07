@@ -530,6 +530,7 @@
       :order-id="printManagerJob?.orderId ?? null"
       :order-number="printManagerJob?.orderNumber ?? ''"
       :style-titles="printManagerJob?.styleTitles"
+      :product-details="printManagerJob?.productDetails"
     />
 
     <v-snackbar v-model="saveSuccess" color="success" timeout="3000">

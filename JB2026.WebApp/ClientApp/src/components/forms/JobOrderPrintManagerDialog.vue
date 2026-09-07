@@ -42,57 +42,93 @@
               />
             </v-col>
 
-            <v-col cols="12" sm="6">
-              <v-checkbox
-                v-model="form.noPicture"
-                :label="t('jobForm.dialogs.printManager.noPicture')"
-                density="comfortable"
-                hide-details
-              />
+            <v-col v-if="form.layout === 'default'" cols="12">
+              <v-sheet border rounded class="pa-3">
+                <v-row dense>
+                  <v-col cols="12" sm="6">
+                    <v-checkbox
+                      v-model="form.noProductDetails"
+                      :label="t('jobForm.dialogs.printManager.noProductDetails')"
+                      density="comfortable"
+                      hide-details
+                    />
+                  </v-col>
+
+                  <v-col cols="12" sm="6">
+                    <v-checkbox
+                      v-model="form.noRemarks"
+                      :label="t('jobForm.dialogs.printManager.noRemarks')"
+                      density="comfortable"
+                      hide-details
+                    />
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="text-subtitle-2 mb-1">{{ t('jobForm.dialogs.printManager.workflows') }}</div>
+                    <div v-if="workflowItems.length === 0" class="text-body-2 text-medium-emphasis py-2">
+                      {{ t('jobForm.dialogs.printManager.noWorkflows') }}
+                    </div>
+                    <template v-else>
+                      <v-checkbox
+                        v-for="(item, index) in workflowItems"
+                        :key="index"
+                        v-model="form.selectedWorkflowIndices"
+                        :label="item.label"
+                        :value="index"
+                        density="compact"
+                        hide-details
+                      />
+                    </template>
+                  </v-col>
+                </v-row>
+              </v-sheet>
             </v-col>
 
-            <v-col cols="12" sm="6">
-              <v-checkbox
-                v-model="form.noProductDetails"
-                :label="t('jobForm.dialogs.printManager.noProductDetails')"
-                density="comfortable"
-                hide-details
-              />
-            </v-col>
+            <v-col v-if="form.layout === 'purchaseOrder'" cols="12">
+              <v-sheet border rounded class="pa-3">
+                <v-row dense>
+                  <v-col cols="12">
+                    <v-select
+                      v-model="form.selectedSupplierId"
+                      :label="t('jobForm.dialogs.printManager.supplier')"
+                      :items="supplierOptions"
+                      item-title="title"
+                      item-value="value"
+                      density="comfortable"
+                      variant="outlined"
+                      clearable
+                      hide-details
+                    />
+                  </v-col>
 
-            <v-col cols="12" sm="6">
-              <v-checkbox
-                v-model="form.noRemarks"
-                :label="t('jobForm.dialogs.printManager.noRemarks')"
-                density="comfortable"
-                hide-details
-              />
-            </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-checkbox
+                      v-model="form.noPicture"
+                      :label="t('jobForm.dialogs.printManager.noPicture')"
+                      density="comfortable"
+                      hide-details
+                    />
+                  </v-col>
 
-            <v-col cols="12">
-              <div class="text-subtitle-2 mb-1">{{ t('jobForm.dialogs.printManager.workflows') }}</div>
-              <div v-if="workflowItems.length === 0" class="text-body-2 text-medium-emphasis py-2">
-                {{ t('jobForm.dialogs.printManager.noWorkflows') }}
-              </div>
-              <template v-else>
-                <v-checkbox
-                  v-model="allWorkflowsSelected"
-                  :label="t('jobForm.dialogs.printManager.selectAllWorkflows')"
-                  density="comfortable"
-                  hide-details
-                  class="mb-1"
-                />
-                <v-divider class="mb-1" />
-                <v-checkbox
-                  v-for="(item, index) in workflowItems"
-                  :key="index"
-                  v-model="form.selectedWorkflowIndices"
-                  :label="item.label"
-                  :value="index"
-                  density="compact"
-                  hide-details
-                />
-              </template>
+                  <v-col cols="12">
+                    <div class="text-subtitle-2 mb-1">{{ t('jobForm.dialogs.printManager.productDetailsSections') }}</div>
+                    <div v-if="parsedSections.length === 0" class="text-body-2 text-medium-emphasis py-2">
+                      {{ t('jobForm.dialogs.printManager.noSections') }}
+                    </div>
+                    <template v-else>
+                      <v-checkbox
+                        v-for="(section, index) in parsedSections"
+                        :key="index"
+                        v-model="form.selectedProductDetailSections"
+                        :label="section"
+                        :value="section"
+                        density="compact"
+                        hide-details
+                      />
+                    </template>
+                  </v-col>
+                </v-row>
+              </v-sheet>
             </v-col>
           </v-row>
         </v-form>
@@ -121,13 +157,16 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { printJobOrder, uploadJobOrderToDms } from '@/services/jobs'
 import { getPaperlessNgxConfigStatus } from '@/services/config'
+import { getAdminSuppliers } from '@/services/admin'
 import type { JobOrderPrintRequest } from '@/types/api'
+import type { AdminSupplierListItem } from '@/types/api'
 
 const props = defineProps<{
   modelValue: boolean
   orderId: string | null
   orderNumber: string
   styleTitles?: string[]
+  productDetails?: string
 }>()
 
 const emit = defineEmits<{
@@ -142,6 +181,7 @@ const uploading = ref(false)
 const errorMessage = ref('')
 const dmsSuccessMessage = ref('')
 const paperlessConfigured = ref(false)
+const suppliers = ref<AdminSupplierListItem[]>([])
 
 const form = reactive({
   layout: 'default',
@@ -149,10 +189,13 @@ const form = reactive({
   noProductDetails: false,
   noRemarks: false,
   selectedWorkflowIndices: [] as number[],
+  selectedSupplierId: null as string | null,
+  selectedProductDetailSections: [] as string[],
 })
 
 const layoutOptions = computed(() => [
   { title: t('jobForm.dialogs.printManager.layoutDefault'), value: 'default' },
+  { title: t('jobForm.dialogs.printManager.layoutPurchaseOrder'), value: 'purchaseOrder' },
 ])
 
 const workflowItems = computed(() =>
@@ -162,18 +205,24 @@ const workflowItems = computed(() =>
   })),
 )
 
-const allWorkflowsSelected = computed({
-  get() {
-    return workflowItems.value.length > 0 && form.selectedWorkflowIndices.length === workflowItems.value.length
-  },
-  set(value: boolean) {
-    if (value) {
-      form.selectedWorkflowIndices = workflowItems.value.map((_, i) => i)
-    } else {
-      form.selectedWorkflowIndices = []
+const parsedSections = computed(() => {
+  if (!props.productDetails) return []
+  const lines = props.productDetails.replace(/<\s*\/?(p|div|br|li|tr|h[1-6])[^>]*>/gi, '\n').split('\n')
+  const sections: string[] = []
+  for (const raw of lines) {
+    const line = raw.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').trim()
+    const m = line.match(/^\s*\d{1,2}\.\s*(.+?)[:：]/)
+    if (m) {
+      const name = m[1].trim()
+      if (name && !sections.includes(name)) sections.push(name)
     }
-  },
+  }
+  return sections
 })
+
+const supplierOptions = computed(() =>
+  suppliers.value.map((s) => ({ title: s.supplierName, value: s.supplierId })),
+)
 
 watch(
   () => props.modelValue,
@@ -181,6 +230,7 @@ watch(
     if (open) {
       resetForm()
       void refreshPaperlessConfig()
+      void refreshSuppliers()
     }
   },
 )
@@ -194,6 +244,14 @@ async function refreshPaperlessConfig() {
   }
 }
 
+async function refreshSuppliers() {
+  try {
+    suppliers.value = await getAdminSuppliers()
+  } catch {
+    suppliers.value = []
+  }
+}
+
 function resetForm() {
   errorMessage.value = ''
   dmsSuccessMessage.value = ''
@@ -202,6 +260,8 @@ function resetForm() {
   form.noProductDetails = false
   form.noRemarks = false
   form.selectedWorkflowIndices = workflowItems.value.map((_, i) => i)
+  form.selectedSupplierId = null
+  form.selectedProductDetailSections = []
 }
 
 async function submitPrint() {
@@ -219,6 +279,8 @@ async function submitPrint() {
       noProductDetails: form.noProductDetails,
       noRemarks: form.noRemarks,
       selectedWorkflowIndices: form.selectedWorkflowIndices,
+      selectedSupplierId: form.selectedSupplierId ?? undefined,
+      selectedProductDetailSections: form.selectedProductDetailSections.length > 0 ? form.selectedProductDetailSections : undefined,
     }
 
     const blob = await printJobOrder(props.orderId, request)
@@ -256,6 +318,8 @@ async function submitUploadToDms() {
       noProductDetails: form.noProductDetails,
       noRemarks: form.noRemarks,
       selectedWorkflowIndices: form.selectedWorkflowIndices,
+      selectedSupplierId: form.selectedSupplierId ?? undefined,
+      selectedProductDetailSections: form.selectedProductDetailSections.length > 0 ? form.selectedProductDetailSections : undefined,
     }
 
     const result = await uploadJobOrderToDms(props.orderId, request)

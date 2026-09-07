@@ -335,6 +335,7 @@
       :order-id="printManagerJob?.orderId ?? null"
       :order-number="printManagerJob?.orderNumber ?? ''"
       :style-titles="printManagerJob?.styleTitles"
+      :product-details="printManagerJob?.productDetails"
     />
 
     <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">

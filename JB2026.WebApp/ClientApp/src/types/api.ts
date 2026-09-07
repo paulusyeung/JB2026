@@ -548,6 +548,8 @@ export interface JobOrderPrintRequest {
   noProductDetails: boolean
   noRemarks: boolean
   selectedWorkflowIndices: number[]
+  selectedSupplierId?: string
+  selectedProductDetailSections?: string[]
 }
 
 export interface QuotationListItem {

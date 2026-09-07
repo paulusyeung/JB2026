@@ -510,6 +510,7 @@
       :order-id="printManagerJob?.orderId ?? null"
       :order-number="printManagerJob?.orderNumber ?? ''"
       :style-titles="printManagerJob?.styleTitles"
+      :product-details="printManagerJob?.productDetails"
     />
   </section>
 </template>
