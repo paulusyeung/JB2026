@@ -69,7 +69,7 @@ export const jobFormMessages = {
           title: '打印工单',
           orderNumber: '订单号',
           layout: '版式',
-          layoutDefault: '工单',
+          layoutDefault: '生产单',
           layoutPurchaseOrder: '工程单',
           noPicture: '不含图片',
           noProductDetails: '不含产品详情',
