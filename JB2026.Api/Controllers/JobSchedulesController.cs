@@ -428,15 +428,17 @@ public sealed class JobSchedulesController : ControllerBase
                 group => group.Key,
                 group => group.ToDictionary(row => row.WorkIndex, row => row.WorkStatus));
 
-        var orderRemarks = await WhereOrderIdIn(
+        var orderProductDetails = await WhereOrderIdIn(
                 _readContext.JobOrders
                     .AsNoTracking(),
                 order => order.OrderId,
                 orderIds)
-            .Select(order => new { order.OrderId, order.Remarks })
+            .Select(order => new { order.OrderId, order.ProductDetails })
             .ToListAsync(cancellationToken);
 
-        var remarksMap = orderRemarks.ToDictionary(item => item.OrderId, item => item.Remarks ?? string.Empty);
+        var remarksMap = orderProductDetails.ToDictionary(
+            item => item.OrderId,
+            item => ExtractPackingRemarks(item.ProductDetails));
 
         var result = rows
             .Where(row =>
@@ -453,8 +455,8 @@ public sealed class JobSchedulesController : ControllerBase
                 var step1 = hasStep1 ? steps[0] : null;
                 var step2 = hasStep2 ? steps[1] : null;
 
-                var singleStepPacking = hasStep1 && !hasStep2 && !hasStep3 && step1 != 3;
-                var threeStepPacking = hasStep1 && hasStep2 && hasStep3 && step2 != 3;
+                var singleStepPacking = hasStep1 && !hasStep2 && !hasStep3 && step1 != 2;
+                var threeStepPacking = hasStep1 && hasStep2 && hasStep3 && step2 != 2;
                 return singleStepPacking || threeStepPacking;
             })
             .Select(row =>
@@ -1391,6 +1393,77 @@ public sealed class JobSchedulesController : ControllerBase
 
         var noTags = Regex.Replace(input, "<.*?>", " ", RegexOptions.Singleline);
         return WebUtility.HtmlDecode(noTags);
+    }
+
+    /// <summary>
+    /// Converts HTML to plain text, preserving line breaks from block-level elements
+    /// (&lt;p&gt;, &lt;div&gt;, &lt;br&gt;, etc.) — matches legacy RichTextBox.Html behaviour.
+    /// </summary>
+    private static string HtmlToPlainText(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return string.Empty;
+        }
+
+        var text = Regex.Replace(html, @"<\s*/?(p|div|br|li|tr|h[1-6])[^>]*>", "\n", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"<[^>]+>", string.Empty);
+        text = WebUtility.HtmlDecode(text);
+        text = Regex.Replace(text, @"\n{3,}", "\n\n");
+        return text.Trim();
+    }
+
+    /// <summary>
+    /// Extracts the "包裝" (packing) section from ProductDetails HTML,
+    /// matching legacy JB2015 behavior in Utility.JobOrder.GetPackingInfo.
+    /// </summary>
+    private static string ExtractPackingRemarks(string? productDetails)
+    {
+        if (string.IsNullOrWhiteSpace(productDetails))
+        {
+            return string.Empty;
+        }
+
+        var plainText = HtmlToPlainText(productDetails);
+
+        // 2016+ numbered-section format, e.g. "3. 包裝"
+        if (HasNumberedSections(plainText))
+        {
+            var section = GetSection(plainText, "包裝").Trim();
+            return string.IsNullOrEmpty(section) ? string.Empty : "包裝：" + section;
+        }
+
+        // Pre-2016 flat format: line starts with "包裝"
+        var lines = plainText.Split(new[] { '\r', '\n' }, StringSplitOptions.None);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (!line.StartsWith("包裝", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var buffer = line;
+            for (var j = i + 1; j < lines.Length; j++)
+            {
+                var next = lines[j];
+                if (string.IsNullOrWhiteSpace(next))
+                {
+                    break;
+                }
+
+                if (next.TrimStart().StartsWith("Normal", StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                buffer += " " + next.Trim();
+            }
+
+            return buffer.Trim();
+        }
+
+        return string.Empty;
     }
 
     private static string GetLabeledValue(string text, string[] labels)
