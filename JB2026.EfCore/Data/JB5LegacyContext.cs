@@ -376,7 +376,7 @@ public partial class JB5LegacyContext : DbContext
             entity.Property(e => e.ProductStyle).HasMaxLength(32);
             entity.Property(e => e.Qty).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.QtyText).HasMaxLength(32);
-            entity.Property(e => e.Remarks).HasMaxLength(512);
+            entity.Property(e => e.Remarks).HasMaxLength(1024);
             entity.Property(e => e.RequiredOn).HasColumnType("datetime");
             entity.Property(e => e.RetiredOn).HasColumnType("datetime");
             entity.Property(e => e.SONumber).HasMaxLength(32);

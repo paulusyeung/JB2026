@@ -39,7 +39,7 @@ public sealed class CreateJobOrderRequest
     [StringLength(64)]
     public string PaymentTerms { get; init; } = string.Empty;
 
-    [StringLength(512)]
+    [StringLength(1024)]
     public string Remarks { get; init; } = string.Empty;
 
     [Range(0, 99)]

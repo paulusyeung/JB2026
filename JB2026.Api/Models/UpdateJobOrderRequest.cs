@@ -24,13 +24,13 @@ public sealed class UpdateJobOrderRequest
 
     public DateTime? OrderedOn { get; init; }
 
-    [Range(0.01, 1000000)]
+    [Range(0, 1000000)]
     public decimal Qty { get; init; }
 
     [StringLength(64)]
     public string? PaymentTerms { get; init; }
 
-    [StringLength(512)]
+    [StringLength(1024)]
     public string Remarks { get; init; } = string.Empty;
 
     public string? ProductDetails { get; init; }
