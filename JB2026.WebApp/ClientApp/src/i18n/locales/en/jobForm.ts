@@ -69,7 +69,7 @@ export const jobFormMessages = {
           title: 'Print Order',
           orderNumber: 'Order Number',
           layout: 'Layout',
-          layoutDefault: 'Job Order (Default)',
+          layoutDefault: 'Job Order',
           layoutPurchaseOrder: 'Purchase Order',
           noPicture: 'No Picture',
           noProductDetails: 'No Product Details',
