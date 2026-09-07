@@ -69,6 +69,7 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
             ModifiedOn = order.ModifiedOn,
             RequiredOn = order.RequiredOn,
             InvoiceRef = order.InvoiceRef,
+            OutputRef = order.OutputRef,
             InvoiceAmount = order.InvoiceAmount,
             Qty = order.Qty,
             NoPicture = request.NoPicture,

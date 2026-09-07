@@ -17,6 +17,7 @@ public sealed class JobOrderPrintDocument
     public DateTime? ModifiedOn { get; init; }
     public DateTime? RequiredOn { get; init; }
     public string? InvoiceRef { get; init; }
+    public string? OutputRef { get; init; }
     public decimal? InvoiceAmount { get; init; }
     public decimal? Qty { get; init; }
     public bool NoPicture { get; init; }

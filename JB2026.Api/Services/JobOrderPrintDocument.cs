@@ -134,7 +134,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
             // Row 5: 成品代號 | 輸出檔案編號 | (empty)
             AddHeaderCell(table, "成品代號：", Model.ProductCode, HeaderLabelWidth1, labelAlignRight: false);
-            AddHeaderCell(table, "輸出檔案編號：", Model.InvoiceRef, HeaderLabelWidth2, labelCjk: true);
+            AddHeaderCell(table, "輸出檔案編號：", Model.OutputRef, HeaderLabelWidth2, labelCjk: true);
             AddHeaderCell(table, string.Empty, string.Empty, HeaderLabelWidth3);
         });
     }
