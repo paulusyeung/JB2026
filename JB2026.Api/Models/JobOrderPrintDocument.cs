@@ -3,6 +3,7 @@ namespace JB2026.Api.Models;
 public sealed class JobOrderPrintDocument
 {
     public string OrderNumber { get; init; } = string.Empty;
+    public int OrderType { get; init; }
     public string? CustomerName { get; init; }
     public string? CustomerRef { get; init; }
     public string? OrderTitle { get; init; }

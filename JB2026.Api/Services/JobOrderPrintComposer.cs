@@ -55,6 +55,7 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
         return new JobOrderPrintDocument
         {
             OrderNumber = compositeOrderNumber,
+            OrderType = order.OrderType,
             CustomerName = order.CustomerName,
             CustomerRef = order.CustomerRef,
             OrderTitle = order.OrderTitle,

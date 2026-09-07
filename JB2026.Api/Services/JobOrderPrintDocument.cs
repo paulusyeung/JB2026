@@ -37,6 +37,10 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
         ["Prepaid"] = "預付",
         ["30 days"] = "30 天付款",
         ["45 days"] = "45 天付款",
+        ["0"] = "柯式印刷",
+        ["1"] = "數碼印刷",
+        ["2"] = "織嘜",
+        ["3"] = "其他",
     };
 
     public JobOrderQuestDocument(JobOrderPrintDocument model)
@@ -110,7 +114,7 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
             // Row 1: 工單編號 | 工單類別 | 制單日期
             AddHeaderCell(table, "工單編號：", Model.OrderNumber, HeaderLabelWidth1, labelAlignRight: false);
-            AddHeaderCell(table, "工單類別：", ToTraditionalChinese(Model.PaymentTerms), HeaderLabelWidth2, cjk: true);
+            AddHeaderCell(table, "工單類別：", ToTraditionalChinese(Model.OrderType.ToString()), HeaderLabelWidth2, cjk: true);
             AddHeaderCell(table, "制單日期：", FmtDate(Model.OrderedOn), HeaderLabelWidth3);
 
             // Row 2: 客戶姓名 | 經手人 | 修改日期
