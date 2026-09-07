@@ -20,10 +20,14 @@ public sealed class JobOrderPrintDocument
     public string? OutputRef { get; init; }
     public decimal? InvoiceAmount { get; init; }
     public decimal? Qty { get; init; }
+    public string Layout { get; init; } = "default";
+    public string? SupplierName { get; init; }
+    public IReadOnlyList<string> SelectedProductDetailSections { get; init; } = Array.Empty<string>();
     public bool NoPicture { get; init; }
     public bool NoProductDetails { get; init; }
     public bool NoRemarks { get; init; }
     public byte[]? ImageBytes { get; init; }
+    public byte[]? ImageBytes2 { get; init; }
     public IReadOnlyList<JobOrderPrintWorkflow> Workflows { get; init; } = Array.Empty<JobOrderPrintWorkflow>();
 }
 

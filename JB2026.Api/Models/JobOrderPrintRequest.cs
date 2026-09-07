@@ -11,4 +11,8 @@ public sealed class JobOrderPrintRequest
     public bool NoRemarks { get; init; }
 
     public IReadOnlyList<int> SelectedWorkflowIndices { get; init; } = Array.Empty<int>();
+
+    public Guid? SelectedSupplierId { get; init; }
+
+    public IReadOnlyList<string>? SelectedProductDetailSections { get; init; }
 }

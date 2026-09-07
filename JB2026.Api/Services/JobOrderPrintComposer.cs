@@ -46,10 +46,32 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
                 .ToList()
             : allWorkflows;
 
+        var isPurchaseOrder = string.Equals(request.Layout, "purchaseOrder", StringComparison.OrdinalIgnoreCase);
+
         byte[]? imageBytes = null;
+        byte[]? imageBytes2 = null;
         if (!request.NoPicture)
         {
-            imageBytes = LoadFirstImageBytes(orderId, baseOrderNumber, order.OrderedOn, order.JobAttachments);
+            if (isPurchaseOrder)
+            {
+                var images = LoadImageBytes(orderId, baseOrderNumber, order.OrderedOn, order.JobAttachments, count: 2);
+                imageBytes = images.ElementAtOrDefault(0);
+                imageBytes2 = images.ElementAtOrDefault(1);
+            }
+            else
+            {
+                imageBytes = LoadFirstImageBytes(orderId, baseOrderNumber, order.OrderedOn, order.JobAttachments);
+            }
+        }
+
+        string? supplierName = null;
+        if (isPurchaseOrder && request.SelectedSupplierId.HasValue)
+        {
+            supplierName = await _readContext.Suppliers
+                .AsNoTracking()
+                .Where(s => s.SupplierId == request.SelectedSupplierId.Value)
+                .Select(s => s.SupplierName)
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         return new JobOrderPrintDocument
@@ -72,10 +94,14 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
             OutputRef = order.OutputRef,
             InvoiceAmount = order.InvoiceAmount,
             Qty = order.Qty,
+            Layout = request.Layout,
+            SupplierName = supplierName,
+            SelectedProductDetailSections = request.SelectedProductDetailSections ?? Array.Empty<string>(),
             NoPicture = request.NoPicture,
             NoProductDetails = request.NoProductDetails,
             NoRemarks = request.NoRemarks,
             ImageBytes = imageBytes,
+            ImageBytes2 = imageBytes2,
             Workflows = selectedWorkflows.Select(w => new JobOrderPrintWorkflow
             {
                 WorkIndex = w.WorkIndex,
@@ -88,20 +114,31 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
 
     private byte[]? LoadFirstImageBytes(Guid orderId, string baseOrderNumber, DateTime? orderedOn, IEnumerable<EfCore.Models.JobAttachment> attachments)
     {
+        return LoadImageBytes(orderId, baseOrderNumber, orderedOn, attachments, count: 1).FirstOrDefault();
+    }
+
+    private List<byte[]> LoadImageBytes(Guid orderId, string baseOrderNumber, DateTime? orderedOn, IEnumerable<EfCore.Models.JobAttachment> attachments, int count)
+    {
         var imageAttachments = attachments
             .OrderBy(a => a.AttachmentIndex)
             .Where(a => !string.IsNullOrWhiteSpace(a.OriginalFileName)
                         && ImageExtensions.Contains(Path.GetExtension(a.OriginalFileName)))
             .ToList();
 
+        var results = new List<byte[]>();
         foreach (var attachment in imageAttachments)
         {
+            if (results.Count >= count)
+            {
+                break;
+            }
+
             var filePath = LocateAttachmentFile(orderId, baseOrderNumber, orderedOn, attachment.OriginalFileName!, attachment.AttachmentType.ToString());
             if (filePath is not null && File.Exists(filePath))
             {
                 try
                 {
-                    return File.ReadAllBytes(filePath);
+                    results.Add(File.ReadAllBytes(filePath));
                 }
                 catch (IOException)
                 {
@@ -110,7 +147,7 @@ public sealed class JobOrderPrintComposer : IJobOrderPrintComposer
             }
         }
 
-        return null;
+        return results;
     }
 
     private string? LocateAttachmentFile(Guid orderId, string orderNumber, DateTime? orderedOn, string fileName, string? attachmentType)

@@ -47,6 +47,15 @@
                 <v-row dense>
                   <v-col cols="12" sm="6">
                     <v-checkbox
+                      v-model="form.noPicture"
+                      :label="t('jobForm.dialogs.printManager.noPicture')"
+                      density="comfortable"
+                      hide-details
+                    />
+                  </v-col>
+
+                  <v-col cols="12" sm="6">
+                    <v-checkbox
                       v-model="form.noProductDetails"
                       :label="t('jobForm.dialogs.printManager.noProductDetails')"
                       density="comfortable"
