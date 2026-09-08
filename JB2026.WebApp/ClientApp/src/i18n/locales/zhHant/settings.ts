@@ -10,6 +10,7 @@ export const settingsMessages = {
         completedQuery: '完成查詢',
         scheduleQueryRange: '顯示已完成作業於',
         daysUnit: '天',
+        jobListDaysBack: '顯示作業清單回溯',
         gmailAccount: 'Gmail 帳號',
         gmailPassword: 'Gmail 密碼',
       },
@@ -33,5 +34,6 @@ export const settingsMessages = {
         saveSuccess: '設定已成功儲存。',
         saveFailed: '無法儲存設定，請確認 API 可用性。',
         scheduleRangeInvalid: '範圍至少需為 1 天。',
+        jobListDaysBackInvalid: '作業清單天數至少需為 1 天。',
       },
     } as const

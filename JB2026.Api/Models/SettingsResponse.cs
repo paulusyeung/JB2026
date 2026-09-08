@@ -31,4 +31,6 @@ public sealed class SettingsResponse
     public string GmailPassword { get; init; } = string.Empty;
 
     public string DateFormatPreference { get; init; } = DefaultDateFormatPreference;
+
+    public int JobListDaysBack { get; init; } = 90;
 }

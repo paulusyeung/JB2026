@@ -560,6 +560,7 @@ import { getOrderTypeMeta } from '@/utils/orderType'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getJobDetail } from '@/services/jobs'
 import { deleteJobOrder, getJobList } from '@/services/jobOrders'
+import { getSettings } from '@/services/settings'
 import {
   generateInvoice,
   getInvoiceSummary,
@@ -642,6 +643,7 @@ const invoicePreviewForm = ref({
   poNumber: '',
 })
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
+const jobListDaysBack = ref(90)
 
 const { t } = useI18n({ useScope: 'global' })
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
@@ -750,6 +752,12 @@ const displayedRows = computed(() => {
 const activeRow = computed(() => rows.value.find((row) => row.orderId === activeOrderId.value) ?? null)
 
 onMounted(async () => {
+  try {
+    const settings = await getSettings()
+    jobListDaysBack.value = settings.jobListDaysBack || 90
+  } catch {
+    // Use default 90 days if settings load fails
+  }
   await load()
 })
 
@@ -759,9 +767,12 @@ async function load() {
   errorSnackbarOpen.value = false
   selectedOrderIds.value = []
   try {
+    const defaultStartOn = startDate.value
+      ? undefined
+      : toIsoDate(new Date(Date.now() - (jobListDaysBack.value - 1) * 24 * 60 * 60 * 1000))
     rows.value = await getJobList({
       lookup: lookup.value.trim() || undefined,
-      startOn: startDate.value || undefined,
+      startOn: startDate.value || defaultStartOn,
       endOn: endDate.value || undefined,
       status: statusFilter.value >= 0 ? statusFilter.value : undefined,
     })

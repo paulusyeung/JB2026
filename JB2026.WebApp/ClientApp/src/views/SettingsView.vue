@@ -83,6 +83,21 @@
               <span class="text-body-2">{{ t('settings.fields.daysUnit') }}</span>
             </div>
 
+            <label class="field-label" for="job-list-days-back">{{ t('settings.fields.jobListDaysBack') }}</label>
+            <div class="d-flex align-center ga-2">
+              <v-text-field
+                id="job-list-days-back"
+                v-model.number="model.jobListDaysBack"
+                type="number"
+                min="1"
+                variant="outlined"
+                density="compact"
+                hide-details
+                class="range-input"
+              />
+              <span class="text-body-2">{{ t('settings.fields.daysUnit') }}</span>
+            </div>
+
             <label class="field-label" for="gmail-account">{{ t('settings.fields.gmailAccount') }}</label>
             <v-text-field
               id="gmail-account"
@@ -153,6 +168,7 @@ const model = ref<AppSettings>({
   gmailAccount: '',
   gmailPassword: '',
   dateFormatPreference: DATE_FORMATS.SHORT_DATE,
+  jobListDaysBack: 90,
 })
 
 const dateFormatOptions = computed(() => [
@@ -201,6 +217,12 @@ async function load() {
 async function save() {
   if (!Number.isFinite(model.value.scheduleQueryRange) || model.value.scheduleQueryRange <= 0) {
     errorMessage.value = t('settings.messages.scheduleRangeInvalid')
+    savedMessage.value = ''
+    return
+  }
+
+  if (!Number.isFinite(model.value.jobListDaysBack) || model.value.jobListDaysBack <= 0) {
+    errorMessage.value = t('settings.messages.jobListDaysBackInvalid')
     savedMessage.value = ''
     return
   }

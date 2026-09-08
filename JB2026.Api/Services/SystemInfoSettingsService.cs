@@ -34,6 +34,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
         string? persistedNextProductNumber = null;
         string? persistedNextQuotationNumber = null;
         string? persistedDateFormat = null;
+        string? persistedJobListDaysBack = null;
 
         if (snapshot?.MetadataXml is not null)
         {
@@ -50,6 +51,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
                     persistedNextProductNumber = settingsElement.Attribute(NextProductNumberAttr)?.Value;
                     persistedNextQuotationNumber = settingsElement.Attribute(NextQuotationNumberAttr)?.Value;
                     persistedDateFormat = settingsElement.Attribute("DateFormatPreference")?.Value;
+                    persistedJobListDaysBack = settingsElement.Attribute("JobListDaysBack")?.Value;
                 }
                 else
                 {
@@ -63,6 +65,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
                         persistedNextProductNumber = dataRecord.Attribute(NextProductNumberAttr)?.Value;
                         persistedNextQuotationNumber = dataRecord.Attribute(NextQuotationNumberAttr)?.Value;
                         persistedDateFormat = dataRecord.Attribute("dateFormatPreference")?.Value;
+                        persistedJobListDaysBack = dataRecord.Attribute("JobListDaysBack")?.Value;
                     }
                 }
             }
@@ -88,6 +91,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
             GmailAccount = baseSettings.GmailAccount,
             GmailPassword = baseSettings.GmailPassword,
             DateFormatPreference = persistedDateFormat ?? baseSettings.DateFormatPreference,
+            JobListDaysBack = int.TryParse(persistedJobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack,
         };
     }
 
@@ -100,7 +104,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
             updated.NextOrderNumber,
             updated.NextProductNumber,
             updated.NextQuotationNumber,
-            updated.DateFormatPreference);
+            updated.DateFormatPreference,
+            updated.JobListDaysBack);
 
         if (snapshot is null)
         {
@@ -124,7 +129,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
         string nextOrderNumber,
         string nextProductNumber,
         string nextQuotationNumber,
-        string dateFormatPreference)
+        string dateFormatPreference,
+        int jobListDaysBack)
     {
         XDocument doc;
 
@@ -167,6 +173,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
                 dataRecord.SetAttributeValue(NextProductNumberAttr, nextProductNumber);
                 dataRecord.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
                 dataRecord.SetAttributeValue("DateFormatPreference", dateFormatPreference);
+                dataRecord.SetAttributeValue("JobListDaysBack", jobListDaysBack);
             }
             else
             {
@@ -178,6 +185,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
                 settingsElement.SetAttributeValue(NextProductNumberAttr, nextProductNumber);
                 settingsElement.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
                 settingsElement.SetAttributeValue("DateFormatPreference", dateFormatPreference);
+                settingsElement.SetAttributeValue("JobListDaysBack", jobListDaysBack);
             }
         }
         else
@@ -187,6 +195,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
             settingsElement.SetAttributeValue(NextProductNumberAttr, nextProductNumber);
             settingsElement.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
             settingsElement.SetAttributeValue("DateFormatPreference", dateFormatPreference);
+            settingsElement.SetAttributeValue("JobListDaysBack", jobListDaysBack);
         }
 
         return doc.ToString(SaveOptions.DisableFormatting);

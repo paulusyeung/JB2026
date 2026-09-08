@@ -51,4 +51,7 @@ public sealed class UpdateSettingsRequest
 
     [StringLength(32)]
     public string DateFormatPreference { get; init; } = SettingsResponse.DefaultDateFormatPreference;
+
+    [Range(1, 3650)]
+    public int JobListDaysBack { get; init; } = 90;
 }

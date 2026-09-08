@@ -827,6 +827,7 @@ export interface AppSettings {
   gmailAccount: string
   gmailPassword: string
   dateFormatPreference: string
+  jobListDaysBack: number
 }
 
 export interface RbacValues {

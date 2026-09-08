@@ -33,6 +33,7 @@ public sealed class InMemorySettingsService : ISettingsService
         GmailAccount = "job.book@marchehk.com",
         GmailPassword = "24110810",
         DateFormatPreference = SettingsResponse.DefaultDateFormatPreference,
+        JobListDaysBack = 90,
     };
 
     public SettingsResponse Get()
@@ -63,6 +64,7 @@ public sealed class InMemorySettingsService : ISettingsService
                 GmailAccount = request.GmailAccount.Trim(),
                 GmailPassword = request.GmailPassword.Trim(),
                 DateFormatPreference = NormalizeDateFormatPreference(request.DateFormatPreference),
+                JobListDaysBack = request.JobListDaysBack,
             };
 
             return _settings;
