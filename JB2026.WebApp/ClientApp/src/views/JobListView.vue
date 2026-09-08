@@ -767,7 +767,8 @@ async function load() {
   errorSnackbarOpen.value = false
   selectedOrderIds.value = []
   try {
-    const defaultStartOn = startDate.value
+    const hasLookup = !!lookup.value.trim()
+    const defaultStartOn = startDate.value || hasLookup
       ? undefined
       : toIsoDate(new Date(Date.now() - (jobListDaysBack.value - 1) * 24 * 60 * 60 * 1000))
     rows.value = await getJobList({
