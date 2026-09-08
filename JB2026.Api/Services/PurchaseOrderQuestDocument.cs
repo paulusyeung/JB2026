@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using JB2026.Api.Models;
 using JB2026.Reporting;
@@ -14,6 +15,9 @@ public sealed class PurchaseOrderQuestDocument : DocumentBase<JobOrderPrintDocum
     private const float InfoLabelWidth = 90f;
     private const float SectionLabelFontSize = 12f;
     private const float ImageMaxHeight = 280f;
+    private const float LogoMaxHeight = 70f;
+
+    private static readonly Lazy<byte[]?> LogoBytes = new(LoadLogoFromEmbeddedResource);
 
     public PurchaseOrderQuestDocument(JobOrderPrintDocument model)
         : base(model)
@@ -44,18 +48,26 @@ public sealed class PurchaseOrderQuestDocument : DocumentBase<JobOrderPrintDocum
             {
                 header.Item().Row(row =>
                 {
-                    row.RelativeItem()
-                       .Text("工程單")
-                       .Style(CjkTextStyle.FontSize(20).Bold());
-                });
-                header.Item().PaddingTop(8).Row(row =>
-                {
-                    row.ConstantItem(InfoLabelWidth)
-                       .Text("工單編號：")
-                       .Style(CjkTextStyle.FontSize(12));
-                    row.RelativeItem()
-                       .Text(Model.OrderNumber)
-                       .Style(CjkTextStyle.FontSize(12));
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text("工程單")
+                           .Style(CjkTextStyle.FontSize(20).Bold());
+                        col.Item().PaddingTop(8).Row(sub =>
+                        {
+                            sub.ConstantItem(InfoLabelWidth)
+                               .Text("工單編號：")
+                               .Style(CjkTextStyle.FontSize(12));
+                            sub.RelativeItem()
+                               .Text(Model.OrderNumber)
+                               .Style(CjkTextStyle.FontSize(12));
+                        });
+                    });
+
+                    if (LogoBytes.Value is not null)
+                    {
+                        row.ConstantItem(64).AlignRight().AlignMiddle()
+                           .Image(LogoBytes.Value).FitArea();
+                    }
                 });
                 header.Item().PaddingBottom(4);
                 header.Item().BorderBottom(0.5f);
@@ -305,6 +317,27 @@ public sealed class PurchaseOrderQuestDocument : DocumentBase<JobOrderPrintDocum
             }
 
             column.Item().Text(line).Style(style);
+        }
+    }
+
+    private static byte[]? LoadLogoFromEmbeddedResource()
+    {
+        try
+        {
+            var assembly = typeof(FontRegistry).Assembly;
+            using var stream = assembly.GetManifestResourceStream("JB2026.Reporting.Fonts.logo.png");
+            if (stream is null)
+            {
+                return null;
+            }
+
+            using var memoryStream = new MemoryStream();
+            stream.CopyTo(memoryStream);
+            return memoryStream.ToArray();
+        }
+        catch
+        {
+            return null;
         }
     }
 }

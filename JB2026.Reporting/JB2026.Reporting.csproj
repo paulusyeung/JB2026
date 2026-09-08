@@ -10,6 +10,7 @@
     <EmbeddedResource Include="Fonts/Lato-Regular.ttf" />
     <EmbeddedResource Include="Fonts/NotoSansCJKsc-Regular.otf" />
     <EmbeddedResource Include="Fonts/uming.ttc" />
+    <EmbeddedResource Include="Fonts/logo.png" />
   </ItemGroup>
 
   <ItemGroup>
