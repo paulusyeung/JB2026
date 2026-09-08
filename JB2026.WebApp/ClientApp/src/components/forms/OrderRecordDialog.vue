@@ -70,6 +70,7 @@
         <v-col cols="12" md="4">
           <v-autocomplete
             v-model="draft.customerName"
+            v-model:search="customerSearchText"
             :items="customerOptions"
             item-title="title"
             item-value="value"
@@ -77,8 +78,11 @@
             variant="outlined"
             density="compact"
             :readonly="mode === 'edit'"
+            :loading="customerLoading"
             clearable
             hide-no-data
+            no-filter
+            @update:search="handleCustomerSearch"
             @update:model-value="handleCustomerChanged"
           />
         </v-col>
@@ -284,6 +288,9 @@ const errorMessage = ref('')
 const mode = ref<'edit' | 'create'>(props.order ? 'edit' : 'create')
 const orderedByDynamicOptions = ref<string[]>([])
 const adminCustomerNames = ref<{ name: string; code: string }[]>([])
+const customerSearchText = ref('')
+const customerLoading = ref(false)
+let customerSearchTimer: ReturnType<typeof setTimeout> | null = null
 const userMap = ref<Record<string, string>>({})
 const nextOrderNumber = ref('')
 const selectedIds = ref(new Set<string>())
@@ -313,7 +320,7 @@ onMounted(async () => {
   await Promise.all([
     loadOrderedByOptions(),
     loadNextOrderNumber(),
-    loadAdminCustomers(),
+    loadCustomers(),
   ])
 })
 
@@ -401,22 +408,30 @@ const relatedHeaders = computed(() => [
 const customerOptions = computed(() => {
   const seen = new Set<string>()
   const items: { title: string; value: string }[] = []
+  const query = customerSearchText.value.trim().toLocaleLowerCase()
 
+  const push = (name: string | null | undefined) => {
+    const n = name?.trim()
+    if (!n || seen.has(n)) return
+    seen.add(n)
+    items.push({ title: n, value: n })
+  }
+
+  // 1. Server results — already narrowed by the debounced lookup (or first 1000 names when idle)
   for (const c of adminCustomerNames.value) {
-    if (!c.name || seen.has(c.name)) continue
-    seen.add(c.name)
-    items.push({ title: c.name, value: c.name })
+    push(c.name)
   }
 
-  for (const row of props.allOrders) {
-    if (!row.customerName || seen.has(row.customerName)) continue
-    seen.add(row.customerName)
-    items.push({ title: row.customerName, value: row.customerName })
+  // 2. Historical order names matching the typed search, so inactive/legacy customers stay selectable
+  if (query) {
+    for (const row of props.allOrders) {
+      if (!row.customerName) continue
+      if (row.customerName.toLocaleLowerCase().includes(query)) push(row.customerName)
+    }
   }
 
-  if (draft.value.customerName && !seen.has(draft.value.customerName)) {
-    items.push({ title: draft.value.customerName, value: draft.value.customerName })
-  }
+  // 3. Always keep the currently selected value available so it displays correctly
+  push(draft.value.customerName)
 
   return items.sort((a, b) => a.title.localeCompare(b.title))
 })
@@ -548,15 +563,27 @@ function handleCustomerChanged(customerName: string | null) {
   }
 }
 
-async function loadAdminCustomers() {
+async function loadCustomers(query?: string) {
+  customerLoading.value = true
   try {
-    const customers = await getAdminCustomers()
+    const customers = await getAdminCustomers({ lookup: query ?? '', take: 1000 })
     adminCustomerNames.value = customers
       .filter((c) => c.customerName?.trim())
       .map((c) => ({ name: c.customerName.trim(), code: c.customerCode?.trim() ?? '' }))
   } catch {
-    // Admin customer list is optional; fall back to order-based names only.
+    // Admin customer list is optional; keep previously loaded names and order history.
+  } finally {
+    customerLoading.value = false
   }
+}
+
+function handleCustomerSearch(search: string) {
+  if (mode.value === 'edit') return
+  if (search === draft.value.customerName) return
+  if (customerSearchTimer) clearTimeout(customerSearchTimer)
+  customerSearchTimer = setTimeout(() => {
+    void loadCustomers(search || undefined)
+  }, 300)
 }
 
 async function loadOrderedByOptions() {
