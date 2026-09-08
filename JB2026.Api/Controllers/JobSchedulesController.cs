@@ -976,10 +976,10 @@ public sealed class JobSchedulesController : ControllerBase
                 await _gateway.InsertAsync(new CreateJobScheduleStoredProcedureRequest(
                     OrderId: item.OrderId,
                     ScheduledOn: now,
-                    Status: 1,
+                    Status: 0,
                     Priority: i,
                     MachineNumber: item.MachineNumber,
-                    CompletedOn: null,
+                    CompletedOn: new DateTime(1900, 1, 1),
                     ShouldReview: false,
                     UrgencyLevel: item.UrgencyLevel,
                     Cancelled: false,
