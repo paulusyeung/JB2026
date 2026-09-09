@@ -27,4 +27,6 @@ public sealed class StockProductListItemResponse
     public required DateTime ModifiedOn { get; init; }
 
     public required string ModifiedBy { get; init; }
+
+    public required bool Retired { get; init; }
 }

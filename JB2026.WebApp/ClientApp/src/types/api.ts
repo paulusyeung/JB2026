@@ -592,6 +592,7 @@ export interface StockProductListItem {
   createdBy: string
   modifiedOn: string
   modifiedBy: string
+  retired: boolean
 }
 
 export interface StockProductRecord {

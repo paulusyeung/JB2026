@@ -494,14 +494,14 @@ public sealed class StockController : ControllerBase
             return validation;
         }
 
-        var product = await _readContext.Products.FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
+        var product = await _writeContext.Products.FirstOrDefaultAsync(item => item.ProductId == id && !item.Retired, cancellationToken);
         if (product is null)
         {
             return NotFound();
         }
 
         var normalizedProductCode = request.ProductCode.Trim();
-        var isCodeInUse = await _readContext.Products
+        var isCodeInUse = await _writeContext.Products
             .AsNoTracking()
             .AnyAsync(item => !item.Retired && item.ProductId != id && item.ProductCode == normalizedProductCode, cancellationToken);
 
@@ -524,7 +524,7 @@ public sealed class StockController : ControllerBase
         product.ModifiedOn = DateTime.UtcNow;
         product.ModifiedBy = GetActorGuid();
 
-        await _readContext.SaveChangesAsync(cancellationToken);
+        await _writeContext.SaveChangesAsync(cancellationToken);
         return Ok(MapProductRecord(product, request.CategoryCode));
     }
 
@@ -535,7 +535,7 @@ public sealed class StockController : ControllerBase
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var product = await _readContext.Products
+        var product = await _writeContext.Products
             .FirstOrDefaultAsync(item => item.ProductId == id, cancellationToken);
 
         if (product is null)
@@ -543,31 +543,7 @@ public sealed class StockController : ControllerBase
             return NotFound();
         }
 
-        if (!product.Retired)
-        {
-            // First-pass: retire the product (soft delete)
-            var actor = GetActorGuid();
-            var now = DateTime.UtcNow;
-            product.Retired = true;
-            product.RetiredOn = now;
-            product.RetiredBy = actor;
-            product.ModifiedOn = now;
-            product.ModifiedBy = actor;
-
-            await _readContext.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation(
-                "Product {ProductId} retired by {Actor}",
-                product.ProductId, actor);
-
-            return Ok(new StockProductDeleteResult
-            {
-                ProductId = product.ProductId,
-                Outcome = "retired"
-            });
-        }
-
-        // Second-pass: hard delete with cascading cleanup
+        // Hard delete with cascading cleanup
         await HardDeleteProductAsync(product, cancellationToken);
 
         return Ok(new StockProductDeleteResult
@@ -580,13 +556,13 @@ public sealed class StockController : ControllerBase
     private async Task HardDeleteProductAsync(Product product, CancellationToken cancellationToken)
     {
         // Remove stock in/out movement rows
-        var stockMovements = await _readContext.StockInOuts
+        var stockMovements = await _writeContext.StockInOuts
             .Where(item => item.ProductId == product.ProductId)
             .ToListAsync(cancellationToken);
-        _readContext.StockInOuts.RemoveRange(stockMovements);
+        _writeContext.StockInOuts.RemoveRange(stockMovements);
 
         // Remove product attachment rows and physical image files
-        var attachments = await _readContext.ProductAttachments
+        var attachments = await _writeContext.ProductAttachments
             .Where(item => item.ProductId == product.ProductId)
             .ToListAsync(cancellationToken);
 
@@ -631,9 +607,9 @@ public sealed class StockController : ControllerBase
             }
         }
 
-        _readContext.ProductAttachments.RemoveRange(attachments);
-        _readContext.Products.Remove(product);
-        await _readContext.SaveChangesAsync(cancellationToken);
+        _writeContext.ProductAttachments.RemoveRange(attachments);
+        _writeContext.Products.Remove(product);
+        await _writeContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Product {ProductId} hard-deleted: {MovementCount} stock movements and {AttachmentCount} attachments removed",
@@ -898,6 +874,7 @@ public sealed class StockController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<StockProductListItemResponse>>> GetProducts(
         [FromQuery] string? keyword,
         [FromQuery] int take = 100,
+        [FromQuery] bool retired = false,
         CancellationToken cancellationToken = default)
     {
         if (take is <= 0 or > 500)
@@ -912,7 +889,7 @@ public sealed class StockController : ControllerBase
 
         var query = _readContext.vwProductLists
             .AsNoTracking()
-            .Where(product => !product.Retired);
+            .Where(product => retired ? product.Retired : !product.Retired);
 
         if (!string.IsNullOrWhiteSpace(normalizedKeyword))
         {
@@ -939,7 +916,8 @@ public sealed class StockController : ControllerBase
                 CreatedOn = product.CreatedOn,
                 CreatedBy = product.CreatedBy ?? string.Empty,
                 ModifiedOn = product.ModifiedOn,
-                ModifiedBy = product.ModifiedBy ?? string.Empty
+                ModifiedBy = product.ModifiedBy ?? string.Empty,
+                Retired = product.Retired
             })
             .ToListAsync(cancellationToken);
 

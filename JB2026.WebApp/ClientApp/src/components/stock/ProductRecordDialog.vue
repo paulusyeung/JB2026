@@ -232,6 +232,7 @@
 
         <v-btn color="primary" :loading="saving" @click="save(false)">{{ t('stock.record.save') }}</v-btn>
         <v-btn color="primary" variant="tonal" :loading="saving" @click="save(true)">{{ t('stock.record.saveClose') }}</v-btn>
+        <v-seperator />
         <v-btn
           v-if="isEditMode"
           color="error"
@@ -259,6 +260,42 @@
     :can-delete="canDeleteAttachments"
     @changed="onAttachmentChanged"
   />
+
+  <v-dialog v-model="showSaveConfirm" max-width="460">
+    <v-card>
+      <v-card-title>{{ t('stock.record.titleEdit') }}</v-card-title>
+      <v-card-text>
+        {{ pendingCloseAfterSave ? t('stock.record.confirmSaveClose') : t('stock.record.confirmSave') }}
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="showSaveConfirm = false">
+          {{ t('common.cancel') }}
+        </v-btn>
+        <v-btn color="primary" variant="flat" :loading="saving" @click="confirmSave">
+          {{ t('stock.record.save') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog v-model="showDeleteConfirm" max-width="460">
+    <v-card>
+      <v-card-title>{{ t('stock.record.titleEdit') }}</v-card-title>
+      <v-card-text>
+        {{ t('stock.record.confirmDelete') }}
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="showDeleteConfirm = false">
+          {{ t('common.cancel') }}
+        </v-btn>
+        <v-btn color="error" variant="flat" :loading="deleting" @click="confirmDelete">
+          {{ t('stock.record.delete') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -315,6 +352,9 @@ const movementRows = ref<MovementHistoryRow[]>([])
 const movementSortBy = ref([{ key: 'inOutDate', order: 'desc' as const }])
 const stockInOutDialogOpen = ref(false)
 const stockAttachmentDialogOpen = ref(false)
+const showSaveConfirm = ref(false)
+const showDeleteConfirm = ref(false)
+const pendingCloseAfterSave = ref(false)
 
 const currentMode = ref<ProductRecordMode>('create')
 const currentProductId = ref<string | null>(null)
@@ -569,10 +609,12 @@ async function save(closeAfterSave: boolean) {
     return
   }
 
-  const confirmed = window.confirm(closeAfterSave ? t('stock.record.confirmSaveClose') : t('stock.record.confirmSave'))
-  if (!confirmed) {
-    return
-  }
+  pendingCloseAfterSave.value = closeAfterSave
+  showSaveConfirm.value = true
+}
+
+async function confirmSave() {
+  showSaveConfirm.value = false
 
   saving.value = true
   try {
@@ -583,7 +625,7 @@ async function save(closeAfterSave: boolean) {
       originalProductCode.value = updated.productCode
       await loadMovements(updated.productId)
       emit('saved', updated.productId)
-      if (closeAfterSave) {
+      if (pendingCloseAfterSave.value) {
         closeDialog()
       }
       return
@@ -598,7 +640,7 @@ async function save(closeAfterSave: boolean) {
 
     await loadMovements(created.productId)
 
-    if (closeAfterSave) {
+    if (pendingCloseAfterSave.value) {
       closeDialog()
     }
   } catch {
@@ -613,10 +655,16 @@ async function deleteRecord() {
     return
   }
 
-  const confirmed = window.confirm(t('stock.record.confirmDelete'))
-  if (!confirmed) {
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (!currentProductId.value) {
+    showDeleteConfirm.value = false
     return
   }
+
+  showDeleteConfirm.value = false
 
   deleting.value = true
   try {

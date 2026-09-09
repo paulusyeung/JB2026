@@ -16,6 +16,7 @@ import type {
 export interface StockProductsQuery {
   keyword?: string
   take?: number
+  retired?: boolean
 }
 
 export async function getStockProducts(query: StockProductsQuery = {}): Promise<StockProductListItem[]> {
@@ -23,6 +24,7 @@ export async function getStockProducts(query: StockProductsQuery = {}): Promise<
     params: {
       keyword: query.keyword ?? '',
       take: query.take ?? 100,
+      retired: query.retired ?? false,
     },
   })
 

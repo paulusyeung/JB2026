@@ -98,6 +98,16 @@
               </v-list>
             </v-menu>
 
+            <v-btn
+              :variant="showRetired ? 'flat' : 'outlined'"
+              size="small"
+              :color="showRetired ? 'warning' : undefined"
+              prepend-icon="mdi-eye-off"
+              @click="showRetired = !showRetired; load()"
+            >
+              {{ t('stock.actions.showRetired') }}
+            </v-btn>
+
             <v-divider vertical class="mx-1" />
 
             <v-btn variant="outlined" size="small" prepend-icon="mdi-paperclip" @click="openStockAttachmentDialog">
@@ -152,6 +162,9 @@
               <v-list-item prepend-icon="mdi-view-grid-outline" :active="viewMode === 'card'" @click="setViewMode('card')">
                 <v-list-item-title>{{ cardViewLabel }}</v-list-item-title>
               </v-list-item>
+              <v-list-item :prepend-icon="showRetired ? 'mdi-eye' : 'mdi-eye-off'" @click="showRetired = !showRetired; load()">
+                <v-list-item-title>{{ t('stock.actions.showRetired') }}</v-list-item-title>
+              </v-list-item>
               <v-list-item prepend-icon="mdi-paperclip" @click="openStockAttachmentDialog">
                 <v-list-item-title>{{ t('stock.actions.attachment') }}</v-list-item-title>
               </v-list-item>
@@ -181,7 +194,7 @@
             :key="row.productId"
             rounded="lg"
             elevation="0"
-            class="stock-mobile-card"
+            :class="['stock-mobile-card', { 'retired-row': row.retired }]"
             role="button"
             tabindex="0"
             @click="openEditDialog(row.productId)"
@@ -189,7 +202,12 @@
           >
             <div class="stock-mobile-card__header">
               <div>
-                <div class="text-subtitle-2 font-weight-bold">{{ row.productName }}</div>
+                <div class="text-subtitle-2 font-weight-bold">
+                  {{ row.productName }}
+                  <v-chip v-if="row.retired" size="x-small" color="warning" variant="tonal" class="ml-1">
+                    {{ t('stock.labels.retired') }}
+                  </v-chip>
+                </div>
                 <div class="text-caption text-medium-emphasis">
                   {{ formatStockNumber(row.stockNumber) }} · {{ row.productCode }}
                 </div>
@@ -238,6 +256,7 @@
             fixed-header
             height="100%"
             class="stock-table"
+            :row-class="getTableRowClass"
             v-model:items-per-page="itemsPerPage"
             :items-per-page-options="[10, 15, 20, 25, 50, -1]"
             @click:row="onRowClick"
@@ -254,6 +273,9 @@
               >
                 {{ formatStockNumber(item.stockNumber) }}
               </a>
+              <v-chip v-if="item.retired" size="x-small" color="warning" variant="tonal" class="ml-1">
+                {{ t('stock.labels.retired') }}
+              </v-chip>
             </template>
 
             <template #[`item.attachment`]="{ item }">
@@ -389,6 +411,7 @@ const stockInOutStockNumber = ref('')
 const stockAttachmentDialogOpen = ref(false)
 const stockAttachmentProductId = ref<string | null>(null)
 const stockAttachmentStockNumber = ref('')
+const showRetired = ref(false)
 const detailViewLabel = computed(() => t('stock.actions.detailView'))
 const cardViewLabel = computed(() => t('stock.actions.cardView'))
 const isCardView = computed(() => viewMode.value === 'card')
@@ -479,7 +502,7 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   try {
-    rows.value = await getStockProducts({ keyword: keyword.value.trim(), take: 500 })
+    rows.value = await getStockProducts({ keyword: keyword.value.trim(), take: 500, retired: showRetired.value })
   } catch {
     errorMessage.value = t('stock.messages.loadFailed')
   } finally {
@@ -513,6 +536,10 @@ function formatMoney(value: number) {
 
 function formatQty(value: number) {
   return formatNumber(value)
+}
+
+function getTableRowClass(item: StockProductListItem) {
+  return item.retired ? 'retired-row' : ''
 }
 
 function toggleSelected(productId: string) {
@@ -554,12 +581,9 @@ async function onDialogSaved() {
   await load()
 }
 
-async function onDialogDeleted(_productId: string, outcome: string) {
+async function onDialogDeleted(_productId: string, _outcome: string) {
   await load()
-  successMessage.value =
-    outcome === 'hardDeleted'
-      ? t('stock.messages.deleteHardDeletedSuccess')
-      : t('stock.messages.deleteRetiredSuccess')
+  successMessage.value = t('stock.messages.deleteHardDeletedSuccess')
 }
 
 function openStockInOutDialog() {
@@ -627,7 +651,6 @@ async function startDelete() {
   const idsToDelete = [...selectedIds.value]
   let successCount = 0
   let failedCount = 0
-  let lastOutcome = ''
 
   deleting.value = true
   errorMessage.value = ''
@@ -635,9 +658,8 @@ async function startDelete() {
   try {
     for (const productId of idsToDelete) {
       try {
-        const result = await deleteProductRecord(productId)
+        await deleteProductRecord(productId)
         successCount++
-        lastOutcome = result.outcome
       } catch {
         failedCount++
       }
@@ -650,10 +672,7 @@ async function startDelete() {
   await load()
 
   if (count === 1 && successCount === 1) {
-    successMessage.value =
-      lastOutcome === 'hardDeleted'
-        ? t('stock.messages.deleteHardDeletedSuccess')
-        : t('stock.messages.deleteRetiredSuccess')
+    successMessage.value = t('stock.messages.deleteHardDeletedSuccess')
   } else if (count > 1) {
     if (failedCount > 0) {
       errorMessage.value = t('stock.messages.deleteBatchResult', { success: successCount, failed: failedCount })
@@ -842,5 +861,10 @@ function exportToCsv() {
   .stock-mobile-list .stock-mobile-card:nth-child(2n) {
     transform: none;
   }
+}
+
+.retired-row {
+  opacity: 0.5;
+  text-decoration: line-through;
 }
 </style>
