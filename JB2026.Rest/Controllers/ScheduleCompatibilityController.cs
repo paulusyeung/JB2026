@@ -272,7 +272,7 @@ public sealed class ScheduleCompatibilityController : ControllerBase
 
     private static string[] ExtractPrintInfo(string? productDetails, string? orderTitle)
     {
-        var plainText = StripHtml(productDetails);
+        var plainText = HtmlToPlainText(productDetails);
 
         // Legacy (JB2015) ProductDetails comes in two shapes:
         //   _2016   : numbered sections, e.g. "3. 印刷" / "石數：12500石"
@@ -372,6 +372,24 @@ public sealed class ScheduleCompatibilityController : ControllerBase
 
         var noTags = Regex.Replace(input, "<.*?>", " ", RegexOptions.Singleline);
         return WebUtility.HtmlDecode(noTags);
+    }
+
+    /// <summary>
+    /// Converts HTML to plain text, preserving line breaks from block-level elements
+    /// (&lt;p&gt;, &lt;div&gt;, &lt;br&gt;, etc.) — matches legacy RichTextBox.Html behaviour.
+    /// </summary>
+    private static string HtmlToPlainText(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return string.Empty;
+        }
+
+        var text = Regex.Replace(html, @"<\s*/?(p|div|br|li|tr|h[1-6])[^>]*>", "\n", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"<[^>]+>", string.Empty);
+        text = WebUtility.HtmlDecode(text);
+        text = Regex.Replace(text, @"\n{3,}", "\n\n");
+        return text.Trim();
     }
 
     private static string GetLabeledValue(string text, string[] labels)

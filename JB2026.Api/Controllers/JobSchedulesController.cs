@@ -1266,7 +1266,7 @@ public sealed class JobSchedulesController : ControllerBase
 
     private static string[] ExtractPrintInfo(string? productDetails, string? orderTitle)
     {
-        var plainText = StripHtml(productDetails);
+        var plainText = HtmlToPlainText(productDetails);
 
         // Legacy (JB2015) ProductDetails comes in two shapes:
         //   _2016   : numbered sections, e.g. "3. 印刷" / "石數：12500石"
