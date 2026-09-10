@@ -552,8 +552,6 @@ function handleCustomerChanged(customerName: string | null) {
     return
   }
 
-  draft.value.customerRef = profile.customerRef
-
   if (!draft.value.paymentTerms) {
     draft.value.paymentTerms = profile.paymentTerms || 'Net 30'
   }
