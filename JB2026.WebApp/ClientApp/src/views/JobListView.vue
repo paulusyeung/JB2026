@@ -436,7 +436,7 @@
               </div>
             </template>
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(invoiceAmountForRow(item)) }}</template>
-            <template #[`item.invoiceRef`]="{ item }">{{ invoiceNumberForRow(item) || '-' }}</template>
+            <template #[`item.invoiceRef`]="{ item }">{{ invoiceNumberForRow(item) }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
           </v-data-table>
         </div>
