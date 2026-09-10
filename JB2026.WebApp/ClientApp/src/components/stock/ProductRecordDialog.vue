@@ -507,14 +507,7 @@ async function loadMovements(productId: string) {
   try {
     errorMessage.value = ''
     const rows = await getProductStockMovements(productId)
-    const sortedRows = [...rows].sort((a, b) => {
-      const inOutDateDelta = new Date(b.inOutDate).getTime() - new Date(a.inOutDate).getTime()
-      if (inOutDateDelta !== 0) {
-        return inOutDateDelta
-      }
-
-      return new Date(b.modifiedOn).getTime() - new Date(a.modifiedOn).getTime()
-    })
+    const sortedRows = [...rows].reverse()
 
     movementRows.value = sortedRows.map((row, index) => ({
       ...row,
