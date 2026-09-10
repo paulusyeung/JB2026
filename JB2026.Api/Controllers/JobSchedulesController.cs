@@ -1010,7 +1010,7 @@ public sealed class JobSchedulesController : ControllerBase
 
         await _writeContext.SaveChangesAsync(cancellationToken);
 
-        // Cancel removed items
+        // Delete removed items from schedule
         foreach (var orderId in request.CancelledOrderIds)
         {
             var cancelSchedule = await _readContext.JobSchedules
@@ -1019,22 +1019,7 @@ public sealed class JobSchedulesController : ControllerBase
 
             if (cancelSchedule is not null)
             {
-                await _gateway.UpdateAsync(new UpdateJobScheduleStoredProcedureRequest(
-                    ScheduleId: cancelSchedule.ScheduleId,
-                    OrderId: orderId,
-                    ScheduledOn: cancelSchedule.ScheduledOn,
-                    Status: cancelSchedule.Status,
-                    Priority: cancelSchedule.Priority,
-                    MachineNumber: cancelSchedule.MachineNumber,
-                    CompletedOn: cancelSchedule.CompletedOn,
-                    ShouldReview: cancelSchedule.ShouldReview,
-                    UrgencyLevel: cancelSchedule.UrgencyLevel,
-                    Cancelled: true,
-                    CancelledOn: now,
-                    CancelledBy: currentUserId,
-                    RescheduledCount: cancelSchedule.RescheduledCount,
-                    RescheduledBy: cancelSchedule.RescheduledBy,
-                    RescheduledOn: cancelSchedule.RescheduledOn), cancellationToken);
+                await _gateway.DeleteAsync(cancelSchedule.ScheduleId, cancellationToken);
             }
         }
 
