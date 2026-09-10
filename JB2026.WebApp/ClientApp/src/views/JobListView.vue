@@ -174,7 +174,7 @@
               {{ t('jobOrder.jobList.actions.newOrder') }}
             </v-btn>
 
-            <v-btn
+            <!-- <v-btn
               variant="tonal"
               color="error"
               size="small"
@@ -184,7 +184,7 @@
               @click="confirmBatchDelete"
             >
               {{ t('jobOrder.jobList.actions.deleteSelected') }}
-            </v-btn>
+            </v-btn> -->
 
             <span class="text-caption text-medium-emphasis" v-if="checkboxMode">
               {{ t('jobOrder.jobList.actions.selected', { count: selectedOrderIds.length }) }}
@@ -228,9 +228,9 @@
               <v-list-item prepend-icon="mdi-file-plus" @click="openNew">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.newOrder') }}</v-list-item-title>
               </v-list-item>
-              <v-list-item prepend-icon="mdi-delete" :disabled="selectedOrderIds.length === 0 || deleting" @click="confirmBatchDelete">
+              <!-- <v-list-item prepend-icon="mdi-delete" :disabled="selectedOrderIds.length === 0 || deleting" @click="confirmBatchDelete">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.deleteSelected') }}</v-list-item-title>
-              </v-list-item>
+              </v-list-item> -->
             </v-list>
           </v-menu>
         </div>

@@ -47,4 +47,10 @@ public sealed class JobDetailResponse
     public string? OriginalSONumber { get; init; }
 
     public Dictionary<string, string>? WorkflowAttributes { get; init; }
+
+    public int? Step1Status { get; init; }
+
+    public int? Step2Status { get; init; }
+
+    public int? Step3Status { get; init; }
 }

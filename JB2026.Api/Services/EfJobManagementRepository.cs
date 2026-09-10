@@ -623,7 +623,19 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
                 .Where(w => w.Workflow != null && w.WorkStatus == null && !string.IsNullOrWhiteSpace(w.WorkTitle))
                 .ToDictionary(
                     w => w.Workflow!.WorkflowName ?? string.Empty,
-                    w => w.WorkTitle!)
+                    w => w.WorkTitle!),
+            Step1Status = job.JobWorkflows
+                .Where(w => w.WorkIndex == 0)
+                .Select(w => (int?)w.WorkStatus)
+                .FirstOrDefault(),
+            Step2Status = job.JobWorkflows
+                .Where(w => w.WorkIndex == 1)
+                .Select(w => (int?)w.WorkStatus)
+                .FirstOrDefault(),
+            Step3Status = job.JobWorkflows
+                .Where(w => w.WorkIndex == 2)
+                .Select(w => (int?)w.WorkStatus)
+                .FirstOrDefault(),
         };
     }
 

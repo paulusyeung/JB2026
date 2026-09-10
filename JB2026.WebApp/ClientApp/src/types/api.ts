@@ -540,6 +540,9 @@ export interface JobDetail extends JobListItem {
   soNumber?: string
   originalSONumber?: string
   workflowAttributes?: Record<string, string>
+  step1Status?: number | null
+  step2Status?: number | null
+  step3Status?: number | null
 }
 
 export interface JobOrderPrintRequest {

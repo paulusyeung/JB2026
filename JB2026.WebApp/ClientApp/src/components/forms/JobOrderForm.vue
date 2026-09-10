@@ -286,7 +286,7 @@
                   density="compact"
                   hide-details
                 />
-                <span :class="['legacy-indicator', indicatorColor(index)]" />
+                <span class="legacy-indicator" :style="{ background: stepStatusColor(attr.workIndex) }" @click.stop="cycleWorkflowStatus(attr.workIndex)" />
               </div>
             </div>
           </div>
@@ -353,6 +353,7 @@ import type { VForm } from 'vuetify/components'
 import { useOrderTypeOptions } from '@/composables/useOrderTypeOptions'
 import { saveJob } from '@/services/jobs'
 import { getJobOrder, getJobPreviewBlob, getOrderTypeWorkflowAttributes } from '@/services/jobOrders'
+import { updatePendingWorkflow } from '@/services/scheduler'
 import type { JobAttachment, JobDetail, JobOrderFormData, JobOrderRecord, OrderTypeWorkflowAttribute } from '@/types/api'
 
 // ---------------------------------------------------------------------------
@@ -386,6 +387,7 @@ const legacyBrand = computed(() => draft.value.orderTitle ?? '')
 const legacyCompletedOn = ref('')
 const workflowAttributeDefs = ref<OrderTypeWorkflowAttribute[]>([])
 const workflowAttributeValues = ref<Record<string, string>>({})
+const workflowStatuses = ref<{ step1: number | null; step2: number | null; step3: number | null }>({ step1: null, step2: null, step3: null })
 const previewImageUrl = ref<string | null>(null)
 const dragOffset = ref({ x: 0, y: 0 })
 const dragPointer = ref<{ id: number; startX: number; startY: number; originX: number; originY: number } | null>(null)
@@ -405,6 +407,11 @@ watch(
     syncLegacyFields(null)
     errorMessage.value = ''
     clearPreviewImage()
+    workflowStatuses.value = {
+      step1: job?.step1Status ?? null,
+      step2: job?.step2Status ?? null,
+      step3: job?.step3Status ?? null,
+    }
     fetchWorkflowAttributes(draft.value.orderType)
 
     if (!job?.orderId) return
@@ -604,6 +611,24 @@ async function handleSubmit() {
 
   try {
       await saveJob(draft.value)
+
+      // Persist workflow status changes if any step was modified
+      if (props.job?.orderId) {
+        const steps = [
+          { index: 0, original: props.job.step1Status ?? null, current: workflowStatuses.value.step1 },
+          { index: 1, original: props.job.step2Status ?? null, current: workflowStatuses.value.step2 },
+          { index: 2, original: props.job.step3Status ?? null, current: workflowStatuses.value.step3 },
+        ]
+        for (const step of steps) {
+          if (step.current !== step.original) {
+            await updatePendingWorkflow(props.job.orderId, {
+              stepIndex: step.index,
+              targetStatus: step.current ?? 1,
+            })
+          }
+        }
+      }
+
       emit('saved')
     } catch (err: unknown) {
       if (import.meta.env.DEV) {
@@ -637,17 +662,40 @@ async function handleSubmit() {
     }
   }
 
-const legacyIndicatorColors = [
-  'legacy-indicator-blue',
-  'legacy-indicator-green',
-  'legacy-indicator-red',
-  'legacy-indicator-orange',
-  'legacy-indicator-purple',
-  'legacy-indicator-teal',
-]
+function stepStatusColor(workIndex: number): string {
+  const status = workIndex === 0
+    ? workflowStatuses.value.step1
+    : workIndex === 1
+      ? workflowStatuses.value.step2
+      : workIndex === 2
+        ? workflowStatuses.value.step3
+        : null
 
-function indicatorColor(index: number): string {
-  return legacyIndicatorColors[index % legacyIndicatorColors.length]
+  if (status == null) return '#bdbdbd'
+  if (status === 0) return '#e76464'
+  if (status === 1) return '#f4a261'
+  if (status === 2) return '#61c06a'
+  if (status === 3) return '#56a8e3'
+  return '#9e9e9e'
+}
+
+function cycleWorkflowStatus(workIndex: number) {
+  if (isNew.value) return
+  const key = workIndex === 0 ? 'step1' : workIndex === 1 ? 'step2' : 'step3'
+  if (!key) return
+  const current = workflowStatuses.value[key]
+  // Cycle: null → 0 → 1 → 2 → 3 → 1
+  if (current == null) {
+    workflowStatuses.value[key] = 0
+  } else if (current === 0) {
+    workflowStatuses.value[key] = 1
+  } else if (current === 1) {
+    workflowStatuses.value[key] = 2
+  } else if (current === 2) {
+    workflowStatuses.value[key] = 3
+  } else {
+    workflowStatuses.value[key] = 0
+  }
 }
 
 async function fetchWorkflowAttributes(orderType: number) {
@@ -1019,30 +1067,8 @@ async function loadPreviewImage(job: JobDetail) {
   border-radius: 999px;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.4);
   display: inline-block;
-}
-
-.legacy-indicator-blue {
-  background: #56a8e3;
-}
-
-.legacy-indicator-green {
-  background: #61c06a;
-}
-
-.legacy-indicator-red {
-  background: #e76464;
-}
-
-.legacy-indicator-orange {
-  background: #f4a261;
-}
-
-.legacy-indicator-purple {
-  background: #9b59b6;
-}
-
-.legacy-indicator-teal {
-  background: #1abc9c;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .legacy-preview {
