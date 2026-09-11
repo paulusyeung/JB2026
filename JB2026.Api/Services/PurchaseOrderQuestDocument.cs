@@ -14,7 +14,7 @@ public sealed class PurchaseOrderQuestDocument : DocumentBase<JobOrderPrintDocum
 {
     private const float InfoLabelWidth = 90f;
     private const float SectionLabelFontSize = 12f;
-    private const float ImageMaxHeight = 280f;
+    private const float ImageMaxHeight = 226.8f; // 8cm
     private const float LogoMaxHeight = 70f;
 
     private static readonly Lazy<byte[]?> LogoBytes = new(LoadLogoFromEmbeddedResource);
@@ -162,6 +162,7 @@ public sealed class PurchaseOrderQuestDocument : DocumentBase<JobOrderPrintDocum
                             .LineHeight(1.0f);
 
                         RenderFormattedMultiline(col, body, bodyStyle);
+                        col.Item().Height(8);
                     }
                 }
             });
