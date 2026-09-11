@@ -136,6 +136,7 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
+              readonly
             />
 
             <v-text-field
