@@ -1049,7 +1049,18 @@ public sealed class JobSchedulesController : ControllerBase
                     RescheduledBy: completeSchedule.RescheduledBy,
                     RescheduledOn: completeSchedule.RescheduledOn), cancellationToken);
             }
+
+            var jobOrder = await _writeContext.JobOrders
+                .FirstOrDefaultAsync(j => j.OrderId == orderId, cancellationToken);
+
+            if (jobOrder is not null)
+            {
+                jobOrder.CompletedOn = now;
+                jobOrder.Status = 3;
+            }
         }
+
+        await _writeContext.SaveChangesAsync(cancellationToken);
 
         return Ok(new { saved = request.ScheduledItems.Count, cancelled = request.CancelledOrderIds.Count, completed = request.CompletedOrderIds.Count });
     }
