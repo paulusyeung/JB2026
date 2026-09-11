@@ -161,7 +161,7 @@
               <span>{{ t('jobOrder.completed.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
               <span>{{ t('jobOrder.completed.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
               <span>{{ t('jobOrder.completed.headers.scheduledOn') }}: {{ format(item.scheduledOn) }}</span>
-              <span>{{ t('jobOrder.completed.headers.completedOn') }}: {{ format(item.completedOn, DATE_FORMATS.SHORT_DATETIME) }}</span>
+              <span>{{ t('jobOrder.completed.headers.completedOn') }}: {{ format(item.completedOn) }}</span>
             </div>
           </v-card>
         </div>
@@ -202,7 +202,7 @@
               <span>{{ t('jobOrder.completed.headers.orderedOn') }}: {{ format(item.orderedOn) }}</span>
               <span>{{ t('jobOrder.completed.headers.requiredOn') }}: {{ format(item.requiredOn) }}</span>
               <span>{{ t('jobOrder.completed.headers.scheduledOn') }}: {{ format(item.scheduledOn) }}</span>
-              <span>{{ t('jobOrder.completed.headers.completedOn') }}: {{ format(item.completedOn, DATE_FORMATS.SHORT_DATETIME) }}</span>
+              <span>{{ t('jobOrder.completed.headers.completedOn') }}: {{ format(item.completedOn) }}</span>
             </div>
           </v-card>
         </div>
@@ -245,7 +245,7 @@
           <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
           <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
           <template #[`item.scheduledOn`]="{ item }">{{ format(item.scheduledOn) }}</template>
-          <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
+          <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
         </v-data-table>
         </div>
 
