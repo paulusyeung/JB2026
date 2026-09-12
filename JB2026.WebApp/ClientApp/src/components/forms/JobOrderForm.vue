@@ -129,15 +129,26 @@
               />
             </v-menu>
 
-            <v-text-field
-              v-model="legacyCompletedOn"
-              :label="t('jobForm.fields.completedOn')"
-              placeholder="yyyy-MM-dd"
-              variant="outlined"
-              density="compact"
-              hide-details="auto"
-              readonly
-            />
+            <v-menu v-model="completedOnPickerOpen" :close-on-content-click="false">
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  v-model="draft.completedOn"
+                  :label="t('jobForm.fields.completedOn')"
+                  placeholder="yyyy-MM-dd"
+                  variant="outlined"
+                  density="compact"
+                  hide-details="auto"
+                  :readonly="!!draft.completedOn"
+                  :append-inner-icon="!draft.completedOn ? 'mdi-calendar' : undefined"
+                  v-bind="!draft.completedOn ? menuProps : {}"
+                />
+              </template>
+              <v-date-picker
+                :model-value="draft.completedOn ? new Date(draft.completedOn + 'T12:00:00') : undefined"
+                hide-header
+                @update:model-value="onCompletedOnPicked"
+              />
+            </v-menu>
 
             <v-text-field
               v-model.number="draft.qty"
@@ -389,7 +400,6 @@ const { t } = useI18n({ useScope: 'global' })
 const { orderTypeOptions } = useOrderTypeOptions()
 const legacyRecord = ref<JobOrderRecord | null>(null)
 const legacyBrand = computed(() => draft.value.orderTitle ?? '')
-const legacyCompletedOn = ref('')
 const workflowAttributeDefs = ref<OrderTypeWorkflowAttribute[]>([])
 const workflowAttributeValues = ref<Record<string, string>>({})
 const workflowStatuses = ref<{ step1: number | null; step2: number | null; step3: number | null }>({ step1: null, step2: null, step3: null })
@@ -476,6 +486,7 @@ const requiredAfterOrdered = (v: string) => {
 
 const orderedOnPickerOpen = ref(false)
 const requiredOnPickerOpen = ref(false)
+const completedOnPickerOpen = ref(false)
 
 function toIsoDate(date: Date): string {
   const y = date.getFullYear()
@@ -496,6 +507,13 @@ function onRequiredOnPicked(date: Date | null) {
     draft.value.requiredOn = toIsoDate(date)
   }
   requiredOnPickerOpen.value = false
+}
+
+function onCompletedOnPicked(date: Date | null) {
+  if (date) {
+    draft.value.completedOn = toIsoDate(date)
+  }
+  completedOnPickerOpen.value = false
 }
 
 // ---------------------------------------------------------------------------
@@ -528,6 +546,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
       invoiceRef: '',
       invoiceAmount: undefined,
       productDetails: '',
+      completedOn: '',
       workflowAttributes: {},
     }
   }
@@ -557,6 +576,7 @@ function buildDraft(job: JobDetail | null): JobOrderFormData {
     invoiceRef: job.invoiceRef ?? '',
     invoiceAmount: job.invoiceAmount ?? undefined,
     productDetails: job.productDetails ?? '',
+    completedOn: '',
     workflowAttributes: job.workflowAttributes ?? {},
   }
 }
@@ -597,7 +617,7 @@ function syncLegacyFields(record: JobOrderRecord | null) {
   draft.value.outputRef = record?.outputRef ?? ''
   draft.value.invoiceRef = record?.invoiceRef ?? ''
   draft.value.invoiceAmount = record?.invoiceAmount ?? undefined
-  legacyCompletedOn.value = formatLegacyDate(record?.completedOn ?? null)
+  draft.value.completedOn = formatLegacyDate(record?.completedOn ?? null)
   draft.value.productStyle = record?.productStyle ?? ''
   draft.value.productDetails = record?.productDetails ?? ''
   if (record) {

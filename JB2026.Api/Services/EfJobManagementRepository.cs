@@ -399,6 +399,7 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
         {
             order.OrderedOn = request.OrderedOn;
         }
+        order.CompletedOn = request.CompletedOn;
         order.Qty = request.Qty;
         if (request.PaymentTerms is not null)
         {

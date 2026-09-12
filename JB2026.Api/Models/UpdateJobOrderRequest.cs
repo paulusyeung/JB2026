@@ -24,6 +24,8 @@ public sealed class UpdateJobOrderRequest
 
     public DateTime? OrderedOn { get; init; }
 
+    public DateTime? CompletedOn { get; init; }
+
     [Range(0, 1000000)]
     public decimal Qty { get; init; }
 

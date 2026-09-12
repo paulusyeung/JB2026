@@ -1051,6 +1051,7 @@ export interface JobOrderFormData {
   outputRef?: string
   invoiceRef?: string
   invoiceAmount?: number
+  completedOn?: string
   workflowAttributes: Record<string, string>
 }
 
