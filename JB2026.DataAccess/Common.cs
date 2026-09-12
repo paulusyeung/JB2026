@@ -20,7 +20,7 @@ namespace JB2026.DataAccess
                 Suspened = -1,
                 Draft = 0,
                 Active,
-                Power
+                Completed
             }
 
             public enum OrderType

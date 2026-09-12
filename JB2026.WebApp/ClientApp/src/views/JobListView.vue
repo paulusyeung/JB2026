@@ -688,8 +688,7 @@ const statusItems = computed(() => [
   { value: -1, label: t('jobOrder.jobList.filters.allStatuses') },
   { value: 0, label: t('jobOrder.status.notStarted') },
   { value: 1, label: t('jobOrder.status.inProgress') },
-  { value: 2, label: t('jobOrder.status.paused') },
-  { value: 3, label: t('jobOrder.status.completed') },
+  { value: 2, label: t('jobOrder.status.completed') },
 ])
 
 const allHeaders = computed(() => [

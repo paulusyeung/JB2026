@@ -171,9 +171,15 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         if (status.HasValue)
         {
-            query = status.Value >= 3
-                ? query.Where(o => o.CompletedOn.HasValue && o.CompletedOn.Value != new DateTime(1900, 1, 1))
-                : query.Where(o => o.Status == status.Value);
+            if (status.Value >= 2)
+            {
+                query = query.Where(o => o.Status == status.Value
+                    || (o.CompletedOn.HasValue && o.CompletedOn.Value != new DateTime(1900, 1, 1)));
+            }
+            else
+            {
+                query = query.Where(o => o.Status == status.Value);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
@@ -411,6 +417,10 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
             order.ProductDetails = request.ProductDetails;
         }
         order.Status = request.Status;
+        if (request.CompletedOn.HasValue && request.CompletedOn.Value != new DateTime(1900, 1, 1))
+        {
+            order.Status = 2;
+        }
         order.OrderType = request.OrderType;
         if (request.SONumber is not null)
         {

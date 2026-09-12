@@ -883,8 +883,7 @@ function handleImportJobs() {
 }
 
 function statusLabel(status: number): string {
-  if (status >= 3) return t('jobOrder.status.completed')
-  if (status === 2) return t('jobOrder.status.paused')
+  if (status >= 2) return t('jobOrder.status.completed')
   if (status === 1) return t('jobOrder.status.inProgress')
   return t('jobOrder.status.notStarted')
 }

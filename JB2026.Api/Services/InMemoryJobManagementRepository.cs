@@ -111,9 +111,15 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
 
         if (status.HasValue)
         {
-            query = status.Value >= 3
-                ? query.Where(j => j.CompletedOn.HasValue && j.CompletedOn.Value != new DateTime(1900, 1, 1))
-                : query.Where(j => j.Status == status.Value);
+            if (status.Value >= 2)
+            {
+                query = query.Where(j => j.Status == status.Value
+                    || (j.CompletedOn.HasValue && j.CompletedOn.Value != new DateTime(1900, 1, 1)));
+            }
+            else
+            {
+                query = query.Where(j => j.Status == status.Value);
+            }
         }
 
         if (!string.IsNullOrEmpty(startsWith) && !string.Equals(startsWith, "All", StringComparison.OrdinalIgnoreCase))
@@ -262,6 +268,13 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             return Task.FromResult<JobOrderResponse?>(null);
         }
 
+        var completedOn = request.CompletedOn;
+        var status = request.Status;
+        if (completedOn.HasValue && completedOn.Value != new DateTime(1900, 1, 1))
+        {
+            status = 2;
+        }
+
         var updated = current with
         {
             CustomerName = request.CustomerName,
@@ -269,6 +282,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             OrderTitle = request.OrderTitle,
             RequiredOn = request.RequiredOn,
             OrderedOn = request.OrderedOn ?? current.OrderedOn,
+            CompletedOn = completedOn,
             Qty = request.Qty,
             Remarks = request.Remarks,
             ProductDetails = request.ProductDetails ?? current.ProductDetails,
@@ -278,7 +292,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             InvoiceRef = request.InvoiceRef ?? current.InvoiceRef,
             InvoiceAmount = request.InvoiceAmount ?? current.InvoiceAmount,
             PaymentTerms = request.PaymentTerms ?? current.PaymentTerms,
-            Status = request.Status,
+            Status = status,
             OrderType = request.OrderType,
             SONumber = request.SONumber,
             OriginalSONumber = request.OriginalSONumber,

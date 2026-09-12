@@ -1078,7 +1078,7 @@ public sealed class JobSchedulesController : ControllerBase
             if (jobOrder is not null)
             {
                 jobOrder.CompletedOn = now;
-                jobOrder.Status = 3;
+                jobOrder.Status = 2;
             }
         }
 
