@@ -990,13 +990,24 @@ public sealed class JobSchedulesController : ControllerBase
                     RescheduledOn: null), cancellationToken);
             }
 
-            // Update workflow step statuses
+            // Update workflow step statuses (upsert — create row if missing)
             var step1Wf = await _writeContext.JobWorkflows
                 .FirstOrDefaultAsync(wf => wf.OrderId == item.OrderId && wf.WorkIndex == 0, cancellationToken);
             if (step1Wf is not null)
             {
                 step1Wf.WorkStatus = item.Step1Status;
                 step1Wf.ModifiedOn = now;
+            }
+            else
+            {
+                _writeContext.JobWorkflows.Add(new JB2026.EfCore.Models.JobWorkflow
+                {
+                    JobWorkflowId = Guid.NewGuid(),
+                    OrderId = item.OrderId,
+                    WorkIndex = 0,
+                    WorkStatus = item.Step1Status,
+                    ModifiedOn = now,
+                });
             }
 
             var step2Wf = await _writeContext.JobWorkflows
@@ -1005,6 +1016,17 @@ public sealed class JobSchedulesController : ControllerBase
             {
                 step2Wf.WorkStatus = item.Step2Status;
                 step2Wf.ModifiedOn = now;
+            }
+            else
+            {
+                _writeContext.JobWorkflows.Add(new JB2026.EfCore.Models.JobWorkflow
+                {
+                    JobWorkflowId = Guid.NewGuid(),
+                    OrderId = item.OrderId,
+                    WorkIndex = 1,
+                    WorkStatus = item.Step2Status,
+                    ModifiedOn = now,
+                });
             }
         }
 
@@ -1097,16 +1119,34 @@ public sealed class JobSchedulesController : ControllerBase
 
         if (workflow is null)
         {
-            return NotFound(new ProblemDetails
+            // Order must exist before we can create a workflow step for it.
+            var orderExists = await _writeContext.JobOrders.AnyAsync(o => o.OrderId == orderId, cancellationToken);
+            if (!orderExists)
             {
-                Title = "Workflow step not found",
-                Detail = $"No workflow step {request.StepIndex} exists for order '{orderId}'.",
-                Status = StatusCodes.Status404NotFound
-            });
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Order not found",
+                    Detail = $"No order '{orderId}' exists.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            workflow = new JB2026.EfCore.Models.JobWorkflow
+            {
+                JobWorkflowId = Guid.NewGuid(),
+                OrderId = orderId,
+                WorkIndex = request.StepIndex,
+                WorkStatus = request.TargetStatus,
+                ModifiedOn = DateTime.Now,
+            };
+            _writeContext.JobWorkflows.Add(workflow);
+        }
+        else
+        {
+            workflow.WorkStatus = request.TargetStatus;
+            workflow.ModifiedOn = DateTime.Now;
         }
 
-        workflow.WorkStatus = request.TargetStatus;
-        workflow.ModifiedOn = DateTime.Now;
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         // Re-read all steps to return a normalized response

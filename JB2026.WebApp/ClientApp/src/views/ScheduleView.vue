@@ -972,8 +972,8 @@ async function markCompleted() {
       scheduledItems: scheduledItems.value.map((item) => ({
         orderId: item.orderId,
         machineNumber: item.machineNumber,
-        step1Status: item.step1Status ?? 0,
-        step2Status: item.step2Status ?? 0,
+        step1Status: item.step1Status,
+        step2Status: item.step2Status,
         urgencyLevel: item.urgencyLevel,
       })),
       cancelledOrderIds: [...cancelledOrderIds.value],
@@ -1008,8 +1008,8 @@ async function executeSave() {
       scheduledItems: scheduledItems.value.map((item) => ({
         orderId: item.orderId,
         machineNumber: item.machineNumber,
-        step1Status: item.step1Status ?? 0,
-        step2Status: item.step2Status ?? 0,
+        step1Status: item.step1Status,
+        step2Status: item.step2Status,
         urgencyLevel: item.urgencyLevel,
       })),
       cancelledOrderIds: [...cancelledOrderIds.value],

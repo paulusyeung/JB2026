@@ -12,7 +12,7 @@ public sealed class SaveScheduleBatchItem
 {
     public Guid OrderId { get; set; }
     public string MachineNumber { get; set; } = string.Empty;
-    public int Step1Status { get; set; }
-    public int Step2Status { get; set; }
+    public int? Step1Status { get; set; }
+    public int? Step2Status { get; set; }
     public int UrgencyLevel { get; set; }
 }

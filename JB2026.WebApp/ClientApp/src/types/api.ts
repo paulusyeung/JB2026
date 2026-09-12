@@ -992,8 +992,8 @@ export interface JobScheduleOnAirItem {
 export interface SaveScheduleBatchItem {
   orderId: string
   machineNumber: string
-  step1Status: number
-  step2Status: number
+  step1Status: number | null
+  step2Status: number | null
   urgencyLevel: number
 }
 
