@@ -292,6 +292,7 @@
         v-if="formJob"
         :job="formJob"
         @saved="handleFormSaved"
+        @saved-and-closed="handleFormSaved"
         @cancel="formOpen = false"
         @attachment="handleAttachment"
         @print-order="handlePrintOrder"

@@ -487,6 +487,7 @@
         v-if="jobFormOpen"
         :job="jobFormJob"
         @saved="handleJobSaved"
+        @saved-and-closed="handleJobSaved"
         @cancel="handleJobFormCancelled"
         @attachment="handleAttachment"
         @print-order="handlePrintOrder"

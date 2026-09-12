@@ -1794,6 +1794,7 @@
         v-if="joFormOpen"
         :job="joFormJob"
         @saved="handleJoSaved"
+        @saved-and-closed="handleJoSaved"
         @cancel="joFormOpen = false"
       />
     </v-dialog>

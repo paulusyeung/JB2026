@@ -37,7 +37,7 @@ export const jobFormMessages = {
       actions: {
         cancel: '取消',
         create: '创建',
-        save: '保存',
+        saveAndClose: '保存并关闭',
         attachment: '附件',
         printOrder: '打印工单',
         workflow: '流程',

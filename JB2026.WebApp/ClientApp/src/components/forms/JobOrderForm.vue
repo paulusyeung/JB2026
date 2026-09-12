@@ -342,6 +342,9 @@
         <v-btn variant="tonal" color="primary" type="submit" :loading="saving" min-width="120">
           {{ isNew ? t('jobForm.actions.create') : t('jobForm.actions.save') }}
         </v-btn>
+        <v-btn variant="tonal" color="primary" :disabled="saving" min-width="120" @click="handleSaveAndClose">
+          {{ t('jobForm.actions.saveAndClose') }}
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-form>
@@ -367,6 +370,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'saved'): void
+  (e: 'saved-and-closed'): void
   (e: 'cancel'): void
   (e: 'attachment', job: JobDetail): void
   (e: 'print-order', job: JobDetail): void
@@ -601,9 +605,9 @@ function syncLegacyFields(record: JobOrderRecord | null) {
   }
 }
 
-async function handleSubmit() {
+async function saveRecord(): Promise<boolean> {
   const { valid } = await formRef.value!.validate()
-  if (!valid) return
+  if (!valid) return false
 
   draft.value.workflowAttributes = { ...workflowAttributeValues.value }
 
@@ -630,7 +634,7 @@ async function handleSubmit() {
         }
       }
 
-      emit('saved')
+      return true
     } catch (err: unknown) {
       if (import.meta.env.DEV) {
         console.error('Job save failed:', err)
@@ -658,10 +662,20 @@ async function handleSubmit() {
       } else {
         errorMessage.value = t('jobForm.saveFailed')
       }
+      return false
     } finally {
       saving.value = false
     }
   }
+
+async function handleSubmit() {
+  await saveRecord()
+}
+
+async function handleSaveAndClose() {
+  const ok = await saveRecord()
+  if (ok) emit('saved-and-closed')
+}
 
 function stepStatusColor(workIndex: number): string {
   const status = workIndex === 0

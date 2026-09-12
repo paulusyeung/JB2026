@@ -80,6 +80,7 @@
     <JobOrderForm
       :job="formJob"
       @saved="handleSaved"
+      @saved-and-closed="handleSaved"
       @cancel="formOpen = false"
       @attachment="handleAttachment"
       @print-order="handlePrintOrder"
