@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_WEBAPP_BASE_URL?: string
   readonly VITE_DEV_USERNAME?: string
   readonly VITE_DEV_PASSWORD?: string
+  readonly VITE_APP_VERSION?: string
 }
 
 interface ImportMeta {

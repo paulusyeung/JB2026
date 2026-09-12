@@ -11,17 +11,26 @@
 #
 #   <user@host>  SSH destination (the user must have passwordless sudo rights;
 #                the SSH key is the only auth factor, so no password is prompted).
-#   [version]    Release label (default: git describe, else timestamp).
+#   [version]    Release label (default: artifacts/VERSION, then git describe,
+#                then timestamp). build.sh writes artifacts/VERSION from .csproj.
 #
 # Secrets (/etc/jb2026/env) and server config are NEVER touched by this script.
 # =============================================================================
 set -euo pipefail
 
-HOST="${1:?usage: deploy.sh <user@host> [version]}"
-VERSION="${2:-$(git -C "$(cd "$(dirname "$0")/../.." && pwd)" describe --tags --always 2>/dev/null || date +%Y%m%d-%H%M%S)}"
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+HOST="${1:?usage: deploy.sh <user@host> [version]}"
+VERSION_FILE="$REPO_ROOT/artifacts/VERSION"
+
+if [ -n "${2:-}" ]; then
+  VERSION="$2"
+elif [ -f "$VERSION_FILE" ]; then
+  VERSION="$(cat "$VERSION_FILE")"
+else
+  VERSION="$(git -C "$REPO_ROOT" describe --tags --always 2>/dev/null || date +%Y%m%d-%H%M%S)"
+fi
+
 OUT="$REPO_ROOT/artifacts"
 TARBALL="/tmp/jb2026-${VERSION}.tar.gz"
 APP_HOME=/opt/jb2026

@@ -55,6 +55,7 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+!.env.development
 appsettings.Local.json
 appsettings.*.local.json
 

@@ -26,15 +26,32 @@ dotnet publish "$REPO_ROOT/JB2026.Api/JB2026.Api.csproj" \
   --configuration Release \
   --output "$OUT/api"
 
+# --- Extract version from .csproj -------------------------------------------
+VERSION=$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' "$REPO_ROOT/JB2026.Api/JB2026.Api.csproj" | head -1)
+if [ -z "$VERSION" ]; then
+  echo "WARNING: Could not extract Version from .csproj, using fallback" >&2
+  VERSION="$(date +%Y%m%d-%H%M%S)"
+fi
+echo "$VERSION" > "$OUT/VERSION"
+echo "==> Version: $VERSION (written to $OUT/VERSION)"
+
+# --- Inject version into Vite build via .env.production ---------------------
+ENV_FILE="$REPO_ROOT/JB2026.WebApp/ClientApp/.env.production"
+echo "VITE_APP_VERSION=$VERSION" > "$ENV_FILE"
+
 echo "==> Building frontend (Vue 3) -> $OUT/web/app"
 cd "$REPO_ROOT/JB2026.WebApp/ClientApp"
 pnpm install --frozen-lockfile
 pnpm run build
+
+rm -f "$ENV_FILE"
+
 # vite.config.ts: outDir '../wwwroot/app', base '/app/'
 cp -r "$REPO_ROOT/JB2026.WebApp/wwwroot/app/." "$OUT/web/app/"
 
 echo ""
 echo "Build complete. Artifacts in: $OUT"
-echo "  api/   (backend)"
-echo "  web/   (frontend SPA)"
+echo "  api/     (backend)"
+echo "  web/     (frontend SPA)"
+echo "  VERSION  ($VERSION)"
 echo "Next: ./deploy.sh <user@host>"

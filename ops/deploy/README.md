@@ -282,6 +282,11 @@ Produces `artifacts/`:
 
 - `artifacts/api/` — `dotnet publish` output (`JB2026.Api.dll` + deps)
 - `artifacts/web/app/` — built Vue SPA (vite `base: '/app/'`)
+- `artifacts/VERSION` — release label extracted from `.csproj` `<Version>`
+
+The version is sourced from `JB2026.Api.csproj` (`<Version>` property).
+It is injected into the frontend at build time via `VITE_APP_VERSION` and
+displayed in the sidebar as `v1.0.1`.
 
 ### 2.2 Deploy
 
@@ -298,7 +303,19 @@ Produces `artifacts/`:
   and `nginx -s reload`.
 - You will be prompted for the sudo password (TTY is allocated).
 
-Version default: `git describe --tags --always`, else a timestamp.
+Version default: `artifacts/VERSION` (from `.csproj`), then
+`git describe --tags --always`, then a timestamp. You can always override
+with an explicit argument: `deploy.sh deploy@<VM-IP> 1.2.3`.
+
+> **Pruning old releases.** Each deploy creates a new folder under
+> `/opt/jb2026/releases/`. Old releases are kept for rollback but consume disk.
+> When space is tight, list and remove stale versions:
+> ```bash
+> ssh deploy@<VM-IP> 'ls -1 /opt/jb2026/releases'
+> ssh deploy@<VM-IP> 'ls -l /opt/jb2026/current'   # check what's active
+> ssh deploy@<VM-IP> 'sudo rm -rf /opt/jb2026/releases/<old-version>'
+> ```
+> Keep the last 3–5 releases plus whatever `current` points at.
 
 ### 2.3 Verify
 
@@ -351,14 +368,18 @@ curl -fsS  http://<VM-IP>/healthz            # 3. backend health (200 JSON)
 curl -fsSI http://<VM-IP>/app/               # 4. SPA (200)
 ```
 
+To bump the version, edit `<Version>` in `JB2026.Api.csproj` before running
+`build.sh`. The deploy label and the DLL assembly version both come from this
+value.
+
 Rules and gotchas:
 
 - `deploy.sh` only ships `artifacts/` from the last `build.sh` — it does not
   rebuild. Always run `build.sh` first after changing code, or the server gets
   stale binaries.
 - Give the release a readable label with `deploy.sh deploy@<VM-IP> 1.0.1`.
-  The default is `git describe --tags --always`; without tags Git falls back
-  to a short hash. Tag releases so rollback targets are meaningful.
+  The default comes from `artifacts/VERSION` (set in `.csproj`). Bump the
+  `<Version>` in `JB2026.Api.csproj` before `build.sh` to change it.
 - `/etc/jb2026/env` (secrets + `LegacyFiles__*` paths) is never overwritten by
   deploy, so server config survives redeploys — edit it in place the odd time
   it needs to change (e.g. the `LegacyFiles__InBox` fix) and restart the unit:
@@ -392,6 +413,11 @@ Rules and gotchas:
 
 ## Notes
 
+- **Versioning:** the release label comes from `<Version>` in
+  `JB2026.Api.csproj`. `build.sh` extracts it and writes `artifacts/VERSION`;
+  `deploy.sh` reads that file. The same value is injected into the SPA as
+  `VITE_APP_VERSION` and displayed in the sidebar. To bump, edit the
+  `.csproj` and rebuild.
 - **HTTP only until TLS:** the provision script opens port 443, but no
   certificate is installed. Add `certbot` + a 443 server block when you have a
   DNS name. Until then, traffic is plaintext on `:80`.

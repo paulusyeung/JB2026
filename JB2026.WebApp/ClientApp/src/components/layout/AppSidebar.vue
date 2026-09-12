@@ -14,7 +14,7 @@
       <div class="brand-mark">JB</div>
       <div>
         <p class="eyebrow mb-1">{{ t('sidebar.eyebrow') }}</p>
-        <h1 class="brand-name">JB2026</h1>
+        <h1 class="brand-name">JB2026 <span v-if="appVersion" class="app-version">v{{ appVersion }}</span></h1>
       </div>
     </div>
 
@@ -68,6 +68,8 @@ const emit = defineEmits<{
 const { t } = useI18n({ useScope: 'global' })
 const sessionStore = useSessionStore()
 
+const appVersion = import.meta.env.VITE_APP_VERSION || ''
+
 const drawerModel = computed(() => (props.isMobile ? props.modelValue : true))
 const showCollapsedTooltips = computed(() => !props.isMobile && props.isCollapsed)
 
@@ -95,3 +97,13 @@ function handleDrawerModelUpdate(nextValue: boolean) {
   emit('update:modelValue', nextValue)
 }
 </script>
+
+<style scoped>
+.app-version {
+  font-size: 0.55rem;
+  font-weight: 400;
+  opacity: 0.5;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+</style>
