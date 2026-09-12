@@ -280,6 +280,7 @@
 
               <div class="job-mobile-card__metrics">
                 <span class="text-caption">{{ t('jobOrder.jobList.headers.quotation') }}: {{ row.productStyle || '-' }}</span>
+                <span class="text-caption">{{ t('jobOrder.jobList.headers.cogs') }}: {{ formatCurrency(Number(row.originalSONumber) || 0) }}</span>
                 <span class="text-caption font-weight-medium">{{ t('jobOrder.jobList.headers.invoiceAmount') }}: {{ formatCurrency(invoiceAmountForRow(row)) }}</span>
                 <div class="d-flex align-center ga-2">
                   <v-chip size="x-small" :color="billingStatusColor(row)" variant="tonal">
@@ -438,6 +439,7 @@
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(invoiceAmountForRow(item)) }}</template>
             <template #[`item.invoiceRef`]="{ item }">{{ invoiceNumberForRow(item) }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
+            <template #[`item.cogs`]="{ item }">{{ formatCurrency(Number(item.originalSONumber) || 0) }}</template>
           </v-data-table>
         </div>
       </v-card-text>
@@ -601,6 +603,7 @@ const defaultColumnKeys = [
   'attachCustomer',
   'orderedBy',
   'productStyle',
+  'cogs',
   'invoiceAmount',
   'invoiceRef',
   'invoiceStatus',
@@ -702,6 +705,7 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.attachCustomer'), key: 'attachCustomer', width: '72px', sortable: false },
   { title: t('jobOrder.jobList.headers.orderedBy'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.jobList.headers.quotation'), key: 'productStyle', width: '120px' },
+  { title: t('jobOrder.jobList.headers.cogs'), key: 'cogs', width: '110px', align: 'end' as const },
   { title: t('jobOrder.jobList.headers.invoiceAmount'), key: 'invoiceAmount', width: '132px', align: 'end' as const },
   { title: t('jobOrder.jobList.headers.invoiceRef'), key: 'invoiceRef', width: '160px' },
   { title: t('jobOrder.jobList.headers.invoiceStatus'), key: 'invoiceStatus', width: '220px', sortable: false },
@@ -957,6 +961,7 @@ function exportToCsv() {
         if (value == null || value === '') return '""'
         if (dateKeys.has(key)) return `"${format(value as string, DATE_FORMATS.ISO_DATE)}"`
         if (typeof value === 'number' && key === 'invoiceAmount') return `"${formatCurrency(value)}"`
+        if (key === 'cogs') return `"${formatCurrency(Number(row.originalSONumber) || 0)}"`
         return `"${String(value).replace(/"/g, '""')}"`
       })
       .join(','),
@@ -1013,6 +1018,10 @@ function valueForSort(row: JobOrderRecord, key: keyof JobOrderRecord) {
 
   if (key === 'invoiceRef') {
     return invoiceNumberForRow(row)
+  }
+
+  if (key === 'cogs') {
+    return Number(row.originalSONumber) || 0
   }
 
   return row[key]

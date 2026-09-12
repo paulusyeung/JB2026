@@ -151,6 +151,7 @@ export const jobOrderMessages = {
           attachCustomer: 'Attachment',
           orderedBy: 'Ordered By',
           quotation: 'Quotation#',
+          cogs: 'COGS',
           invoiceAmount: 'Invoice Amount',
           invoiceRef: 'Invoice No.',
           invoiceStatus: 'Billing Status',

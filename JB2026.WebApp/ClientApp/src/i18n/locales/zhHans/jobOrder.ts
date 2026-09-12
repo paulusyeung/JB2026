@@ -150,6 +150,7 @@ export const jobOrderMessages = {
           attachCustomer: '附',
           orderedBy: '下单者',
           quotation: '报价号',
+          cogs: '生产成本',
           invoiceAmount: '发票金额',
           invoiceRef: '发票号',
           invoiceStatus: '账单状态',
