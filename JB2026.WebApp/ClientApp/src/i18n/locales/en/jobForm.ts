@@ -37,7 +37,7 @@ export const jobFormMessages = {
       actions: {
         cancel: 'Cancel',
         create: 'Create',
-        saveChanges: 'Save Changes',
+        save: 'Save',
         attachment: 'Attachment',
         printOrder: 'Print Order',
         workflow: 'Workflow',

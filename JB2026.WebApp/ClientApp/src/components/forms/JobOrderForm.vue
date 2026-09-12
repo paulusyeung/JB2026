@@ -340,7 +340,7 @@
         <v-spacer />
         <v-btn variant="tonal" color="primary" :disabled="saving" @click="emit('cancel')">{{ t('jobForm.actions.cancel') }}</v-btn>
         <v-btn variant="tonal" color="primary" type="submit" :loading="saving" min-width="120">
-          {{ isNew ? t('jobForm.actions.create') : t('jobForm.actions.saveChanges') }}
+          {{ isNew ? t('jobForm.actions.create') : t('jobForm.actions.save') }}
         </v-btn>
       </v-card-actions>
     </v-card>
