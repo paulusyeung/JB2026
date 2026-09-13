@@ -400,7 +400,7 @@
             </template>
 
             <template #[`item.attachProduct`]="{ item }">
-              <div class="d-flex justify-center">
+              <div class="d-flex justify-start">
                 <v-icon size="14" :color="item.attachmentProductCount > 0 ? 'success' : 'error'">
                   {{ item.attachmentProductCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
                 </v-icon>
@@ -408,7 +408,7 @@
             </template>
 
             <template #[`item.attachCustomer`]="{ item }">
-              <div class="d-flex justify-center">
+              <div class="d-flex justify-start">
                 <v-icon size="14" :color="item.attachmentCustomerCount > 0 ? 'success' : 'error'">
                   {{ item.attachmentCustomerCount > 0 ? 'mdi-paperclip' : 'mdi-circle-outline' }}
                 </v-icon>
