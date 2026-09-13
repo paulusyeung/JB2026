@@ -234,6 +234,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Ckeditor } from '@ckeditor/ckeditor5-vue'
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
+import '@ckeditor/ckeditor5-build-classic/build/translations/zh-cn.js'
+import '@ckeditor/ckeditor5-build-classic/build/translations/zh.js'
 import { getJobPreviewBlob } from '@/services/jobOrders'
 import { deleteJobAttachments, saveJob, uploadJobAttachment } from '@/services/jobs'
 import type { JobAttachment, JobDetail, JobOrderFormData } from '@/types/api'
@@ -270,11 +272,20 @@ const emit = defineEmits<{
   (e: 'error', message: string): void
 }>()
 
-const { t } = useI18n({ useScope: 'global' })
+const { t, locale } = useI18n({ useScope: 'global' })
 const htmlEditor = ClassicEditor
 
-const editorConfig = {
+const ckeditorLocale = computed(() => {
+  switch (locale.value) {
+    case 'zh-Hans': return 'zh-cn'
+    case 'zh-Hant': return 'zh'
+    default: return 'en'
+  }
+})
+
+const editorConfig = computed(() => ({
   licenseKey: 'GPL',
+  language: ckeditorLocale.value,
   toolbar: {
     items: [
       'undo',
@@ -299,10 +310,11 @@ const editorConfig = {
     ],
     shouldNotGroupWhenFull: true,
   },
-}
+}))
 
-const remarksEditorConfig = {
+const remarksEditorConfig = computed(() => ({
   licenseKey: 'GPL',
+  language: ckeditorLocale.value,
   toolbar: {
     items: [
       'undo',
@@ -327,7 +339,7 @@ const remarksEditorConfig = {
     ],
     shouldNotGroupWhenFull: true,
   },
-}
+}))
 
 const uploading = ref(false)
 const openingSelection = ref(false)
