@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="attachmentModel" max-width="min(100%, 1100px)" scrollable>
-    <v-card class="job-attachment-dialog">
+    <v-card v-draggable-dialog class="job-attachment-dialog">
       <v-card-title class="d-flex align-center ga-2 flex-wrap">
         <div class="text-h6">{{ t('jobForm.dialogs.attachmentsTitle') }}</div>
         <v-chip size="small" color="primary" variant="tonal">{{ job?.orderNumber || '-' }}</v-chip>
@@ -143,7 +143,7 @@
   </v-dialog>
 
   <v-dialog v-model="productDetailsModel" max-width="min(100%, 760px)" scrollable>
-    <v-card>
+    <v-card v-draggable-dialog>
       <v-card-title class="d-flex align-center ga-2 flex-wrap">
         <div class="text-h6">{{ t('jobForm.dialogs.productDetailsTitle') }}</div>
         <v-spacer />
@@ -177,7 +177,7 @@
   </v-dialog>
 
   <v-dialog v-model="remarksModel" max-width="min(100%, 760px)" scrollable>
-    <v-card>
+    <v-card v-draggable-dialog>
       <v-card-title class="d-flex align-center ga-2 flex-wrap">
         <div class="text-h6">{{ t('jobForm.dialogs.remarksTitle') }}</div>
         <v-spacer />
@@ -211,7 +211,7 @@
   </v-dialog>
 
   <v-dialog v-model="showDeleteConfirm" max-width="460">
-    <v-card>
+    <v-card v-draggable-dialog>
       <v-card-title>{{ t('jobForm.actions.deleteSelected') }}</v-card-title>
       <v-card-text>
         {{ t('jobForm.messages.confirmDeleteAttachments', { count: selectedKeys.length }) }}
