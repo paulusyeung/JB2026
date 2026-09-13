@@ -390,7 +390,7 @@
             </template>
 
             <template #[`item.status`]="{ item }">
-              <div class="d-flex justify-center">
+              <div class="d-flex justify-start">
                 <v-tooltip :text="statusLabel(item.status)" location="top">
                   <template v-slot:activator="{ props }">
                     <v-icon v-bind="props" size="16" :color="statusColor(item.status)">{{ statusIcon(item.status) }}</v-icon>

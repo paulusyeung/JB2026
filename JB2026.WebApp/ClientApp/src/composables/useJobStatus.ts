@@ -1,5 +1,5 @@
 export function statusIcon(status: number): string {
-  if (status >= 2) return 'mdi-flag-check'
+  if (status >= 2) return 'mdi-flag-checkered'
   if (status === 1) return 'mdi-flag-variant-outline'
   return 'mdi-flag-minus-outline'
 }
