@@ -43,7 +43,7 @@ export const jobFormMessages = {
         workflow: 'Workflow',
         edit: 'Edit',
         editProductDetails: 'Edit Product Details',
-        editRemarks: 'Edit Remarks',
+        editRemarks: 'Edit Ｃost',
         open: 'Open',
         download: 'Download',
         deleteSelected: 'Delete Selected',

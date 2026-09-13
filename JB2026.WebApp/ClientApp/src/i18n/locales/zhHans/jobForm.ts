@@ -43,7 +43,7 @@ export const jobFormMessages = {
         workflow: '流程',
         edit: '编辑',
         editProductDetails: '编辑产品内容',
-        editRemarks: '编辑备注',
+        editRemarks: '编辑成本',
         open: '打开',
         download: '下载',
         deleteSelected: '删除所选',
