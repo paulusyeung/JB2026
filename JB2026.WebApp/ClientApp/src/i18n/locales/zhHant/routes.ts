@@ -42,7 +42,7 @@ export const routesMessages = {
       reports: '報表',
   reportsExceptionalReport: '異常報表',
       admin: '管理',
-  adminWorkflow: '工作流',
+  adminWorkflow: '工作流程',
   adminWorkflowForms: '工作流程表單',
   adminOrderType: '訂單類型',
   adminUser: '用戶',
