@@ -45,7 +45,7 @@ interface UpdateJobRequest {
   outputRef?: string
   invoiceRef?: string
   invoiceAmount?: number
-  completedOn?: string
+  completedOn?: string | null
   workflowAttributes?: Record<string, string>
 }
 
@@ -146,7 +146,7 @@ export async function saveJob(data: JobOrderFormData): Promise<void> {
       outputRef: data.outputRef,
       invoiceRef: data.invoiceRef,
       invoiceAmount: data.invoiceAmount,
-      completedOn: data.completedOn,
+      completedOn: data.completedOn || null,
       workflowAttributes: data.workflowAttributes,
     }
 
