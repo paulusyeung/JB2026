@@ -423,9 +423,9 @@ watch(
     errorMessage.value = ''
     clearPreviewImage()
     workflowStatuses.value = {
-      step1: job?.step1Status ?? null,
-      step2: job?.step2Status ?? null,
-      step3: job?.step3Status ?? null,
+      step1: job?.step1Status ?? (job?.orderId ? null : 0),
+      step2: job?.step2Status ?? (job?.orderId ? null : 0),
+      step3: job?.step3Status ?? (job?.orderId ? null : 0),
     }
     fetchWorkflowAttributes(draft.value.orderType)
 

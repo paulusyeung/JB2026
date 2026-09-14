@@ -742,7 +742,8 @@ async function load() {
 
     allAvailableItems.value = available
     scheduledItems.value = onAir.map((item) => ({ ...item }))
-  } catch {
+  } catch (err) {
+    console.error('Schedule load failed:', err)
     errorMessage.value = t('scheduler.schedule.loadFailed')
   } finally {
     loading.value = false

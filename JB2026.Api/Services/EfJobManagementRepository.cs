@@ -332,29 +332,36 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         _writeContext.JobOrders.Add(order);
         await _writeContext.SaveChangesAsync();
 
-        if (request.WorkflowAttributes is not null && request.WorkflowAttributes.Count > 0)
+        var steps = await _readContext.Z_OrderTypeWorkflows
+            .AsNoTracking()
+            .Where(mapping => mapping.OrderType == request.OrderType && mapping.WorkflowId.HasValue)
+            .Include(mapping => mapping.Workflow)
+            .Where(mapping => mapping.Workflow != null)
+            .OrderBy(mapping => mapping.WorkIndex)
+            .ToListAsync();
+
+        if (steps.Count > 0)
         {
-            var lookup = await BuildAttributeLookupAsync(request.OrderType);
-            foreach (var (name, value) in request.WorkflowAttributes)
+            var workflowAttributes = request.WorkflowAttributes ?? new Dictionary<string, string>();
+
+            foreach (var step in steps)
             {
-                if (!lookup.TryGetValue(name, out var attr))
-                {
-                    _logger.LogWarning("Unknown workflow attribute '{Name}' for order type {OrderType}", name, request.OrderType);
-                    continue;
-                }
+                var name = step.Workflow!.WorkflowName ?? string.Empty;
+                workflowAttributes.TryGetValue(name, out var value);
 
                 _writeContext.JobWorkflows.Add(new JobWorkflow
                 {
                     JobWorkflowId = Guid.NewGuid(),
                     OrderId = order.OrderId,
-                    WorkflowId = attr.WorkflowId,
-                    WorkIndex = attr.WorkIndex,
+                    WorkflowId = step.WorkflowId,
+                    WorkIndex = step.WorkIndex,
                     WorkTitle = value,
-                    WorkStatus = null,
+                    WorkStatus = 0,
                     WorkInstruction = null,
                     WorkNotes = null,
                 });
             }
+
             await _writeContext.SaveChangesAsync();
         }
 
