@@ -1149,6 +1149,29 @@ public sealed class JobSchedulesController : ControllerBase
                 ModifiedOn = DateTime.Now,
             };
             _writeContext.JobWorkflows.Add(workflow);
+
+            try
+            {
+                await _writeContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex) when (SqlUniqueViolation.IsUniqueIndexViolation(ex))
+            {
+                // A concurrent request already inserted this (OrderId, WorkIndex)
+                // between our check and insert. Reload and turn into an update.
+                _writeContext.ChangeTracker.Clear();
+                workflow = await _writeContext.JobWorkflows
+                    .FirstOrDefaultAsync(
+                        wf => wf.OrderId == orderId && wf.WorkIndex == request.StepIndex,
+                        cancellationToken);
+                if (workflow is null)
+                {
+                    throw;
+                }
+
+                workflow.WorkStatus = request.TargetStatus;
+                workflow.ModifiedOn = DateTime.Now;
+                await _writeContext.SaveChangesAsync(cancellationToken);
+            }
         }
         else
         {

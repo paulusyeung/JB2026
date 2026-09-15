@@ -359,6 +359,8 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                     WorkStatus = 0,
                     WorkInstruction = null,
                     WorkNotes = null,
+                    ModifiedOn = now,
+                    ModifiedBy = actorId,
                 });
             }
 
@@ -461,7 +463,8 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
         {
             order.JobNumber = int.TryParse(request.JobNumber, out var jobNumber) ? jobNumber : (int?)null;
         }
-        order.ModifiedBy = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
+        var actorId = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
+        order.ModifiedBy = actorId;
         order.ModifiedOn = DateTime.UtcNow;
 
         await _writeContext.SaveChangesAsync();
@@ -470,6 +473,8 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
         {
             var lookup = await BuildAttributeLookupAsync(request.OrderType);
             var seenIds = new HashSet<Guid>();
+            var addedRows = new List<JobWorkflow>();
+            var now = DateTime.UtcNow;
 
             foreach (var (name, value) in request.WorkflowAttributes)
             {
@@ -482,11 +487,11 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
                 seenIds.Add(attr.WorkflowId);
 
                 var existing = await _writeContext.JobWorkflows
-                    .FirstOrDefaultAsync(jw => jw.OrderId == orderId && jw.WorkflowId == attr.WorkflowId);
+                    .FirstOrDefaultAsync(jw => jw.OrderId == orderId && jw.WorkIndex == attr.WorkIndex);
 
                 if (existing is null)
                 {
-                    _writeContext.JobWorkflows.Add(new JobWorkflow
+                    var row = new JobWorkflow
                     {
                         JobWorkflowId = Guid.NewGuid(),
                         OrderId = orderId,
@@ -496,16 +501,57 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
                         WorkStatus = null,
                         WorkInstruction = null,
                         WorkNotes = null,
-                    });
+                        ModifiedOn = now,
+                        ModifiedBy = actorId,
+                    };
+                    addedRows.Add(row);
+                    _writeContext.JobWorkflows.Add(row);
                 }
                 else
                 {
-                    existing.WorkIndex = attr.WorkIndex;
+                    existing.WorkflowId = attr.WorkflowId;
                     existing.WorkTitle = value;
                     existing.WorkStatus = null;
                     existing.WorkInstruction = null;
                     existing.WorkNotes = null;
+                    existing.ModifiedOn = now;
+                    existing.ModifiedBy = actorId;
                 }
+            }
+
+            try
+            {
+                await _writeContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (SqlUniqueViolation.IsUniqueIndexViolation(ex))
+            {
+                // A concurrent request already inserted one of the (OrderId, WorkIndex)
+                // rows between our check and insert. Reload and merge those as updates.
+                _writeContext.ChangeTracker.Clear();
+                var freshMap = (await _writeContext.JobWorkflows
+                        .Where(jw => jw.OrderId == orderId)
+                        .ToListAsync())
+                    .ToDictionary(jw => jw.WorkIndex);
+
+                foreach (var row in addedRows)
+                {
+                    if (freshMap.TryGetValue(row.WorkIndex, out var winner))
+                    {
+                        winner.WorkflowId = row.WorkflowId;
+                        winner.WorkTitle = row.WorkTitle;
+                        winner.WorkStatus = row.WorkStatus;
+                        winner.WorkInstruction = row.WorkInstruction;
+                        winner.WorkNotes = row.WorkNotes;
+                        winner.ModifiedOn = row.ModifiedOn;
+                        winner.ModifiedBy = row.ModifiedBy;
+                    }
+                    else
+                    {
+                        _writeContext.JobWorkflows.Add(row);
+                    }
+                }
+
+                await _writeContext.SaveChangesAsync();
             }
 
             var orphaned = await _writeContext.JobWorkflows
