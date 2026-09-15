@@ -836,6 +836,7 @@ public sealed class JobSchedulesController : ControllerBase
             .AsNoTracking()
             .Where(item => item.OrderType == orderType)
             .Where(item => item.Status == 1)
+            .Where(item => item.JobNumber != 0)
             .Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-91))
             .Where(item => item.CompletedOn == null || item.CompletedOn.Value.Year == 1900)
             .Where(item => !_readContext.JobSchedules.Any(s => s.OrderId == item.OrderId && s.Cancelled != true))
