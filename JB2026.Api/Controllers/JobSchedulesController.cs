@@ -225,8 +225,8 @@ public sealed class JobSchedulesController : ControllerBase
                 .ToDictionary(
                     group => group.Key,
                     group => group
-                        .OrderBy(row => row.WorkIndex)
-                        .ToDictionary(row => row.WorkIndex, row => row.WorkStatus ?? 0));
+                        .GroupBy(row => row.WorkIndex)
+                        .ToDictionary(g => g.Key, g => g.First().WorkStatus ?? 0));
 
             var scheduleRows = await WhereOrderIdIn(
                     _readContext.JobSchedules
@@ -426,7 +426,9 @@ public sealed class JobSchedulesController : ControllerBase
             .GroupBy(row => row.OrderId)
             .ToDictionary(
                 group => group.Key,
-                group => group.ToDictionary(row => row.WorkIndex, row => row.WorkStatus));
+                group => group
+                    .GroupBy(row => row.WorkIndex)
+                    .ToDictionary(g => g.Key, g => g.First().WorkStatus));
 
         var orderProductDetails = await WhereOrderIdIn(
                 _readContext.JobOrders
@@ -533,7 +535,9 @@ public sealed class JobSchedulesController : ControllerBase
             .GroupBy(workflow => workflow.OrderId)
             .ToDictionary(
                 group => group.Key,
-                group => group.ToDictionary(workflow => workflow.WorkIndex, workflow => workflow.WorkStatus));
+                group => group
+                    .GroupBy(workflow => workflow.WorkIndex)
+                    .ToDictionary(g => g.Key, g => g.First().WorkStatus));
 
         var remarksRows = await WhereOrderIdIn(
                 _readContext.JobOrders
@@ -831,6 +835,7 @@ public sealed class JobSchedulesController : ControllerBase
         var rows = await _readContext.JobOrders
             .AsNoTracking()
             .Where(item => item.OrderType == orderType)
+            .Where(item => item.Status == 1)
             .Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-91))
             .Where(item => item.CompletedOn == null || item.CompletedOn.Value.Year == 1900)
             .Where(item => !_readContext.JobSchedules.Any(s => s.OrderId == item.OrderId && s.Cancelled != true))
@@ -891,7 +896,11 @@ public sealed class JobSchedulesController : ControllerBase
 
         var workflowMap = workflowRows
             .GroupBy(wf => wf.OrderId)
-            .ToDictionary(g => g.Key, g => g.ToDictionary(wf => wf.WorkIndex, wf => wf.WorkStatus));
+            .ToDictionary(
+                g => g.Key,
+                g => g
+                    .GroupBy(wf => wf.WorkIndex)
+                    .ToDictionary(gg => gg.Key, gg => gg.First().WorkStatus));
 
         var orderDetails = await WhereOrderIdIn(
                 _readContext.JobOrders
@@ -1154,7 +1163,9 @@ public sealed class JobSchedulesController : ControllerBase
             .Where(wf => wf.OrderId == orderId && wf.WorkIndex >= 0 && wf.WorkIndex <= 2)
             .ToListAsync(cancellationToken);
 
-        var stepMap = allSteps.ToDictionary(s => s.WorkIndex, s => s.WorkStatus);
+        var stepMap = allSteps
+            .GroupBy(s => s.WorkIndex)
+            .ToDictionary(g => g.Key, g => g.First().WorkStatus);
 
         return Ok(new PendingWorkflowUpdateResponse
         {
