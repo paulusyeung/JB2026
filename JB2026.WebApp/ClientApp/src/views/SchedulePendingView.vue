@@ -365,7 +365,7 @@ const rows = ref<JobSchedulePendingItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const lookup = ref('')
-// commonQuery mapping: 0=None, 1=Ordered in last 30 days, 2=Ordered in last 90 days.
+// commonQuery mapping: 0=Ordered in last 60 days (default), 1=Ordered in last 90 days, 2=Ordered in last 120 days.
 const commonQuery = ref(0)
 const selectedOrderIds = ref<string[]>([])
 const activeOrderId = ref<string | null>(null)
@@ -416,9 +416,9 @@ const isPhoneLayout = computed(() => display.smAndDown.value)
 const isCardView = computed(() => viewMode.value === 'card')
 
 const commonQueryItems = computed(() => [
-  { value: 0, label: t('jobOrder.pending.commonQueryItems.none') },
-  { value: 1, label: t('jobOrder.pending.commonQueryItems.ordered30') },
-  { value: 2, label: t('jobOrder.pending.commonQueryItems.ordered90') },
+  { value: 0, label: t('jobOrder.pending.commonQueryItems.ordered60') },
+  { value: 1, label: t('jobOrder.pending.commonQueryItems.ordered90') },
+  { value: 2, label: t('jobOrder.pending.commonQueryItems.ordered120') },
 ])
 
 const allHeaders = computed(() => [

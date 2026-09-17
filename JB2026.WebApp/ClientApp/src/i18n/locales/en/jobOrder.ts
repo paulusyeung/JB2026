@@ -174,8 +174,9 @@ export const jobOrderMessages = {
         },
         commonQueryItems: {
           none: 'None',
-          ordered30: 'Ordered in last 30 days',
+          ordered60: 'Ordered in last 60 days',
           ordered90: 'Ordered in last 90 days',
+          ordered120: 'Ordered in last 120 days',
         },
         actions: {
           columns: 'Columns',

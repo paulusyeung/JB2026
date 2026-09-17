@@ -173,8 +173,9 @@ export const jobOrderMessages = {
         },
         commonQueryItems: {
           none: '无',
-          ordered30: '最近 30 天下单',
+          ordered60: '最近 60 天下单',
           ordered90: '最近 90 天下单',
+          ordered120: '最近 120 天下单',
         },
         actions: {
           columns: '栏位',

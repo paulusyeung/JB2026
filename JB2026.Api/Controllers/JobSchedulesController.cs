@@ -107,14 +107,17 @@ public sealed class JobSchedulesController : ControllerBase
             List<PendingRow> baseRows;
             try
             {
+                // Mirror legacy pending semantics (PendingList.cs + vwSchedulePending):
+                // only Active (1) Printing (0) orders; default window is 60 days.
                 var viewQuery = _readContext.vwJobSchedule_PendingLists
-                    .AsNoTracking();
+                    .AsNoTracking()
+                    .Where(item => item.Status == 1 && item.OrderType == 0);
 
                 viewQuery = commonQuery.GetValueOrDefault() switch
                 {
-                    1 => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-30) && item.OrderedOn.Value < today.AddDays(1)),
-                    2 => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-90) && item.OrderedOn.Value < today.AddDays(1)),
-                    _ => viewQuery
+                    1 => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-90) && item.OrderedOn.Value < today.AddDays(1)),
+                    2 => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-120) && item.OrderedOn.Value < today.AddDays(1)),
+                    _ => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-60) && item.OrderedOn.Value < today.AddDays(1)),
                 };
 
                 if (!string.IsNullOrWhiteSpace(lookup))
@@ -128,8 +131,7 @@ public sealed class JobSchedulesController : ControllerBase
                 }
 
                 var viewRows = await viewQuery
-                    .OrderByDescending(item => item.JobOrderNumber)
-                    .ThenByDescending(item => item.OrderNumber)
+                    .OrderByDescending(item => item.OrderNumber)
                     .Take(safeTake)
                     .ToListAsync(cancellationToken);
 

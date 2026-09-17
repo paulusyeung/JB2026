@@ -174,8 +174,9 @@ export const jobOrderMessages = {
         },
         commonQueryItems: {
           none: '無',
-          ordered30: '最近 30 天下單',
+          ordered60: '最近 60 天下單',
           ordered90: '最近 90 天下單',
+          ordered120: '最近 120 天下單',
         },
         actions: {
           columns: '欄位',
