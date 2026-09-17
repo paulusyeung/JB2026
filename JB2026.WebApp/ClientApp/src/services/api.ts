@@ -46,9 +46,11 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      // Skip refresh logic for 2FA verify endpoint (invalid code, not expired session)
-      const is2faVerifyEndpoint = originalRequest.url?.includes('/api/v2/auth/2fa/verify')
-      if (is2faVerifyEndpoint) {
+      // Skip refresh logic for unauthenticated auth endpoints: an expired session
+      // never surfaces as a 401 here, so retrying would re-enter the interceptor
+      // and deadlock (refresh/revoke) or wrongly retry bad credentials (token/2fa).
+      const isUnauthenticatedAuthEndpoint = originalRequest.url?.match(/\/api\/v2\/auth\/(token|refresh|revoke|2fa\/verify)/)
+      if (isUnauthenticatedAuthEndpoint) {
         return Promise.reject(error)
       }
 
@@ -104,6 +106,7 @@ apiClient.interceptors.response.use(
         console.log('[Auth] refresh failed:', refreshError)
         clearSessionAndRedirectToLogin()
         processQueue(null)
+        isRefreshing = false
         return Promise.reject(refreshError)
       }
     }
