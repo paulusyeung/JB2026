@@ -263,6 +263,15 @@
               density="compact"
               hide-details="auto"
             />
+
+            <v-text-field
+              v-model="draft.orderedBy"
+              :label="t('jobOrder.record.fields.salesRep')"
+              variant="outlined"
+              density="compact"
+              hide-details="auto"
+              readonly
+            />
           </div>
         </div>
 
