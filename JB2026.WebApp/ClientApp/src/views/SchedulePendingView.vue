@@ -525,6 +525,11 @@ function toggleColumn(columnKey: string) {
 
 function onRowClick(_event: Event, payload: { item: JobSchedulePendingItem }) {
   activeOrderId.value = payload.item.orderId
+  if (checkboxMode.value) {
+    toggleSelectedOrder(payload.item.orderId)
+  } else {
+    openEditor(payload.item)
+  }
 }
 
 function setViewMode(mode: 'detail' | 'card') {

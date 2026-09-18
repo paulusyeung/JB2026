@@ -111,7 +111,7 @@
           <v-divider vertical class="mx-1" />
 
           <v-btn
-            color="warning"
+            color="primary"
             variant="outlined"
             size="small"
             prepend-icon="mdi-calendar-refresh"
@@ -409,7 +409,7 @@ const displayedRows = computed(() => {
   return result
 })
 const activeRow = computed(() => rows.value.find((row) => row.orderId === activeOrderId.value) ?? null)
-const canReschedule = computed(() => selectedOrderIds.value.length > 0 || !!activeRow.value)
+const canReschedule = computed(() => selectedOrderIds.value.length > 0)
 
 onMounted(async () => {
   await load()
@@ -475,6 +475,11 @@ function toggleColumn(columnKey: string) {
 
 function onRowClick(_event: Event, payload: { item: JobScheduleCompletedItem }) {
   activeOrderId.value = payload.item.orderId
+  if (checkboxMode.value) {
+    toggleSelectedOrder(payload.item.orderId)
+  } else {
+    openEditor(payload.item)
+  }
 }
 
 function setViewMode(mode: 'detail' | 'card') {
