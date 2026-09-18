@@ -194,7 +194,7 @@ public sealed class JobSchedulesControllerTests
         context.JobOrders.Add(new JobOrder
         {
             OrderId = orderId,
-            OrderType = 1,
+            OrderType = 0,
             OrderNumber = "168312",
             JobNumber = 1,
             CustomerName = "Orbusneich",
@@ -202,6 +202,7 @@ public sealed class JobSchedulesControllerTests
             Status = 1,
             OrderedOn = DateTime.Today,
             RequiredOn = DateTime.Today.AddDays(7),
+            CompletedOn = new DateTime(1900, 1, 1),
             CreatedOn = DateTime.UtcNow,
             CreatedBy = Guid.NewGuid(),
             ModifiedOn = DateTime.UtcNow,
@@ -255,6 +256,8 @@ public sealed class JobSchedulesControllerTests
                 CustomerName = "Alpha",
                 OrderTitle = "First",
                 Status = 1,
+                OrderedOn = DateTime.Today,
+                CompletedOn = new DateTime(1900, 1, 1),
                 CreatedOn = DateTime.UtcNow,
                 CreatedBy = Guid.NewGuid(),
                 ModifiedOn = DateTime.UtcNow,
@@ -270,6 +273,8 @@ public sealed class JobSchedulesControllerTests
                 CustomerName = "Numeric",
                 OrderTitle = "Second",
                 Status = 1,
+                OrderedOn = DateTime.Today,
+                CompletedOn = new DateTime(1900, 1, 1),
                 CreatedOn = DateTime.UtcNow,
                 CreatedBy = Guid.NewGuid(),
                 ModifiedOn = DateTime.UtcNow,
@@ -292,6 +297,84 @@ public sealed class JobSchedulesControllerTests
         var numericItems = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(numericOk.Value);
         Assert.Single(numericItems);
         Assert.Equal("1680-1", numericItems[0].OrderNumber);
+    }
+
+    [Fact]
+    public async Task GetPending_CommonQuery_WideningWindowReturnsMoreOrders()
+    {
+        using var context = CreateContext(nameof(GetPending_CommonQuery_WideningWindowReturnsMoreOrders));
+
+        // Two active printing orders: one ordered ~50 days ago (falls in every window),
+        // one ordered ~80 days ago (only in the 90/120-day windows). A NULL CompletedOn
+        // order must also be treated as pending (like the "available" endpoint).
+        context.JobOrders.AddRange(
+            new JobOrder
+            {
+                OrderId = Guid.NewGuid(),
+                OrderType = 0,
+                OrderNumber = "C50",
+                JobNumber = 1,
+                CustomerName = "Recent",
+                OrderTitle = "Within 60",
+                Status = 1,
+                OrderedOn = DateTime.Today.AddDays(-50),
+                CompletedOn = new DateTime(1900, 1, 1),
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false
+            },
+            new JobOrder
+            {
+                OrderId = Guid.NewGuid(),
+                OrderType = 0,
+                OrderNumber = "C80",
+                JobNumber = 1,
+                CustomerName = "Older",
+                OrderTitle = "Within 90",
+                Status = 1,
+                OrderedOn = DateTime.Today.AddDays(-80),
+                CompletedOn = new DateTime(1900, 1, 1),
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false
+            },
+            new JobOrder
+            {
+                OrderId = Guid.NewGuid(),
+                OrderType = 0,
+                OrderNumber = "CNULL",
+                JobNumber = 1,
+                CustomerName = "NullCompleted",
+                OrderTitle = "Null Completed",
+                Status = 1,
+                OrderedOn = DateTime.Today.AddDays(-20),
+                CompletedOn = null,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid(),
+                ModifiedOn = DateTime.UtcNow,
+                ModifiedBy = Guid.NewGuid(),
+                Retired = false
+            });
+
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, new NoOpGateway());
+
+        var baseResult = await controller.GetPending(null, 0, null, 100, CancellationToken.None);
+        var baseOk = Assert.IsType<OkObjectResult>(baseResult.Result);
+        var baseItems = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(baseOk.Value);
+        Assert.Equal(2, baseItems.Count);
+        Assert.Contains(baseItems, item => item.OrderNumber == "C50-1");
+        Assert.Contains(baseItems, item => item.OrderNumber == "CNULL-1");
+
+        var wideResult = await controller.GetPending(null, 1, null, 100, CancellationToken.None);
+        var wideOk = Assert.IsType<OkObjectResult>(wideResult.Result);
+        var wideItems = Assert.IsAssignableFrom<IReadOnlyList<JobSchedulePendingItemResponse>>(wideOk.Value);
+        Assert.Equal(3, wideItems.Count);
     }
 
     // -----------------------------------------------------------------------

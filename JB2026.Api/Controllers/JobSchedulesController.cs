@@ -98,105 +98,57 @@ public sealed class JobSchedulesController : ControllerBase
         {
             var safeTake = Math.Clamp(take, 1, 2000);
             var today = DateTime.Today;
-            var allowJobOrdersFallback = string.Equals(
-                _readContext.Database.ProviderName,
-                "Microsoft.EntityFrameworkCore.InMemory",
-                StringComparison.Ordinal);
 
-            // Try legacy pending view first
-            List<PendingRow> baseRows;
-            try
+            // Query JobOrder directly instead of the legacy vwJobSchedule_PendingList SQL
+            // view. That view hard-coded `GETDATE() - OrderedOn <= 61` in its definition,
+            // which capped the pending list to roughly the last 60 days and made the
+            // commonQuery 90/120-day windows unusable (they always returned the same rows).
+            // Mirror the same base semantics as the "available" endpoint: active (1)
+            // printing (0) orders that are not retired and not completed (CompletedOn is
+            // NULL or the legacy sentinel YEAR = 1900), then apply the commonQuery
+            // window on OrderedOn.
+            var query = _readContext.JobOrders
+                .AsNoTracking()
+                .Where(item => item.Status == 1 && item.OrderType == 0)
+                .Where(item => item.JobNumber != 0)
+                .Where(item => !item.Retired)
+                .Where(item => item.CompletedOn == null || item.CompletedOn.Value.Year == 1900);
+
+            query = commonQuery.GetValueOrDefault() switch
             {
-                // Mirror legacy pending semantics (PendingList.cs + vwSchedulePending):
-                // only Active (1) Printing (0) orders; default window is 60 days.
-                var viewQuery = _readContext.vwJobSchedule_PendingLists
-                    .AsNoTracking()
-                    .Where(item => item.Status == 1 && item.OrderType == 0);
+                1 => query.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-90) && item.OrderedOn.Value < today.AddDays(1)),
+                2 => query.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-120) && item.OrderedOn.Value < today.AddDays(1)),
+                _ => query.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-60) && item.OrderedOn.Value < today.AddDays(1)),
+            };
 
-                viewQuery = commonQuery.GetValueOrDefault() switch
-                {
-                    1 => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-90) && item.OrderedOn.Value < today.AddDays(1)),
-                    2 => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-120) && item.OrderedOn.Value < today.AddDays(1)),
-                    _ => viewQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-60) && item.OrderedOn.Value < today.AddDays(1)),
-                };
-
-                if (!string.IsNullOrWhiteSpace(lookup))
-                {
-                    var keyword = lookup.Trim();
-                    viewQuery = viewQuery.Where(item =>
-                        (item.OrderNumber != null && item.OrderNumber.Contains(keyword)) ||
-                        (item.JobOrderNumber != null && item.JobOrderNumber.Contains(keyword)) ||
-                        (item.CustomerName != null && item.CustomerName.Contains(keyword)) ||
-                        (item.OrderTitle != null && item.OrderTitle.Contains(keyword)));
-                }
-
-                var viewRows = await viewQuery
-                    .OrderByDescending(item => item.OrderNumber)
-                    .Take(safeTake)
-                    .ToListAsync(cancellationToken);
-
-                baseRows = viewRows.Select(item => new PendingRow
-                {
-                    OrderId = item.OrderId,
-                    OrderType = item.OrderType,
-                    OrderNumber = item.OrderNumber,
-                    JobNumber = item.JobNumber,
-                    JobOrderNumber = item.JobOrderNumber,
-                    CustomerName = item.CustomerName,
-                    OrderTitle = item.OrderTitle,
-                    Status = item.Status,
-                    OrderedOn = item.OrderedOn,
-                    RequiredOn = item.RequiredOn,
-                }).ToList();
-            }
-            catch when (allowJobOrdersFallback)
+            if (!string.IsNullOrWhiteSpace(lookup))
             {
-                // The in-memory test provider does not materialize SQL views.
-                baseRows = new List<PendingRow>();
+                var keyword = lookup.Trim();
+                query = query.Where(item =>
+                    (item.OrderNumber != null && item.OrderNumber.Contains(keyword)) ||
+                    (item.JobNumber != null && (item.OrderNumber + "-" + item.JobNumber.Value).Contains(keyword)) ||
+                    (item.CustomerName != null && item.CustomerName.Contains(keyword)) ||
+                    (item.OrderTitle != null && item.OrderTitle.Contains(keyword)));
             }
 
-            // Fallback to JobOrders if view is empty or unavailable
-            if (allowJobOrdersFallback && baseRows.Count == 0)
+            var orderRows = await query
+                .OrderByDescending(item => item.OrderNumber)
+                .Take(safeTake)
+                .ToListAsync(cancellationToken);
+
+            var baseRows = orderRows.Select(item => new PendingRow
             {
-                var fallbackQuery = _readContext.JobOrders
-                    .AsNoTracking()
-                    .Where(item => item.Status == 1 && !item.Retired);
-
-                fallbackQuery = commonQuery.GetValueOrDefault() switch
-                {
-                    1 => fallbackQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-30) && item.OrderedOn.Value < today.AddDays(1)),
-                    2 => fallbackQuery.Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-90) && item.OrderedOn.Value < today.AddDays(1)),
-                    _ => fallbackQuery
-                };
-
-                if (!string.IsNullOrWhiteSpace(lookup))
-                {
-                    var keyword = lookup.Trim();
-                    fallbackQuery = fallbackQuery.Where(item =>
-                        (item.OrderNumber != null && item.OrderNumber.Contains(keyword)) ||
-                        (item.CustomerName != null && item.CustomerName.Contains(keyword)) ||
-                        (item.OrderTitle != null && item.OrderTitle.Contains(keyword)));
-                }
-
-                var fallbackResults = await fallbackQuery
-                    .OrderByDescending(item => item.OrderNumber)
-                    .Take(safeTake)
-                    .ToListAsync(cancellationToken);
-
-                baseRows = fallbackResults.Select(item => new PendingRow
-                {
-                    OrderId = item.OrderId,
-                    OrderType = item.OrderType,
-                    OrderNumber = item.OrderNumber,
-                    JobNumber = item.JobNumber,
-                    JobOrderNumber = null,
-                    CustomerName = item.CustomerName,
-                    OrderTitle = item.OrderTitle,
-                    Status = item.Status,
-                    OrderedOn = item.OrderedOn,
-                    RequiredOn = item.RequiredOn,
-                }).ToList();
-            }
+                OrderId = item.OrderId,
+                OrderType = item.OrderType,
+                OrderNumber = item.OrderNumber,
+                JobNumber = item.JobNumber,
+                JobOrderNumber = null,
+                CustomerName = item.CustomerName,
+                OrderTitle = item.OrderTitle,
+                Status = item.Status,
+                OrderedOn = item.OrderedOn,
+                RequiredOn = item.RequiredOn,
+            }).ToList();
 
             if (!string.IsNullOrWhiteSpace(startsWith))
             {
