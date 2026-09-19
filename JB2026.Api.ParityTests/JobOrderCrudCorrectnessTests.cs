@@ -1,5 +1,8 @@
+using JB2026.Api.Models;
+using JB2026.Api.Services;
 using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace JB2026.Api.ParityTests;
 
@@ -88,6 +91,37 @@ public sealed class JobOrderCrudCorrectnessTests
         var deleted = await readContext.JobOrders.AsNoTracking()
             .FirstOrDefaultAsync(x => x.OrderId == created.OrderId);
         Assert.Null(deleted);
+    }
+
+    [Fact]
+    public async Task EfCore_create_duplicate_order_number_and_job_number_reuses_existing_row()
+    {
+        await using var writeContext = LegacyDbContextFactory.CreateWriteContext();
+        await using var readContext = LegacyDbContextFactory.CreateReadContext();
+        var repository = new EfJobManagementRepository(readContext, writeContext, NullLogger<EfJobManagementRepository>.Instance);
+
+        var request = new CreateJobOrderRequest
+        {
+            OrderNumber = $"DUP-{Guid.NewGuid():N}"[..10],
+            JobNumber = "77",
+            CustomerName = "Duplicate Check Customer",
+            CustomerRef = "REF-DUP",
+            OrderTitle = "Duplicate check title",
+            OrderedBy = "admin",
+            OrderedOn = DateTime.Today,
+            RequiredOn = DateTime.Today.AddDays(2),
+            Qty = 1m,
+            PaymentTerms = "Net 30",
+            Remarks = "duplicate test",
+            Status = 1,
+            OrderType = 0,
+        };
+
+        var first = await repository.CreateJobOrder(request, "admin");
+        var second = await repository.CreateJobOrder(request, "admin");
+
+        Assert.Equal(first.OrderId, second.OrderId);
+        Assert.Equal(1, await writeContext.JobOrders.CountAsync(x => x.OrderNumber == request.OrderNumber && x.JobNumber == 77));
     }
 
     private static string TrimToMaxLength(string value, int maxLength)

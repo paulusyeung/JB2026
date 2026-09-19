@@ -359,7 +359,7 @@
       <v-card-actions class="pa-4 d-flex ga-2 responsive-dialog-actions">
         <v-spacer />
         <v-btn variant="tonal" color="primary" :disabled="saving" @click="emit('cancel')">{{ t('jobForm.actions.cancel') }}</v-btn>
-        <v-btn variant="tonal" color="primary" type="submit" :loading="saving" min-width="120">
+        <v-btn variant="tonal" color="primary" type="submit" :loading="saving" :disabled="saving" min-width="120">
           {{ isNew ? t('jobForm.actions.create') : t('jobForm.actions.save') }}
         </v-btn>
         <v-btn variant="tonal" color="primary" :disabled="saving" min-width="120" @click="handleSaveAndClose">
@@ -635,6 +635,8 @@ function syncLegacyFields(record: JobOrderRecord | null) {
 }
 
 async function saveRecord(): Promise<boolean> {
+  if (saving.value) return false
+
   const { valid } = await formRef.value!.validate()
   if (!valid) return false
 
@@ -702,6 +704,7 @@ async function handleSubmit() {
 }
 
 async function handleSaveAndClose() {
+  if (saving.value) return
   const ok = await saveRecord()
   if (ok) emit('saved-and-closed')
 }

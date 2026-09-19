@@ -15,7 +15,7 @@ namespace JB2026.Api.Tests
             var expiryDays = 30;
 
             // Act
-            var token = await service.CreateAsync(userId, expiryDays);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(expiryDays));
 
             // Assert
             Assert.NotNull(token);
@@ -29,7 +29,7 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-456";
-            var token = await service.CreateAsync(userId, 30);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // Act
             var result = await service.ValidateAsync(token);
@@ -60,7 +60,7 @@ namespace JB2026.Api.Tests
             var service = new RefreshTokenService();
             var userId = "test-user-789";
             // Create a token that expires in -1 days (already expired)
-            var token = await service.CreateAsync(userId, -1);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(-1));
 
             // Act
             var result = await service.ValidateAsync(token);
@@ -75,8 +75,8 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-theft";
-            var token1 = await service.CreateAsync(userId, 30);
-            var token2 = await service.CreateAsync(userId, 30);
+            var token1 = await service.CreateAsync(userId, TimeSpan.FromDays(30));
+            var token2 = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // First validation marks token1 as used (via ValidateAndConsumeAsync)
             var result1 = await service.ValidateAndConsumeAsync(token1);
@@ -97,7 +97,7 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-revoke";
-            var token = await service.CreateAsync(userId, 30);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // Act
             await service.RevokeAsync(token);
@@ -124,8 +124,8 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-revoke-all";
-            var token1 = await service.CreateAsync(userId, 30);
-            var token2 = await service.CreateAsync(userId, 30);
+            var token1 = await service.CreateAsync(userId, TimeSpan.FromDays(30));
+            var token2 = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // Act
             await service.RevokeAllForUserAsync(userId);
@@ -145,8 +145,8 @@ namespace JB2026.Api.Tests
             var userId = "test-user-unique";
 
             // Act
-            var token1 = await service.CreateAsync(userId, 30);
-            var token2 = await service.CreateAsync(userId, 30);
+            var token1 = await service.CreateAsync(userId, TimeSpan.FromDays(30));
+            var token2 = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // Assert
             Assert.NotEqual(token1, token2);
@@ -158,7 +158,7 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-consume";
-            var token = await service.CreateAsync(userId, 30);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // Act
             var result = await service.ValidateAndConsumeAsync(token);
@@ -178,7 +178,7 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-already-consumed";
-            var token = await service.CreateAsync(userId, 30);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // First call consumes the token
             var result1 = await service.ValidateAndConsumeAsync(token);
@@ -196,7 +196,7 @@ namespace JB2026.Api.Tests
             var service = new RefreshTokenService();
             var userId = "test-user-expired-consume";
             // Create a token that expires in -1 days (already expired)
-            var token = await service.CreateAsync(userId, -1);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(-1));
 
             // Act
             var result = await service.ValidateAndConsumeAsync(token);
@@ -211,7 +211,7 @@ namespace JB2026.Api.Tests
             // Arrange
             var service = new RefreshTokenService();
             var userId = "test-user-concurrent";
-            var token = await service.CreateAsync(userId, 30);
+            var token = await service.CreateAsync(userId, TimeSpan.FromDays(30));
 
             // Act - make concurrent calls
             var task1 = service.ValidateAndConsumeAsync(token);

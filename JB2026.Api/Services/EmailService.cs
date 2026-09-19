@@ -125,6 +125,11 @@ public sealed class EmailService : IEmailService
             await imapFolder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
 
             var message = await imapFolder.GetMessageAsync(uid, cancellationToken);
+            if (message is null)
+            {
+                _logger.LogWarning("[Email] Message not found for UID {Id} in folder {Folder}", id, folder);
+                return null;
+            }
 
             var detail = new EmailDetailResponse
             {
@@ -198,6 +203,11 @@ public sealed class EmailService : IEmailService
             await imapFolder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
 
             var message = await imapFolder.GetMessageAsync(uid, cancellationToken);
+            if (message is null)
+            {
+                _logger.LogWarning("[Email] Message not found for UID {Id} in folder {Folder}", id, folder);
+                return null;
+            }
 
             foreach (var attachment in message.Attachments)
             {

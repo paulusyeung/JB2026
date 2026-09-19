@@ -477,7 +477,6 @@ public sealed class JobOrderQuestDocument : DocumentBase<JobOrderPrintDocument>
 
     private static bool UseCjkFallback(string? value)
     {
-        return true; // Always use CJK fallback for now, as per the latest changes.
         if (string.IsNullOrWhiteSpace(value))
         {
             return false;

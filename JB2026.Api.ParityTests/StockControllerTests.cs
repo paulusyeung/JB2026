@@ -55,7 +55,7 @@ public sealed class StockControllerTests
         using var context = CreateContext(nameof(GetProducts_InvalidTake_ReturnsBadRequest) + take);
         var controller = CreateController(context);
 
-        var result = await controller.GetProducts(null, take, CancellationToken.None);
+        var result = await controller.GetProducts(null, take, false, CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
@@ -103,7 +103,7 @@ public sealed class StockControllerTests
         await context.SaveChangesAsync();
 
         var controller = CreateController(context);
-        var result = await controller.GetProducts(null, 100, CancellationToken.None);
+        var result = await controller.GetProducts(null, 100, false, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var items = Assert.IsAssignableFrom<IReadOnlyList<StockProductListItemResponse>>(ok.Value);
@@ -153,7 +153,7 @@ public sealed class StockControllerTests
         await context.SaveChangesAsync();
 
         var controller = CreateController(context);
-        var result = await controller.GetProducts("ABC", 100, CancellationToken.None);
+        var result = await controller.GetProducts("ABC", 100, false, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var items = Assert.IsAssignableFrom<IReadOnlyList<StockProductListItemResponse>>(ok.Value);

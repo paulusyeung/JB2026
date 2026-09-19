@@ -14,10 +14,10 @@
 
     <v-card-text class="pt-2">
       <div class="d-flex flex-wrap ga-2 mb-3">
-        <v-btn size="small" color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="handleSave()">
+        <v-btn size="small" color="primary" prepend-icon="mdi-content-save" :loading="saving" :disabled="saving" @click="handleSave()">
           {{ t('jobOrder.record.actions.save') }}
         </v-btn>
-        <v-btn size="small" variant="tonal" prepend-icon="mdi-content-save-check" :loading="saving" @click="handleSave(true)">
+        <v-btn size="small" variant="tonal" prepend-icon="mdi-content-save-check" :loading="saving" :disabled="saving" @click="handleSave(true)">
           {{ t('jobOrder.record.actions.saveClose') }}
         </v-btn>
         <v-btn size="small" variant="outlined" prepend-icon="mdi-delete" :loading="deleting" :disabled="mode === 'create'" @click="handleDelete">
@@ -673,6 +673,8 @@ function validateDraft() {
 }
 
 async function handleSave(closeAfterSave = false) {
+  if (saving.value) return
+
   const validationError = validateDraft()
   if (validationError) {
     errorMessage.value = validationError

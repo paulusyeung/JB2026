@@ -228,7 +228,7 @@ public sealed class CustomerSummaryServiceTests
         {
             if (id == _customerId)
             {
-                return Task.FromResult(new CustomerStoredProcedureRecord(
+                return Task.FromResult<CustomerStoredProcedureRecord?>(new CustomerStoredProcedureRecord(
                     CustomerId: id,
                     CustomerName: "Test Customer",
                     LoginAccount: "test",
@@ -279,7 +279,7 @@ public sealed class CustomerSummaryServiceTests
         public Uri Uri { get => new("http://localhost:11434"); set { } }
         public string SelectedModel { get => "llama3"; set { } }
 
-        public async IAsyncEnumerable<GenerateResponseStream?> GenerateAsync(GenerateRequest request, CancellationToken cancellationToken)
+        public async IAsyncEnumerable<GenerateResponseStream?> GenerateAsync(GenerateRequest request, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await Task.Yield();
             yield return new GenerateResponseStream

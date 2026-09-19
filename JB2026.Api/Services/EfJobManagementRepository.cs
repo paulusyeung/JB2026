@@ -296,13 +296,33 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
     {
         var actorId = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();
         var now = DateTime.UtcNow;
+        var requestJobNumber = int.TryParse(request.JobNumber, out var parsedJobNumber) ? parsedJobNumber : (int?)null;
+
+        var existingOrder = await _writeContext.JobOrders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(order =>
+                order.OrderNumber == request.OrderNumber &&
+                order.JobNumber == requestJobNumber &&
+                !order.Retired);
+
+        if (existingOrder is not null)
+        {
+            _logger.LogWarning(
+                "Duplicate create request ignored for OrderNumber={OrderNumber}, JobNumber={JobNumber}, OrderId={OrderId}",
+                request.OrderNumber,
+                request.JobNumber,
+                existingOrder.OrderId);
+
+            var existingUserDisplayNameLookup = BuildUserDisplayNameLookup();
+            return MapOrder(existingOrder, existingUserDisplayNameLookup);
+        }
 
         var order = new JobOrder
         {
             OrderId = Guid.NewGuid(),
             OrderType = request.OrderType,
             OrderNumber = request.OrderNumber,
-            JobNumber = int.TryParse(request.JobNumber, out var jobNumber) ? jobNumber : null,
+            JobNumber = requestJobNumber,
             CustomerName = request.CustomerName,
             CustomerRef = request.CustomerRef,
             OrderTitle = request.OrderTitle,
