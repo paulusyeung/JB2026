@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using JB2026.Api.Models;
 using JB2026.EfCore.Data;
@@ -250,39 +251,83 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
     public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn)
     {
-        var query = _readContext.vwJobStatGrossProfits.AsNoTracking().AsQueryable();
+        var query = _readContext.JobOrders
+            .AsNoTracking()
+            .Where(order => order.InvoiceAmount.HasValue && order.InvoiceAmount.Value != 0)
+            .Select(order => new
+            {
+                OrderNumber = order.OrderNumber,
+                JobNumber = order.JobNumber,
+                CustomerName = order.CustomerName,
+                OrderTitle = order.OrderTitle,
+                CustomerRef = order.CustomerRef,
+                OrderedBy = order.OrderedBy,
+                InvoiceRef = order.InvoiceRef,
+                OriginalSONumber = order.OriginalSONumber,
+                InvoiceAmount = order.InvoiceAmount,
+                InvDate = order.CompletedOn.HasValue
+                    ? (order.CompletedOn.Value.Year == 1900 ? order.RequiredOn : order.CompletedOn)
+                    : (DateTime?)null,
+            });
 
         if (startOn.HasValue)
         {
             var lower = startOn.Value.ToDateTime(TimeOnly.MinValue);
-            query = query.Where(item => item.InvDate.HasValue && item.InvDate.Value >= lower);
+            query = query.Where(row => row.InvDate.HasValue && row.InvDate.Value >= lower);
         }
 
         if (endOn.HasValue)
         {
             var upperExclusive = endOn.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
-            query = query.Where(item => item.InvDate.HasValue && item.InvDate.Value < upperExclusive);
+            query = query.Where(row => row.InvDate.HasValue && row.InvDate.Value < upperExclusive);
         }
 
         return query
-            .OrderBy(item => item.InvDate)
-            .ThenBy(item => item.InvNumber)
-            .Select(item => new JobStatsResponse
+            .OrderBy(row => row.InvDate)
+            .ThenBy(row => row.InvoiceRef)
+            .ToList()
+            .Select(row =>
             {
-                JobNumber = item.JobNumber ?? string.Empty,
-                CustomerName = item.CustomerName ?? string.Empty,
-                Brand = item.OrderTitle ?? string.Empty,
-                PurchaseOrder = item.PurchaseOrder ?? string.Empty,
-                SalesRep = item.SalesRep ?? string.Empty,
-                GrossProfit = item.GrossProfit ?? 0m,
-                Cost = item.Cost ?? 0m,
-                InvoiceAmount = item.InvoiceAmount ?? 0m,
-                InvNumber = item.InvNumber ?? string.Empty,
-                InvDate = item.InvDate.HasValue ? DateOnly.FromDateTime(item.InvDate.Value) : null,
-                Year = item.InvDate.HasValue ? item.InvDate.Value.Year : null,
-                Month = item.InvDate.HasValue ? item.InvDate.Value.Month : null,
+                var invoiceAmount = row.InvoiceAmount ?? 0m;
+                var cost = ParseCostFromOriginalSoNumber(row.OriginalSONumber);
+                var grossProfit = invoiceAmount <= 0m
+                    ? 0m
+                    : Math.Round((invoiceAmount - cost) / invoiceAmount * 100m, 2, MidpointRounding.AwayFromZero);
+
+                return new JobStatsResponse
+                {
+                    JobNumber = BuildCompositeOrderNumber(row.OrderNumber, row.JobNumber),
+                    CustomerName = row.CustomerName ?? string.Empty,
+                    Brand = row.OrderTitle ?? string.Empty,
+                    PurchaseOrder = row.CustomerRef ?? string.Empty,
+                    SalesRep = row.OrderedBy ?? string.Empty,
+                    GrossProfit = grossProfit,
+                    Cost = cost,
+                    InvoiceAmount = invoiceAmount,
+                    InvNumber = row.InvoiceRef ?? string.Empty,
+                    InvDate = row.InvDate.HasValue ? DateOnly.FromDateTime(row.InvDate.Value) : null,
+                    Year = row.InvDate.HasValue ? row.InvDate.Value.Year : null,
+                    Month = row.InvDate.HasValue ? row.InvDate.Value.Month : null,
+                };
             })
             .ToList();
+    }
+
+    private static decimal ParseCostFromOriginalSoNumber(string? originalSONumber)
+    {
+        if (string.IsNullOrEmpty(originalSONumber))
+        {
+            return 0m;
+        }
+
+        if (!originalSONumber.All(character => char.IsAsciiDigit(character) || character == '.'))
+        {
+            return 0m;
+        }
+
+        return decimal.TryParse(originalSONumber, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var cost)
+            ? cost
+            : 0m;
     }
 
     public JobOrderResponse? GetJobOrder(Guid orderId)

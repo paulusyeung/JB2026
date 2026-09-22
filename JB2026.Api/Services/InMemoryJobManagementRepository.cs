@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using JB2026.Api.Models;
 
 namespace JB2026.Api.Services;
@@ -195,7 +196,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             .Select(job =>
             {
                 var invoiceAmount = Math.Round(job.Qty * 1.8m, 2);
-                var cost = Math.Round(job.Qty * 1.15m, 2);
+                var cost = ParseCostFromOriginalSoNumber(job.OriginalSONumber);
                 var grossProfit = invoiceAmount <= 0m ? 0m : Math.Round((invoiceAmount - cost) / invoiceAmount, 4);
 
                 return new JobStatsResponse
@@ -428,6 +429,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 Status = 2,
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 3, 21, 9, 0, 0, DateTimeKind.Utc),
+                OriginalSONumber = "820.50",
                 StyleTitles = ["Carton front", "Carton reverse", "Insert leaflet"],
                 Attachments =
                 [
@@ -453,6 +455,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 Status = 1,
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 3, 24, 9, 0, 0, DateTimeKind.Utc),
+                OriginalSONumber = "1245.00",
                 StyleTitles = ["A1 poster", "A3 handbill"],
                 Attachments =
                 [
@@ -477,6 +480,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 Status = 0,
                 CreatedBy = "admin",
                 CreatedOn = new DateTime(2026, 3, 27, 9, 0, 0, DateTimeKind.Utc),
+                OriginalSONumber = "930.25",
                 StyleTitles = ["Cover", "Section dividers", "Product spreads"],
                 Attachments =
                 [
@@ -484,6 +488,23 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
                 ]
             }
         ];
+    }
+
+    private static decimal ParseCostFromOriginalSoNumber(string? originalSONumber)
+    {
+        if (string.IsNullOrEmpty(originalSONumber))
+        {
+            return 0m;
+        }
+
+        if (!originalSONumber.All(character => char.IsAsciiDigit(character) || character == '.'))
+        {
+            return 0m;
+        }
+
+        return decimal.TryParse(originalSONumber, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var cost)
+            ? cost
+            : 0m;
     }
 
     private sealed record JobRecord
