@@ -23,11 +23,11 @@
         <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
           {{ t('common.refresh') }}
         </v-btn>
-        <v-divider vertical class="align-self-stretch" />
-        <div v-if="rows.length > 0" class="d-flex flex-wrap ga-2">
-          <v-chip color="secondary" variant="tonal">{{ t('reports.exceptional.rows', { count: rows.length }) }}</v-chip>
+        <!-- <v-divider vertical class="align-self-stretch" />
+        <div v-if="filteredRows.length > 0" class="d-flex flex-wrap ga-2">
+          <v-chip color="secondary" variant="tonal">{{ t('reports.exceptional.rows', { count: filteredRows.length }) }}</v-chip>
           <v-chip color="accent" variant="tonal">{{ t('reports.exceptional.totalInvoice', { amount: formatCurrency(totalInvoiceAmount) }) }}</v-chip>
-        </div>
+        </div> -->
       </v-card-title>
 
       <v-card-text class="pb-0">
@@ -91,6 +91,41 @@
               </v-list-item>
             </v-list>
           </v-menu>
+
+          <v-divider vertical class="mx-1"></v-divider>
+
+          <v-menu location="bottom" :close-on-content-click="false">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-filter-variant">
+                {{ t('reports.exceptional.criteria.title') }}
+              </v-btn>
+            </template>
+            <v-card min-width="340" class="pa-3">
+              <div v-for="criterion in EXCEPTIONAL_CRITERIA" :key="criterion.id" class="d-flex align-center ga-2 py-1">
+                <v-switch
+                  :model-value="criteriaEnabled(criterion)"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                  @update:model-value="setCriterionEnabled(criterion.id, $event === true)"
+                />
+                <span class="text-body-2 flex-grow-1">{{ t(`reports.exceptional.criteria.${criterion.id}`) }}</span>
+                <v-text-field
+                  v-if="criterion.id !== 'noInvoiceAfterCompleted'"
+                  :model-value="String(criteriaDays(criterion))"
+                  type="number"
+                  min="0"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  class="criteria-days-input"
+                  :label="t('reports.exceptional.criteria.days')"
+                  @update:model-value="setCriterionDaysFromInput(criterion.id, $event)"
+                />
+              </div>
+              <div class="text-caption text-medium-emphasis mt-2">{{ t('reports.exceptional.criteria.matchHint') }}</div>
+            </v-card>
+          </v-menu>
         </div>
       </v-card-text>
 
@@ -147,6 +182,7 @@
           class="exceptional-list-table"
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+          :no-data-text="t('reports.exceptional.empty')"
         >
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
           <template #[`item.orderNumber`]="{ item }">
@@ -176,8 +212,20 @@
           <template #[`item.invoiceNumber`]="{ item }">
             {{ invoiceNumberForRow(item) }}
           </template>
-
-          
+          <template #[`item.exceptionalReasons`]="{ item }">
+            <div class="d-flex flex-wrap ga-1">
+              <v-chip
+                v-for="reason in reasonsForRow(item)"
+                :key="reason"
+                size="x-small"
+                variant="tonal"
+                color="primary"
+                class="exceptional-reason-chip"
+              >
+                {{ reason }}
+              </v-chip>
+            </div>
+          </template>
         </v-data-table>
         </div>
       </v-card-text>
@@ -254,6 +302,70 @@ const endOn = ref(toDateOnly(new Date(now.getFullYear(), now.getMonth() + 1, 0))
 const selectedOrderIds = ref<string[]>([])
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
+interface ExceptionalCriterion {
+  id: 'notScheduled' | 'notCompleted' | 'noInvoice' | 'noInvoiceAfterCompleted' | 'noCOGS'
+  defaultDays: number
+  defaultEnabled: boolean
+  matches(row: JobOrderRecord, today: Date, days: number): boolean
+}
+
+const DAY_MS = 86_400_000
+
+function parseDateOrNull(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  if (parsed.getFullYear() <= 1900) return null
+  return parsed
+}
+
+function daysSince(from: string | null | undefined, today: Date): number {
+  const start = parseDateOrNull(from)
+  if (!start) return Number.POSITIVE_INFINITY
+  return Math.floor((today.getTime() - start.getTime()) / DAY_MS)
+}
+
+const EXCEPTIONAL_CRITERIA: ExceptionalCriterion[] = [
+  {
+    id: 'notScheduled',
+    defaultDays: 7,
+    defaultEnabled: true,
+    matches: (row, today, days) => !row.hasActiveSchedule && daysSince(row.orderedOn, today) > days,
+  },
+  {
+    id: 'notCompleted',
+    defaultDays: 7,
+    defaultEnabled: true,
+    matches: (row, today, days) => parseDateOrNull(row.completedOn) == null && daysSince(row.orderedOn, today) > days,
+  },
+  {
+    id: 'noInvoice',
+    defaultDays: 7,
+    defaultEnabled: true,
+    matches: (row, today, days) => !row.invoiceRef && daysSince(row.orderedOn, today) > days,
+  },
+  {
+    id: 'noInvoiceAfterCompleted',
+    defaultDays: 7,
+    defaultEnabled: true,
+    matches: (row) => parseDateOrNull(row.completedOn) != null && !row.invoiceRef,
+  },
+  {
+    id: 'noCOGS',
+    defaultDays: 7,
+    defaultEnabled: true,
+    matches: (row, today, days) => !row.originalSONumber && daysSince(row.orderedOn, today) > days,
+  },
+]
+
+function defaultCriteriaState(): Record<string, { enabled: boolean; days: number }> {
+  const out: Record<string, { enabled: boolean; days: number }> = {}
+  for (const criterion of EXCEPTIONAL_CRITERIA) {
+    out[criterion.id] = { enabled: criterion.defaultEnabled, days: criterion.defaultDays }
+  }
+  return out
+}
+
 const {
   visibleColumns: visibleColumnKeys,
   sortKey,
@@ -261,9 +373,11 @@ const {
   checkboxMode,
   viewMode,
   itemsPerPage,
+  criteria: criteriaState,
 } = useViewSettings('exceptional-report', {
   visibleColumns: [
     'ln',
+    'exceptionalReasons',
     'orderNumber',
     'orderedOn',
     'customerName',
@@ -280,16 +394,68 @@ const {
     'completedOn',
   ],
   sortKey: 'orderNumber',
-  sortDirection: 'asc',
+  sortDirection: 'desc',
   checkboxMode: false,
   viewMode: 'detail',
   itemsPerPage: 10,
+  criteria: defaultCriteriaState(),
 })
 const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const { format } = useGlobalDateFormatter()
 const { formatCurrency } = useLocaleFormatters()
 const isCardView = computed(() => viewMode.value === 'card')
+
+function criteriaEnabled(criterion: ExceptionalCriterion): boolean {
+  return criteriaState.value?.[criterion.id]?.enabled ?? criterion.defaultEnabled
+}
+
+function criteriaDays(criterion: ExceptionalCriterion): number {
+  return criteriaState.value?.[criterion.id]?.days ?? criterion.defaultDays
+}
+
+function setCriterionEnabled(id: string, enabled: boolean) {
+  const state = criteriaState.value
+  if (!state?.[id]) return
+  state[id].enabled = enabled
+}
+
+function setCriterionDays(id: string, days: number) {
+  const state = criteriaState.value
+  if (!state?.[id]) return
+  state[id].days = days
+}
+
+function setCriterionDaysFromInput(id: string, raw: string | null) {
+  const parsed = Number.parseInt(raw ?? '', 10)
+  const fallback = EXCEPTIONAL_CRITERIA.find((criterion) => criterion.id === id)?.defaultDays ?? 0
+  setCriterionDays(id, Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback)
+}
+
+const filteredRows = computed(() => {
+  const today = new Date()
+  const enabled = EXCEPTIONAL_CRITERIA.filter((criterion) => criteriaEnabled(criterion))
+  if (enabled.length === 0) return []
+  return rows.value.filter((row) => enabled.some((criterion) => criterion.matches(row, today, criteriaDays(criterion))))
+})
+
+const reasonsByOrderId = computed(() => {
+  const map: Record<string, string[]> = {}
+  const today = new Date()
+  for (const row of rows.value) {
+    const reasons = EXCEPTIONAL_CRITERIA
+      .filter((criterion) => criteriaEnabled(criterion) && criterion.matches(row, today, criteriaDays(criterion)))
+      .map((criterion) => t(`reports.exceptional.criteria.${criterion.id}`))
+    if (reasons.length > 0) {
+      map[row.orderId] = reasons
+    }
+  }
+  return map
+})
+
+function reasonsForRow(row: JobOrderRecord) {
+  return reasonsByOrderId.value[row.orderId] ?? []
+}
 
 const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.ln'), key: 'ln', width: '56px', sortable: false },
@@ -307,6 +473,7 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.modifiedOn'), key: 'modifiedOn', width: '120px' },
   { title: t('jobOrder.jobList.headers.modifiedBy'), key: 'modifiedBy', width: '120px' },
   { title: t('jobOrder.jobList.headers.completedOn'), key: 'completedOn', width: '120px' },
+  { title: t('reports.exceptional.criteria.reasons'), key: 'exceptionalReasons', minWidth: '220px', sortable: false },
 ])
 
 const headers = computed(() => allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
@@ -320,7 +487,7 @@ const sortableColumns = computed(() =>
 const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
 
 const sortedRows = computed(() => {
-  const result = [...rows.value]
+  const result = [...filteredRows.value]
   const key = sortKey.value as keyof JobOrderRecord
 
   result.sort((lhs, rhs) => {
@@ -351,7 +518,7 @@ const sortedRows = computed(() => {
 
 const totalInvoiceAmount = computed(() => {
   let total = 0
-  for (const row of rows.value) {
+  for (const row of filteredRows.value) {
     total += invoiceAmountForRow(row)
   }
   return total
@@ -530,6 +697,14 @@ function invoiceNumberForRow(row: JobOrderRecord) {
 .toolbar-menu-list {
   max-height: 340px;
   overflow: auto;
+}
+
+.criteria-days-input {
+  width: 96px;
+}
+
+.exceptional-reason-chip {
+  cursor: default;
 }
 
 .exceptional-table-shell {

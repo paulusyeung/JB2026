@@ -59,4 +59,8 @@ public sealed class JobOrderResponse
     public string? SONumber { get; init; }
 
     public string? OriginalSONumber { get; init; }
+
+    public DateTime? ScheduledOn { get; init; }
+
+    public bool HasActiveSchedule { get; init; }
 }

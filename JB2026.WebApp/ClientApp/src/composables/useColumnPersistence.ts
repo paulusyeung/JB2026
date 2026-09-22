@@ -4,6 +4,10 @@ import { getUserPreference, saveUserPreference } from '@/services/userPreference
 
 const STORAGE_PREFIX = 'view-settings-'
 
+interface CriteriaSettings {
+  [id: string]: { enabled: boolean; days: number }
+}
+
 interface ViewSettings {
   visibleColumns: string[]
   sortKey?: string
@@ -12,6 +16,7 @@ interface ViewSettings {
   viewMode?: 'detail' | 'card' | 'table'
   itemsPerPage?: number
   ignoreGuest?: boolean
+  criteria?: CriteriaSettings
 }
 
 const SAVE_DEBOUNCE_MS = 500
@@ -36,11 +41,12 @@ export function useViewSettings(viewId: string, defaults: {
   viewMode?: 'detail' | 'card' | 'table'
   itemsPerPage?: number
   ignoreGuest?: boolean
+  criteria?: CriteriaSettings
 }) {
   const storageKey = `${STORAGE_PREFIX}${viewId}`
   const objectId = getViewObjectId(viewId)
   let saveTimer: ReturnType<typeof setTimeout> | null = null
-  
+
   const visibleColumns = ref<string[]>([])
   const sortKey = ref<string | undefined>(defaults.sortKey)
   const sortDirection = ref<'asc' | 'desc' | undefined>(defaults.sortDirection)
@@ -48,6 +54,7 @@ export function useViewSettings(viewId: string, defaults: {
   const viewMode = ref<'detail' | 'card' | 'table' | undefined>(defaults.viewMode)
   const itemsPerPage = ref<number | undefined>(defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE)
   const ignoreGuest = ref<boolean | undefined>(defaults.ignoreGuest)
+  const criteria = ref<CriteriaSettings | undefined>(defaults.criteria)
 
   function parseSettings(raw: string | null): ViewSettings | null {
     if (!raw) {
@@ -66,6 +73,7 @@ export function useViewSettings(viewId: string, defaults: {
         viewMode: parsed.viewMode ?? defaults.viewMode,
         itemsPerPage: parsed.itemsPerPage ?? defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
         ignoreGuest: parsed.ignoreGuest ?? defaults.ignoreGuest,
+        criteria: parsed.criteria ?? defaults.criteria,
       }
     } catch {
       return null
@@ -87,6 +95,7 @@ export function useViewSettings(viewId: string, defaults: {
       viewMode: defaults.viewMode,
       itemsPerPage: defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
       ignoreGuest: defaults.ignoreGuest,
+      criteria: defaults.criteria,
     }
   }
 
@@ -102,6 +111,7 @@ export function useViewSettings(viewId: string, defaults: {
     viewMode.value = settings.viewMode
     itemsPerPage.value = settings.itemsPerPage
     ignoreGuest.value = settings.ignoreGuest
+    criteria.value = settings.criteria
   }
 
   async function loadFromServerAndOverlay() {
@@ -152,7 +162,7 @@ export function useViewSettings(viewId: string, defaults: {
 
   // Watch for changes and save
   watch(
-    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest],
+    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria],
     () => {
       const settings: ViewSettings = {
         visibleColumns: visibleColumns.value,
@@ -162,6 +172,7 @@ export function useViewSettings(viewId: string, defaults: {
         viewMode: viewMode.value,
         itemsPerPage: itemsPerPage.value,
         ignoreGuest: ignoreGuest.value,
+        criteria: criteria.value,
       }
 
       saveToLocalStorage(settings)
@@ -170,5 +181,5 @@ export function useViewSettings(viewId: string, defaults: {
     { deep: true }
   )
 
-  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest }
+  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria }
 }

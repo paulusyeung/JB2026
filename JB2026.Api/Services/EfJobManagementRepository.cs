@@ -737,6 +737,8 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
             modifiedBy = modifiedByDisplayName;
         }
 
+        var activeSchedules = job.JobSchedules.Where(schedule => schedule.Cancelled != true).ToList();
+
         return new JobOrderResponse
         {
             OrderId = job.OrderId,
@@ -767,7 +769,12 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
             ModifiedBy = modifiedBy,
             ModifiedOn = job.ModifiedOn,
             SONumber = job.SONumber,
-            OriginalSONumber = job.OriginalSONumber
+            OriginalSONumber = job.OriginalSONumber,
+            ScheduledOn = activeSchedules
+                .Select(schedule => schedule.ScheduledOn)
+                .Where(scheduledOn => scheduledOn.HasValue)
+                .Min(scheduledOn => scheduledOn),
+            HasActiveSchedule = activeSchedules.Count > 0
         };
     }
 
@@ -802,7 +809,9 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
             CreatedOn = order.CreatedOn,
             ModifiedBy = order.ModifiedBy,
             ModifiedOn = order.ModifiedOn,
-            SONumber = order.SONumber
+            SONumber = order.SONumber,
+            ScheduledOn = null,
+            HasActiveSchedule = false
         };
     }
 

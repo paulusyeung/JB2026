@@ -1085,6 +1085,8 @@ export interface JobOrderRecord {
   modifiedOn: string | null
   soNumber?: string
   originalSONumber?: string
+  scheduledOn?: string | null
+  hasActiveSchedule?: boolean
 }
 
 export interface JobStatsRecord {

@@ -400,7 +400,9 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             ModifiedBy = job.ModifiedBy,
             ModifiedOn = job.ModifiedOn,
             SONumber = job.SONumber,
-            OriginalSONumber = job.OriginalSONumber
+            OriginalSONumber = job.OriginalSONumber,
+            ScheduledOn = job.ScheduledOn,
+            HasActiveSchedule = job.HasActiveSchedule
         };
     }
 
@@ -508,6 +510,8 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public DateTime? CompletedOn { get; init; }
         public string? SONumber { get; init; }
         public string? OriginalSONumber { get; init; }
+        public DateTime? ScheduledOn { get; init; }
+        public bool HasActiveSchedule { get; init; }
         public string? ProductStyle { get; init; }
         public string? ProductCode { get; init; }
         public string? OutputRef { get; init; }

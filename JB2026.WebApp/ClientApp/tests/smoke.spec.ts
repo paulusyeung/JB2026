@@ -45,6 +45,36 @@ async function mockApiRoutes(page: Page) {
     }),
   )
 
+  // App settings endpoint — mounted by App.vue on startup; without a mock the
+  // real API rejects the fake token with 401 and the axios interceptor bounces
+  // the session to the login page.
+  await page.route('**/api/v2/settings', (route) =>
+    route.fulfill({
+      json: {
+        companyName: '',
+        timeZone: '',
+        currencyCode: '',
+        enableLegacyFallback: false,
+        ownerName: '',
+        nextOrderNumber: '',
+        nextProductNumber: '',
+        nextQuotationNumber: '',
+        commonQueryIndex: 0,
+        completedQueryIndex: 0,
+        scheduleQueryRange: 0,
+        gmailAccount: '',
+        gmailPassword: '',
+        dateFormatPreference: 'dd/MM/yyyy',
+        jobListDaysBack: 30,
+      },
+    }),
+  )
+
+  // Effective RBAC values — same 401 leak as the settings endpoint.
+  await page.route('**/api/v2/settings/rbac/effective', (route) =>
+    route.fulfill({ json: { values: {} } }),
+  )
+
   // Jobs list endpoint
   await page.route('**/api/v2/jobs/**', (route) =>
     route.fulfill({ json: { rows: [], total: 0 } }),
@@ -540,15 +570,27 @@ test.describe('Slice A — read-only lists and dashboard', () => {
     await expect(page.getByText('1001-1')).toBeVisible()
   })
 
-  test('exceptional report route renders legacy-style job list', async ({ page }) => {
+  test('exceptional report route renders job orders matching criteria', async ({ page }) => {
     await injectFakeSession(page)
     await mockApiRoutes(page)
     await page.goto('/app/job-order/reports/exceptional')
 
     await expect(page.getByRole('heading', { name: 'Exceptional Report' })).toBeVisible()
-    await page.getByLabel('Month').fill('2026-03')
+    await page.getByLabel('Start date').fill('2026-03-01')
+    await page.getByLabel('End date').fill('2026-03-31')
+    await page.getByRole('button', { name: 'Refresh' }).click()
+
     await expect(page.getByText('JB260331-01')).toBeVisible()
     await expect(page.getByText('Modern Job Order')).toBeVisible()
+    await expect(page.getByText('Not scheduled')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Criteria' }).click()
+    const switches = page.locator('.v-overlay-container .v-switch')
+    await expect(switches).toHaveCount(5)
+    for (let i = 0; i < 5; i++) {
+      await switches.nth(i).click()
+    }
+    await expect(page.getByText('No exceptional records match the selected criteria.')).toBeVisible()
   })
 
   test('admin view renders user directory and current profile', async ({ page }) => {
