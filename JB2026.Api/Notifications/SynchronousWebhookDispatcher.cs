@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using JB2026.EfCore.Data;
+using JB2026.EfCore.Models;
 using JB2026.EfCore.Notifications;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,10 +35,25 @@ public sealed class SynchronousWebhookDispatcher : IWebhookEventDispatcher
             return;
         }
 
-        var subscriptions = await _writeContext.WebhookSubscriptions
-            .AsNoTracking()
-            .Where(x => x.IsActive)
-            .ToListAsync(cancellationToken);
+        List<WebhookSubscription> subscriptions;
+        try
+        {
+            subscriptions = await _writeContext.WebhookSubscriptions
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Webhook delivery is best-effort: a subscription lookup failure
+            // (missing table, connectivity, permissions) must never fail the
+            // business operation that emitted the event.
+            _logger.LogError(
+                ex,
+                "Unable to read webhook subscriptions; skipping dispatch for event type {EventType}",
+                eventType);
+            return;
+        }
 
         var matched = subscriptions
             .Where(x => IsEventSubscribed(x.EventTypes, eventType))

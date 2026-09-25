@@ -3,6 +3,7 @@ using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using JB2026.EfCore.Notifications;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace JB2026.Api.ParityTests;
 
@@ -42,7 +43,8 @@ public sealed class JobLifecycleEventPublisherTests
         return new JobLifecycleEventPublisher(
             CreateWriteContext(dbName),
             CreateReadContext(dbName),
-            dispatcher);
+            dispatcher,
+            NullLogger<JobLifecycleEventPublisher>.Instance);
     }
 
     private static JobOrder CreateOrder(

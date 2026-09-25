@@ -116,6 +116,25 @@ public sealed class SynchronousWebhookDispatcherTests
     }
 
     [Fact]
+    public async Task EnqueueEventAsync_SubscriptionReadFailure_DoesNotThrow()
+    {
+        // Regression: the subscription read used to sit outside the try/catch, so
+        // a failure there (e.g. "Invalid object name 'dbo.WebhookSubscriptions'")
+        // propagated into the business operation that emitted the event.
+        var context = CreateContext();
+        var handler = new StubHttpMessageHandler();
+        var dispatcher = CreateDispatcher(context, handler);
+
+        // Disposing the context makes the WebhookSubscriptions read throw, which
+        // is the closest in-memory stand-in for a missing table.
+        context.Dispose();
+
+        await dispatcher.EnqueueEventAsync("OnJobScheduled", new { EventType = "OnJobScheduled" }, CancellationToken.None);
+
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task DispatchAsync_InvalidUrl_DoesNotSend()
     {
         using var context = CreateContext();

@@ -1,6 +1,7 @@
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace JB2026.EfCore.Notifications;
 
@@ -17,15 +18,18 @@ public sealed class JobLifecycleEventPublisher
     private readonly JB5LegacyWriteContext _writeContext;
     private readonly JB5LegacyReadContext _readContext;
     private readonly IWebhookEventDispatcher _webhookDispatcher;
+    private readonly ILogger<JobLifecycleEventPublisher> _logger;
 
     public JobLifecycleEventPublisher(
         JB5LegacyWriteContext writeContext,
         JB5LegacyReadContext readContext,
-        IWebhookEventDispatcher webhookDispatcher)
+        IWebhookEventDispatcher webhookDispatcher,
+        ILogger<JobLifecycleEventPublisher> logger)
     {
         _writeContext = writeContext;
         _readContext = readContext;
         _webhookDispatcher = webhookDispatcher;
+        _logger = logger;
     }
 
     private static readonly IReadOnlyDictionary<JobLifecycleEventType, string> LegacyTitles =
@@ -119,7 +123,21 @@ public sealed class JobLifecycleEventPublisher
         });
 
         await _writeContext.SaveChangesAsync(cancellationToken);
-        await _webhookDispatcher.EnqueueEventAsync(WebhookEventTypes[eventType], payload, cancellationToken);
+
+        // Webhook delivery is best-effort: the history row is already committed
+        // above, so a dispatch failure must not surface as a failed business
+        // operation (schedule save, job create/update, invoice send).
+        try
+        {
+            await _webhookDispatcher.EnqueueEventAsync(WebhookEventTypes[eventType], payload, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(
+                ex,
+                "Webhook dispatch failed for lifecycle event {EventType}; history row was still recorded",
+                eventType);
+        }
     }
 
     private async Task<Guid?> ResolveOwnerAsync(JobOrder order, CancellationToken cancellationToken)

@@ -50,8 +50,8 @@ public sealed class JobLifecyclePushHistoryHooksTests
 
     private static string NewDbName() => Guid.NewGuid().ToString("N");
 
-    private static JobLifecycleEventPublisher CreatePublisher(string dbName, RecordingWebhookDispatcher dispatcher)
-        => new(CreateWriteContext(dbName), CreateReadContext(dbName), dispatcher);
+    private static JobLifecycleEventPublisher CreatePublisher(string dbName, IWebhookEventDispatcher dispatcher)
+        => new(CreateWriteContext(dbName), CreateReadContext(dbName), dispatcher, NullLogger<JobLifecycleEventPublisher>.Instance);
 
     private static EfJobManagementRepository CreateRepository(
         string dbName,
@@ -66,12 +66,18 @@ public sealed class JobLifecyclePushHistoryHooksTests
 
     private static JobSchedulesController CreateSchedulesController(
         string dbName,
-        RecordingWebhookDispatcher dispatcher)
+        IWebhookEventDispatcher dispatcher)
+        => CreateSchedulesController(dbName, dispatcher, new NoOpScheduleGateway());
+
+    private static JobSchedulesController CreateSchedulesController(
+        string dbName,
+        IWebhookEventDispatcher dispatcher,
+        IJobScheduleStoredProcedureGateway scheduleGateway)
     {
         var controller = new JobSchedulesController(
             CreateReadContext(dbName),
             CreateWriteContext(dbName),
-            new NoOpScheduleGateway(),
+            scheduleGateway,
             new NoOpPackingGateway(),
             CreatePublisher(dbName, dispatcher));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
@@ -180,6 +186,92 @@ public sealed class JobLifecyclePushHistoryHooksTests
         var row = Assert.Single(await verify.FCMHistories.ToListAsync());
         Assert.Equal("JB5 已排單", row.MessageTitle);
         Assert.Equal("O-100-3: Acme Corp", row.MessageBody);
+    }
+
+    // -----------------------------------------------------------------------
+    // Scheduled — webhook dispatch failure must not fail the save
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task SaveBatch_Reorder_SucceedsAndPersistsPriority_WhenWebhookDispatchThrows()
+    {
+        // Regression: dbo.WebhookSubscriptions did not exist, so the dispatcher's
+        // subscription read threw AFTER spJobSchedule_UpdRec had already run.
+        // SaveBatch returned 500 and ScheduleView reported "Unable to save
+        // schedule" even though the reorder had been committed.
+        var dbName = NewDbName();
+        var first = CreateOrder("170287", 1);
+        var moved = CreateOrder("170288", 1);
+        var last = CreateOrder("170289", 1);
+        await SeedOrderAsync(dbName, first);
+        await SeedOrderAsync(dbName, moved);
+        await SeedOrderAsync(dbName, last);
+        await SeedSchedulesAsync(dbName, first.OrderId, moved.OrderId, last.OrderId);
+
+        var dispatcher = new ThrowingWebhookDispatcher();
+        var gateway = new RecordingScheduleGateway();
+        var controller = CreateSchedulesController(dbName, dispatcher, gateway);
+
+        // Row 2 (moved) is dragged down to row 3.
+        var result = await controller.SaveBatch(new SaveScheduleBatchRequest
+        {
+            OrderType = 0,
+            ScheduledItems =
+            [
+                new SaveScheduleBatchItem { OrderId = first.OrderId, MachineNumber = "1", UrgencyLevel = 0 },
+                new SaveScheduleBatchItem { OrderId = last.OrderId, MachineNumber = "1", UrgencyLevel = 0 },
+                new SaveScheduleBatchItem { OrderId = moved.OrderId, MachineNumber = "1", UrgencyLevel = 0 },
+            ],
+        }, CancellationToken.None);
+
+        Assert.IsAssignableFrom<OkObjectResult>(result);
+
+        // The reordered sequence reached the stored procedure as 0-based priority.
+        Assert.Collection(
+            gateway.Updates,
+            u => AssertUpdate(u, first.OrderId, expectedPriority: 0),
+            u => AssertUpdate(u, last.OrderId, expectedPriority: 1),
+            u => AssertUpdate(u, moved.OrderId, expectedPriority: 2));
+
+        // Push history is still recorded even though dispatch blew up — one row
+        // per scheduled item, in the reordered sequence.
+        using var verify = CreateWriteContext(dbName);
+        var history = await verify.FCMHistories.OrderBy(h => h.DeliveredOn).ToListAsync();
+        Assert.Equal(3, history.Count);
+        Assert.All(history, h => Assert.Equal("JB5 已排單", h.MessageTitle));
+        Assert.Equal(
+            ["170287-1: Acme Corp", "170289-1: Acme Corp", "170288-1: Acme Corp"],
+            history.Select(h => h.MessageBody));
+    }
+
+    private static void AssertUpdate(
+        UpdateJobScheduleStoredProcedureRequest update,
+        Guid expectedOrderId,
+        int expectedPriority)
+    {
+        Assert.Equal(expectedOrderId, update.OrderId);
+        Assert.Equal(expectedPriority, update.Priority);
+    }
+
+    private static async Task SeedSchedulesAsync(string dbName, params Guid[] orderIds)
+    {
+        using var context = CreateWriteContext(dbName);
+        for (var i = 0; i < orderIds.Length; i++)
+        {
+            context.JobSchedules.Add(new JobSchedule
+            {
+                ScheduleId = Guid.NewGuid(),
+                OrderId = orderIds[i],
+                ScheduledOn = new DateTime(2026, 9, 26),
+                Status = 0,
+                Priority = i,
+                MachineNumber = "1",
+                Cancelled = false,
+                UrgencyLevel = 0,
+            });
+        }
+
+        await context.SaveChangesAsync();
     }
 
     // -----------------------------------------------------------------------
@@ -463,6 +555,36 @@ public sealed class JobLifecyclePushHistoryHooksTests
         public (bool isValid, string errorMessage) ValidateConfiguration() => (true, string.Empty);
 
         public Task<byte[]?> GetStreamAsync(string endpoint) => Task.FromResult<byte[]?>(null);
+    }
+
+    private sealed class ThrowingWebhookDispatcher : IWebhookEventDispatcher
+    {
+        /// <summary>
+        /// Mirrors the production failure: the subscription read blew up because
+        /// dbo.WebhookSubscriptions was missing.
+        /// </summary>
+        public Task EnqueueEventAsync(string eventType, object payload, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("Invalid object name 'dbo.WebhookSubscriptions'.");
+    }
+
+    private sealed class RecordingScheduleGateway : IJobScheduleStoredProcedureGateway
+    {
+        public List<UpdateJobScheduleStoredProcedureRequest> Updates { get; } = [];
+
+        public Task<JobScheduleStoredProcedureRecord?> SelectAsync(Guid scheduleId, CancellationToken cancellationToken = default)
+            => Task.FromResult<JobScheduleStoredProcedureRecord?>(null);
+
+        public Task<Guid> InsertAsync(CreateJobScheduleStoredProcedureRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(Guid.Empty);
+
+        public Task<bool> UpdateAsync(UpdateJobScheduleStoredProcedureRequest request, CancellationToken cancellationToken = default)
+        {
+            Updates.Add(request);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAsync(Guid scheduleId, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
     }
 
     private sealed class NoOpScheduleGateway : IJobScheduleStoredProcedureGateway

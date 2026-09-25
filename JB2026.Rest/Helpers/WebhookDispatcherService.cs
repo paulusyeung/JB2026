@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Hangfire;
 using JB2026.EfCore.Data;
+using JB2026.EfCore.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace JB2026.Rest.Helpers;
@@ -32,10 +33,25 @@ public sealed class WebhookDispatcherService : IWebhookDispatcherService
             return;
         }
 
-        var subscriptions = await _readContext.WebhookSubscriptions
-            .AsNoTracking()
-            .Where(x => x.IsActive)
-            .ToListAsync(cancellationToken);
+        List<WebhookSubscription> subscriptions;
+        try
+        {
+            subscriptions = await _readContext.WebhookSubscriptions
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Webhook delivery is best-effort: a subscription lookup failure
+            // (missing table, connectivity, permissions) must never fail the
+            // business operation that emitted the event.
+            _logger.LogError(
+                ex,
+                "Unable to read webhook subscriptions; skipping dispatch for event type {EventType}",
+                eventType);
+            return;
+        }
 
         if (subscriptions.Count == 0)
         {
