@@ -71,6 +71,50 @@ public sealed class InMemorySettingsService : ISettingsService
         }
     }
 
+    public Task<string> AllocateNextOrderNumberAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            var allocated = _settings.NextOrderNumber;
+            _settings = WithNextOrderNumber(_settings, IncrementOrderNumber(allocated));
+
+            return Task.FromResult(allocated);
+        }
+    }
+
+    /// <summary>
+    /// Mirrors the legacy JB5 allocator (Job.Book/Controls/Utility.cs GetNextOrderNumber):
+    /// hand out the current value, then persist its successor padded to six digits.
+    /// </summary>
+    internal static string IncrementOrderNumber(string current)
+    {
+        var next = int.TryParse(current, out var parsed) ? parsed + 1 : 1;
+
+        return next.ToString().PadLeft(6, '0');
+    }
+
+    private static SettingsResponse WithNextOrderNumber(SettingsResponse source, string nextOrderNumber)
+    {
+        return new SettingsResponse
+        {
+            CompanyName = source.CompanyName,
+            TimeZone = source.TimeZone,
+            CurrencyCode = source.CurrencyCode,
+            EnableLegacyFallback = source.EnableLegacyFallback,
+            OwnerName = source.OwnerName,
+            NextOrderNumber = nextOrderNumber,
+            NextProductNumber = source.NextProductNumber,
+            NextQuotationNumber = source.NextQuotationNumber,
+            CommonQueryIndex = source.CommonQueryIndex,
+            CompletedQueryIndex = source.CompletedQueryIndex,
+            ScheduleQueryRange = source.ScheduleQueryRange,
+            GmailAccount = source.GmailAccount,
+            GmailPassword = source.GmailPassword,
+            DateFormatPreference = source.DateFormatPreference,
+            JobListDaysBack = source.JobListDaysBack,
+        };
+    }
+
     private static string NormalizeDateFormatPreference(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

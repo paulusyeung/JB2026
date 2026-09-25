@@ -7,10 +7,12 @@ namespace JB2026.Api.Services;
 public sealed class InMemoryJobManagementRepository : IJobManagementRepository
 {
     private readonly ConcurrentDictionary<Guid, JobRecord> _jobs;
+    private readonly ISettingsService? _settingsService;
 
-    public InMemoryJobManagementRepository()
+    public InMemoryJobManagementRepository(ISettingsService? settingsService = null)
     {
         _jobs = new ConcurrentDictionary<Guid, JobRecord>(CreateSeedData().ToDictionary(job => job.OrderId));
+        _settingsService = settingsService;
     }
 
     public IReadOnlyList<JobListItemResponse> GetRange(DateOnly startOn, int days)
@@ -223,15 +225,29 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return _jobs.TryGetValue(orderId, out var job) ? MapOrder(job) : null;
     }
 
-    public Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
+    public async Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
     {
+        // A blank order number means "new order": the server allocates it here rather than
+        // trusting a value the client may have cached before another user consumed it.
+        var orderNumber = request.OrderNumber.Trim();
+        if (orderNumber.Length == 0)
+        {
+            if (_settingsService is null)
+            {
+                throw new InvalidOperationException(
+                    "OrderNumber was not supplied and no settings service is available to allocate one.");
+            }
+
+            orderNumber = (await _settingsService.AllocateNextOrderNumberAsync()).Trim();
+        }
+
         var orderId = Guid.NewGuid();
         var timestamp = DateTime.UtcNow;
         var record = new JobRecord
         {
             OrderId = orderId,
             OrderType = request.OrderType,
-            OrderNumber = request.OrderNumber,
+            OrderNumber = orderNumber,
             JobNumber = request.JobNumber,
             CustomerName = request.CustomerName,
             CustomerRef = request.CustomerRef,
@@ -259,7 +275,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         };
 
         _jobs[orderId] = record;
-        return Task.FromResult(MapOrder(record));
+        return MapOrder(record);
     }
 
     public Task<JobOrderResponse?> UpdateJobOrder(Guid orderId, UpdateJobOrderRequest request, string actor)

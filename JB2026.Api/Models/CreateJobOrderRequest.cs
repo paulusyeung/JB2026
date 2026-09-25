@@ -4,7 +4,10 @@ namespace JB2026.Api.Models;
 
 public sealed class CreateJobOrderRequest
 {
-    [Required]
+    /// <summary>
+    /// Optional. When blank the server allocates the next order number atomically and this
+    /// value must not be trusted. Only supply it when adding a job to an existing order.
+    /// </summary>
     [StringLength(32)]
     public string OrderNumber { get; init; } = string.Empty;
 

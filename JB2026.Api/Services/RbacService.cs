@@ -108,21 +108,11 @@ public sealed class RbacService : IRbacService
             throw new ArgumentException("Role is required to save group RBAC.", nameof(role));
         }
 
-        var snapshot = await _systemInfoGateway.SelectFirstAsync(cancellationToken);
-        var metadataXml = UpsertGroupRbac(snapshot?.MetadataXml, role, values);
-
-        if (snapshot is null)
-        {
-            await _systemInfoGateway.InsertAsync(new CreateSystemInfoStoredProcedureRequest(
-                OwnerName: null,
-                MetadataXml: metadataXml), cancellationToken);
-            return;
-        }
-
-        await _systemInfoGateway.UpdateAsync(new UpdateSystemInfoStoredProcedureRequest(
-            SystemId: snapshot.SystemId,
-            OwnerName: snapshot.OwnerName,
-            MetadataXml: metadataXml), cancellationToken);
+        // Routed through the gateway so this whole-document write cannot discard a concurrent
+        // order-number allocation stored in the same MetadataXml row.
+        await _systemInfoGateway.MutateMetadataAsync(
+            currentXml => UpsertGroupRbac(currentXml, role, values),
+            cancellationToken);
     }
 
     public async Task<RbacSnapshot> GetUserRbacAsync(Guid userId, CancellationToken cancellationToken = default)

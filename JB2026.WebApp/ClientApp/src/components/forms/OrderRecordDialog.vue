@@ -28,7 +28,7 @@
       <v-row dense>
         <v-col cols="12" md="4">
           <v-text-field
-            v-model="draft.orderNumber"
+            :model-value="mode === 'create' ? '' : draft.orderNumber"
             :label="t('jobOrder.record.fields.orderNumber')"
             :placeholder="mode === 'create' ? t('jobOrder.record.fields.orderNumberAuto') : ''"
             variant="outlined"
@@ -261,7 +261,6 @@ import { useSessionStore } from '@/stores/session'
 import { getAdminCustomers, getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
 import { deleteJobAttachments, getJobDetail } from '@/services/jobs'
-import { getSettings, updateSettings } from '@/services/settings'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
 import { statusIcon, statusColor } from '@/composables/useJobStatus'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
@@ -292,7 +291,6 @@ const customerSearchText = ref('')
 const customerLoading = ref(false)
 let customerSearchTimer: ReturnType<typeof setTimeout> | null = null
 const userMap = ref<Record<string, string>>({})
-const nextOrderNumber = ref('')
 const selectedIds = ref(new Set<string>())
 const session = useSessionStore()
 const globalFormat = useGlobalDateFormatter()
@@ -319,7 +317,6 @@ watch(
 onMounted(async () => {
   await Promise.all([
     loadOrderedByOptions(),
-    loadNextOrderNumber(),
     loadCustomers(),
   ])
 })
@@ -603,18 +600,6 @@ async function loadOrderedByOptions() {
   }
 }
 
-async function loadNextOrderNumber() {
-  try {
-    const settings = await getSettings()
-    // nextOrderNumber.value = settings.nextOrderNumber
-    // Convert the number to a string and pad it to a length of 6 with '0'
-    nextOrderNumber.value = String(settings.nextOrderNumber).padStart(6, '0');
-
-  } catch {
-    // Non-critical; save will fail validation if nextOrderNumber is unavailable.
-  }
-}
-
 function buildCreateDraft(): JobOrderFormData {
   const today = new Date().toISOString().slice(0, 10)
 
@@ -686,15 +671,10 @@ async function handleSave(closeAfterSave = false) {
 
   try {
     if (mode.value === 'create') {
-      if (!nextOrderNumber.value) {
-        errorMessage.value = t('jobOrder.record.saveFailed')
-        return
-      }
-
-      draft.value.orderNumber = nextOrderNumber.value
-
+      // The order number is allocated by the server inside this request. The dialog shows
+      // "Automatic Generated" rather than a predicted value, because any number read from
+      // settings now can be consumed by another user before this save completes.
       const created = await createJobOrder({
-        orderNumber: draft.value.orderNumber,
         jobNumber: draft.value.jobNumber,
         customerName: draft.value.customerName,
         customerRef: draft.value.customerRef,
@@ -709,16 +689,6 @@ async function handleSave(closeAfterSave = false) {
         invoiceRef: draft.value.invoiceRef || '',
         invoiceAmount: draft.value.invoiceAmount,
       })
-
-      const incremented = String(Number(nextOrderNumber.value) + 1)
-      nextOrderNumber.value = incremented
-
-      try {
-        const current = await getSettings()
-        await updateSettings({ ...current, nextOrderNumber: incremented })
-      } catch {
-        // Non-critical: local nextOrderNumber is already incremented
-      }
 
       emit('saved', created.orderId)
       if (closeAfterSave) {

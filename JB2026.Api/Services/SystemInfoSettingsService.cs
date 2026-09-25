@@ -29,51 +29,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
     {
         var baseSettings = _fallback.Get();
         var snapshot = GetSystemInfoSnapshot();
-
-        string? persistedNextOrderNumber = null;
-        string? persistedNextProductNumber = null;
-        string? persistedNextQuotationNumber = null;
-        string? persistedDateFormat = null;
-        string? persistedJobListDaysBack = null;
-
-        if (snapshot?.MetadataXml is not null)
-        {
-            try
-            {
-                var doc = XDocument.Parse(snapshot.MetadataXml);
-
-                // Try new format first: <Settings .../>
-                var settingsElement = doc.Root?.Descendants(SettingsElement).FirstOrDefault();
-
-                if (settingsElement is not null)
-                {
-                    persistedNextOrderNumber = settingsElement.Attribute(NextOrderNumberAttr)?.Value;
-                    persistedNextProductNumber = settingsElement.Attribute(NextProductNumberAttr)?.Value;
-                    persistedNextQuotationNumber = settingsElement.Attribute(NextQuotationNumberAttr)?.Value;
-                    persistedDateFormat = settingsElement.Attribute("DateFormatPreference")?.Value;
-                    persistedJobListDaysBack = settingsElement.Attribute("JobListDaysBack")?.Value;
-                }
-                else
-                {
-                    // Fall back to old format: <record id="data" .../>
-                    var dataRecord = doc.Root?.Elements(RecordElement)
-                        .FirstOrDefault(el => el.Attribute(RecordIdAttribute)?.Value == DataRecordId);
-
-                    if (dataRecord is not null)
-                    {
-                        persistedNextOrderNumber = dataRecord.Attribute(NextOrderNumberAttr)?.Value;
-                        persistedNextProductNumber = dataRecord.Attribute(NextProductNumberAttr)?.Value;
-                        persistedNextQuotationNumber = dataRecord.Attribute(NextQuotationNumberAttr)?.Value;
-                        persistedDateFormat = dataRecord.Attribute("dateFormatPreference")?.Value;
-                        persistedJobListDaysBack = dataRecord.Attribute("JobListDaysBack")?.Value;
-                    }
-                }
-            }
-            catch
-            {
-                // If XML is malformed, fall back to in-memory defaults
-            }
-        }
+        var persisted = ParsePersistedSettings(snapshot?.MetadataXml);
 
         return new SettingsResponse
         {
@@ -82,46 +38,117 @@ public sealed class SystemInfoSettingsService : ISettingsService
             CurrencyCode = baseSettings.CurrencyCode,
             EnableLegacyFallback = baseSettings.EnableLegacyFallback,
             OwnerName = string.IsNullOrWhiteSpace(snapshot?.OwnerName) ? baseSettings.OwnerName : snapshot.OwnerName,
-            NextOrderNumber = persistedNextOrderNumber ?? baseSettings.NextOrderNumber,
-            NextProductNumber = persistedNextProductNumber ?? baseSettings.NextProductNumber,
-            NextQuotationNumber = persistedNextQuotationNumber ?? baseSettings.NextQuotationNumber,
+            NextOrderNumber = persisted.NextOrderNumber ?? baseSettings.NextOrderNumber,
+            NextProductNumber = persisted.NextProductNumber ?? baseSettings.NextProductNumber,
+            NextQuotationNumber = persisted.NextQuotationNumber ?? baseSettings.NextQuotationNumber,
             CommonQueryIndex = baseSettings.CommonQueryIndex,
             CompletedQueryIndex = baseSettings.CompletedQueryIndex,
             ScheduleQueryRange = baseSettings.ScheduleQueryRange,
             GmailAccount = baseSettings.GmailAccount,
             GmailPassword = baseSettings.GmailPassword,
-            DateFormatPreference = persistedDateFormat ?? baseSettings.DateFormatPreference,
-            JobListDaysBack = int.TryParse(persistedJobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack,
+            DateFormatPreference = persisted.DateFormatPreference ?? baseSettings.DateFormatPreference,
+            JobListDaysBack = int.TryParse(persisted.JobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack,
         };
     }
+
+    private static PersistedSettings ParsePersistedSettings(string? metadataXml)
+    {
+        if (string.IsNullOrWhiteSpace(metadataXml))
+        {
+            return new PersistedSettings(null, null, null, null, null);
+        }
+
+        try
+        {
+            var doc = XDocument.Parse(metadataXml);
+
+            // Try new format first: <Settings .../>
+            var settingsElement = doc.Root?.Descendants(SettingsElement).FirstOrDefault();
+
+            if (settingsElement is not null)
+            {
+                return new PersistedSettings(
+                    settingsElement.Attribute(NextOrderNumberAttr)?.Value,
+                    settingsElement.Attribute(NextProductNumberAttr)?.Value,
+                    settingsElement.Attribute(NextQuotationNumberAttr)?.Value,
+                    settingsElement.Attribute("DateFormatPreference")?.Value,
+                    settingsElement.Attribute("JobListDaysBack")?.Value);
+            }
+
+            // Fall back to old format: <record id="data" .../>
+            var dataRecord = doc.Root?.Elements(RecordElement)
+                .FirstOrDefault(el => el.Attribute(RecordIdAttribute)?.Value == DataRecordId);
+
+            if (dataRecord is not null)
+            {
+                return new PersistedSettings(
+                    dataRecord.Attribute(NextOrderNumberAttr)?.Value,
+                    dataRecord.Attribute(NextProductNumberAttr)?.Value,
+                    dataRecord.Attribute(NextQuotationNumberAttr)?.Value,
+                    dataRecord.Attribute("dateFormatPreference")?.Value,
+                    dataRecord.Attribute("JobListDaysBack")?.Value);
+            }
+        }
+        catch
+        {
+            // If XML is malformed, fall back to in-memory defaults
+        }
+
+        return new PersistedSettings(null, null, null, null, null);
+    }
+
+    private sealed record PersistedSettings(
+        string? NextOrderNumber,
+        string? NextProductNumber,
+        string? NextQuotationNumber,
+        string? DateFormatPreference,
+        string? JobListDaysBack);
 
     public SettingsResponse Update(UpdateSettingsRequest request)
     {
         var updated = _fallback.Update(request);
-        var snapshot = GetSystemInfoSnapshot();
-        var metadataXml = UpsertSettingsAttributes(
-            snapshot?.MetadataXml, 
-            updated.NextOrderNumber,
-            updated.NextProductNumber,
-            updated.NextQuotationNumber,
-            updated.DateFormatPreference,
-            updated.JobListDaysBack);
 
-        if (snapshot is null)
-        {
-            _gateway.InsertAsync(new CreateSystemInfoStoredProcedureRequest(
-                OwnerName: updated.OwnerName,
-                MetadataXml: metadataXml)).GetAwaiter().GetResult();
-
-            return updated;
-        }
-
-        _gateway.UpdateAsync(new UpdateSystemInfoStoredProcedureRequest(
-            SystemId: snapshot.SystemId,
-            OwnerName: updated.OwnerName,
-            MetadataXml: metadataXml)).GetAwaiter().GetResult();
+        // Routed through the gateway so a concurrent order-number allocation cannot be lost.
+        _gateway.MutateMetadataAsync(
+            currentXml => UpsertSettingsAttributes(
+                currentXml,
+                updated.NextOrderNumber,
+                updated.NextProductNumber,
+                updated.NextQuotationNumber,
+                updated.DateFormatPreference,
+                updated.JobListDaysBack),
+            CancellationToken.None).GetAwaiter().GetResult();
 
         return updated;
+    }
+
+    public async Task<string> AllocateNextOrderNumberAsync(CancellationToken cancellationToken = default)
+    {
+        var baseSettings = _fallback.Get();
+        string? allocated = null;
+
+        await _gateway.MutateMetadataAsync(
+            currentXml =>
+            {
+                var persisted = ParsePersistedSettings(currentXml);
+                allocated = persisted.NextOrderNumber ?? baseSettings.NextOrderNumber;
+
+                return UpsertSettingsAttributes(
+                    currentXml,
+                    InMemorySettingsService.IncrementOrderNumber(allocated),
+                    persisted.NextProductNumber ?? baseSettings.NextProductNumber,
+                    persisted.NextQuotationNumber ?? baseSettings.NextQuotationNumber,
+                    persisted.DateFormatPreference ?? baseSettings.DateFormatPreference,
+                    int.TryParse(persisted.JobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack);
+            },
+            cancellationToken);
+
+        if (allocated is null)
+        {
+            throw new InvalidOperationException("Cannot allocate an order number because no SystemInfo record exists.");
+        }
+
+        return allocated;
     }
 
     private static string UpsertSettingsAttributes(

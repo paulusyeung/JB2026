@@ -2,7 +2,8 @@ import { apiClient } from './api'
 import type { JobOrderRecord, JobStatsRecord, OrderTypeWorkflowAttribute } from '@/types/api'
 
 interface CreateJobOrderRequest {
-  orderNumber: string
+  /** Omit for a brand new order; the server allocates the number atomically. */
+  orderNumber?: string
   jobNumber: string
   customerName: string
   customerRef: string

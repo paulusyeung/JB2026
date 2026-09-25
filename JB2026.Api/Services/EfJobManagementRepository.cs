@@ -14,6 +14,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
     private readonly JB5LegacyWriteContext _writeContext;
     private readonly ILogger<EfJobManagementRepository> _logger;
     private readonly JobLifecycleEventPublisher? _jobLifecycleEventPublisher;
+    private readonly ISettingsService? _settingsService;
 
     private static readonly Func<JB5LegacyReadContext, int, IEnumerable<JobOrder>> CompiledGetJobOrders =
         EF.CompileQuery((JB5LegacyReadContext db, int take) =>
@@ -53,12 +54,14 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         JB5LegacyReadContext readContext,
         JB5LegacyWriteContext writeContext,
         ILogger<EfJobManagementRepository> logger,
-        JobLifecycleEventPublisher? jobLifecycleEventPublisher = null)
+        JobLifecycleEventPublisher? jobLifecycleEventPublisher = null,
+        ISettingsService? settingsService = null)
     {
         _readContext = readContext;
         _writeContext = writeContext;
         _logger = logger;
         _jobLifecycleEventPublisher = jobLifecycleEventPublisher;
+        _settingsService = settingsService;
     }
 
     public IReadOnlyList<JobListItemResponse> GetRange(DateOnly startOn, int days)
@@ -347,10 +350,24 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         var now = DateTime.UtcNow;
         var requestJobNumber = int.TryParse(request.JobNumber, out var parsedJobNumber) ? parsedJobNumber : (int?)null;
 
+        // A blank order number means "new order": the server allocates it here rather than
+        // trusting a value the client may have cached before another user consumed it.
+        var orderNumber = request.OrderNumber.Trim();
+        if (orderNumber.Length == 0)
+        {
+            if (_settingsService is null)
+            {
+                throw new InvalidOperationException(
+                    "OrderNumber was not supplied and no settings service is available to allocate one.");
+            }
+
+            orderNumber = (await _settingsService.AllocateNextOrderNumberAsync()).Trim();
+        }
+
         var existingOrder = await _writeContext.JobOrders
             .AsNoTracking()
             .FirstOrDefaultAsync(order =>
-                order.OrderNumber == request.OrderNumber &&
+                order.OrderNumber == orderNumber &&
                 order.JobNumber == requestJobNumber &&
                 !order.Retired);
 
@@ -358,7 +375,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         {
             _logger.LogWarning(
                 "Duplicate create request ignored for OrderNumber={OrderNumber}, JobNumber={JobNumber}, OrderId={OrderId}",
-                request.OrderNumber,
+                orderNumber,
                 request.JobNumber,
                 existingOrder.OrderId);
 
@@ -370,7 +387,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         {
             OrderId = Guid.NewGuid(),
             OrderType = request.OrderType,
-            OrderNumber = request.OrderNumber,
+            OrderNumber = orderNumber,
             JobNumber = requestJobNumber,
             CustomerName = request.CustomerName,
             CustomerRef = request.CustomerRef,

@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using JB2026.EfCore.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace JB2026.Api.Services;
 
@@ -59,7 +60,7 @@ public sealed class SystemInfoStoredProcedureGateway : ISystemInfoStoredProcedur
             MetadataXml: GetNullableString(reader, "MetadataXml"));
     }
 
-    public async Task<Guid> InsertAsync(CreateSystemInfoStoredProcedureRequest request, CancellationToken cancellationToken = default)
+    public async Task<Guid> InsertAsync(CreateSystemInfoStoredProcedureRequest request, CancellationToken cancellationToken = default, DbTransaction? transaction = null)
     {
         var connection = _writeContext.Database.GetDbConnection();
         await EnsureConnectionOpenAsync(connection, cancellationToken);
@@ -67,6 +68,7 @@ public sealed class SystemInfoStoredProcedureGateway : ISystemInfoStoredProcedur
         await using var command = connection.CreateCommand();
         command.CommandText = "spSystemInfo_InsRec";
         command.CommandType = CommandType.StoredProcedure;
+        command.Transaction = transaction;
 
         var outParam = command.CreateParameter();
         outParam.ParameterName = "@SystemId";
@@ -83,7 +85,7 @@ public sealed class SystemInfoStoredProcedureGateway : ISystemInfoStoredProcedur
             : Guid.Parse(outParam.Value?.ToString() ?? throw new InvalidOperationException("Missing output SystemId."));
     }
 
-    public async Task<bool> UpdateAsync(UpdateSystemInfoStoredProcedureRequest request, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateAsync(UpdateSystemInfoStoredProcedureRequest request, DbTransaction? transaction = null, CancellationToken cancellationToken = default)
     {
         var connection = _writeContext.Database.GetDbConnection();
         await EnsureConnectionOpenAsync(connection, cancellationToken);
@@ -91,12 +93,83 @@ public sealed class SystemInfoStoredProcedureGateway : ISystemInfoStoredProcedur
         await using var command = connection.CreateCommand();
         command.CommandText = "spSystemInfo_UpdRec";
         command.CommandType = CommandType.StoredProcedure;
+        command.Transaction = transaction;
         command.Parameters.Add(CreateInputParameter(command, "@SystemId", DbType.Guid, request.SystemId));
 
         AddParameters(command, request);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<SystemInfoStoredProcedureRecord?> SelectFirstForUpdateAsync(DbTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        var connection = _writeContext.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT TOP 1 [SystemId], [OwnerName], [MetadataXml] FROM [dbo].[SystemInfo] WITH (UPDLOCK, HOLDLOCK)";
+        command.CommandType = CommandType.Text;
+        command.Transaction = transaction;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new SystemInfoStoredProcedureRecord(
+            SystemId: reader.GetGuid(reader.GetOrdinal("SystemId")),
+            OwnerName: GetNullableString(reader, "OwnerName"),
+            MetadataXml: GetNullableString(reader, "MetadataXml"));
+    }
+
+    public async Task<string?> MutateMetadataAsync(Func<string?, string?> mutate, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mutate);
+
+        await using var transaction = await _writeContext.Database.BeginTransactionAsync(cancellationToken);
+        var dbTransaction = transaction.GetDbTransaction();
+
+        try
+        {
+            var snapshot = await SelectFirstForUpdateAsync(dbTransaction, cancellationToken);
+            var metadataXml = mutate(snapshot?.MetadataXml);
+
+            if (metadataXml is null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return snapshot?.MetadataXml;
+            }
+
+            if (snapshot is null)
+            {
+                await InsertAsync(
+                    new CreateSystemInfoStoredProcedureRequest(OwnerName: null, MetadataXml: metadataXml),
+                    cancellationToken,
+                    dbTransaction);
+            }
+            else
+            {
+                await UpdateAsync(
+                    new UpdateSystemInfoStoredProcedureRequest(
+                        SystemId: snapshot.SystemId,
+                        OwnerName: snapshot.OwnerName,
+                        MetadataXml: metadataXml),
+                    dbTransaction,
+                    cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+
+            return snapshot?.MetadataXml;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<bool> DeleteAsync(Guid systemId, CancellationToken cancellationToken = default)
