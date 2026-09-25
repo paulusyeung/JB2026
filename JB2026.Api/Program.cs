@@ -136,6 +136,13 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 	builder.Services.AddScoped<IRbacService, RbacService>();
 	builder.Services.AddScoped<AISummaryService>();
 	builder.Services.AddScoped<CustomerSummaryService>();
+	builder.Services.AddHttpClient(nameof(JB2026.Api.Notifications.SynchronousWebhookDispatcher), client =>
+	{
+		client.Timeout = TimeSpan.FromSeconds(5);
+	});
+	builder.Services.AddScoped<JB2026.Api.Notifications.SynchronousWebhookDispatcher>();
+	builder.Services.AddScoped<JB2026.EfCore.Notifications.IWebhookEventDispatcher>(sp => sp.GetRequiredService<JB2026.Api.Notifications.SynchronousWebhookDispatcher>());
+	builder.Services.AddScoped<JB2026.EfCore.Notifications.JobLifecycleEventPublisher>();
 }
 else
 {

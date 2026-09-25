@@ -4,6 +4,7 @@ using JB2026.Api.Models.Billing;
 using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
+using JB2026.EfCore.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -236,12 +237,14 @@ public class BillingService : IBillingService
     private readonly ISettingsService? _settingsService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<BillingService> _logger;
+    private readonly JobLifecycleEventPublisher? _jobLifecycleEventPublisher;
 
     public BillingService(
         IInvoiceNinjaHttpClient invoiceNinjaClient,
         IOptions<BillingOptions> billingOptions,
         IServiceProvider serviceProvider,
-        ILogger<BillingService> logger)
+        ILogger<BillingService> logger,
+        JobLifecycleEventPublisher? jobLifecycleEventPublisher = null)
     {
         _invoiceNinjaClient = invoiceNinjaClient;
         _billingOptions = billingOptions;
@@ -250,6 +253,7 @@ public class BillingService : IBillingService
         _settingsService = serviceProvider.GetService<ISettingsService>();
         _timeProvider = serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
         _logger = logger;
+        _jobLifecycleEventPublisher = jobLifecycleEventPublisher;
     }
 
     public async Task<(bool isConnected, string statusMessage)> CheckConnectivityAsync()
@@ -616,12 +620,20 @@ public class BillingService : IBillingService
             return;
         }
 
+        var previousInvoiceRef = order.InvoiceRef;
+        var previousInvoiceAmount = order.InvoiceAmount;
         order.InvoiceRef = invoice.Number;
         order.InvoiceAmount = invoice.Amount;
         order.ModifiedOn = DateTime.UtcNow;
         order.ModifiedBy = modifiedBy;
 
         await _writeContext.SaveChangesAsync();
+
+        if (_jobLifecycleEventPublisher is not null &&
+            (order.InvoiceRef != previousInvoiceRef || order.InvoiceAmount != previousInvoiceAmount))
+        {
+            await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.Invoiced, order.OrderId, CancellationToken.None);
+        }
 
         _logger.LogInformation(
             "Updated job order {OrderId} with invoice number {InvoiceNumber} and amount {Amount} after mark-sent for invoice {ExternalInvoiceId}",

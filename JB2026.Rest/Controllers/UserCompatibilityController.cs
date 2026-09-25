@@ -373,6 +373,8 @@ public sealed class UserCompatibilityController : ControllerBase
             "onreadyplate" => 13,
             "onready_final" => 14,
             "onreadyfinal" => 14,
+            "onjobinvoiced" => 15,
+            "onjobcogsfilled" => 16,
             "onfileagent" => 30,
             _ => 0
         };

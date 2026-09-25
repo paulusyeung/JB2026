@@ -4,6 +4,7 @@ using Hangfire.SqlServer;
 using JB2026.Api.Options;
 using JB2026.Api.Services;
 using JB2026.EfCore.Data;
+using JB2026.EfCore.Notifications;
 using JB2026.Rest.Helpers;
 using JB2026.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -113,12 +114,16 @@ if (!string.IsNullOrWhiteSpace(primaryConnectionString))
 
 	builder.Services.AddHangfireServer();
 	builder.Services.AddScoped<IWebhookDispatcherService, WebhookDispatcherService>();
+	builder.Services.AddScoped<IWebhookEventDispatcher>(sp => sp.GetRequiredService<IWebhookDispatcherService>());
+	builder.Services.AddScoped<JobLifecycleEventPublisher>();
 }
 else
 {
 	builder.Services.AddSingleton<IQuotationRepository, InMemoryQuotationRepository>();
 	builder.Services.AddSingleton<IJobManagementRepository, InMemoryJobManagementRepository>();
 	builder.Services.AddScoped<IWebhookDispatcherService, WebhookDispatcherService>();
+	builder.Services.AddScoped<IWebhookEventDispatcher>(sp => sp.GetRequiredService<IWebhookDispatcherService>());
+	builder.Services.AddScoped<JobLifecycleEventPublisher>();
 }
 
 var app = builder.Build();

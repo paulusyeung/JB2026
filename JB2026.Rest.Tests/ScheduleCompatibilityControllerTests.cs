@@ -45,13 +45,15 @@ public sealed class ScheduleCompatibilityControllerTests : IClassFixture<RestTes
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var historyTopic = await _factory.ReadAsync(ctx =>
+        var history = await _factory.ReadAsync(ctx =>
             ctx.FCMHistories
                 .OrderByDescending(x => x.DeliveredOn)
-                .Select(x => x.Topic)
+                .Select(x => new { x.Topic, x.MessageTitle })
                 .FirstOrDefaultAsync());
 
-        Assert.Equal("OnReadyPaper", historyTopic);
+        Assert.NotNull(history);
+        Assert.Equal("Device", history.Topic);
+        Assert.Equal("JB5 有紙", history.MessageTitle);
     }
 
     [Fact]
@@ -76,12 +78,14 @@ public sealed class ScheduleCompatibilityControllerTests : IClassFixture<RestTes
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var historyTopic = await _factory.ReadAsync(ctx =>
+        var history = await _factory.ReadAsync(ctx =>
             ctx.FCMHistories
                 .OrderByDescending(x => x.DeliveredOn)
-                .Select(x => x.Topic)
+                .Select(x => new { x.Topic, x.MessageTitle })
                 .FirstOrDefaultAsync());
 
-        Assert.Equal("OnReadyPlate", historyTopic);
+        Assert.NotNull(history);
+        Assert.Equal("Device", history.Topic);
+        Assert.Equal("JB5 有鋅", history.MessageTitle);
     }
 }

@@ -525,6 +525,7 @@ public sealed class StockController : ControllerBase
         product.ModifiedBy = GetActorGuid();
 
         await _writeContext.SaveChangesAsync(cancellationToken);
+
         return Ok(MapProductRecord(product, request.CategoryCode));
     }
 

@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using JB2026.Api.Models;
 using JB2026.EfCore.Data;
 using JB2026.EfCore.Models;
+using JB2026.EfCore.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace JB2026.Api.Services;
@@ -12,6 +13,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
     private readonly JB5LegacyReadContext _readContext;
     private readonly JB5LegacyWriteContext _writeContext;
     private readonly ILogger<EfJobManagementRepository> _logger;
+    private readonly JobLifecycleEventPublisher? _jobLifecycleEventPublisher;
 
     private static readonly Func<JB5LegacyReadContext, int, IEnumerable<JobOrder>> CompiledGetJobOrders =
         EF.CompileQuery((JB5LegacyReadContext db, int take) =>
@@ -50,11 +52,13 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
     public EfJobManagementRepository(
         JB5LegacyReadContext readContext,
         JB5LegacyWriteContext writeContext,
-        ILogger<EfJobManagementRepository> logger)
+        ILogger<EfJobManagementRepository> logger,
+        JobLifecycleEventPublisher? jobLifecycleEventPublisher = null)
     {
         _readContext = readContext;
         _writeContext = writeContext;
         _logger = logger;
+        _jobLifecycleEventPublisher = jobLifecycleEventPublisher;
     }
 
     public IReadOnlyList<JobListItemResponse> GetRange(DateOnly startOn, int days)
@@ -397,6 +401,16 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         _writeContext.JobOrders.Add(order);
         await _writeContext.SaveChangesAsync();
 
+        if (_jobLifecycleEventPublisher is not null)
+        {
+            await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.OrderCreated, order.OrderId, CancellationToken.None);
+
+            if (!string.IsNullOrWhiteSpace(request.OriginalSONumber))
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.CogsFilled, order.OrderId, CancellationToken.None);
+            }
+        }
+
         var steps = await _readContext.Z_OrderTypeWorkflows
             .AsNoTracking()
             .Where(mapping => mapping.OrderType == request.OrderType && mapping.WorkflowId.HasValue)
@@ -470,6 +484,10 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
             // Logging failure should not block the update
         }
 
+        var wasCompleted = order.Status == 2;
+        var hadInvoiceRef = !string.IsNullOrWhiteSpace(order.InvoiceRef);
+        var hadOriginalSO = order.OriginalSONumber;
+
         order.OrderNumber = request.OrderNumber;
         order.CustomerName = request.CustomerName;
         order.CustomerRef = request.CustomerRef;
@@ -533,6 +551,28 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
         order.ModifiedOn = DateTime.UtcNow;
 
         await _writeContext.SaveChangesAsync();
+
+        if (_jobLifecycleEventPublisher is not null)
+        {
+            var completedNow = order.Status == 2 && !wasCompleted;
+            var invoicedNow = !hadInvoiceRef && !string.IsNullOrWhiteSpace(order.InvoiceRef);
+
+            if (completedNow)
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.Completed, orderId, CancellationToken.None);
+            }
+
+            if (invoicedNow)
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.Invoiced, orderId, CancellationToken.None);
+            }
+
+            var cogsNow = order.OriginalSONumber;
+            if (!string.IsNullOrWhiteSpace(cogsNow) && cogsNow != hadOriginalSO)
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.CogsFilled, orderId, CancellationToken.None);
+            }
+        }
 
         if (request.WorkflowAttributes is not null)
         {

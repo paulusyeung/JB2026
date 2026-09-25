@@ -1,6 +1,7 @@
+using JB2026.EfCore.Notifications;
+
 namespace JB2026.Rest.Helpers;
 
-public interface IWebhookDispatcherService
+public interface IWebhookDispatcherService : IWebhookEventDispatcher
 {
-    Task EnqueueEventAsync(string eventType, object payload, CancellationToken cancellationToken);
 }
