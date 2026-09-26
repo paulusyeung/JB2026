@@ -420,6 +420,9 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
 
         if (_jobLifecycleEventPublisher is not null)
         {
+            // A new dbo.JobOrder row (draft JobNumber 0, or an additional job > 1) emits
+            // 'JB5 新增訂單'. The first real job additionally emits it on the 0 -> 1 update
+            // (see UpdateJobOrder), so the draft is intentionally logged at both points.
             await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.OrderCreated, order.OrderId, CancellationToken.None);
 
             if (!string.IsNullOrWhiteSpace(request.OriginalSONumber))
@@ -504,6 +507,7 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
         var wasCompleted = order.Status == 2;
         var hadInvoiceRef = !string.IsNullOrWhiteSpace(order.InvoiceRef);
         var hadOriginalSO = order.OriginalSONumber;
+        var hadJobNumber = order.JobNumber;
 
         order.OrderNumber = request.OrderNumber;
         order.CustomerName = request.CustomerName;
@@ -571,8 +575,18 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
 
         if (_jobLifecycleEventPublisher is not null)
         {
+            // Condition 1: the draft order shell (JobNumber 0) becoming the first real
+            // job (JobNumber 1) counts as '新增訂單'. Additional jobs are logged at create
+            // time (see CreateJobOrder); re-saving an existing job number is not re-logged.
+            var firstJobNow = hadJobNumber == 0 && order.JobNumber == 1;
+
             var completedNow = order.Status == 2 && !wasCompleted;
             var invoicedNow = !hadInvoiceRef && !string.IsNullOrWhiteSpace(order.InvoiceRef);
+
+            if (firstJobNow)
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.OrderCreated, orderId, CancellationToken.None);
+            }
 
             if (completedNow)
             {

@@ -158,6 +158,56 @@ public sealed class JobLifecyclePushHistoryHooksTests
         Assert.Equal(OwnerIdText, row.UserIdList);
     }
 
+    [Fact]
+    public async Task CreateJobOrder_DraftJobNumberZero_StillPublishesCreated()
+    {
+        var dbName = NewDbName();
+        await SeedOwnerDevicesAsync(dbName);
+        var dispatcher = new RecordingWebhookDispatcher();
+        var repository = CreateRepository(dbName, dispatcher);
+
+        var response = await repository.CreateJobOrder(new CreateJobOrderRequest
+        {
+            OrderNumber = "O-100",
+            JobNumber = "0",
+            CustomerName = "Acme Corp",
+            OrderTitle = "Gift box",
+            OrderedBy = "admin",
+            OrderedOn = new DateTime(2026, 1, 5),
+            RequiredOn = new DateTime(2026, 1, 10),
+            Qty = 5000,
+            Status = 1,
+            OrderType = 0,
+        }, OwnerIdText);
+
+        Assert.NotNull(response);
+        Assert.Equal("OnJobCreated", dispatcher.Events.Single().EventType);
+
+        using var verify = CreateWriteContext(dbName);
+        var row = await verify.FCMHistories.SingleAsync();
+        Assert.Equal("JB5 新增訂單", row.MessageTitle);
+        Assert.Equal("O-100-0: Acme Corp", row.MessageBody);
+    }
+
+    [Fact]
+    public async Task UpdateJobOrder_FirstJobTransition_PublishesCreatedExactlyOnce()
+    {
+        var dbName = NewDbName();
+        await SeedOwnerDevicesAsync(dbName);
+        var orderId = await SeedOrderAsync(dbName, CreateOrder(jobNumber: 0));
+        var dispatcher = new RecordingWebhookDispatcher();
+        var repository = CreateRepository(dbName, dispatcher);
+
+        await repository.UpdateJobOrder(orderId, CreateUpdateRequest(jobNumber: "1"), OwnerIdText);
+        Assert.Single(dispatcher.Events.Where(e => e.EventType == "OnJobCreated"));
+
+        await repository.UpdateJobOrder(orderId, CreateUpdateRequest(jobNumber: "1"), OwnerIdText);
+        Assert.Single(dispatcher.Events.Where(e => e.EventType == "OnJobCreated"));
+
+        using var verify = CreateWriteContext(dbName);
+        Assert.Single(await verify.FCMHistories.Where(r => r.MessageTitle == "JB5 新增訂單").ToListAsync());
+    }
+
     // -----------------------------------------------------------------------
     // Scheduled
     // -----------------------------------------------------------------------
@@ -473,7 +523,8 @@ public sealed class JobLifecyclePushHistoryHooksTests
         DateTime? completedOn = null,
         string? invoiceRef = null,
         decimal? invoiceAmount = null,
-        string? originalSONumber = null)
+        string? originalSONumber = null,
+        string? jobNumber = null)
     {
         return new UpdateJobOrderRequest
         {
@@ -489,6 +540,7 @@ public sealed class JobLifecyclePushHistoryHooksTests
             InvoiceRef = invoiceRef,
             InvoiceAmount = invoiceAmount,
             OriginalSONumber = originalSONumber,
+            JobNumber = jobNumber,
         };
     }
 
