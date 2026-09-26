@@ -72,10 +72,6 @@ public static class Jb2026ServiceCollectionExtensions
                 {
                     tracing.AddOtlpExporter(options => options.Endpoint = endpoint);
                 }
-                else
-                {
-                    tracing.AddConsoleExporter();
-                }
             });
 
         // Add CORS support (Task 2.3)
