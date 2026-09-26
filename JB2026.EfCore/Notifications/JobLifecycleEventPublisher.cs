@@ -15,6 +15,12 @@ public sealed class JobLifecycleEventPublisher
     private const int FcmRegistrationAuthType = 3;
     private const string StaffOnlyRecipients = "staffonly";
 
+    // dbo.FCMHistory column widths (nvarchar). The lists are comma-joined and must fit,
+    // otherwise SQL Server raises error 8152 ("String or binary data would be truncated").
+    private const int RecipientListMaxLength = 1024;
+    private const int UserIdListMaxLength = 512;
+    private const int MessageBodyMaxLength = 256;
+
     private readonly JB5LegacyWriteContext _writeContext;
     private readonly JB5LegacyReadContext _readContext;
     private readonly IWebhookEventDispatcher _webhookDispatcher;
@@ -111,18 +117,34 @@ public sealed class JobLifecycleEventPublisher
 
         var recipients = await ResolveRecipientsAsync(eventType, targetUserId, cancellationToken);
 
-        _writeContext.FCMHistories.Add(new FCMHistory
+        var history = new FCMHistory
         {
             FCMHistoryId = Guid.NewGuid(),
-            MessageTitle = LegacyTitles[eventType],
-            MessageBody = body,
+            MessageTitle = Truncate(LegacyTitles[eventType], 64),
+            MessageBody = Truncate(body, 256),
             DeliveredOn = createdOn,
             Topic = "Device",
             RecipientList = recipients.RecipientList,
             UserIdList = recipients.UserIdList,
-        });
+        };
 
-        await _writeContext.SaveChangesAsync(cancellationToken);
+        // Persisting the history row must never fail the business operation that
+        // triggered it (order create/update, schedule save, invoice send). On failure
+        // the entry is detached so a later SaveChanges on the shared write context does
+        // not re-attempt the same failing insert.
+        try
+        {
+            _writeContext.FCMHistories.Add(history);
+            await _writeContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _writeContext.Entry(history).State = EntityState.Detached;
+            _logger.LogError(
+                ex,
+                "FCMHistory insert failed for lifecycle event {EventType}; business operation continues without history row",
+                eventType);
+        }
 
         // Webhook delivery is best-effort: the history row is already committed
         // above, so a dispatch failure must not surface as a failed business
@@ -182,9 +204,47 @@ public sealed class JobLifecycleEventPublisher
             var targeted = optedIn.Count > 0 ? optedIn : devices;
             if (targeted.Count > 0)
             {
-                return (
-                    string.Join(',', targeted),
-                    string.Join(',', Enumerable.Repeat(userId.ToString(), targeted.Count)));
+                // Cap the parallel device/user lists so each comma-joined value fits its
+                // column. UserIdList repeats the owner GUID once per device, so it is the
+                // binding limit (~13 devices for a 36-char GUID). Without capping, a user
+                // with many registered devices overflows it and the insert fails with SQL 8152.
+                var userIdText = userId.ToString();
+                var maxDevicesByUserId = (UserIdListMaxLength + 1) / (userIdText.Length + 1);
+                var recipientList = new List<string>();
+                var userIdList = new List<string>();
+                var recipientLength = 0;
+
+                foreach (var deviceId in targeted)
+                {
+                    if (recipientList.Count >= maxDevicesByUserId)
+                    {
+                        break;
+                    }
+
+                    var separator = recipientList.Count == 0 ? 0 : 1;
+                    if (recipientLength + separator + deviceId.Length > RecipientListMaxLength)
+                    {
+                        break;
+                    }
+
+                    recipientList.Add(deviceId);
+                    userIdList.Add(userIdText);
+                    recipientLength += separator + deviceId.Length;
+                }
+
+                if (recipientList.Count > 0)
+                {
+                    if (recipientList.Count < targeted.Count)
+                    {
+                        _logger.LogWarning(
+                            "Recipient list capped from {Total} to {Kept} devices for user {UserId} to fit FCMHistory column widths",
+                            targeted.Count,
+                            recipientList.Count,
+                            userId);
+                    }
+
+                    return (string.Join(',', recipientList), string.Join(',', userIdList));
+                }
             }
         }
 
@@ -199,4 +259,7 @@ public sealed class JobLifecycleEventPublisher
 
         return $"{composite}: {order.CustomerName}".TrimEnd();
     }
+
+    private static string Truncate(string value, int maxLength)
+        => value.Length <= maxLength ? value : value[..maxLength];
 }

@@ -99,6 +99,43 @@ public sealed class JobLifecycleEventPublisherTests
     }
 
     [Fact]
+    public async Task PublishOrderEventAsync_ManyDevices_CapsToColumnWidths()
+    {
+        var dbName = Guid.NewGuid().ToString("N");
+        var dispatcher = new RecordingWebhookDispatcher();
+        var order = CreateOrder();
+
+        using (var context = CreateWriteContext(dbName))
+        {
+            context.JobOrders.Add(order);
+            for (var i = 0; i < 40; i++)
+            {
+                context.UserNotifications.Add(new UserNotification
+                {
+                    NotifyId = Guid.NewGuid(),
+                    UserId = OwnerId,
+                    NotifyType = 10,
+                    DeviceId = $"dev-{i:D4}-{new string('x', 200)}",
+                });
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        var publisher = CreatePublisher(dbName, dispatcher);
+        await publisher.PublishOrderEventAsync(JobLifecycleEventType.OrderCreated, order.OrderId, CancellationToken.None);
+
+        using var verify = CreateWriteContext(dbName);
+        var row = await verify.FCMHistories.SingleAsync();
+
+        Assert.NotNull(row.RecipientList);
+        Assert.NotNull(row.UserIdList);
+        Assert.True(row.RecipientList!.Length <= 1024);
+        Assert.True(row.UserIdList!.Length <= 512);
+        Assert.Equal(row.RecipientList!.Split(',').Length, row.UserIdList!.Split(',').Length);
+    }
+
+    [Fact]
     public async Task PublishOrderEventAsync_NoOptIn_FallsBackToRegisteredDevices()
     {
         var dbName = Guid.NewGuid().ToString("N");

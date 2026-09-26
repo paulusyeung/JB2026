@@ -25,6 +25,10 @@
         </v-btn>
       </div>
 
+      <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-3">
+        {{ errorMessage }}
+      </v-alert>
+
       <v-row dense>
         <v-col cols="12" md="4">
           <v-text-field
@@ -236,10 +240,6 @@
           <template #[`item.modifiedOn`]="{ item }">{{ globalFormat.format(item.modifiedOn, DATE_FORMATS.SHORT_DATETIME) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ formatUser(item.modifiedBy) }}</template>
         </v-data-table>
-
-        <v-alert v-if="errorMessage" type="error" variant="tonal" class="mt-3">
-          {{ errorMessage }}
-        </v-alert>
 
         <!-- 2026-06-27 paulsu: 冇需要，暫時用 v-if 隱藏 -->
         <v-card-actions v-if="false" class="pa-4 d-flex ga-2 responsive-dialog-actions">
@@ -717,8 +717,9 @@ async function handleSave(closeAfterSave = false) {
         emit('cancel')
       }
     }
-  } catch {
-    errorMessage.value = t('jobOrder.record.saveFailed')
+  } catch (err: unknown) {
+    const data = (err as { response?: { data?: { detail?: string; title?: string; message?: string } } })?.response?.data
+    errorMessage.value = data?.detail || data?.title || data?.message || t('jobOrder.record.saveFailed')
   } finally {
     saving.value = false
   }
