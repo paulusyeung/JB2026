@@ -243,12 +243,10 @@ public sealed class JobLifecyclePushHistoryHooksTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task SaveBatch_Reorder_SucceedsAndPersistsPriority_WhenWebhookDispatchThrows()
+    public async Task SaveBatch_ReorderOnly_DoesNotPublishScheduled()
     {
-        // Regression: dbo.WebhookSubscriptions did not exist, so the dispatcher's
-        // subscription read threw AFTER spJobSchedule_UpdRec had already run.
-        // SaveBatch returned 500 and ScheduleView reported "Unable to save
-        // schedule" even though the reorder had been committed.
+        // Reordering / machine changes / status toggles on already-scheduled jobs
+        // must not re-emit the "JB5 已排單" push history. Only newly-added jobs do.
         var dbName = NewDbName();
         var first = CreateOrder("170287", 1);
         var moved = CreateOrder("170288", 1);
@@ -258,11 +256,11 @@ public sealed class JobLifecyclePushHistoryHooksTests
         await SeedOrderAsync(dbName, last);
         await SeedSchedulesAsync(dbName, first.OrderId, moved.OrderId, last.OrderId);
 
-        var dispatcher = new ThrowingWebhookDispatcher();
+        var dispatcher = new RecordingWebhookDispatcher();
         var gateway = new RecordingScheduleGateway();
         var controller = CreateSchedulesController(dbName, dispatcher, gateway);
 
-        // Row 2 (moved) is dragged down to row 3.
+        // Row 2 (moved) is dragged down to row 3; nothing is newly added.
         var result = await controller.SaveBatch(new SaveScheduleBatchRequest
         {
             OrderType = 0,
@@ -276,22 +274,71 @@ public sealed class JobLifecyclePushHistoryHooksTests
 
         Assert.IsAssignableFrom<OkObjectResult>(result);
 
-        // The reordered sequence reached the stored procedure as 0-based priority.
+        // Reordered sequence still reaches the stored procedure as 0-based priority.
         Assert.Collection(
             gateway.Updates,
             u => AssertUpdate(u, first.OrderId, expectedPriority: 0),
             u => AssertUpdate(u, last.OrderId, expectedPriority: 1),
             u => AssertUpdate(u, moved.OrderId, expectedPriority: 2));
+        Assert.Empty(gateway.Inserts);
 
-        // Push history is still recorded even though dispatch blew up — one row
-        // per scheduled item, in the reordered sequence.
+        // No push history and no webhook for a pure reorder.
+        Assert.Empty(dispatcher.Events.Where(e => e.EventType == "OnJobScheduled"));
         using var verify = CreateWriteContext(dbName);
-        var history = await verify.FCMHistories.OrderBy(h => h.DeliveredOn).ToListAsync();
-        Assert.Equal(3, history.Count);
-        Assert.All(history, h => Assert.Equal("JB5 已排單", h.MessageTitle));
-        Assert.Equal(
-            ["170287-1: Acme Corp", "170289-1: Acme Corp", "170288-1: Acme Corp"],
-            history.Select(h => h.MessageBody));
+        Assert.Empty(await verify.FCMHistories.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SaveBatch_MixedReorderAndNewItem_PublishesOnlyNewAndSurvivesWebhookThrow()
+    {
+        // Regression: dbo.WebhookSubscriptions did not exist, so the dispatcher's
+        // subscription read threw AFTER the stored procedure had already run.
+        // SaveBatch returned 500 and ScheduleView reported "Unable to save
+        // schedule" even though the operation had been committed. Also verifies the
+        // push history is emitted only for the newly-scheduled job, not the reorders.
+        var dbName = NewDbName();
+        var first = CreateOrder("170287", 1);
+        var moved = CreateOrder("170288", 1);
+        var last = CreateOrder("170289", 1);
+        await SeedOrderAsync(dbName, first);
+        await SeedOrderAsync(dbName, moved);
+        await SeedOrderAsync(dbName, last);
+        // Only first and last are already scheduled; moved is a brand-new insert.
+        await SeedSchedulesAsync(dbName, first.OrderId, last.OrderId);
+
+        var dispatcher = new ThrowingWebhookDispatcher();
+        var gateway = new RecordingScheduleGateway();
+        var controller = CreateSchedulesController(dbName, dispatcher, gateway);
+
+        // moved (new) is appended at row 3; first/last keep their slots.
+        var result = await controller.SaveBatch(new SaveScheduleBatchRequest
+        {
+            OrderType = 0,
+            ScheduledItems =
+            [
+                new SaveScheduleBatchItem { OrderId = first.OrderId, MachineNumber = "1", UrgencyLevel = 0 },
+                new SaveScheduleBatchItem { OrderId = last.OrderId, MachineNumber = "1", UrgencyLevel = 0 },
+                new SaveScheduleBatchItem { OrderId = moved.OrderId, MachineNumber = "1", UrgencyLevel = 0 },
+            ],
+        }, CancellationToken.None);
+
+        Assert.IsAssignableFrom<OkObjectResult>(result);
+
+        // first/last updated in place; moved inserted.
+        Assert.Collection(
+            gateway.Updates,
+            u => AssertUpdate(u, first.OrderId, expectedPriority: 0),
+            u => AssertUpdate(u, last.OrderId, expectedPriority: 1));
+        Assert.Collection(
+            gateway.Inserts,
+            insert => Assert.Equal(moved.OrderId, insert.OrderId));
+
+        // Push history is recorded for the new job even though dispatch blew up,
+        // and nothing is emitted for the two reorders.
+        using var verify = CreateWriteContext(dbName);
+        var row = Assert.Single(await verify.FCMHistories.ToListAsync());
+        Assert.Equal("JB5 已排單", row.MessageTitle);
+        Assert.Equal("170288-1: Acme Corp", row.MessageBody);
     }
 
     private static void AssertUpdate(
@@ -622,12 +669,16 @@ public sealed class JobLifecyclePushHistoryHooksTests
     private sealed class RecordingScheduleGateway : IJobScheduleStoredProcedureGateway
     {
         public List<UpdateJobScheduleStoredProcedureRequest> Updates { get; } = [];
+        public List<CreateJobScheduleStoredProcedureRequest> Inserts { get; } = [];
 
         public Task<JobScheduleStoredProcedureRecord?> SelectAsync(Guid scheduleId, CancellationToken cancellationToken = default)
             => Task.FromResult<JobScheduleStoredProcedureRecord?>(null);
 
         public Task<Guid> InsertAsync(CreateJobScheduleStoredProcedureRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(Guid.Empty);
+        {
+            Inserts.Add(request);
+            return Task.FromResult(Guid.Empty);
+        }
 
         public Task<bool> UpdateAsync(UpdateJobScheduleStoredProcedureRequest request, CancellationToken cancellationToken = default)
         {

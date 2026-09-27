@@ -910,13 +910,12 @@ public sealed class JobSchedulesController : ControllerBase
     {
         var now = DateTime.Now;
         var currentUserId = ResolveCurrentUserId();
-        var scheduledOrderIds = new List<Guid>();
+        var newlyScheduledOrderIds = new List<Guid>();
 
         // Upsert each scheduled item
         for (var i = 0; i < request.ScheduledItems.Count; i++)
         {
             var item = request.ScheduledItems[i];
-            scheduledOrderIds.Add(item.OrderId);
 
             var existingSchedule = await _readContext.JobSchedules
                 .AsNoTracking()
@@ -943,6 +942,8 @@ public sealed class JobSchedulesController : ControllerBase
             }
             else
             {
+                newlyScheduledOrderIds.Add(item.OrderId);
+
                 await _gateway.InsertAsync(new CreateJobScheduleStoredProcedureRequest(
                     OrderId: item.OrderId,
                     ScheduledOn: now,
@@ -1004,7 +1005,7 @@ public sealed class JobSchedulesController : ControllerBase
 
         if (_jobLifecycleEventPublisher is not null)
         {
-            foreach (var scheduledOrderId in scheduledOrderIds)
+            foreach (var scheduledOrderId in newlyScheduledOrderIds)
             {
                 await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.Scheduled, scheduledOrderId, cancellationToken);
             }
