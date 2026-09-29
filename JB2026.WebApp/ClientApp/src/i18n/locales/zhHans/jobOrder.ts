@@ -98,6 +98,7 @@ export const jobOrderMessages = {
         loadFailed: '无法加载作业列表，请确认 API 可用性。',
         actions: {
           columns: '栏位',
+          resetColumns: '重置栏位顺序',
           sorting: '排序',
           checkbox: '复选框',
           views: '视图',

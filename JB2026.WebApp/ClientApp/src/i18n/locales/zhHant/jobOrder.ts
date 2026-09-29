@@ -98,6 +98,7 @@ export const jobOrderMessages = {
         loadFailed: '無法載入作業列表，請確認 API 可用性。',
         actions: {
           columns: '欄位',
+          resetColumns: '重設欄位順序',
           sorting: '排序',
           checkbox: '核取方塊',
           views: '檢視',

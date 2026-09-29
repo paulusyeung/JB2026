@@ -10,6 +10,7 @@ interface CriteriaSettings {
 
 interface ViewSettings {
   visibleColumns: string[]
+  columnOrder?: string[]
   sortKey?: string
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
@@ -31,10 +32,11 @@ const DEFAULT_ITEMS_PER_PAGE = 10
  *
  * @param viewId - A unique identifier for the view (e.g., 'stock', 'orders').
  * @param defaults - Default settings for the view.
- * @returns An object containing refs for visibleColumns, sortKey, sortDirection, and checkboxMode.
+ * @returns An object containing refs for visibleColumns, columnOrder, sortKey, sortDirection, and checkboxMode.
  */
 export function useViewSettings(viewId: string, defaults: {
   visibleColumns: string[]
+  columnOrder?: string[]
   sortKey?: string
   sortDirection?: 'asc' | 'desc'
   checkboxMode?: boolean
@@ -48,6 +50,7 @@ export function useViewSettings(viewId: string, defaults: {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   const visibleColumns = ref<string[]>([])
+  const columnOrder = ref<string[]>([])
   const sortKey = ref<string | undefined>(defaults.sortKey)
   const sortDirection = ref<'asc' | 'desc' | undefined>(defaults.sortDirection)
   const checkboxMode = ref<boolean | undefined>(defaults.checkboxMode)
@@ -67,6 +70,9 @@ export function useViewSettings(viewId: string, defaults: {
         visibleColumns: Array.isArray(parsed.visibleColumns) && parsed.visibleColumns.length > 0
           ? parsed.visibleColumns
           : [...defaults.visibleColumns],
+        columnOrder: Array.isArray(parsed.columnOrder) && parsed.columnOrder.length > 0
+          ? parsed.columnOrder
+          : [...(defaults.columnOrder ?? defaults.visibleColumns)],
         sortKey: parsed.sortKey ?? defaults.sortKey,
         sortDirection: parsed.sortDirection ?? defaults.sortDirection,
         checkboxMode: parsed.checkboxMode ?? defaults.checkboxMode,
@@ -89,6 +95,7 @@ export function useViewSettings(viewId: string, defaults: {
 
     return {
       visibleColumns: [...defaults.visibleColumns],
+      columnOrder: [...(defaults.columnOrder ?? defaults.visibleColumns)],
       sortKey: defaults.sortKey,
       sortDirection: defaults.sortDirection,
       checkboxMode: defaults.checkboxMode,
@@ -105,6 +112,7 @@ export function useViewSettings(viewId: string, defaults: {
 
   function applySettings(settings: ViewSettings) {
     visibleColumns.value = settings.visibleColumns
+    columnOrder.value = settings.columnOrder ?? []
     sortKey.value = settings.sortKey
     sortDirection.value = settings.sortDirection
     checkboxMode.value = settings.checkboxMode
@@ -162,10 +170,11 @@ export function useViewSettings(viewId: string, defaults: {
 
   // Watch for changes and save
   watch(
-    [visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria],
+    [visibleColumns, columnOrder, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria],
     () => {
       const settings: ViewSettings = {
         visibleColumns: visibleColumns.value,
+        columnOrder: columnOrder.value,
         sortKey: sortKey.value,
         sortDirection: sortDirection.value,
         checkboxMode: checkboxMode.value,
@@ -181,5 +190,5 @@ export function useViewSettings(viewId: string, defaults: {
     { deep: true }
   )
 
-  return { visibleColumns, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria }
+  return { visibleColumns, columnOrder, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria }
 }

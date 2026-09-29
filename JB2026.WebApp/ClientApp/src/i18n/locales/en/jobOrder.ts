@@ -98,6 +98,7 @@ export const jobOrderMessages = {
         loadFailed: 'Unable to load job list. Please verify API availability.',
         actions: {
           columns: 'Columns',
+          resetColumns: 'Reset Column Order',
           sorting: 'Sorting',
           checkbox: 'Checkbox',
           views: 'Views',
