@@ -85,6 +85,35 @@ public sealed class JobStatsRepositoryTests
     }
 
     [Fact]
+    public void GetJobStats_InvoiceDateFallsBackWhenCompletedOnIsMissing()
+    {
+        using var readContext = CreateReadContext();
+
+        SeedJob(readContext, "JB260301", 1, 200m, "50.00", completedOn: null, requiredOn: new DateTime(2026, 1, 10, 12, 0, 0));
+        SeedJob(readContext, "JB260302", 2, 200m, "50.00", completedOn: null, requiredOn: null, orderedOn: new DateTime(2026, 2, 20, 12, 0, 0));
+        var repo = CreateRepository(readContext);
+
+        var rows = repo.GetJobStats(null, null).OrderBy(row => row.JobNumber).ToList();
+
+        Assert.Equal(new DateOnly(2026, 1, 10), rows.First(row => row.JobNumber == "JB260301-1").InvDate);
+        Assert.Equal(new DateOnly(2026, 2, 20), rows.First(row => row.JobNumber == "JB260302-2").InvDate);
+    }
+
+    [Fact]
+    public void GetJobStats_IncludesInvoicedJobsThatAreNotYetCompleted_WithinDateRange()
+    {
+        using var readContext = CreateReadContext();
+
+        SeedJob(readContext, "JB260301", 1, 200m, "50.00", completedOn: null, requiredOn: new DateTime(2026, 1, 10, 12, 0, 0));
+        SeedJob(readContext, "JB260302", 2, 200m, "50.00", completedOn: null, requiredOn: new DateTime(2026, 3, 10, 12, 0, 0));
+        var repo = CreateRepository(readContext);
+
+        var january = repo.GetJobStats(new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31)).Select(row => row.JobNumber).ToArray();
+
+        Assert.Equal(new[] { "JB260301-1" }, january);
+    }
+
+    [Fact]
     public void GetJobStats_GrossProfitUsesPercentageSemantics()
     {
         using var readContext = CreateReadContext();
@@ -140,8 +169,9 @@ public sealed class JobStatsRepositoryTests
         decimal? invoiceAmount,
         string? originalSONumber,
         DateTime? completedOn,
-        DateTime requiredOn,
-        string? invoiceRef = null)
+        DateTime? requiredOn,
+        string? invoiceRef = null,
+        DateTime? orderedOn = null)
     {
         var order = new JobOrder
         {
@@ -157,6 +187,7 @@ public sealed class JobStatsRepositoryTests
             OriginalSONumber = originalSONumber,
             CompletedOn = completedOn,
             RequiredOn = requiredOn,
+            OrderedOn = orderedOn,
         };
 
         readContext.JobOrders.Add(order);

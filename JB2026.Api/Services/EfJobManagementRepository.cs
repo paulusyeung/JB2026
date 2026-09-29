@@ -272,9 +272,12 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
                 InvoiceRef = order.InvoiceRef,
                 OriginalSONumber = order.OriginalSONumber,
                 InvoiceAmount = order.InvoiceAmount,
-                InvDate = order.CompletedOn.HasValue
-                    ? (order.CompletedOn.Value.Year == 1900 ? order.RequiredOn : order.CompletedOn)
-                    : (DateTime?)null,
+                // Invoicing does not set CompletedOn, so a job can carry an invoice amount while still
+                // being open. Both the 1900 sentinel and a missing completion date fall back to the
+                // required date, then to the ordered date, so those jobs still reach the stats report.
+                InvDate = order.CompletedOn.HasValue && order.CompletedOn.Value.Year != 1900
+                    ? order.CompletedOn
+                    : order.RequiredOn ?? order.OrderedOn,
             });
 
         if (startOn.HasValue)
