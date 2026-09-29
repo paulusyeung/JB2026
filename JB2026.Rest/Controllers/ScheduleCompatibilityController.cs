@@ -94,11 +94,16 @@ public sealed class ScheduleCompatibilityController : ControllerBase
             return NotFound();
         }
 
+        // Captured before the overwrite below. A ready event is the transition INTO
+        // ready, so re-posting the same status must not record another row (spec:
+        // "Only one record per event occurrence").
+        var priorStatus = workflow.WorkStatus;
+
         workflow.WorkStatus = status;
         workflow.ModifiedOn = DateTime.Now;
         await _writeContext.SaveChangesAsync(cancellationToken);
 
-        if (status == WorkflowReadyStatus)
+        if (status == WorkflowReadyStatus && priorStatus != WorkflowReadyStatus)
         {
             if (type == 0)
             {

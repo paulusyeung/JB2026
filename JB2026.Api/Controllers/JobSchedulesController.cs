@@ -911,6 +911,8 @@ public sealed class JobSchedulesController : ControllerBase
         var now = DateTime.Now;
         var currentUserId = ResolveCurrentUserId();
         var newlyScheduledOrderIds = new List<Guid>();
+        var readyPaperOrderIds = new HashSet<Guid>();
+        var readyPlateOrderIds = new HashSet<Guid>();
 
         // Upsert each scheduled item
         for (var i = 0; i < request.ScheduledItems.Count; i++)
@@ -964,6 +966,8 @@ public sealed class JobSchedulesController : ControllerBase
             // Update workflow step statuses (upsert — create row if missing)
             var step1Wf = await _writeContext.JobWorkflows
                 .FirstOrDefaultAsync(wf => wf.OrderId == item.OrderId && wf.WorkIndex == 0, cancellationToken);
+            // Captured before the overwrite below; a missing row counts as "not ready".
+            var priorStep1Status = step1Wf?.WorkStatus;
             if (step1Wf is not null)
             {
                 step1Wf.WorkStatus = item.Step1Status;
@@ -983,6 +987,7 @@ public sealed class JobSchedulesController : ControllerBase
 
             var step2Wf = await _writeContext.JobWorkflows
                 .FirstOrDefaultAsync(wf => wf.OrderId == item.OrderId && wf.WorkIndex == 1, cancellationToken);
+            var priorStep2Status = step2Wf?.WorkStatus;
             if (step2Wf is not null)
             {
                 step2Wf.WorkStatus = item.Step2Status;
@@ -999,6 +1004,16 @@ public sealed class JobSchedulesController : ControllerBase
                     ModifiedOn = now,
                 });
             }
+
+            if (BecameReady(priorStep1Status, item.Step1Status))
+            {
+                readyPaperOrderIds.Add(item.OrderId);
+            }
+
+            if (BecameReady(priorStep2Status, item.Step2Status))
+            {
+                readyPlateOrderIds.Add(item.OrderId);
+            }
         }
 
         await _writeContext.SaveChangesAsync(cancellationToken);
@@ -1008,6 +1023,16 @@ public sealed class JobSchedulesController : ControllerBase
             foreach (var scheduledOrderId in newlyScheduledOrderIds)
             {
                 await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.Scheduled, scheduledOrderId, cancellationToken);
+            }
+
+            foreach (var readyPaperOrderId in readyPaperOrderIds)
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.ReadyPaper, readyPaperOrderId, cancellationToken);
+            }
+
+            foreach (var readyPlateOrderId in readyPlateOrderIds)
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(JobLifecycleEventType.ReadyPlate, readyPlateOrderId, cancellationToken);
             }
         }
 
@@ -1110,6 +1135,9 @@ public sealed class JobSchedulesController : ControllerBase
                 wf => wf.OrderId == orderId && wf.WorkIndex == request.StepIndex,
                 cancellationToken);
 
+        // Captured before any branch mutates it; a missing row counts as "not ready".
+        var priorWorkStatus = workflow?.WorkStatus;
+
         if (workflow is null)
         {
             // Order must exist before we can create a workflow step for it.
@@ -1164,6 +1192,15 @@ public sealed class JobSchedulesController : ControllerBase
         }
 
         await _writeContext.SaveChangesAsync(cancellationToken);
+
+        if (_jobLifecycleEventPublisher is not null)
+        {
+            var readyEventType = ResolveReadyEventType(request.StepIndex);
+            if (readyEventType is not null && BecameReady(priorWorkStatus, request.TargetStatus))
+            {
+                await _jobLifecycleEventPublisher.PublishOrderEventAsync(readyEventType.Value, orderId, cancellationToken);
+            }
+        }
 
         // Re-read all steps to return a normalized response
         var allSteps = await _writeContext.JobWorkflows
@@ -1297,6 +1334,28 @@ public sealed class JobSchedulesController : ControllerBase
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(value, out var id) ? id : null;
     }
+
+    /// <summary>
+    /// Maps a zero-based workflow step to the ready lifecycle event it represents:
+    /// 0 (paper) => ReadyPaper, 1 (plate) => ReadyPlate. Step 2 is packing and has no
+    /// ready-push equivalent, so it returns null.
+    /// </summary>
+    private static JobLifecycleEventType? ResolveReadyEventType(int workIndex)
+        => workIndex switch
+        {
+            0 => JobLifecycleEventType.ReadyPaper,
+            1 => JobLifecycleEventType.ReadyPlate,
+            _ => null,
+        };
+
+    /// <summary>
+    /// A ready event fires only on an actual not-ready -> ready transition. Both save
+    /// paths overwrite the status from whatever the client sent (SaveBatch re-sends the
+    /// whole grid, so an unrelated machine-number change would otherwise re-emit a ready
+    /// push for every already-green order), so the prior value must be compared.
+    /// </summary>
+    private static bool BecameReady(int? priorStatus, int? nextStatus)
+        => priorStatus != WorkflowStatusGreen && nextStatus == WorkflowStatusGreen;
 
     private async Task UpdatePackingWorkflowStatusAsync(
         Guid orderId,

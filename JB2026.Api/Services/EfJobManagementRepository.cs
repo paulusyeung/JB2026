@@ -650,7 +650,11 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
                 {
                     existing.WorkflowId = attr.WorkflowId;
                     existing.WorkTitle = value;
-                    existing.WorkStatus = null;
+                    // WorkStatus is deliberately NOT reset here. This block re-syncs the
+                    // order type's attribute metadata (title/instruction/notes); the light
+                    // status is operator-set operational state. Nulling it made every job
+                    // form save clear paper/plate green, which also suppressed the ready
+                    // event the following PATCH was meant to report.
                     existing.WorkInstruction = null;
                     existing.WorkNotes = null;
                     existing.ModifiedOn = now;
@@ -678,7 +682,8 @@ VALUES ({0}, {1}, {2}, {3}, {4}, {5})
                     {
                         winner.WorkflowId = row.WorkflowId;
                         winner.WorkTitle = row.WorkTitle;
-                        winner.WorkStatus = row.WorkStatus;
+                        // Same as above: the placeholder row carries no real status, so keep
+                        // whatever the concurrent writer persisted on the winning row.
                         winner.WorkInstruction = row.WorkInstruction;
                         winner.WorkNotes = row.WorkNotes;
                         winner.ModifiedOn = row.ModifiedOn;

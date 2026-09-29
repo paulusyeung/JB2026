@@ -563,15 +563,342 @@ public sealed class JobLifecyclePushHistoryHooksTests
     }
 
     // -----------------------------------------------------------------------
+    // Ready paper / ready plate — SaveBatch step-status upsert
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task SaveBatch_StepsToGreen_PublishesReadyPaperAndReadyPlate()
+    {
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowStepsAsync(dbName, orderId, (0, 0), (1, 1));
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        var result = await controller.SaveBatch(new SaveScheduleBatchRequest
+        {
+            OrderType = 0,
+            ScheduledItems =
+            [
+                new SaveScheduleBatchItem
+                {
+                    OrderId = orderId,
+                    MachineNumber = "M-1",
+                    Step1Status = 2,
+                    Step2Status = 2,
+                    UrgencyLevel = 0,
+                },
+            ],
+        }, CancellationToken.None);
+
+        Assert.IsAssignableFrom<OkObjectResult>(result);
+        Assert.Equal(1, dispatcher.Events.Count(e => e.EventType == "OnReadyPaper"));
+        Assert.Equal(1, dispatcher.Events.Count(e => e.EventType == "OnReadyPlate"));
+
+        using var verify = CreateWriteContext(dbName);
+        Assert.Single(await verify.FCMHistories.Where(r => r.MessageTitle == "JB5 有紙").ToListAsync());
+        Assert.Single(await verify.FCMHistories.Where(r => r.MessageTitle == "JB5 有鋅").ToListAsync());
+    }
+
+    [Fact]
+    public async Task SaveBatch_AlreadyGreenSteps_DoesNotRepublishReady()
+    {
+        // SaveBatch re-sends the whole grid on every save (machine change, urgency
+        // change, extra job added). Resending an already-green step must not emit a
+        // second ready push — exactly one row per event occurrence.
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowStepsAsync(dbName, orderId, (0, 2), (1, 2));
+        await SeedSchedulesAsync(dbName, orderId);
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        await controller.SaveBatch(new SaveScheduleBatchRequest
+        {
+            OrderType = 0,
+            ScheduledItems =
+            [
+                new SaveScheduleBatchItem
+                {
+                    OrderId = orderId,
+                    MachineNumber = "M-9",
+                    Step1Status = 2,
+                    Step2Status = 2,
+                    UrgencyLevel = 3,
+                },
+            ],
+        }, CancellationToken.None);
+
+        Assert.Empty(dispatcher.Events.Where(e => e.EventType == "OnReadyPaper" || e.EventType == "OnReadyPlate"));
+        using var verify = CreateWriteContext(dbName);
+        Assert.Empty(await verify.FCMHistories.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SaveBatch_StepLeavingGreen_DoesNotPublishReady()
+    {
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowStepsAsync(dbName, orderId, (0, 2), (1, 2));
+        await SeedSchedulesAsync(dbName, orderId);
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        await controller.SaveBatch(new SaveScheduleBatchRequest
+        {
+            OrderType = 0,
+            ScheduledItems =
+            [
+                new SaveScheduleBatchItem
+                {
+                    OrderId = orderId,
+                    MachineNumber = "M-1",
+                    Step1Status = 0,
+                    Step2Status = null,
+                    UrgencyLevel = 0,
+                },
+            ],
+        }, CancellationToken.None);
+
+        Assert.Empty(dispatcher.Events);
+        using var verify = CreateWriteContext(dbName);
+        Assert.Empty(await verify.FCMHistories.ToListAsync());
+    }
+
+    // -----------------------------------------------------------------------
+    // Ready paper / ready plate — UpdatePendingWorkflow (pending + job form views)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdatePendingWorkflow_StepToGreen_PublishesReadyOnce()
+    {
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowStepsAsync(dbName, orderId, (0, 0), (1, 1));
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        await controller.UpdatePendingWorkflow(
+            orderId,
+            new UpdatePendingWorkflowRequest { StepIndex = 0, TargetStatus = 2 },
+            CancellationToken.None);
+
+        // Re-sending the same green status must not record a second row.
+        await controller.UpdatePendingWorkflow(
+            orderId,
+            new UpdatePendingWorkflowRequest { StepIndex = 0, TargetStatus = 2 },
+            CancellationToken.None);
+
+        Assert.Single(dispatcher.Events.Where(e => e.EventType == "OnReadyPaper"));
+        using var verify = CreateWriteContext(dbName);
+        Assert.Single(await verify.FCMHistories.Where(r => r.MessageTitle == "JB5 有紙").ToListAsync());
+    }
+
+    [Fact]
+    public async Task UpdatePendingWorkflow_StepTwoToGreen_PublishesReadyPlate()
+    {
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowStepsAsync(dbName, orderId, (0, 0), (1, 0));
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        await controller.UpdatePendingWorkflow(
+            orderId,
+            new UpdatePendingWorkflowRequest { StepIndex = 1, TargetStatus = 2 },
+            CancellationToken.None);
+
+        Assert.Single(dispatcher.Events.Where(e => e.EventType == "OnReadyPlate"));
+        using var verify = CreateWriteContext(dbName);
+        Assert.Single(await verify.FCMHistories.Where(r => r.MessageTitle == "JB5 有鋅").ToListAsync());
+    }
+
+    [Fact]
+    public async Task UpdatePendingWorkflow_PackingStepToGreen_DoesNotPublishReady()
+    {
+        // Step index 2 is packing; it has no ready-push equivalent.
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowStepsAsync(dbName, orderId, (0, 0), (1, 0), (2, 0));
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        await controller.UpdatePendingWorkflow(
+            orderId,
+            new UpdatePendingWorkflowRequest { StepIndex = 2, TargetStatus = 2 },
+            CancellationToken.None);
+
+        Assert.Empty(dispatcher.Events);
+        using var verify = CreateWriteContext(dbName);
+        Assert.Empty(await verify.FCMHistories.ToListAsync());
+    }
+
+    [Fact]
+    public async Task UpdatePendingWorkflow_MissingRowSetToGreen_PublishesReady()
+    {
+        // No workflow row yet: prior status is unknown, so reaching green counts as a
+        // not-ready -> ready transition.
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var controller = CreateSchedulesController(dbName, dispatcher);
+
+        await controller.UpdatePendingWorkflow(
+            orderId,
+            new UpdatePendingWorkflowRequest { StepIndex = 0, TargetStatus = 2 },
+            CancellationToken.None);
+
+        Assert.Single(dispatcher.Events.Where(e => e.EventType == "OnReadyPaper"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Workflow attribute re-sync must not clear an operator-set green status
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdateJobOrder_WorkflowAttributeResync_PreservesGreenStatus()
+    {
+        // The job form sends workflowAttributes on every save. Re-syncing the
+        // attribute metadata used to null out WorkStatus, so saving the form wiped the
+        // paper/plate green lights (and lost the ready event that followed).
+        var dbName = NewDbName();
+        var order = CreateOrder();
+        var orderId = await SeedOrderAsync(dbName, order);
+        await SeedWorkflowAttributeCatalogAsync(dbName, ("Paper", 0), ("Plate", 1));
+        await SeedWorkflowAttributeStepsAsync(dbName, orderId, (0, 2), (1, 2));
+
+        var dispatcher = new RecordingWebhookDispatcher();
+        var repository = CreateRepository(dbName, dispatcher);
+
+        await repository.UpdateJobOrder(
+            orderId,
+            CreateUpdateRequest(workflowAttributes: new Dictionary<string, string>
+            {
+                ["Paper"] = "Paper v2",
+                ["Plate"] = "Plate v2",
+            }),
+            OwnerIdText);
+
+        using var verify = CreateWriteContext(dbName);
+        var steps = await verify.JobWorkflows.Where(w => w.OrderId == orderId).ToListAsync();
+        Assert.Equal(2, steps.Single(s => s.WorkIndex == 0).WorkStatus);
+        Assert.Equal(2, steps.Single(s => s.WorkIndex == 1).WorkStatus);
+        // Metadata is still re-synced.
+        Assert.Equal("Paper v2", steps.Single(s => s.WorkIndex == 0).WorkTitle);
+        Assert.Equal("Plate v2", steps.Single(s => s.WorkIndex == 1).WorkTitle);
+    }
+
+    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    private static async Task SeedWorkflowStepsAsync(
+        string dbName,
+        Guid orderId,
+        params (int WorkIndex, int? WorkStatus)[] steps)
+    {
+        foreach (var (workIndex, workStatus) in steps)
+        {
+            AddWorkflowStep(dbName, orderId, workIndex, workStatus, withAttributeId: false);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Steps linked to their dbo.Z_Workflow attribute row, as the job form creates them.
+    /// </summary>
+    private static async Task SeedWorkflowAttributeStepsAsync(
+        string dbName,
+        Guid orderId,
+        params (int WorkIndex, int? WorkStatus)[] steps)
+    {
+        foreach (var (workIndex, workStatus) in steps)
+        {
+            AddWorkflowStep(dbName, orderId, workIndex, workStatus, withAttributeId: true);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private static void AddWorkflowStep(
+        string dbName,
+        Guid orderId,
+        int workIndex,
+        int? workStatus,
+        bool withAttributeId)
+    {
+        using var context = CreateWriteContext(dbName);
+        context.JobWorkflows.Add(new JobWorkflow
+        {
+            JobWorkflowId = Guid.NewGuid(),
+            OrderId = orderId,
+            WorkIndex = workIndex,
+            WorkStatus = workStatus,
+            WorkflowId = withAttributeId ? WorkflowIdForWorkIndex(workIndex) : null,
+            WorkTitle = "Original title",
+            ModifiedOn = new DateTime(2026, 9, 26),
+        });
+        context.SaveChanges();
+    }
+
+    /// <summary>
+    /// Deterministic per WorkIndex so a seeded JobWorkflow can be linked to its
+    /// attribute row.
+    /// </summary>
+    private static Guid WorkflowIdForWorkIndex(int workIndex) => new(workIndex + 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    /// <summary>
+    /// Seeds dbo.Z_Workflow + dbo.Z_OrderTypeWorkflow — the order-type attribute
+    /// catalog that BuildAttributeLookupAsync reads.
+    /// </summary>
+    private static async Task SeedWorkflowAttributeCatalogAsync(
+        string dbName,
+        params (string Name, int WorkIndex)[] attributes)
+    {
+        using var context = CreateWriteContext(dbName);
+        foreach (var (name, workIndex) in attributes)
+        {
+            var workflowId = WorkflowIdForWorkIndex(workIndex);
+            context.Z_Workflows.Add(new Z_Workflow
+            {
+                WorkflowId = workflowId,
+                WorkflowName = name,
+                WorkTitle = name,
+            });
+            context.Z_OrderTypeWorkflows.Add(new Z_OrderTypeWorkflow
+            {
+                OrderTypeWorkflowId = Guid.NewGuid(),
+                WorkflowId = workflowId,
+                OrderType = 0,
+                WorkIndex = workIndex,
+            });
+        }
+
+        await context.SaveChangesAsync();
+    }
 
     private static UpdateJobOrderRequest CreateUpdateRequest(
         DateTime? completedOn = null,
         string? invoiceRef = null,
         decimal? invoiceAmount = null,
         string? originalSONumber = null,
-        string? jobNumber = null)
+        string? jobNumber = null,
+        Dictionary<string, string>? workflowAttributes = null)
     {
         return new UpdateJobOrderRequest
         {
@@ -588,6 +915,7 @@ public sealed class JobLifecyclePushHistoryHooksTests
             InvoiceAmount = invoiceAmount,
             OriginalSONumber = originalSONumber,
             JobNumber = jobNumber,
+            WorkflowAttributes = workflowAttributes,
         };
     }
 

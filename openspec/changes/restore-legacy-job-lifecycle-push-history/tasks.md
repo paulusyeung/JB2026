@@ -31,8 +31,27 @@
 - [x] 4.8 Add NotifyType 15 (`onjobinvoiced`) and 16 (`onjobcogsfilled`) to `UserCompatibilityController.MapNotifyType` and verify `dotnet build JB2026.Api`
 - [x] 4.9 Verify per-event `NotifyType` opt-in targeting (10/11/12/13/14/15/16) with a test using seeded `UserAuth` + `UserNotification` rows, confirming `RecipientList` and `UserIdList` shapes — verify the test passes
 
-## 5. Integration verification
+## 5. Ready-event trigger relocation to the production host
 
-- [x] 5.1 Run `dotnet build JB2026.sln` and fix any compile errors across Api, Rest, EfCore, and test projects
-- [x] 5.2 Run `dotnet test JB2026.Api.ParityTests` and `dotnet test JB2026.Rest.Tests` and confirm all tests pass
-- [ ] 5.3 Manually exercise one end-to-end ready event against a local `JB2026.Rest` with a seeded active `WebhookSubscription` for `OnReadyPaper` and confirm a `Device` history row appears and a webhook POST arrives
+The ready events were only wired to `ScheduleCompatibilityController.PostRegister`
+(`JB2026.Rest`). `JB2026.Rest` is not in the deployed image (`Dockerfile` builds and
+runs `JB2026.Api`), and no client calls `POST api/Schedule/{orderId}/{type}/{status}` —
+so `ReadyPlate`/`ReadyPaper` produced no `FCMHistory` rows and no webhooks in production.
+The three UI surfaces that mark a step green all write through `JB2026.Api`:
+
+| Surface | Endpoint |
+|---|---|
+| `ScheduleView.vue`, `DashboardOperatorView.vue` | `POST /api/v2/job-schedules/batch` |
+| `SchedulePendingView.vue`, `JobOrderForm.vue` | `PATCH /api/v2/job-schedules/pending/{orderId}/workflow` |
+
+- [x] 5.1 Add `ResolveReadyEventType(workIndex)` (`0 → ReadyPaper`, `1 → ReadyPlate`, `2 → null` for packing) and `BecameReady(prior, next)` (`prior != 2 && next == 2`) helpers to `JobSchedulesController` — verify `dotnet build JB2026.Api` succeeds
+- [x] 5.2 Emit `OnReadyPaper`/`OnReadyPlate` in `SaveBatch` step-status upsert, capturing each step's prior status before the overwrite and publishing after `SaveChangesAsync`. The guard is mandatory here: `SaveBatch` re-sends the whole grid on every save, so publishing on `Step1Status == 2` alone would re-emit a push for every already-green order on any machine-number or urgency change — verify `dotnet build JB2026.Api` and a transition test plus an already-green dedupe test
+- [x] 5.3 Emit `OnReadyPaper`/`OnReadyPlate` in `UpdatePendingWorkflow`, capturing `priorWorkStatus` before the insert/update/race-recovery branches — verify `dotnet build JB2026.Api` and tests for step 0, step 1, step 2 (packing, no event), and a missing row set to green
+- [x] 5.4 Stop `EfJobManagementRepository.UpdateJobOrder` from clearing `WorkStatus` when re-syncing `WorkflowAttributes`. The job form sends `workflowAttributes` on every save; nulling `WorkStatus` there wiped the paper/plate green lights on any job edit and lost the ready event the following PATCH was meant to report. The unique-violation recovery merge must also stop copying the placeholder row's null status over the winning row — verify a test asserts a green status survives an attribute re-sync while metadata is still re-synced
+- [x] 5.5 Guard `ScheduleCompatibilityController.PostRegister` with the same prior-status check so the `JB2026.Rest` path cannot double-record if that project is ever deployed — verify a new `PostRegister_AlreadyReady_PersistsNoSecondHistoryRow` test
+
+## 6. Integration verification
+
+- [x] 6.1 Run `dotnet build JB2026.sln` and fix any compile errors across Api, Rest, EfCore, and test projects
+- [x] 6.2 Run `dotnet test JB2026.Api.ParityTests` and `dotnet test JB2026.Rest.Tests` and confirm all tests pass
+- [ ] 6.3 Manually exercise one end-to-end ready event against a running `JB2026.Api` with a seeded active `WebhookSubscription` for `OnReadyPaper`: mark the paper workflow step green from the pending view, and confirm a `Device` history row appears in `dbo.FCMHistory` and a webhook POST arrives. (Rewritten from the original 5.3, which targeted `JB2026.Rest` — that host is not deployed, so the ready path could not be exercised there.)
