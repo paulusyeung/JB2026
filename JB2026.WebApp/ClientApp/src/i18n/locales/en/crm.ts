@@ -8,6 +8,7 @@ export const crmMessages = {
       emailInUse: 'This email is already in use by another staff member',
     },
     actions: {
+      resetColumns: 'Reset Column Order',
       new: 'New Staff Member',
     },
   },
@@ -48,6 +49,7 @@ export const crmMessages = {
       migrateCustomerSelect: 'Select JB2026 Customer',
     },
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',
@@ -83,6 +85,7 @@ export const crmMessages = {
       updatedBy: 'Updated by',
     },
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',
@@ -134,6 +137,7 @@ export const crmMessages = {
       updatedBy: 'Updated by',
     },
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',
@@ -188,6 +192,7 @@ export const crmMessages = {
       updatedBy: 'Updated by',
     },
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',

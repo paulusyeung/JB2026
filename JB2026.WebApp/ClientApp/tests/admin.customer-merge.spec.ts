@@ -64,6 +64,13 @@ async function mockApi(page: Page, customers: CustomerRow[] = [CUSTOMER_A, CUSTO
 
   await page.route('**/ui/feature-flags', (route) => route.fulfill({ json: { flags: [] } }))
 
+  // View preferences (column order, visibility) are fetched per registered view.
+  await page.route('**/api/v2/user-preferences/**', (route) =>
+    route.request().method() === 'PUT'
+      ? route.fulfill({ json: { metadata: null } })
+      : route.fulfill({ status: 404, json: null }),
+  )
+
   await page.route('**/api/v2/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())

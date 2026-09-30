@@ -50,6 +50,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('admin.user.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -198,6 +204,10 @@
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.icon`]='{ item }'>
             <v-icon size="16" :color="item.primaryRec ? 'warning' : 'secondary'">
               {{ item.primaryRec ? 'mdi-account-key' : 'mdi-account' }}
@@ -240,6 +250,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
@@ -257,8 +269,21 @@ const rows = ref<AdminUser[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
+const defaultColumnKeys = [
+  'icon',
+  'username',
+  'ln',
+  'userAlias',
+  'userPassword',
+  'role',
+  'createdOn',
+  'createdBy',
+  'modifiedOn',
+  'modifiedBy',
+]
 const viewSettings = useViewSettings('admin-user', {
-  visibleColumns: ['icon', 'username', 'ln', 'userAlias', 'userPassword', 'role', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'userAlias',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -267,6 +292,7 @@ const viewSettings = useViewSettings('admin-user', {
   ignoreGuest: true,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -297,8 +323,10 @@ const allHeaders = computed(() => [
   { title: t('admin.user.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
 const headers = computed(() =>
-  allHeaders.value.filter((h) =>
+  orderedHeaders.value.filter((h) =>
     visibleColumnKeys.value.includes(String(h.key)) &&
     isColumnVisible(String(h.key), {
       hideOnPhone: ['userPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
@@ -326,7 +354,7 @@ const sortableColumns = computed(() =>
     .map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
 )
 
-const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+const columnOptions = computed(() => orderedHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
 const displayedRows = computed<AdminUserDisplayItem[]>(() => {
   const key = sortKey.value as keyof AdminUser

@@ -363,55 +363,8 @@
           >
             <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
 
-            <template #headers="{ headers: headerRows, toggleSort, isSorted, getSortIcon, allSelected, someSelected, selectAll }">
-              <tr>
-                <th
-                  v-for="column in headerRows[0] ?? []"
-                  :key="String(column.key)"
-                  :data-column-key="String(column.key)"
-                  class="v-data-table__td v-data-table__th v-data-table__th--sticky job-list-th"
-                  :class="[
-                    `v-data-table-column--align-${column.align ?? 'start'}`,
-                    {
-                      'v-data-table-column--no-padding': column.key === 'data-table-select',
-                      'v-data-table__th--sortable': column.sortable,
-                      'v-data-table__th--sorted': isSorted(column),
-                      'job-list-th--dragging': draggingColumnKey === column.key,
-                      'job-list-th--drop-target': dropTargetColumnKey === column.key,
-                    },
-                  ]"
-                  :style="{
-                    position: 'sticky',
-                    top: 0,
-                    width: toCssUnit(column.width),
-                    minWidth: toCssUnit(column.minWidth),
-                    maxWidth: toCssUnit(column.maxWidth),
-                  }"
-                  :draggable="isReorderableColumn(column.key)"
-                  :tabindex="column.sortable ? 0 : undefined"
-                  @click="column.sortable ? toggleSort(column, $event) : undefined"
-                  @keydown.enter="column.sortable ? toggleSort(column, $event) : undefined"
-                  @dragstart="onColumnDragStart($event, String(column.key))"
-                  @dragover="onColumnDragOver($event, String(column.key))"
-                  @drop="onColumnDrop($event, String(column.key))"
-                  @dragend="onColumnDragEnd"
-                >
-                  <v-checkbox-btn
-                    v-if="column.key === 'data-table-select'"
-                    color="primary"
-                    :model-value="allSelected"
-                    :indeterminate="someSelected && !allSelected"
-                    density="compact"
-                    @update:model-value="selectAll"
-                  />
-                  <div v-else class="v-data-table-header__content">
-                    <span v-if="headerIconByKey[String(column.key)]" class="sr-only">{{ column.title }}</span>
-                    <v-icon v-if="headerIconByKey[String(column.key)]" size="14">{{ headerIconByKey[String(column.key)] }}</v-icon>
-                    <span v-else>{{ column.title }}</span>
-                    <v-icon v-if="column.sortable" class="v-data-table-header__sort-icon" :icon="getSortIcon(column)" />
-                  </div>
-                </th>
-              </tr>
+            <template #headers="table">
+              <ReorderableTableHeaders :table="table" :header-extras="headerExtras" @move="moveColumn" />
             </template>
 
             <template #[`item.orderType`]="{ item }">
@@ -473,6 +426,7 @@
                 </v-btn>
               </div>
             </template>
+
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(invoiceAmountForRow(item)) }}</template>
             <template #[`item.invoiceRef`]="{ item }">{{ invoiceNumberForRow(item) }}</template>
             <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
@@ -594,6 +548,8 @@ import { useDisplay } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getOrderTypeMeta } from '@/utils/orderType'
@@ -753,24 +709,14 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.jobList.headers.completedOn'), key: 'completedOn', width: '122px' },
 ])
 
-const headerIconByKey: Record<string, string> = {
-  orderType: 'mdi-tag-outline',
-  status: 'mdi-flag',
-  attachProduct: 'mdi-paperclip',
-  attachCustomer: 'mdi-paperclip',
+const headerExtras = {
+  orderType: { icon: 'mdi-tag-outline' },
+  status: { icon: 'mdi-flag' },
+  attachProduct: { icon: 'mdi-paperclip' },
+  attachCustomer: { icon: 'mdi-paperclip' },
 }
 
-const orderedHeaders = computed(() => {
-  const position = new Map<string, number>()
-  columnOrder.value.forEach((key, index) => position.set(key, index))
-
-  return [...allHeaders.value].sort((lhs, rhs) => {
-    const leftPosition = position.get(String(lhs.key)) ?? Number.MAX_SAFE_INTEGER
-    const rightPosition = position.get(String(rhs.key)) ?? Number.MAX_SAFE_INTEGER
-    if (leftPosition !== rightPosition) return leftPosition - rightPosition
-    return allHeaders.value.indexOf(lhs) - allHeaders.value.indexOf(rhs)
-  })
-})
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
 
 const headers = computed(() => orderedHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
 
@@ -781,63 +727,6 @@ const sortableColumns = computed(() =>
 )
 
 const columnOptions = computed(() => orderedHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
-
-const draggingColumnKey = ref<string | null>(null)
-const dropTargetColumnKey = ref<string | null>(null)
-
-function isReorderableColumn(columnKey: unknown) {
-  return columnKey !== 'data-table-select'
-}
-
-function toCssUnit(value: unknown) {
-  if (typeof value === 'number') return `${value}px`
-  return typeof value === 'string' && value ? value : undefined
-}
-
-function onColumnDragStart(event: DragEvent, columnKey: string) {
-  draggingColumnKey.value = columnKey
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', columnKey)
-  }
-}
-
-function onColumnDragOver(event: DragEvent, columnKey: string) {
-  if (!draggingColumnKey.value || draggingColumnKey.value === columnKey) return
-  event.preventDefault()
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-  dropTargetColumnKey.value = columnKey
-}
-
-function onColumnDrop(event: DragEvent, columnKey: string) {
-  event.preventDefault()
-  const sourceKey = draggingColumnKey.value || event.dataTransfer?.getData('text/plain') || ''
-  onColumnDragEnd()
-  if (sourceKey && sourceKey !== columnKey) {
-    moveColumn(sourceKey, columnKey)
-  }
-}
-
-function onColumnDragEnd() {
-  draggingColumnKey.value = null
-  dropTargetColumnKey.value = null
-}
-
-function moveColumn(sourceKey: string, targetKey: string) {
-  const order = orderedHeaders.value.map((header) => String(header.key))
-  const fromIndex = order.indexOf(sourceKey)
-  const targetIndex = order.indexOf(targetKey)
-  if (fromIndex < 0 || targetIndex < 0) return
-
-  order.splice(targetIndex, 0, ...order.splice(fromIndex, 1))
-  columnOrder.value = order
-}
-
-function resetColumnOrder() {
-  columnOrder.value = [...defaultColumnKeys]
-}
 
 const hasSingleSelection = computed(() => selectedOrderIds.value.length === 1)
 const attachmentAndPrintDisabled = computed(() => !hasSingleSelection.value)
@@ -1388,18 +1277,6 @@ async function handleActionUpdated() {
 
 .job-list-table :deep(tbody td) {
   font-size: 12px;
-}
-
-.job-list-th {
-  cursor: grab;
-}
-
-.job-list-th--dragging {
-  opacity: 0.4;
-}
-
-.job-list-th--drop-target {
-  box-shadow: inset 3px 0 0 0 rgb(var(--v-theme-primary));
 }
 
 .job-table-shell {

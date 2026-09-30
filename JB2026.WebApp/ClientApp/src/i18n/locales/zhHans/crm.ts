@@ -8,6 +8,7 @@ export const crmMessages = {
       emailInUse: '此邮箱已被其他员工使用',
     },
     actions: {
+      resetColumns: '重置栏位顺序',
       new: '新增员工',
     },
   },
@@ -48,6 +49,7 @@ export const crmMessages = {
       migrateCustomerSelect: '选择 JB2026 客户',
     },
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '列',
       sorting: '排序',
       sortBy: '排序方式',
@@ -83,6 +85,7 @@ export const crmMessages = {
       updatedBy: '更新人',
     },
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '列',
       sorting: '排序',
       sortBy: '排序方式',
@@ -134,6 +137,7 @@ export const crmMessages = {
       updatedBy: '更新人',
     },
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '列',
       sorting: '排序',
       sortBy: '排序方式',
@@ -188,6 +192,7 @@ export const crmMessages = {
       updatedBy: '更新人',
     },
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '列',
       sorting: '排序',
       sortBy: '排序方式',

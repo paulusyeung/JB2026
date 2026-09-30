@@ -53,6 +53,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('jobOrder.pending.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -246,6 +252,10 @@
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onRowClick"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" :header-extras="headerExtras" @move="moveColumn" />
+          </template>
+
           <template #[`item.orderNumber`]="{ item }">
             <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEditor(item)">
               {{ item.orderNumber }}
@@ -289,12 +299,6 @@
           <template #[`item.urgencyLevel`]="{ item }">
             <div class="d-flex justify-center">
               <v-icon v-if="urgencyIcon(item.urgencyLevel)" size="16" :color="urgencyColor(item.urgencyLevel)">{{ urgencyIcon(item.urgencyLevel) }}</v-icon>
-            </div>
-          </template>
-
-          <template #[`header.urgencyLevel`]>
-            <div class="d-flex justify-center">
-              <v-icon size="16" color="grey-darken-2">mdi-bell</v-icon>
             </div>
           </template>
 
@@ -351,6 +355,8 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
@@ -381,20 +387,22 @@ const printManagerJob = ref<JobDetail | null>(null)
 const workflowActionLoading = ref(false)
 const urgencyActionLoading = ref(false)
 
+const defaultColumnKeys = [
+  'orderNumber',
+  'orderType',
+  'status',
+  'step1Status',
+  'step2Status',
+  'step3Status',
+  'urgencyLevel',
+  'customerName',
+  'orderTitle',
+  'orderedOn',
+  'requiredOn',
+]
 const viewSettings = useViewSettings('pending-schedule', {
-  visibleColumns: [
-    'orderNumber',
-    'orderType',
-    'status',
-    'step1Status',
-    'step2Status',
-    'step3Status',
-    'urgencyLevel',
-    'customerName',
-    'orderTitle',
-    'orderedOn',
-    'requiredOn',
-  ],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -402,6 +410,7 @@ const viewSettings = useViewSettings('pending-schedule', {
   itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -435,8 +444,14 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.pending.headers.requiredOn'), key: 'requiredOn', width: '122px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
-const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
+const headerExtras = {
+  urgencyLevel: { icon: 'mdi-bell', size: 16, color: 'grey-darken-2', align: 'center' as const },
+}
+
+const headers = computed(() => orderedHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
+const columnOptions = computed(() => orderedHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
 const sortableColumns = computed(() =>
   allHeaders.value
     .filter((header) => header.sortable !== false)

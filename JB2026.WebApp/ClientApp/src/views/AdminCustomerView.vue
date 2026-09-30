@@ -43,6 +43,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('admin.customer.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -245,6 +251,10 @@
           class="admin-customer-table"
           @click:row="onRowClick"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.icon`]='{ item }'>
             <v-icon
               size="14"
@@ -321,6 +331,8 @@ import { useI18n } from 'vue-i18n'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import AdminCustomerRecordDialog from '@/components/forms/AdminCustomerRecordDialog.vue'
 import { getAdminCustomers, mergeAdminCustomers } from '@/services/admin'
 import { syncCustomerToBilling } from '@/services/billing'
@@ -343,8 +355,17 @@ const rows = ref<AdminCustomerListItem[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
+const defaultColumnKeys = [
+  'icon',
+  'customerName',
+  'ln',
+  'loginAccount',
+  'loginPassword',
+  'customerCode',
+]
 const viewSettings = useViewSettings('admin-customer', {
-  visibleColumns: ['icon', 'customerName', 'ln', 'loginAccount', 'loginPassword', 'customerCode'],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'customerName',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -352,6 +373,7 @@ const viewSettings = useViewSettings('admin-customer', {
   itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -392,8 +414,10 @@ const allHeaders = computed(() => [
   { title: t('admin.customer.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
 const headers = computed(() =>
-  allHeaders.value.filter((h) =>
+  orderedHeaders.value.filter((h) =>
     visibleColumnKeys.value.includes(String(h.key)) &&
     isColumnVisible(String(h.key), {
       hideOnPhone: ['loginPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
@@ -421,7 +445,7 @@ const sortableColumns = computed(() =>
     .map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
 )
 
-const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+const columnOptions = computed(() => orderedHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
 const displayedRows = computed<AdminCustomerDisplayItem[]>(() => {
   const key = sortKey.value as keyof AdminCustomerListItem

@@ -38,6 +38,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('admin.supplier.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -185,6 +191,10 @@
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onRowClick"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.icon`]>
             <v-icon size="16" color="secondary">mdi-truck-delivery</v-icon>
           </template>
@@ -227,6 +237,8 @@ import { useI18n } from 'vue-i18n'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import AdminSupplierRecordDialog from '@/components/forms/AdminSupplierRecordDialog.vue'
 import { getAdminSuppliers } from '@/services/admin'
 import type { AdminSupplierListItem, AdminSupplierRecord } from '@/types/api'
@@ -242,8 +254,17 @@ const rows = ref<AdminSupplierListItem[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
+const defaultColumnKeys = [
+  'icon',
+  'supplierName',
+  'ln',
+  'loginAccount',
+  'loginPassword',
+  'supplierCode',
+]
 const viewSettings = useViewSettings('admin-supplier', {
-  visibleColumns: ['icon', 'supplierName', 'ln', 'loginAccount', 'loginPassword', 'supplierCode'],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'supplierName',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -251,6 +272,7 @@ const viewSettings = useViewSettings('admin-supplier', {
   itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -280,8 +302,10 @@ const allHeaders = computed(() => [
   { title: t('admin.supplier.headers.modifiedBy'), key: 'modifiedBy', minWidth: '100px' },
 ])
 
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
 const headers = computed(() =>
-  allHeaders.value.filter((h) =>
+  orderedHeaders.value.filter((h) =>
     visibleColumnKeys.value.includes(String(h.key)) &&
     isColumnVisible(String(h.key), {
       hideOnPhone: ['loginPassword', 'createdOn', 'createdBy', 'modifiedOn', 'modifiedBy'],
@@ -309,7 +333,7 @@ const sortableColumns = computed(() =>
     .map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
 )
 
-const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+const columnOptions = computed(() => orderedHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
 const displayedRows = computed<AdminSupplierDisplayItem[]>(() => {
   const key = sortKey.value as keyof AdminSupplierListItem

@@ -33,6 +33,13 @@ async function mockApiRoutes(page: Page) {
     route.fulfill({ json: { flags: [] } }),
   )
 
+  // View preferences (column order, visibility) are fetched per registered view.
+  await page.route('**/api/v2/user-preferences/**', (route) =>
+    route.request().method() === 'PUT'
+      ? route.fulfill({ json: { metadata: null } })
+      : route.fulfill({ status: 404, json: null }),
+  )
+
   // Current profile endpoint
   await page.route('**/api/v2/user-profiles/me', (route) =>
     route.fulfill({

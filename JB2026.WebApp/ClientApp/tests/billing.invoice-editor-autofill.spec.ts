@@ -13,6 +13,13 @@ async function injectFakeSession(page: Page) {
 async function mockBillingRoutes(page: Page, state: { lookupBodies: any[] }) {
   await page.route('**/ui/feature-flags', (route) => route.fulfill({ json: { flags: [] } }))
 
+  // View preferences (column order, visibility) are fetched per registered view.
+  await page.route('**/api/v2/user-preferences/**', (route) =>
+    route.request().method() === 'PUT'
+      ? route.fulfill({ json: { metadata: null } })
+      : route.fulfill({ status: 404, json: null }),
+  )
+
   await page.route('**/api/v2/user-profiles/me', (route) =>
     route.fulfill({
       json: {

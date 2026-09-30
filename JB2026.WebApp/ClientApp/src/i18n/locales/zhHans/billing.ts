@@ -33,6 +33,7 @@ export const billingMessages = {
       },
     },
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '栏位',
       sorting: '排序',
       sortBy: '排序字段',
@@ -88,6 +89,7 @@ export const billingMessages = {
     subtitle: '已与 Invoice Ninja 同步的客户记录',
     lookup: '客户搜索',
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '栏位',
       sorting: '排序',
       sortBy: '排序字段',
@@ -145,6 +147,7 @@ export const billingMessages = {
     lookup: '客户查询',
     invoiceLookup: '发票查询',
     actions: {
+      resetColumns: '重置栏位顺序',
       columns: '栏位',
       sorting: '排序',
       sortBy: '排序字段',

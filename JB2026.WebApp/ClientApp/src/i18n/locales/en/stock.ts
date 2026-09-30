@@ -5,6 +5,7 @@ export const stockMessages = {
       search: 'Search',
       rows: '{count} records',
       actions: {
+        resetColumns: 'Reset Column Order',
         columns: 'Columns',
         sorting: 'Sorting',
         more: 'More',

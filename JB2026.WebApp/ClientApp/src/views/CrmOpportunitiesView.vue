@@ -41,6 +41,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('crm.opportunities.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -190,6 +196,10 @@
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.name`]='{ item }'>
             <a class="text-body-2 text-primary text-decoration-none cursor-pointer" @click.stop="openPopup(item.id)">{{ item.name }}</a>
           </template>
@@ -251,6 +261,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import CrmOpportunityRecordDialog from '@/components/crm/CrmOpportunityRecordDialog.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
@@ -278,8 +290,22 @@ const rows = ref<CrmOpportunity[]>([])
 const loading = ref(false)
 const lookup = ref('')
 const errorMessage = ref('')
+const defaultColumnKeys = [
+  'name',
+  'stage',
+  'closeDate',
+  'amount',
+  'company',
+  'pointOfContact',
+  'owner',
+  'createdOn',
+  'createdBy',
+  'updatedOn',
+  'updatedBy',
+]
 const viewSettings = useViewSettings('crm-opportunities', {
-  visibleColumns: ['name', 'stage', 'closeDate', 'amount', 'company', 'pointOfContact', 'owner', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'name',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -287,6 +313,7 @@ const viewSettings = useViewSettings('crm-opportunities', {
   itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -318,8 +345,10 @@ const allHeaders = computed(() => [
   { title: t('crm.opportunities.headers.updatedBy'), key: 'updatedBy', minWidth: '120px' },
 ])
 
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
 const headers = computed(() =>
-  allHeaders.value.filter((h) =>
+  orderedHeaders.value.filter((h) =>
     visibleColumnKeys.value.includes(String(h.key)) &&
     isColumnVisible(String(h.key), {
       hideOnPhone: ['closeDate', 'amount', 'company', 'pointOfContact', 'owner', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
@@ -346,7 +375,7 @@ const sortableColumns = computed(() =>
   allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
 )
 
-const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+const columnOptions = computed(() => orderedHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
 const displayedRows = computed<OpportunitiesDisplayItem[]>(() => {
   const key = sortKey.value as keyof CrmOpportunity

@@ -108,11 +108,11 @@ async function mockApi(page: Page) {
 }
 
 async function headerKeys(page: Page) {
-  return page.locator('.job-list-th').evaluateAll((cells) => cells.map((cell) => cell.getAttribute('data-column-key') ?? ''))
+  return page.locator('.reorderable-th').evaluateAll((cells) => cells.map((cell) => cell.getAttribute('data-column-key') ?? ''))
 }
 
 async function dragHeader(page: Page, sourceIndex: number, targetIndex: number) {
-  const headers = page.locator('.job-list-th')
+  const headers = page.locator('.reorderable-th')
   const source = (await headers.nth(sourceIndex).boundingBox())!
   const target = (await headers.nth(targetIndex).boundingBox())!
 
@@ -180,11 +180,11 @@ test.describe('Job list column order', () => {
     await page.goto('/app/job-order/job-list')
     await expect(page.getByText('Banner Print')).toBeVisible()
 
-    await page.locator('.job-list-th').filter({ hasText: 'Order Number' }).click()
+    await page.locator('.reorderable-th').filter({ hasText: 'Order Number' }).click()
     await expect(page.locator('.v-data-table__th--sorted').first()).toBeVisible()
 
     await page.getByRole('button', { name: /checkbox/i }).click()
-    const selectAllHeader = page.locator('.job-list-th').first()
+    const selectAllHeader = page.locator('.reorderable-th').first()
     await selectAllHeader.locator('.v-selection-control').click()
     await expect(page.locator('tbody .v-selection-control').first()).toHaveClass(/v-selection-control--dirty/)
   })

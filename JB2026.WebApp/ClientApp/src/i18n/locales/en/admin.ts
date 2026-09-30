@@ -25,6 +25,7 @@ export const adminMessages = {
           modifiedBy: 'Modified By',
         },
         actions: {
+          resetColumns: 'Reset Column Order',
           columns: 'Columns',
           sorting: 'Sorting',
           checkbox: 'Checkbox',
@@ -94,6 +95,7 @@ export const adminMessages = {
           modifiedBy: 'Modified By',
         },
         actions: {
+          resetColumns: 'Reset Column Order',
           columns: 'Columns',
           sorting: 'Sorting',
           checkbox: 'Checkbox',
@@ -174,6 +176,7 @@ export const adminMessages = {
           modifiedBy: 'Modified By',
         },
         actions: {
+          resetColumns: 'Reset Column Order',
           columns: 'Columns',
           sorting: 'Sorting',
           checkbox: 'Checkbox',

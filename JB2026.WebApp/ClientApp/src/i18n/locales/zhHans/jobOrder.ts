@@ -34,6 +34,7 @@ export const jobOrderMessages = {
         loadFailed: '无法加载订单列表，请确认 API 可用性。',
         actions: {
           columns: '栏位',
+          resetColumns: '重置栏位顺序',
           sorting: '排序',
           checkbox: '复选框',
           sortBy: '排序字段',
@@ -179,6 +180,7 @@ export const jobOrderMessages = {
           ordered120: '最近 120 天下单',
         },
         actions: {
+          resetColumns: '重置栏位顺序',
           columns: '栏位',
           sorting: '排序',
           checkbox: '复选框',
@@ -234,6 +236,7 @@ export const jobOrderMessages = {
           completed30: '最近 30 日完成',
         },
         actions: {
+          resetColumns: '重置栏位顺序',
           columns: '栏位',
           sorting: '排序',
           checkbox: '复选框',
@@ -275,6 +278,7 @@ export const jobOrderMessages = {
           ordered90: '最近 90 天下单',
         },
         actions: {
+          resetColumns: '重置栏位顺序',
           columns: '列',
           sorting: '排序',
           sortBy: '排序字段',

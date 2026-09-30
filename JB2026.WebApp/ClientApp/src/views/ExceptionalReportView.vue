@@ -46,6 +46,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('jobOrder.orderList.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -184,6 +190,10 @@
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           :no-data-text="t('reports.exceptional.empty')"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
           <template #[`item.orderNumber`]="{ item }">
             <span class="text-primary exceptional-order-link" @click.stop="openEditor(item)">{{ item.orderNumber }}-{{ item.jobNumber }}</span>
@@ -274,6 +284,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -366,8 +378,27 @@ function defaultCriteriaState(): Record<string, { enabled: boolean; days: number
   return out
 }
 
+const defaultColumnKeys = [
+  'ln',
+  'exceptionalReasons',
+  'orderNumber',
+  'orderedOn',
+  'customerName',
+  'orderTitle',
+  'attachProduct',
+  'customerRef',
+  'attachCustomer',
+  'orderedBy',
+  'invoiceAmount',
+  'invoiceNumber',
+  'requiredOn',
+  'modifiedOn',
+  'modifiedBy',
+  'completedOn',
+]
 const {
   visibleColumns: visibleColumnKeys,
+  columnOrder,
   sortKey,
   sortDirection,
   checkboxMode,
@@ -375,24 +406,8 @@ const {
   itemsPerPage,
   criteria: criteriaState,
 } = useViewSettings('exceptional-report', {
-  visibleColumns: [
-    'ln',
-    'exceptionalReasons',
-    'orderNumber',
-    'orderedOn',
-    'customerName',
-    'orderTitle',
-    'attachProduct',
-    'customerRef',
-    'attachCustomer',
-    'orderedBy',
-    'invoiceAmount',
-    'invoiceNumber',
-    'requiredOn',
-    'modifiedOn',
-    'modifiedBy',
-    'completedOn',
-  ],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -476,7 +491,9 @@ const allHeaders = computed(() => [
   { title: t('reports.exceptional.criteria.reasons'), key: 'exceptionalReasons', minWidth: '220px', sortable: false },
 ])
 
-const headers = computed(() => allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
+const headers = computed(() => orderedHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
 
 const sortableColumns = computed(() =>
   allHeaders.value
@@ -484,7 +501,7 @@ const sortableColumns = computed(() =>
     .map((header) => ({ key: String(header.key), title: String(header.title) })),
 )
 
-const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
+const columnOptions = computed(() => orderedHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })))
 
 const sortedRows = computed(() => {
   const result = [...filteredRows.value]

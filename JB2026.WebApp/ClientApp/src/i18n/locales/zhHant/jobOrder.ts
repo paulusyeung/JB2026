@@ -34,6 +34,7 @@ export const jobOrderMessages = {
         loadFailed: '無法載入訂單列表，請確認 API 可用性。',
         actions: {
           columns: '欄位',
+          resetColumns: '重設欄位順序',
           sorting: '排序',
           checkbox: '核取方塊',
           sortBy: '排序欄位',
@@ -180,6 +181,7 @@ export const jobOrderMessages = {
           ordered120: '最近 120 天下單',
         },
         actions: {
+          resetColumns: '重設欄位順序',
           columns: '欄位',
           sorting: '排序',
           checkbox: '核取方塊',
@@ -235,6 +237,7 @@ export const jobOrderMessages = {
           completed30: '最近 30 日完成',
         },
         actions: {
+          resetColumns: '重設欄位順序',
           columns: '欄位',
           sorting: '排序',
           checkbox: '核取方塊',
@@ -276,6 +279,7 @@ export const jobOrderMessages = {
           ordered90: '最近 90 天下單',
         },
         actions: {
+          resetColumns: '重設欄位順序',
           columns: '欄位',
           sorting: '排序',
           sortBy: '排序欄位',

@@ -25,6 +25,7 @@ export const adminMessages = {
           modifiedBy: '修改者',
         },
         actions: {
+          resetColumns: '重置栏位顺序',
           columns: '栏位',
           sorting: '排序',
           checkbox: '复选框',
@@ -92,6 +93,7 @@ export const adminMessages = {
           modifiedBy: '修改者',
         },
         actions: {
+          resetColumns: '重置栏位顺序',
           columns: '栏位',
           sorting: '排序',
           checkbox: '复选框',
@@ -172,6 +174,7 @@ export const adminMessages = {
           modifiedBy: '修改者',
         },
         actions: {
+          resetColumns: '重置栏位顺序',
           columns: '栏位',
           sorting: '排序',
           checkbox: '复选框',

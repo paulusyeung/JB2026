@@ -5,6 +5,7 @@ export const stockMessages = {
       search: '搜尋',
       rows: '共 {count} 筆',
       actions: {
+        resetColumns: '重設欄位順序',
         columns: '欄位',
         sorting: '排序',
         more: '更多',

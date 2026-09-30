@@ -53,6 +53,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('jobOrder.packing.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -214,6 +220,10 @@
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onRowClick"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.orderNumber`]="{ item }">
             <v-btn variant="text" color="primary" density="comfortable" class="px-0 text-none" @click.stop="openEditor(item)">
               {{ item.orderNumber }}
@@ -298,6 +308,8 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
@@ -325,20 +337,22 @@ const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
 const workflowActionLoading = ref(false)
 
+const defaultColumnKeys = [
+  'orderNumber',
+  'orderType',
+  'step1Status',
+  'step2Status',
+  'step3Status',
+  'ln',
+  'customerName',
+  'orderTitle',
+  'orderedOn',
+  'requiredOn',
+  'remarks',
+]
 const viewSettings = useViewSettings('packing-schedule', {
-  visibleColumns: [
-    'orderNumber',
-    'orderType',
-    'step1Status',
-    'step2Status',
-    'step3Status',
-    'ln',
-    'customerName',
-    'orderTitle',
-    'orderedOn',
-    'requiredOn',
-    'remarks',
-  ],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -346,6 +360,7 @@ const viewSettings = useViewSettings('packing-schedule', {
   itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -379,8 +394,10 @@ const allHeaders = computed(() => [
   { title: t('jobOrder.packing.headers.remarks'), key: 'remarks', minWidth: '260px' },
 ])
 
-const headers = computed(() => allHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
-const columnOptions = computed(() => allHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title) })))
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
+const headers = computed(() => orderedHeaders.value.filter((h) => visibleColumnKeys.value.includes(String(h.key))))
+const columnOptions = computed(() => orderedHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title) })))
 const sortableColumns = computed(() =>
   allHeaders.value
     .filter((h) => h.sortable !== false)

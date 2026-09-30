@@ -34,6 +34,7 @@ export const jobOrderMessages = {
         loadFailed: 'Unable to load order list. Please verify API availability.',
         actions: {
           columns: 'Columns',
+          resetColumns: 'Reset Column Order',
           sorting: 'Sorting',
           checkbox: 'Checkbox',
           sortBy: 'Sort By',
@@ -180,6 +181,7 @@ export const jobOrderMessages = {
           ordered120: 'Ordered in last 120 days',
         },
         actions: {
+          resetColumns: 'Reset Column Order',
           columns: 'Columns',
           sorting: 'Sorting',
           checkbox: 'Checkbox',
@@ -235,6 +237,7 @@ export const jobOrderMessages = {
           completed30: 'Completed in last 30 days',
         },
         actions: {
+          resetColumns: 'Reset Column Order',
           columns: 'Columns',
           sorting: 'Sorting',
           checkbox: 'Checkbox',
@@ -276,6 +279,7 @@ export const jobOrderMessages = {
           ordered90: 'Ordered in last 90 days',
         },
         actions: {
+          resetColumns: 'Reset Column Order',
           columns: 'Columns',
           sorting: 'Sorting',
           sortBy: 'Sort By',

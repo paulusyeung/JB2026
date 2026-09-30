@@ -33,6 +33,7 @@ export const billingMessages = {
       },
     },
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',
@@ -88,6 +89,7 @@ export const billingMessages = {
     subtitle: 'Invoice Ninja synced client records',
     lookup: 'Client lookup',
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',
@@ -145,6 +147,7 @@ export const billingMessages = {
     lookup: 'Client lookup',
     invoiceLookup: 'Invoice lookup',
     actions: {
+      resetColumns: 'Reset Column Order',
       columns: 'Columns',
       sorting: 'Sorting',
       sortBy: 'Sort by',

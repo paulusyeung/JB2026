@@ -56,6 +56,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('billing.invoices.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -206,6 +212,10 @@
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onRowClick"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.invoiceNumber`]="{ item }">
             <v-btn variant="text" color="primary" class="px-0 text-none" @click="openInvoice(item)">
               {{ item.invoiceNumber || item.externalInvoiceId }}
@@ -270,6 +280,8 @@ import axios from 'axios'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { listInvoices, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, uploadInvoiceToDms, type InvoiceBillingSummary } from '@/services/billing'
@@ -296,8 +308,17 @@ const dmsSuccessMessage = ref('')
 const showEditorDialog = ref(false)
 const editorMode = ref<'create' | 'edit' | 'view'>('create')
 const editorInvoiceId = ref<string | undefined>(undefined)
+const defaultColumnKeys = [
+  'invoiceNumber',
+  'clientName',
+  'invoiceDate',
+  'status',
+  'amount',
+  'dueDate',
+]
 const viewSettings = useViewSettings('billing-invoices', {
-  visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate'],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'invoiceDate',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -305,6 +326,7 @@ const viewSettings = useViewSettings('billing-invoices', {
   itemsPerPage: 10,
 })
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -322,12 +344,14 @@ const allHeaders = computed(() => [
   { title: t('billing.invoices.headers.dueDate'), key: 'dueDate', width: '130px' },
 ])
 
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
 const headers = computed(() =>
-  allHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))),
+  orderedHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))),
 )
 
 const columnOptions = computed(() =>
-  allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+  orderedHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
 )
 
 const sortableColumns = computed(() =>

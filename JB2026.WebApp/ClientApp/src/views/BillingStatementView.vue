@@ -43,6 +43,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+          <v-divider />
+          <v-list density="compact">
+            <v-list-item prepend-icon="mdi-restore" @click="resetColumnOrder">
+              <v-list-item-title>{{ t('billing.statement.actions.resetColumns') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -191,6 +197,10 @@
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders :table="table" @move="moveColumn" />
+          </template>
+
           <template #[`item.icon`]>
             <v-icon size="14" color="primary">mdi-account</v-icon>
           </template>
@@ -222,6 +232,8 @@ import BillingStatementRequestDialog from '@/components/billing/BillingStatement
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useViewSettings } from '@/composables/useColumnPersistence'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import {
   createBillingStatementLaunch,
   downloadBillingStatementDocument,
@@ -250,8 +262,16 @@ const selectedClientIds = ref<string[]>([])
 const statementDialogOpen = ref(false)
 const statementLaunchLoading = ref(false)
 const statementDialogErrorMessage = ref('')
+const defaultColumnKeys = [
+  'icon',
+  'ln',
+  'clientName',
+  'clientCode',
+  'outstandingBalance',
+]
 const viewSettings = useViewSettings('billing-statement', {
-  visibleColumns: ['icon', 'ln', 'clientName', 'clientCode', 'outstandingBalance'],
+  visibleColumns: defaultColumnKeys,
+  columnOrder: defaultColumnKeys,
   sortKey: 'clientName',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -260,6 +280,7 @@ const viewSettings = useViewSettings('billing-statement', {
 })
 
 const visibleColumnKeys = viewSettings.visibleColumns
+const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
 const checkboxMode = viewSettings.checkboxMode
@@ -276,8 +297,10 @@ const allHeaders = computed(() => [
   { title: t('billing.statement.headers.outstandingBalance'), key: 'outstandingBalance', minWidth: '180px' },
 ])
 
+const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
+
 const headers = computed(() =>
-  allHeaders.value.filter((header) =>
+  orderedHeaders.value.filter((header) =>
     visibleColumnKeys.value.includes(String(header.key)) &&
     isColumnVisible(String(header.key), {
       hideOnPhone: [],
@@ -286,7 +309,7 @@ const headers = computed(() =>
   ),
 )
 
-const columnOptions = computed(() => allHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })))
+const columnOptions = computed(() => orderedHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })))
 
 const sortableColumns = computed(() =>
   allHeaders.value
