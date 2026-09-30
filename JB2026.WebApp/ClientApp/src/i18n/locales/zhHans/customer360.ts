@@ -8,6 +8,24 @@ export const customer360Messages = {
   },
   jobOrders: {
     invoiceNotFound: '发票 {invoiceNumber} 未在发票或文件选项卡中找到。',
+    actions: {
+      resetColumns: '重置栏位顺序',
+    },
+  },
+  invoices: {
+    actions: {
+      resetColumns: '重置栏位顺序',
+    },
+  },
+  opportunities: {
+    actions: {
+      resetColumns: '重置栏位顺序',
+    },
+  },
+  tasks: {
+    actions: {
+      resetColumns: '重置栏位顺序',
+    },
   },
   tabs: {
     jobOrders: '工单',
@@ -34,6 +52,7 @@ export const customer360Messages = {
     lookup: '搜索邮件\u2026',
     actions: {
       columns: '列',
+      resetColumns: '重置栏位顺序',
       sorting: '排序',
       checkbox: '复选框',
       views: '视图',
@@ -68,6 +87,7 @@ export const customer360Messages = {
       detailView: '表格视图',
       cardView: '卡片视图',
       columns: '列',
+      resetColumns: '重置栏位顺序',
       sortBy: '排序方式',
       asc: '升序',
       desc: '降序',

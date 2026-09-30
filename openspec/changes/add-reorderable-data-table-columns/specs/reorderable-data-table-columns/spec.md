@@ -104,6 +104,29 @@ A view that renders a nested grid inside its expanded rows SHALL offer reorderin
 - **WHEN** the master grid is rendered with reorderable headers and a row is expanded
 - **THEN** the expanded row SHALL continue to span all master columns, including the selection column when checkbox mode is enabled
 
+### Requirement: In a view that shows several tables, each table SHALL have its own column order
+A view that presents multiple independent tables on one page (for example a tabbed company overview with a table per tab) SHALL offer reordering on each table, with an order, a stored preference and a reset action that belong to that table alone.
+
+#### Scenario: Each table keeps its own order
+- **WHEN** a user reorders columns in one table of a multi-table view
+- **THEN** that table SHALL re-render in the new order, the order SHALL be persisted as that table's per-user preference, and the other tables in the same view SHALL keep their own orders
+
+#### Scenario: Moving between tables does not disturb their orders
+- **WHEN** a user reorders columns in one table and then switches to another table in the same view and back
+- **THEN** both tables SHALL render the order the user gave them
+
+#### Scenario: Each table's menu lists and resets only that table's columns
+- **WHEN** a user opens a table's Columns menu in a multi-table view
+- **THEN** the menu SHALL list that table's columns in that table's current order, and the reset action SHALL restore that table's default order without changing any other table
+
+#### Scenario: Hidden columns stay hidden while reordering
+- **WHEN** a user has hidden a column in one of the view's tables and reorders that table's headers
+- **THEN** the hidden column SHALL remain hidden, and the stored order SHALL keep its place so showing it again restores the user's position
+
+#### Scenario: Utility columns in a tabbed view are pinned
+- **WHEN** one of a multi-table view's tables leads with a non-data column such as a row-number column
+- **THEN** that column SHALL NOT be draggable and SHALL NOT be displaced by a drop onto it
+
 ### Requirement: Reorderable headers SHALL preserve existing table behavior
 Rendering reorderable header cells SHALL NOT change the visible or interactive behavior of the data table.
 

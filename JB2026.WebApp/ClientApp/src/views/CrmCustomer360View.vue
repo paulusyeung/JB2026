@@ -186,6 +186,12 @@
                       <v-list-item-title>{{ column.title }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
+                  <v-divider />
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-restore" @click="resetJoColumnOrder">
+                      <v-list-item-title>{{ t('customer360.jobOrders.actions.resetColumns') }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
                 </v-menu>
 
                 <v-menu location="bottom">
@@ -371,27 +377,16 @@
                   class="job-orders-table"
                   @click:row="onJoRowClick"
                 >
+                  <template #headers="table">
+                    <ReorderableTableHeaders
+                      :table="table"
+                      :header-extras="joHeaderExtras"
+                      :reorderable-keys="joReorderableKeys"
+                      @move="moveJoColumn"
+                    />
+                  </template>
+
                   <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
-
-                  <template #[`header.orderType`]>
-                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.orderType') }}</span> -->
-                    <v-icon size="14" color="primary">mdi-tag-outline</v-icon>
-                  </template>
-
-                  <template #[`header.status`]>
-                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.status') }}</span> -->
-                    <v-icon size="14" color="primary">mdi-flag</v-icon>
-                  </template>
-
-                  <template #[`header.attachProduct`]>
-                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.attachProduct') }}</span> -->
-                    <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-                  </template>
-
-                  <template #[`header.attachCustomer`]>
-                    <!-- <span class="sr-only">{{ t('jobOrder.jobList.headers.attachCustomer') }}</span> -->
-                    <v-icon size="14" color="primary">mdi-paperclip</v-icon>
-                  </template>
 
                   <template #[`item.orderType`]="{ item }">
                     <div class="d-flex justify-center">
@@ -500,6 +495,12 @@
                         <v-checkbox-btn :model-value="invVisibleColumnKeys.includes(column.key)" />
                       </template>
                       <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                  <v-divider />
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-restore" @click="resetInvColumnOrder">
+                      <v-list-item-title>{{ t('customer360.invoices.actions.resetColumns') }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -685,6 +686,13 @@
                   class="invoices-table"
                   @click:row="onInvRowClick"
                 >
+                  <template #headers="table">
+                    <ReorderableTableHeaders
+                      :table="table"
+                      @move="moveInvColumn"
+                    />
+                  </template>
+
                   <template #[`item.invoiceNumber`]="{ item }">
                     <v-btn variant="text" color="primary" class="px-0 text-none" @click.stop="openInvoice(item)">
                       {{ item.invoiceNumber || item.externalInvoiceId }}
@@ -752,6 +760,12 @@
                         <v-checkbox-btn :model-value="oppVisibleColumnKeys.includes(column.key)" />
                       </template>
                       <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                  <v-divider />
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-restore" @click="resetOppColumnOrder">
+                      <v-list-item-title>{{ t('customer360.opportunities.actions.resetColumns') }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -912,6 +926,13 @@
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="opportunities-table"
                 >
+                  <template #headers="table">
+                    <ReorderableTableHeaders
+                      :table="table"
+                      @move="moveOppColumn"
+                    />
+                  </template>
+
                   <template #[`item.name`]='{ item }'>
                     <a class="text-body-2 text-primary text-decoration-none cursor-pointer" @click.stop="openOpportunityPopup(item.id)">{{ item.name }}</a>
                   </template>
@@ -986,6 +1007,12 @@
                         <v-checkbox-btn :model-value="taskVisibleColumnKeys.includes(column.key)" />
                       </template>
                       <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                  <v-divider />
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-restore" @click="resetTaskColumnOrder">
+                      <v-list-item-title>{{ t('customer360.tasks.actions.resetColumns') }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -1160,6 +1187,13 @@
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="tasks-table"
                 >
+                  <template #headers="table">
+                    <ReorderableTableHeaders
+                      :table="table"
+                      @move="moveTaskColumn"
+                    />
+                  </template>
+
                   <template #[`item.title`]='{ item }'>
                     <a class="text-body-2 text-primary text-decoration-none cursor-pointer" @click.stop="openTaskPopup(item.id)">{{ item.title }}</a>
                   </template>
@@ -1247,6 +1281,12 @@
                         <v-checkbox-btn :model-value="filesVisibleColumnKeys.includes(column.key)" />
                       </template>
                       <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                  <v-divider />
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-restore" @click="resetFilesColumnOrder">
+                      <v-list-item-title>{{ t('customer360.files.actions.resetColumns') }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -1409,6 +1449,13 @@
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="files-table"
                 >
+                  <template #headers="table">
+                    <ReorderableTableHeaders
+                      :table="table"
+                      @move="moveFilesColumn"
+                    />
+                  </template>
+
                   <template #[`item.archiveSerialNumber`]="{ value }">
                     {{ value ?? '—' }}
                   </template>
@@ -1505,6 +1552,12 @@
                         <v-checkbox-btn :model-value="emailVisibleColumnKeys.includes(column.key)" />
                       </template>
                       <v-list-item-title>{{ column.title }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                  <v-divider />
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-restore" @click="resetEmailColumnOrder">
+                      <v-list-item-title>{{ t('customer360.emails.actions.resetColumns') }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -1648,6 +1701,14 @@
                   class="emails-table"
                   @click:row="onEmailRowClick"
                 >
+                  <template #headers="table">
+                    <ReorderableTableHeaders
+                      :table="table"
+                      :header-extras="emailHeaderExtras"
+                      @move="moveEmailColumn"
+                    />
+                  </template>
+
                   <template #[`item.sender`]="{ item }">
                     <div class="d-flex align-center ga-1 text-truncate email-row-click" style="max-width: 260px;" @click="onEmailRowClick($event, { item })">
                       <v-icon size="14" class="flex-shrink-0">mdi-email-outline</v-icon>
@@ -1665,16 +1726,6 @@
 
                   <template #[`item.size`]="{ item }">
                     <span class="email-row-click" @click="onEmailRowClick($event, { item })">{{ emailFormatSize(item.size) }}</span>
-                  </template>
-
-                  <template #[`header.hasAttachment`]>
-                    <div class="d-flex justify-center">
-                      <v-tooltip :text="t('customer360.emails.headers.attachment')" location="top">
-                        <template #activator="{ props }">
-                          <v-icon v-bind="props" size="14">mdi-paperclip</v-icon>
-                        </template>
-                      </v-tooltip>
-                    </div>
                   </template>
 
                   <template #[`item.hasAttachment`]="{ item }">
@@ -1925,6 +1976,8 @@ import CrmTaskRecordDialog from '@/components/crm/CrmTaskRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import BillingInvoiceEditorDialog from '@/components/billing/BillingInvoiceEditorDialog.vue'
 import ListMobileCard, { type ListMobileCardColumn } from '@/components/grids/ListMobileCard.vue'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { useResponsiveList } from '@/composables/useResponsiveList'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
@@ -2106,8 +2159,23 @@ const oppSaveSuccess = ref(false)
 const oppSuccessMessage = ref('')
 const oppSelectedIds = ref<string[]>([])
 
+const oppDefaultColumnKeys = [
+  'name',
+  'stage',
+  'closeDate',
+  'amount',
+  'company',
+  'pointOfContact',
+  'owner',
+  'createdOn',
+  'createdBy',
+  'updatedOn',
+  'updatedBy',
+]
+
 const oppViewSettings = useViewSettings('crm-customer360-opportunities', {
-  visibleColumns: ['name', 'stage', 'closeDate', 'amount', 'company', 'pointOfContact', 'owner', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+  visibleColumns: oppDefaultColumnKeys,
+  columnOrder: oppDefaultColumnKeys,
   sortKey: 'name',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -2115,6 +2183,7 @@ const oppViewSettings = useViewSettings('crm-customer360-opportunities', {
   itemsPerPage: 10,
 })
 const oppVisibleColumnKeys = oppViewSettings.visibleColumns
+const oppColumnOrder = oppViewSettings.columnOrder
 const oppSortKey = oppViewSettings.sortKey
 const oppSortDirection = oppViewSettings.sortDirection
 const oppCheckboxMode = oppViewSettings.checkboxMode
@@ -2150,7 +2219,7 @@ const allOppHeaders = computed(() => [
 ])
 
 const oppHeaders = computed(() =>
-  allOppHeaders.value.filter((h) =>
+  orderedOppHeaders.value.filter((h) =>
     oppVisibleColumnKeys.value.includes(String(h.key)) &&
     oppIsColumnVisible(String(h.key), {
       hideOnPhone: ['closeDate', 'amount', 'company', 'pointOfContact', 'owner', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
@@ -2177,7 +2246,7 @@ const oppSortableColumns = computed(() =>
   allOppHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
 )
 
-const oppColumnOptions = computed(() => allOppHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+const oppColumnOptions = computed(() => orderedOppHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
 const oppDisplayedRows = computed<OppDisplayItem[]>(() => {
   const key = oppSortKey.value as keyof CrmOpportunity
@@ -2302,8 +2371,22 @@ const taskSaveSuccess = ref(false)
 const taskSuccessMessage = ref('')
 const taskSelectedIds = ref<string[]>([])
 
+const taskDefaultColumnKeys = [
+  'title',
+  'status',
+  'body',
+  'dueDate',
+  'assignee',
+  'relations',
+  'createdOn',
+  'createdBy',
+  'updatedOn',
+  'updatedBy',
+]
+
 const taskViewSettings = useViewSettings('crm-customer360-tasks', {
-  visibleColumns: ['title', 'status', 'body', 'dueDate', 'assignee', 'relations', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
+  visibleColumns: taskDefaultColumnKeys,
+  columnOrder: taskDefaultColumnKeys,
   sortKey: 'title',
   sortDirection: 'asc',
   checkboxMode: false,
@@ -2311,6 +2394,7 @@ const taskViewSettings = useViewSettings('crm-customer360-tasks', {
   itemsPerPage: 10,
 })
 const taskVisibleColumnKeys = taskViewSettings.visibleColumns
+const taskColumnOrder = taskViewSettings.columnOrder
 const taskSortKey = taskViewSettings.sortKey
 const taskSortDirection = taskViewSettings.sortDirection
 const taskCheckboxMode = taskViewSettings.checkboxMode
@@ -2356,7 +2440,7 @@ const allTaskHeaders = computed(() => [
 ])
 
 const taskHeaders = computed(() =>
-  allTaskHeaders.value.filter((h) =>
+  orderedTaskHeaders.value.filter((h) =>
     taskVisibleColumnKeys.value.includes(String(h.key)) &&
     oppIsColumnVisible(String(h.key), {
       hideOnPhone: ['body', 'dueDate', 'assignee', 'relations', 'createdOn', 'createdBy', 'updatedOn', 'updatedBy'],
@@ -2364,6 +2448,11 @@ const taskHeaders = computed(() =>
     }),
   ),
 )
+const {
+  orderedHeaders: orderedOppHeaders,
+  moveColumn: moveOppColumn,
+  resetColumnOrder: resetOppColumnOrder,
+} = useColumnOrder(oppColumnOrder, allOppHeaders, oppDefaultColumnKeys)
 
 const taskMobileColumns = computed<ListMobileCardColumn<TaskDisplayItem>[]>(() => [
   { key: 'title', label: t('crm.tasks.headers.title'), section: 'header', emphasis: true },
@@ -2383,7 +2472,7 @@ const taskSortableColumns = computed(() =>
   allTaskHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })),
 )
 
-const taskColumnOptions = computed(() => allTaskHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
+const taskColumnOptions = computed(() => orderedTaskHeaders.value.map((h) => ({ key: String(h.key), title: String(h.title || h.key) })))
 
 const taskDisplayedRows = computed<TaskDisplayItem[]>(() => {
   const key = taskSortKey.value as keyof CrmTask
@@ -2508,8 +2597,31 @@ const joInvoiceSearchingFor = ref<string | null>(null)
 const joInvoiceNotice = ref('')
 const joInvoiceNoticeOpen = ref(false)
 
+const joDefaultColumnKeys = [
+  'orderType',
+  'ln',
+  'orderNumber',
+  'status',
+  'orderedOn',
+  'createdOn',
+  'customerName',
+  'orderTitle',
+  'attachProduct',
+  'customerRef',
+  'attachCustomer',
+  'orderedBy',
+  'productStyle',
+  'invoiceAmount',
+  'invoiceRef',
+  'requiredOn',
+  'modifiedOn',
+  'modifiedBy',
+  'completedOn',
+]
+
 const joViewSettings = useViewSettings('crm-customer360-job-orders', {
-  visibleColumns: ['orderType', 'ln', 'orderNumber', 'status', 'orderedOn', 'createdOn', 'customerName', 'orderTitle', 'attachProduct', 'customerRef', 'attachCustomer', 'orderedBy', 'productStyle', 'invoiceAmount', 'invoiceRef', 'requiredOn', 'modifiedOn', 'modifiedBy', 'completedOn'],
+  visibleColumns: joDefaultColumnKeys,
+  columnOrder: joDefaultColumnKeys,
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -2517,6 +2629,7 @@ const joViewSettings = useViewSettings('crm-customer360-job-orders', {
   itemsPerPage: 10,
 })
 const joVisibleColumnKeys = joViewSettings.visibleColumns
+const joColumnOrder = joViewSettings.columnOrder
 const joSortKey = joViewSettings.sortKey
 const joSortDirection = joViewSettings.sortDirection
 const joCheckboxMode = joViewSettings.checkboxMode
@@ -2636,8 +2749,13 @@ const allJoHeaders = computed(() => [
 ])
 
 const joHeaders = computed(() =>
-  allJoHeaders.value.filter((header) => joVisibleColumnKeys.value.includes(String(header.key))),
+  orderedJoHeaders.value.filter((header) => joVisibleColumnKeys.value.includes(String(header.key))),
 )
+const {
+  orderedHeaders: orderedTaskHeaders,
+  moveColumn: moveTaskColumn,
+  resetColumnOrder: resetTaskColumnOrder,
+} = useColumnOrder(taskColumnOrder, allTaskHeaders, taskDefaultColumnKeys)
 
 const allFilesHeaders = computed(() => [
   { title: 'ASN', key: 'archiveSerialNumber', width: '80px' },
@@ -2653,11 +2771,11 @@ const allFilesHeaders = computed(() => [
 ])
 
 const filesHeaders = computed(() =>
-  allFilesHeaders.value.filter((header) => filesVisibleColumnKeys.value.includes(String(header.key))),
+  orderedFilesHeaders.value.filter((header) => filesVisibleColumnKeys.value.includes(String(header.key))),
 )
 
 const filesColumnOptions = computed(() =>
-  allFilesHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+  orderedFilesHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
 )
 
 const filesSortableColumns = computed(() =>
@@ -2713,8 +2831,22 @@ const joSortableColumns = computed(() =>
 )
 
 const joColumnOptions = computed(() =>
-  allJoHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })),
+  orderedJoHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title) })),
 )
+const joReorderableKeys = joDefaultColumnKeys.filter((key) => key !== 'ln')
+
+const joHeaderExtras = {
+  orderType: { icon: 'mdi-tag-outline', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.orderType') },
+  status: { icon: 'mdi-flag', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.status') },
+  attachProduct: { icon: 'mdi-paperclip', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.attachProduct') },
+  attachCustomer: { icon: 'mdi-paperclip', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.attachCustomer') },
+}
+
+const {
+  orderedHeaders: orderedJoHeaders,
+  moveColumn: moveJoColumn,
+  resetColumnOrder: resetJoColumnOrder,
+} = useColumnOrder(joColumnOrder, allJoHeaders, joDefaultColumnKeys)
 
 const joDisplayedRows = computed(() => {
   let result = [...joRows.value]
@@ -2886,8 +3018,18 @@ const invShowEditorDialog = ref(false)
 const invEditorMode = ref<'create' | 'edit' | 'view'>('create')
 const invEditorInvoiceId = ref<string | undefined>(undefined)
 
+const invDefaultColumnKeys = [
+  'invoiceNumber',
+  'clientName',
+  'invoiceDate',
+  'status',
+  'amount',
+  'dueDate',
+]
+
 const invViewSettings = useViewSettings('crm-customer360-invoices', {
-  visibleColumns: ['invoiceNumber', 'clientName', 'invoiceDate', 'status', 'amount', 'dueDate'],
+  visibleColumns: invDefaultColumnKeys,
+  columnOrder: invDefaultColumnKeys,
   sortKey: 'invoiceDate',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -2895,6 +3037,7 @@ const invViewSettings = useViewSettings('crm-customer360-invoices', {
   itemsPerPage: 10,
 })
 const invVisibleColumnKeys = invViewSettings.visibleColumns
+const invColumnOrder = invViewSettings.columnOrder
 const invSortKey = invViewSettings.sortKey
 const invSortDirection = invViewSettings.sortDirection
 const invCheckboxMode = invViewSettings.checkboxMode
@@ -2916,12 +3059,17 @@ const allInvHeaders = computed(() => [
 ])
 
 const invHeaders = computed(() =>
-  allInvHeaders.value.filter((header) => invVisibleColumnKeys.value.includes(String(header.key))),
+  orderedInvHeaders.value.filter((header) => invVisibleColumnKeys.value.includes(String(header.key))),
 )
 
 const invColumnOptions = computed(() =>
-  allInvHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+  orderedInvHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
 )
+const {
+  orderedHeaders: orderedInvHeaders,
+  moveColumn: moveInvColumn,
+  resetColumnOrder: resetInvColumnOrder,
+} = useColumnOrder(invColumnOrder, allInvHeaders, invDefaultColumnKeys)
 
 const invSortableColumns = computed(() =>
   allInvHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
@@ -3196,8 +3344,22 @@ const filesLookup = ref('')
 const filesSelectedIds = ref<number[]>([])
 const formatFileDate = useGlobalDateFormatter().format
 
+const filesDefaultColumnKeys = [
+  'archiveSerialNumber',
+  'correspondentName',
+  'title',
+  'ownerName',
+  'noteCount',
+  'documentTypeName',
+  'created',
+  'pageCount',
+  'isSharedByRequester',
+  'actions',
+]
+
 const filesViewSettings = useViewSettings('crm-customer360-files', {
-  visibleColumns: ['archiveSerialNumber', 'correspondentName', 'title', 'ownerName', 'noteCount', 'documentTypeName', 'created', 'pageCount', 'isSharedByRequester', 'actions'],
+  visibleColumns: filesDefaultColumnKeys,
+  columnOrder: filesDefaultColumnKeys,
   sortKey: 'created',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -3205,7 +3367,14 @@ const filesViewSettings = useViewSettings('crm-customer360-files', {
   itemsPerPage: 10,
 })
 const filesVisibleColumnKeys = filesViewSettings.visibleColumns
+const filesColumnOrder = filesViewSettings.columnOrder
 const filesSortKey = filesViewSettings.sortKey
+const {
+  orderedHeaders: orderedFilesHeaders,
+  moveColumn: moveFilesColumn,
+  resetColumnOrder: resetFilesColumnOrder,
+} = useColumnOrder(filesColumnOrder, allFilesHeaders, filesDefaultColumnKeys)
+
 const filesSortDirection = filesViewSettings.sortDirection
 const filesCheckboxMode = filesViewSettings.checkboxMode
 const filesViewMode = filesViewSettings.viewMode
@@ -3319,8 +3488,17 @@ const emailErrorMessage = ref('')
 const emailSelectedIds = ref<string[]>([])
 const emailCardLimit = ref(50)
 
+const emailDefaultColumnKeys = [
+  'sender',
+  'subject',
+  'date',
+  'size',
+  'hasAttachment',
+]
+
 const emailViewSettings = useViewSettings('crm-customer360-emails', {
-  visibleColumns: ['sender', 'subject', 'date', 'size', 'hasAttachment'],
+  visibleColumns: emailDefaultColumnKeys,
+  columnOrder: emailDefaultColumnKeys,
   sortKey: 'date',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -3328,6 +3506,7 @@ const emailViewSettings = useViewSettings('crm-customer360-emails', {
   itemsPerPage: 10,
 })
 const emailVisibleColumnKeys = emailViewSettings.visibleColumns
+const emailColumnOrder = emailViewSettings.columnOrder
 const emailSortKey = emailViewSettings.sortKey
 const emailSortDirection = emailViewSettings.sortDirection
 const emailCheckboxMode = emailViewSettings.checkboxMode
@@ -3362,7 +3541,7 @@ const allEmailHeaders = computed(() => [
 ])
 
 const emailHeaders = computed(() =>
-  allEmailHeaders.value.filter((header) => emailVisibleColumnKeys.value.includes(String(header.key))),
+  orderedEmailHeaders.value.filter((header) => emailVisibleColumnKeys.value.includes(String(header.key))),
 )
 
 const emailSortableColumns = computed(() =>
@@ -3372,8 +3551,17 @@ const emailSortableColumns = computed(() =>
 )
 
 const emailColumnOptions = computed(() =>
-  allEmailHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
+  orderedEmailHeaders.value.map((header) => ({ key: String(header.key), title: String(header.title || header.key) })),
 )
+const emailHeaderExtras = {
+  hasAttachment: { icon: 'mdi-paperclip', size: 14, align: 'center' as const, title: t('customer360.emails.headers.attachment') },
+}
+
+const {
+  orderedHeaders: orderedEmailHeaders,
+  moveColumn: moveEmailColumn,
+  resetColumnOrder: resetEmailColumnOrder,
+} = useColumnOrder(emailColumnOrder, allEmailHeaders, emailDefaultColumnKeys)
 
 const emailDisplayedRows = computed(() => {
   let result = [...emailRows.value]

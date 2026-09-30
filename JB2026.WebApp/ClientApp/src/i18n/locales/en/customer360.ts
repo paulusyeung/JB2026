@@ -8,6 +8,24 @@ export const customer360Messages = {
   },
   jobOrders: {
     invoiceNotFound: 'Invoice {invoiceNumber} not found in Invoices or Files.',
+    actions: {
+      resetColumns: 'Reset Column Order',
+    },
+  },
+  invoices: {
+    actions: {
+      resetColumns: 'Reset Column Order',
+    },
+  },
+  opportunities: {
+    actions: {
+      resetColumns: 'Reset Column Order',
+    },
+  },
+  tasks: {
+    actions: {
+      resetColumns: 'Reset Column Order',
+    },
   },
   tabs: {
     jobOrders: 'Job Orders',
@@ -34,6 +52,7 @@ export const customer360Messages = {
     lookup: 'Search emails\u2026',
     actions: {
       columns: 'Columns',
+      resetColumns: 'Reset Column Order',
       sorting: 'Sorting',
       checkbox: 'Checkbox',
       views: 'Views',
@@ -68,6 +87,7 @@ export const customer360Messages = {
       detailView: 'Detail View',
       cardView: 'Card View',
       columns: 'Columns',
+      resetColumns: 'Reset Column Order',
       sortBy: 'Sort by',
       asc: 'Asc',
       desc: 'Desc',

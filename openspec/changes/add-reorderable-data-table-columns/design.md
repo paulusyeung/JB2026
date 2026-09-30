@@ -8,8 +8,9 @@ Technical constraints that shape the approach:
 - `useSort` / `useSelection` are Vuetify internals and are **not** exported from the `vuetify` package entry, so a component cannot obtain sort/selection state by `inject`; the view must pass the `#headers` slot props through. Order resolution likewise needs the view's `allHeaders` array, so it stays in a composable the view calls.
 - Reordering must be expressed as a reorder of the array passed to `:headers`; column identity is the header `key`, never the array index.
 - `useColumnPersistence` already models a whole view-preference document in `localStorage` under `view-settings-<viewId>` and mirrors it to `UserPreferencesController` (`GET`/`PUT /api/v2/user-preferences/{objectType}/{objectId}`) with a 500 ms debounce. The prototype added a `columnOrder` array to that document. Preference metadata is free-form JSON in an XML column, so adding the field needs no migration, and older stored documents without `columnOrder` fall back to the view's default order.
-- Server persistence only happens when `getViewObjectId(viewId)` returns a GUID (`viewPreferenceKeys.ts`), otherwise the view is localStorage-only. Of the 16 views in scope, only `stock`, `crm-people` and `crm-companies` are registered today, so the other 13 need a new GUID.
+- Server persistence only happens when `getViewObjectId(viewId)` returns a GUID (`viewPreferenceKeys.ts`), otherwise the view is localStorage-only. Of the 16 views in scope, only `stock`, `crm-people` and `crm-companies` are registered today, so the other 13 need a new GUID; `OrderListView` and the six `CrmCustomer360View` tables add six more.
 - Audited shape of the 16 in-scope views: every one has exactly one `v-data-table` (no nested or master-detail grid), every one renders with `fixed-header`, every one has a Columns menu wired to `useViewSettings`, and every one has its own `*-table-shell` class carrying the view-scoped `:deep(.v-data-table__th)` layout rules. Four carry an icon header cell: `StockView` (`mdi-paperclip`), `CrmPeopleView` and `CrmCompaniesView` (`mdi-link-variant` with a tooltip), `SchedulePendingView` (`mdi-bell`, centered). No view needs a header cell that is more than an icon plus a title.
+- Audited shape of `CrmCustomer360View`: six tables behind one tab strip (job orders, invoices, opportunities, tasks, files, emails), each with its own `useViewSettings` id, Columns menu, `visibleColumns` list, `*-table` class and `fixed-header` grid. Unlike the 16 views, one view here holds six independent tables, each with a card-layout alternative and its own sort/filter/checkbox settings, so one shared order cannot express the six. Two icon-header groups become `headerExtras` (four job-order columns, one email column), and the job-order `ln` row-number column is a utility column like `OrderListView`'s `#`.
 - The prototype was verified against the previous rendering: header cell class list, inline width/min-width, computed pixel widths, header text, and body rows are identical apart from the added drag affordance and a wrapper `div` on icon-only headers.
 
 ## Goals / Non-Goals
@@ -80,9 +81,28 @@ Every view's own namespace (`crm.people.actions.resetColumns`, `billing.invoices
 
 - **Alternative: one shared `common.resetColumns` key.** Rejected: it prevents per-view wording, which the team requires, at the cost of 16 keys x 3 locales to keep in sync by hand. JobListView's existing `jobOrder.jobList.actions.resetColumns` stays as is.
 
-### 6. Register object ids for all 16 views so the order is per user, not per browser (confirmed)
+### 6. Register object ids for all in-scope views so the order is per user, not per browser (confirmed)
 
-`viewPreferenceKeys.ts` gains a GUID for each of the 13 in-scope view ids that lacks one, so every one of the 16 writes its preference server-side. Rows appear lazily on the first preference save; no seed data, no migration step, and the generic `UserPreference` store absorbs them as ordinary (objectType 1) rows. Removing a GUID later reverts a view to localStorage-only without affecting the others.
+`viewPreferenceKeys.ts` gains a GUID for each of the 19 in-scope view ids that lacks one, so every one of the 16 views and all six `CrmCustomer360View` tables write their preference server-side. Rows appear lazily on the first preference save; no seed data, no migration step, and the generic `UserPreference` store absorbs them as ordinary (objectType 1) rows. Removing a GUID later reverts a view to localStorage-only without affecting the others.
+
+### 6b. A view with several tables gets one order, one setting and one reset per table
+
+`CrmCustomer360View` holds six tables, so each one owns its own `useViewSettings` id, its own `columnOrder` default, its own `useColumnOrder` call, its own `useColumnOrder` move/reset handlers and its own reset item in the Columns menu that is already there. The visibility filter stays where it was, on top of the resolved order:
+
+```
+allJoHeaders            (the view's full default header list)
+  → useColumnOrder       (ordered + hidden columns keep their place)
+    → orderedJoHeaders  (bound to nothing directly)
+      → joHeaders       (filtered by joVisibleColumnKeys — what the grid renders)
+      → joColumnOptions (the Columns menu, in the same order)
+```
+
+- The Columns menu is built from the ordered headers, not from the default list, so the menu and the grid cannot disagree; the 16 single-table views get this for free because their `*ColumnOptions` list is the whole list.
+- `:headers` is bound to the filtered `joHeaders`, never to `orderedJoHeaders`. Binding the unfiltered list would render hidden columns again, because `visibleColumns` is a separate setting.
+- The reset label lives in `customer360.<section>.actions.resetColumns` for each of the six sections, so the wording can be adapted per table like every other view (Decision 5).
+- The card layouts keep their own hard-coded field order. They are a different presentation, not a responsive fallback of the grid, so reordering one is not required for the other to make sense.
+- **Alternative: one order shared by the whole view.** Rejected: the six tables have nothing in common but a customer, and users compare unrelated column sets; one order would drag an invoice's columns into the job-order grid. One `useViewSettings` per table is what the view already does for sort, page size, checkbox and card/table mode, so this follows the established shape rather than inventing a new one.
+- **Alternative: a second `v-data-table` per tab with its own route or view.** Rejected: no behavior problem is being solved, and it would split a working view into six.
 
 ### 7. Reset restores the view's default order, not a snapshot
 
@@ -113,6 +133,9 @@ A column the view offers but the stored order does not contain is appended after
 - [`OrderListView`'s Columns menu lists the nested grid's columns, not the master grid's] → The reset entry sits at the end of that menu behind a divider, exactly as in the other 17 views, and resets the master order. The menu's own checkbox list is unchanged, so nothing that works today behaves differently; making the master grid's columns hideable is a separate UI decision.
 - [`OrderListView` renders a nested grid once per expanded row, so a shared `#headers` override would multiply drag surfaces] → Only the master grid overrides `#headers`. The nested grid keeps Vuetify's built-in header row and its three icon header slots, so expanding rows costs nothing extra and the nested grid's behaviour is bit-for-bit unchanged.
 - [`OrderListView`'s leading `expander` and `#` columns are utility columns] → Passed as a `reorderableKeys` allow-list so they can never be dragged, matching how `data-table-select` is treated elsewhere, and so a drop target at the far left cannot displace them.
+- [`CrmCustomer360View`'s six tables each add an order, so the view is the one with the most settings in it] → The six follow the pattern the view already uses for every other per-table setting (sort, page size, checkbox, card/table mode), and the six ids are named after the table rather than the view, so a future seventh table is added the same way. The cost is six preference rows per user instead of one, which the generic store handles without a migration.
+- [`CrmCustomer360View`'s job-order icon headers move from template slots to `headerExtras` and the email attachment header loses its `v-tooltip`] → `headerExtras` renders icon plus `sr-only` title and puts the title on the icon, which is what the other four icon-header views already do; the columns stay sortable-free, visually identical apart from native tooltip timing. The cell markup that replaced them was view-owned, not shared, so nothing else reads it.
+- [`CrmCustomer360View`'s card layouts still use their own field order] → Accepted: the two presentations are chosen independently today, so a drag on the grid must not silently reorder a card.
 - [Drag reordering is mouse-oriented on the header row] → Header cells remain click-sortable and keyboard-activatable; the Columns menu lists the same order, and the reset action is the keyboard-reachable escape hatch. Touch-based reordering is not provided.
 - [A drop near a cell edge reorders to the target rather than inserting at the pixel position] → Accepted: the target index is deterministic, which keeps the stored order unambiguous; the drop-target highlight tells the user which position will result.
 
@@ -122,4 +145,5 @@ A column the view offers but the stored order does not contain is appended after
 2. Gate on the existing job-list column-order spec plus a new component spec before touching any other view. If either fails, the change stops here with one view affected.
 3. Convert the 16 views: add the `#headers` slot wired to the component, replace the four icon header slots with `headerExtras` entries, call the composable, add `columnOrder` to `useViewSettings` defaults, add the reset item and its own `resetColumns` key to the Columns menu, and register the view's object id in the same step so no view lands half-persistent.
 4. Convert `OrderListView` last, on the same pattern: master grid only, `reorderableKeys` allow-list for the reorderable columns, reset entry in the existing Columns menu, `columnOrder` in its `useViewSettings` defaults, and the nested line-item grid left alone. Its `orderlist` object id is already registered.
-5. No data migration, no backend deploy, no feature flag. Rollback is a revert of the frontend change; a stored `columnOrder` in existing preferences is inert for views that stop reading it, and the Columns-menu reset gives users a way back without a deploy.
+5. Convert the six `CrmCustomer360View` tables on the same pattern, one table per step: `#headers` slot, `columnOrder` in the table's `useViewSettings` defaults, a `useColumnOrder` call, the Columns menu rebuilt from the ordered headers plus a reset item, `headerExtras` for the icon headers, the `reorderableKeys` allow-list for job orders, and a `customer360.<section>.actions.resetColumns` key in all three locales. Each table's object id is registered in the same step.
+6. No data migration, no backend deploy, no feature flag. Rollback is a revert of the frontend change; a stored `columnOrder` in existing preferences is inert for views that stop reading it, and the Columns-menu reset gives users a way back without a deploy.
