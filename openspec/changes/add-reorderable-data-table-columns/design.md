@@ -44,7 +44,7 @@ The component lives in `src/components/grids/` beside `JobsTable.vue` and is use
 - `table` — the `#headers` slot-props object (`headers`, `columns`, `toggleSort`, `isSorted`, `getSortIcon`, `allSelected`, `someSelected`, `selectAll`) passed straight through. The component reads what it needs, and a slot prop Vuetify adds or renames rides along instead of breaking the call site.
 - `headerExtras` — `Record<key, { icon: string; size?: number; color?: string; title?: string; align?: 'start' | 'center' | 'end' }>`, rendered as icon plus `sr-only` title. This is what the four views with icon header cells need (`{ synced: { icon: 'mdi-link-variant', size: 18, title: t('crm.people.messages.syncedTooltip') } }`), expressed as data instead of a template slot.
 - `reorderableKeys` — optional allow-list of column keys that may be dragged; defaults to "everything except `data-table-select`".
-- `reorderable` — boolean, default `true`. Unused in this batch (no in-scope view has a nested grid) but present so the deferred master-detail work needs no API change.
+- `reorderable` — boolean, default `true`. Unused (no converted view has a nested grid sharing the master's markup) but present so a future nested-grid case needs no API change.
 - `@move(sourceKey, targetKey)` — the component tracks only which cell is being dragged and which is the drop target, for the visual feedback. It holds **no** ordering state, so the composable remains the single source of behavior.
 
 **Styling split:** the drag affordance (cursor, dimmed source, drop-target marker) moves into the component's scoped styles, defined once. Each view keeps its own `*-table-shell` class and `:deep(.v-data-table__th)` padding/background rules, which legitimately differ per view and are not the affordance. The component also absorbs `toCssUnit` for width/min-width/max-width. The affordance class is therefore component-owned (`reorderable-th`, `reorderable-th--dragging`, `reorderable-th--drop-target`) rather than view-owned, so `tests/job-list.column-order.spec.ts` locates header cells with the component's class; the assertions themselves are unchanged.
@@ -68,9 +68,9 @@ The stored document keeps every column key, so hiding and re-showing a column re
 
 - **Alternative: store only the visible order.** Rejected: a hidden column's position is lost, and re-showing it would append it at the end.
 
-### 4. A `reorderable` prop is available but unused in this batch
+### 4. A `reorderable` prop is available but still unused
 
-All 16 in-scope views have a single data table, so there is no nested grid to exclude. The only remaining master-detail view is `OrderListView`, which is deferred (proposal.md - Out of scope); when it comes back, its master grid uses the component as-is and its nested line-item grid either keeps the built-in header row (no `#headers` override) or passes `:reorderable="false"`. The prop costs one line now and avoids an API change later.
+No converted view has a nested grid that shares the master's header markup, so the prop stays unused. `OrderListView` needs no escape hatch: its master grid uses the component as-is and its nested line-item grid simply does not override `#headers`, so Vuetify keeps rendering that grid's header row.
 
 - **Alternative: rely on a view simply not overriding `#headers` on the nested table.** Preferred, and sufficient; the prop is the escape hatch for a case where a nested table shares markup with the master.
 
@@ -104,12 +104,15 @@ A column the view offers but the stored order does not contain is appended after
 
 ## Risks / Trade-offs
 
-- [A bug in the shared component takes sorting and select-all out of all 17 views at once] → Land the component and refactor JobListView alone first, and require `tests/job-list.column-order.spec.ts` to pass unchanged before any other view is converted (Migration step 2). Convert the remaining views one at a time so a component defect is caught while only one view depends on it.
+- [A bug in the shared component takes sorting and select-all out of all 18 converted grids at once] → Land the component and refactor JobListView alone first, and require `tests/job-list.column-order.spec.ts` to pass unchanged before any other view is converted (Migration step 2). Convert the remaining views one at a time so a component defect is caught while only one view depends on it.
 - [A Vuetify upgrade changes internal header markup] → One fix location. The single component spec fails first because it asserts the same class names, inline styles and computed styles against a recorded baseline, and JobListView is the reference view for repairing them.
 - [Prop creep as deferred views come back] → The prop list is deliberately small and the variabilities that exist today (widths, alignment, icon cells) are data, not code. Adding a prop or an entry to `headerExtras` is preferred over a second rendering path; a genuinely new kind of header cell is the signal to reconsider the design rather than to add an escape hatch casually.
 - [A view loses an icon header cell during conversion] → `headerExtras` is data, and the four conversions are explicit checklist items; the component spec covers the icon plus accessible-name contract. `StockView`'s current attachment icon has no title, so its `headerExtras` entry should add one rather than reproduce the omission.
 - [Registering 13 object ids creates preference rows that did not exist server-side] → Rows are per user and per view, written only after a settings change; reversible by removing the GUID (users fall back to their local order).
 - [Stored orders grow stale as columns are added or renamed] → Unknown keys are ignored and new keys are appended, so a stale order degrades gracefully instead of breaking the view.
+- [`OrderListView`'s Columns menu lists the nested grid's columns, not the master grid's] → The reset entry sits at the end of that menu behind a divider, exactly as in the other 17 views, and resets the master order. The menu's own checkbox list is unchanged, so nothing that works today behaves differently; making the master grid's columns hideable is a separate UI decision.
+- [`OrderListView` renders a nested grid once per expanded row, so a shared `#headers` override would multiply drag surfaces] → Only the master grid overrides `#headers`. The nested grid keeps Vuetify's built-in header row and its three icon header slots, so expanding rows costs nothing extra and the nested grid's behaviour is bit-for-bit unchanged.
+- [`OrderListView`'s leading `expander` and `#` columns are utility columns] → Passed as a `reorderableKeys` allow-list so they can never be dragged, matching how `data-table-select` is treated elsewhere, and so a drop target at the far left cannot displace them.
 - [Drag reordering is mouse-oriented on the header row] → Header cells remain click-sortable and keyboard-activatable; the Columns menu lists the same order, and the reset action is the keyboard-reachable escape hatch. Touch-based reordering is not provided.
 - [A drop near a cell edge reorders to the target rather than inserting at the pixel position] → Accepted: the target index is deterministic, which keeps the stored order unambiguous; the drop-target highlight tells the user which position will result.
 
@@ -118,4 +121,5 @@ A column the view offers but the stored order does not contain is appended after
 1. Create `useColumnOrder` and `ReorderableTableHeaders` from the prototype, and refactor JobListView onto them with no behavior change.
 2. Gate on the existing job-list column-order spec plus a new component spec before touching any other view. If either fails, the change stops here with one view affected.
 3. Convert the 16 views: add the `#headers` slot wired to the component, replace the four icon header slots with `headerExtras` entries, call the composable, add `columnOrder` to `useViewSettings` defaults, add the reset item and its own `resetColumns` key to the Columns menu, and register the view's object id in the same step so no view lands half-persistent.
-4. No data migration, no backend deploy, no feature flag. Rollback is a revert of the frontend change; a stored `columnOrder` in existing preferences is inert for views that stop reading it, and the Columns-menu reset gives users a way back without a deploy.
+4. Convert `OrderListView` last, on the same pattern: master grid only, `reorderableKeys` allow-list for the reorderable columns, reset entry in the existing Columns menu, `columnOrder` in its `useViewSettings` defaults, and the nested line-item grid left alone. Its `orderlist` object id is already registered.
+5. No data migration, no backend deploy, no feature flag. Rollback is a revert of the frontend change; a stored `columnOrder` in existing preferences is inert for views that stop reading it, and the Columns-menu reset gives users a way back without a deploy.

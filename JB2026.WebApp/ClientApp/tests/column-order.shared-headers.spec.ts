@@ -149,7 +149,7 @@ test('every in-scope list view renders reorderable headers', async ({ page }) =>
     await injectFakeSession(page)
     await mockApi(page)
     await page.goto(view.path)
-    await page.waitForTimeout(600)
+    await page.locator('.v-data-table__th, .v-data-table__td').first().waitFor({ timeout: 15000 })
 
     const count = await page.locator('.reorderable-th').count()
     if (count < 2) {
@@ -304,6 +304,156 @@ for (const icon of ICON_HEADERS) {
     await expect(cell).toHaveAttribute('draggable', 'true')
   })
 }
+
+// ─── master-detail view: the master grid only ─────────────────────────────────
+
+const ORDER_LIST_PATH = '/app/job-order/order-list'
+const ORDER_LIST_VIEW_ID = 'orderlist'
+
+const MASTER_DEFAULTS = [
+  'expander',
+  'ln',
+  'orderNumber',
+  'customerName',
+  'orderTitle',
+  'requiredOn',
+  'invoiceAmount',
+  'orderedBy',
+  'orderedOn',
+]
+
+const ORDER_FIXTURE = {
+  orderId: 'order-1',
+  orderNumber: 'SO-001',
+  customerName: 'Acme Ltd',
+  orderTitle: 'Blue shirt run',
+  requiredOn: '2026-10-01',
+  orderedOn: '2026-09-01',
+  orderedBy: 'Jane Doe',
+  invoiceAmount: 1250,
+  status: 'Open',
+}
+
+async function mockOrderList(page: Page) {
+  await page.route('**/api/v2/job-orders**', (route) => route.fulfill({ json: [ORDER_FIXTURE] }))
+}
+
+async function expandFirstRow(page: Page) {
+  await page.locator('.order-list-table tbody .mdi-plus-box-outline').first().click()
+  await page.locator('.detail-grid').waitFor()
+}
+
+test('OrderListView: the master grid reorders and persists, with its utility columns pinned', async ({ page }) => {
+  await injectFakeSession(page)
+  const { preferenceWrites } = await mockApi(page)
+  await mockOrderList(page)
+  await page.goto(ORDER_LIST_PATH)
+
+  const headers = page.locator('.order-list-table .reorderable-th')
+  await expect(headers.first()).toBeVisible()
+  expect(await headerKeys(page)).toEqual(MASTER_DEFAULTS)
+
+  // The view sorts through its own Sorting menu, so the header row keeps Vuetify's sort
+  // affordances and a header click never reorders anything.
+  const sortable = headers.filter({ has: page.locator('.v-data-table-header__sort-icon') }).first()
+  await expect(sortable).toHaveClass(/v-data-table__th--sortable/)
+  await sortable.click()
+  expect(await headerKeys(page)).toEqual(MASTER_DEFAULTS)
+
+  // The expander and row-number columns lead the grid and never move.
+  for (const pinned of ['expander', 'ln']) {
+    const cell = page.locator(`.order-list-table .reorderable-th[data-column-key="${pinned}"]`)
+    await expect(cell).toHaveAttribute('draggable', 'false')
+    await expect(cell).not.toHaveClass(/reorderable-th--draggable/)
+  }
+  for (const key of ['orderNumber', 'customerName', 'orderedOn']) {
+    await expect(page.locator(`.order-list-table .reorderable-th[data-column-key="${key}"]`)).toHaveAttribute(
+      'draggable',
+      'true',
+    )
+  }
+
+  // The pinned columns cannot be displaced: a drop onto the row number is refused.
+  await dragHeader(page, 2, 1)
+  expect(await headerKeys(page)).toEqual(MASTER_DEFAULTS)
+
+  await dragHeader(page, 2, 3)
+  const reordered = await headerKeys(page)
+  expect(reordered[3]).toBe('orderNumber')
+  expect(reordered.slice(0, 2)).toEqual(['expander', 'ln'])
+
+  const stored = await readStoredOrder(page, ORDER_LIST_VIEW_ID)
+  expect(stored, 'OrderListView: columnOrder was not written to local storage').toEqual(reordered)
+
+  await page.waitForTimeout(800)
+  expect(preferenceWrites.some((body) => body.includes('columnOrder'))).toBe(true)
+
+  await page.reload()
+  await expect(page.locator('.order-list-table .reorderable-th').first()).toBeVisible()
+  expect(await headerKeys(page)).toEqual(reordered)
+
+  await page.getByRole('button', { name: /columns/i }).click()
+  const menuTitles = (await page.locator('.v-overlay__content .v-list-item-title').allTextContents()).map((title) =>
+    title.trim(),
+  )
+  expect(menuTitles[menuTitles.length - 1]).toBe('Reset Column Order')
+
+  await page.getByText('Reset Column Order').click()
+  await page.waitForTimeout(300)
+  expect(await headerKeys(page)).toEqual(MASTER_DEFAULTS)
+})
+
+test('OrderListView: the nested line-item grid is not a drag surface', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await injectFakeSession(page)
+  await mockApi(page)
+  await mockOrderList(page)
+  await page.goto(ORDER_LIST_PATH)
+  await expandFirstRow(page)
+
+  // The nested grid renders Vuetify's own header row, icon header cells included.
+  const detail = page.locator('.detail-grid')
+  await expect(detail).toBeVisible()
+  const detailHeaders = detail.locator('.v-data-table__th')
+  expect(await detailHeaders.count()).toBeGreaterThan(1)
+  await expect(detailHeaders.first()).toBeVisible()
+  await expect(detail.locator('.mdi-flag').first()).toBeVisible()
+  expect(await detail.locator('.reorderable-th').count()).toBe(0)
+  expect(await detail.locator('th[draggable]').count()).toBe(0)
+
+  // Expanding a row adds no extra drag surfaces to the master grid.
+  expect(await page.locator('.reorderable-th').count()).toBe(MASTER_DEFAULTS.length)
+  expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
+test('OrderListView: the Columns menu still toggles the nested grid columns', async ({ page }) => {
+  await injectFakeSession(page)
+  await mockApi(page)
+  await mockOrderList(page)
+  await page.goto(ORDER_LIST_PATH)
+  await expandFirstRow(page)
+
+  const detailHeaders = page.locator('.detail-grid .v-data-table__th')
+  const before = await detailHeaders.count()
+
+  await page.getByRole('button', { name: /columns/i }).click()
+  await page.getByRole('listitem').filter({ hasText: /^Status$/ }).click()
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+
+  // Status is an icon-only detail column, so it is counted rather than read.
+  expect(await detailHeaders.count()).toBe(before - 1)
+  const visible = await page.evaluate(() => {
+    const raw = localStorage.getItem('view-settings-orderlist')
+    return raw ? ((JSON.parse(raw) as { visibleColumns?: string[] }).visibleColumns ?? []) : []
+  })
+  expect(visible).not.toContain('status')
+
+  // Hiding a nested column leaves the master grid and its order alone.
+  expect(await headerKeys(page)).toEqual(MASTER_DEFAULTS)
+})
 
 // ─── views without a registered preference id stay local-only ─────────────────
 

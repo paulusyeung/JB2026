@@ -35,19 +35,31 @@ For each view: add the `#headers` slot wired to `ReorderableTableHeaders`, repla
 - [x] 5.1 Add a `resetColumns` key to each of the 16 view namespaces in `en`, `zhHans` and `zhHant` (48 entries) and verify each key resolves in all three locales. `CrmStaffMembersView` reuses `admin.user.*` for the rest of its copy, so it gets a dedicated `crm.staffMember.actions.resetColumns` key; `ExceptionalReportView` uses `jobOrder.orderList.actions.resetColumns` alongside the other `jobOrder.orderList.*` strings it already borrows
 - [x] 5.2 Verify `JobListView` keeps its existing `jobOrder.jobList.actions.resetColumns` key and the two features are visually identical in wording
 
-## 6. Tests And Verification
+## 6. Master-Detail View (OrderListView)
 
-- [x] 6.1 Add a Playwright spec for `ReorderableTableHeaders` with a baseline recorded from the verified JobListView rendering: header cell class list, inline width/min-width, cell count, computed padding / `position` / `text-align`, icon headers keeping icon plus accessible name, the selection header not being draggable, and drag result
-- [x] 6.2 Add a cross-view behavioral spec looping the 16 converted views plus JobListView, asserting the same drag result and the same reset result rather than markup
-- [x] 6.3 Add a persistence spec covering a second view: `columnOrder` written to the preference payload, restored after reload, menu order, and reset restoring the default
-- [x] 6.4 Run the typecheck in ClientApp and verify the error count is unchanged from the recorded baseline (59 errors, all pre-existing; the 3 pre-existing `no-unused-vars` hits in `CrmStaffMembersView`/`ExceptionalReportView`/`JobListView` and the `JobListView` sort-key comparison are among them)
-- [x] 6.5 Run `npm run lint` in ClientApp and verify no new errors in the touched files
-- [x] 6.6 Run the full Playwright smoke suite and verify no pre-existing spec regressed
+- [x] 6.1 Convert the master grid: add the `#headers` slot wired to `ReorderableTableHeaders`, call `useColumnOrder` over `masterHeaders`, add `columnOrder` to its `useViewSettings` defaults, and feed the ordered headers to the table
+- [x] 6.2 Pass a `reorderableKeys` allow-list so the `expander` and `#` utility columns stay pinned, and keep the expanded-row `colspan` in step with the ordered header count
+- [x] 6.3 Add a "Reset column order" entry behind a divider at the end of the existing Columns menu, wired to the composable's reset, reusing `jobOrder.orderList.actions.resetColumns`
+- [x] 6.4 Leave the nested line-item grid untouched: no `#headers` override, its three icon header slots and its Columns-menu visibility toggles unchanged
+- [x] 6.5 Extend the shared spec with OrderListView master-grid coverage: master drag + reload persistence, pinned `expander`/`#` columns, reset, detail-column visibility still working, and the nested grid showing no drag affordance
+
+## 7. Tests And Verification
+
+- [x] 7.1 Add a Playwright spec for `ReorderableTableHeaders` with a baseline recorded from the verified JobListView rendering: header cell class list, inline width/min-width, cell count, computed padding / `position` / `text-align`, icon headers keeping icon plus accessible name, the selection header not being draggable, and drag result
+- [x] 7.2 Add a cross-view behavioral spec looping the 16 converted views plus JobListView, asserting the same drag result and the same reset result rather than markup
+- [x] 7.3 Add a persistence spec covering a second view: `columnOrder` written to the preference payload, restored after reload, menu order, and reset restoring the default
+- [x] 7.4 Run the typecheck in ClientApp and verify the error count is unchanged from the recorded baseline (59 errors, all pre-existing; the 3 pre-existing `no-unused-vars` hits in `CrmStaffMembersView`/`ExceptionalReportView`/`JobListView` and the `JobListView` sort-key comparison are among them)
+- [x] 7.5 Run `npm run lint` in ClientApp and verify no new errors in the touched files
+- [x] 7.6 Run the full Playwright smoke suite and verify no pre-existing spec regressed
 
 ## Verification Record
 
-- `column-order.shared-headers.spec.ts` (new, 24 tests) is the shared coverage: a 16-view render probe, a per-view drag/persist/reload/menu-order/reset loop, the Vuetify header rendering baseline, the four icon header cells, the non-draggable selection cell, and a local-only view with no registered object id. `job-list.column-order.spec.ts` (3 tests) still passes on the shared component.
+- `column-order.shared-headers.spec.ts` (new, 27 tests) is the shared coverage: a 16-view render probe, a per-view drag/persist/reload/menu-order/reset loop, the Vuetify header rendering baseline, the four icon header cells, the non-draggable selection cell, and a local-only view with no registered object id. `job-list.column-order.spec.ts` (3 tests) still passes on the shared component.
 - Registering the 13 new object ids makes those views issue a preference GET on mount, which the older specs did not mock; `**/api/v2/user-preferences/**` is now mocked in the nine specs that visit an in-scope view, otherwise the unmocked request 401s and the axios interceptor bounces to `/app/login`.
 - `npx vue-tsc --noEmit -p tsconfig.app.json`: 59 errors, identical to the pre-change baseline.
 - `npx eslint` on the new component, composable and specs: 0 errors.
-- Full chromium Playwright suite: 55 passed, 56 failed. The 56 failures are the same pre-existing set as on `HEAD` (verified by stashing the change and re-running); they fail on unrelated views and selectors and are not touched by this change.
+- Full chromium Playwright suite: 58 passed, 56 failed. The 56 failures are the same pre-existing set recorded on `HEAD`; they fail on unrelated views and selectors and are not touched by this change. The three extra passes are the new `OrderListView` tests.
+- `OrderListView` coverage added to the shared spec: the master grid's default order, `expander` and `ln` pinned against both dragging and being dropped onto, a master drag persisted to `view-settings-orderlist` and to the preference payload, restored after reload and reverted by the Columns-menu reset, the nested line-item grid rendering Vuetify's own header row with no `.reorderable-th` and no `th[draggable]`, and the Columns menu still hiding a nested column without disturbing the master order.
+- The OrderListView test found a real gap in the shared component: `reorderableKeys` only made a cell undraggable, but a drop *onto* such a cell still reordered it, so the pinned `expander` and `ln` columns could be displaced (and the same applied to `data-table-select` in every other view). `onColumnDragOver`/`onColumnDrop` now refuse a non-reorderable target, and the grab cursor moved from `.reorderable-th` to a `reorderable-th--draggable` class so a non-draggable cell no longer shows it.
+- The 16-view render probe waits for a header cell instead of a fixed 600 ms, which removes a cold-start flake on the first view.
+- The `mobile-chromium` project cannot launch on this host (`libflite1`, `libavif16`, `libwoff1` missing), so the phone-viewport coverage was not re-run. `OrderListView`'s card layout does not use the header arrays at all, and its table branch is changed only in the header row and the expanded-row `colspan`.

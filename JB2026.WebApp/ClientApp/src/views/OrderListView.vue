@@ -71,6 +71,12 @@
                 <v-list-item-title>{{ column.title }}</v-list-item-title>
               </v-list-item>
             </v-list>
+            <v-divider />
+            <v-list density="compact">
+              <v-list-item prepend-icon="mdi-restore" @click="resetMasterColumnOrder">
+                <v-list-item-title>{{ t('jobOrder.orderList.actions.resetColumns') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
           </v-menu>
 
           <v-menu location="bottom">
@@ -315,7 +321,7 @@
 
         <div v-else class="order-table-shell">
         <v-data-table
-          :headers="masterHeaders"
+          :headers="orderedMasterHeaders"
           :items="masterRows"
           :loading="loading"
           v-model:expanded="expandedMasterIds"
@@ -330,6 +336,14 @@
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           @click:row="onRowClick"
         >
+          <template #headers="table">
+            <ReorderableTableHeaders
+              :table="table"
+              :reorderable-keys="masterReorderableKeys"
+              @move="moveMasterColumn"
+            />
+          </template>
+
           <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
 
           <template #[`item.expander`]="{ item }">
@@ -391,7 +405,7 @@
 
           <template #expanded-row="{ item }">
             <tr>
-              <td :colspan="masterHeaders.length + (checkboxMode ? 1 : 0)" class="pa-0">
+              <td :colspan="orderedMasterHeaders.length + (checkboxMode ? 1 : 0)" class="pa-0">
                 <v-data-table
                   :headers="detailHeaders"
                   :items="detailRowsFor(item)"
@@ -522,6 +536,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
+import { useColumnOrder } from '@/composables/useColumnOrder'
 import { useViewSettings } from '@/composables/useColumnPersistence'
 import { deleteJobOrder, getJobOrder, getOrderList } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
@@ -530,6 +545,7 @@ import OrderRecordDialog from '@/components/forms/OrderRecordDialog.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
+import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
 import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
 
@@ -561,8 +577,21 @@ const actionNoticeMessage = ref('')
 const pendingOrderIdForRefresh = ref<string | null>(null)
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
+const defaultMasterColumnKeys = [
+  'expander',
+  'ln',
+  'orderNumber',
+  'customerName',
+  'orderTitle',
+  'requiredOn',
+  'invoiceAmount',
+  'orderedBy',
+  'orderedOn',
+]
+
 const {
   visibleColumns: visibleColumnKeys,
+  columnOrder,
   sortKey,
   sortDirection,
   checkboxMode,
@@ -587,6 +616,7 @@ const {
     'requiredOn',
     'completedOn',
   ],
+  columnOrder: defaultMasterColumnKeys,
   sortKey: 'orderNumber',
   sortDirection: 'desc',
   checkboxMode: false,
@@ -636,6 +666,14 @@ const masterHeaders = computed(() => [
   { title: t('jobOrder.orderList.headers.salesRep'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '120px' },
 ])
+
+const masterReorderableKeys = defaultMasterColumnKeys.filter((key) => key !== 'expander' && key !== 'ln')
+
+const {
+  orderedHeaders: orderedMasterHeaders,
+  moveColumn: moveMasterColumn,
+  resetColumnOrder: resetMasterColumnOrder,
+} = useColumnOrder(columnOrder, masterHeaders, defaultMasterColumnKeys)
 
 const allHeaders = computed(() => [
   { title: '', key: 'expander', width: '42px', sortable: false },

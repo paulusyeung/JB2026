@@ -81,6 +81,29 @@ The system SHALL list columns in the user's current order in the view's Columns 
 - **WHEN** a user hides or shows a column from the Columns menu
 - **THEN** the visibility change SHALL be applied and persisted independently of the column order
 
+### Requirement: In a master-detail view, only the master grid SHALL be reorderable
+A view that renders a nested grid inside its expanded rows SHALL offer reordering on the master grid only, and SHALL leave the nested grid's header rendering untouched.
+
+#### Scenario: Master grid is reorderable and persisted
+- **WHEN** a user reorders columns of a master-detail view's master grid
+- **THEN** the master grid SHALL re-render in the new order, the order SHALL be persisted as that view's per-user preference, and the Columns menu's reset action SHALL restore the master's default order
+
+#### Scenario: Nested grid is not a drag surface
+- **WHEN** a user expands a row in a master-detail view
+- **THEN** the nested grid's headers SHALL render exactly as before, SHALL show no drag affordance, and SHALL NOT be displaceable
+
+#### Scenario: Nested grid column visibility is unchanged
+- **WHEN** a user opens the master-detail view's Columns menu
+- **THEN** the menu SHALL continue to list and toggle the nested grid's columns as it did before reordering was added, and its reorderable-keys SHALL NOT be applied to that grid
+
+#### Scenario: Master grid utility columns are pinned
+- **WHEN** a view's master grid leads with non-data columns such as a row expander or a row-number column
+- **THEN** those columns SHALL NOT be draggable and SHALL NOT be displaced by a drop onto them
+
+#### Scenario: Expanded rows still span the full grid
+- **WHEN** the master grid is rendered with reorderable headers and a row is expanded
+- **THEN** the expanded row SHALL continue to span all master columns, including the selection column when checkbox mode is enabled
+
 ### Requirement: Reorderable headers SHALL preserve existing table behavior
 Rendering reorderable header cells SHALL NOT change the visible or interactive behavior of the data table.
 

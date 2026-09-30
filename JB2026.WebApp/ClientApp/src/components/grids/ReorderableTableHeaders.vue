@@ -105,6 +105,7 @@ function onColumnDragStart(event: DragEvent, columnKey: string) {
 
 function onColumnDragOver(event: DragEvent, columnKey: string) {
   if (!draggingColumnKey.value || draggingColumnKey.value === columnKey) return
+  if (!isReorderableColumn(columnKey)) return
   event.preventDefault()
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'move'
@@ -116,7 +117,7 @@ function onColumnDrop(event: DragEvent, columnKey: string) {
   event.preventDefault()
   const sourceKey = draggingColumnKey.value || event.dataTransfer?.getData('text/plain') || ''
   onColumnDragEnd()
-  if (sourceKey && sourceKey !== columnKey) {
+  if (sourceKey && sourceKey !== columnKey && isReorderableColumn(columnKey)) {
     emit('move', sourceKey, columnKey)
   }
 }
@@ -140,6 +141,7 @@ function onColumnDragEnd() {
           'v-data-table-column--no-padding': column.key === SELECT_COLUMN_KEY,
           'v-data-table__th--sortable': column.sortable,
           'v-data-table__th--sorted': isSortedFor(column),
+          'reorderable-th--draggable': isReorderableColumn(column.key),
           'reorderable-th--dragging': draggingColumnKey === String(column.key),
           'reorderable-th--drop-target': dropTargetColumnKey === String(column.key),
         },
@@ -188,7 +190,7 @@ function onColumnDragEnd() {
 </template>
 
 <style scoped>
-.reorderable-th {
+.reorderable-th--draggable {
   cursor: grab;
 }
 
