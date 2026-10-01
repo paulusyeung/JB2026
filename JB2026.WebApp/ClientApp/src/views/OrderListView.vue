@@ -396,7 +396,6 @@
           <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
           <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
           <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
-          <template #[`item.invoiceAmount`]="{ item }">{{ invoiceAmountForRow(item) === 0 ? '' : formatQty(invoiceAmountForRow(item)) }}</template>
           <template #[`item.invoiceStatus`]="{ item }">
             <v-chip size="x-small" :color="billingStatusColor(item)" variant="tonal">
               {{ billingStatusLabel(item) }}
@@ -584,7 +583,6 @@ const defaultMasterColumnKeys = [
   'customerName',
   'orderTitle',
   'requiredOn',
-  'invoiceAmount',
   'orderedBy',
   'orderedOn',
 ]
@@ -662,7 +660,6 @@ const masterHeaders = computed(() => [
   { title: t('jobOrder.record.fields.customerName'), key: 'customerName', minWidth: '240px' },
   { title: t('jobOrder.record.fields.orderTitle'), key: 'orderTitle', minWidth: '280px' },
   { title: t('jobOrder.record.fields.requiredOn'), key: 'requiredOn', width: '120px' },
-  { title: t('jobOrder.record.fields.invoiceAmount'), key: 'invoiceAmount', align: 'end' as const, width: '120px' },
   { title: t('jobOrder.orderList.headers.salesRep'), key: 'orderedBy', width: '100px' },
   { title: t('jobOrder.record.fields.orderedOn'), key: 'orderedOn', width: '120px' },
 ])
