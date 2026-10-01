@@ -181,8 +181,8 @@ function handleLocaleChange(nextLocale: AppLocale | null) {
   setLocale(nextLocale)
 }
 
-function handleLogout() {
-  session.logout()
+async function handleLogout() {
+  await session.logout()
   router.push({ name: 'login' })
 }
 </script>
