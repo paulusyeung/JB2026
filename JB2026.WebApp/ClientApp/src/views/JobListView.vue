@@ -360,7 +360,7 @@
             :headers="headers"
             :items="displayedRows"
             :loading="loading"
-            v-model="selectedOrderIds"
+            :model-value="selectedOrderIds"
             :show-select="checkboxMode"
             item-value="orderId"
             density="compact"
@@ -369,6 +369,7 @@
             class="job-list-table"
             v-model:items-per-page="itemsPerPage"
             :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+            @update:model-value="onSelectionUpdate"
             @click:row="onRowClick"
           >
             <template #[`item.ln`]="{ index }">{{ index + 1 }}</template>
@@ -862,12 +863,16 @@ function toggleColumn(columnKey: string) {
 }
 
 function toggleSelected(orderId: string) {
-  if (selectedOrderIds.value.includes(orderId)) {
-    selectedOrderIds.value = selectedOrderIds.value.filter((id) => id !== orderId)
+  selectedOrderIds.value = selectedOrderIds.value.includes(orderId) ? [] : [orderId]
+}
+
+function onSelectionUpdate(value: readonly unknown[] | null | undefined) {
+  if (!Array.isArray(value) || value.length === 0) {
+    selectedOrderIds.value = []
     return
   }
 
-  selectedOrderIds.value = [...selectedOrderIds.value, orderId]
+  selectedOrderIds.value = [String(value[value.length - 1])]
 }
 
 function setViewMode(mode: JobListViewMode) {
