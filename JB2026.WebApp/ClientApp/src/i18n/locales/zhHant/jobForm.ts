@@ -41,6 +41,7 @@ export const jobFormMessages = {
         attachment: '附件',
         printOrder: '列印工單',
         workflow: '流程',
+        timeline: '時間軸',
         edit: '編輯',
         editProductDetails: '編輯產品內容',
         editRemarks: '編輯成本',

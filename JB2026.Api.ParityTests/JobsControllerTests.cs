@@ -184,6 +184,8 @@ public sealed class JobsControllerTests
 
         public JobOrderResponse? GetJobOrder(Guid orderId) => null;
 
+        public IReadOnlyList<JobTimelineItemResponse>? GetJobTimeline(Guid orderId, int take) => [];
+
         public Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
         {
             LastActor = actor;

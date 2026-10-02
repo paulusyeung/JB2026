@@ -85,6 +85,45 @@ public sealed class JobOrdersControllerTests
         Assert.True(repository.JobStatsCalled);
     }
 
+    [Fact]
+    public void GetTimeline_KnownOrder_ReturnsEntryWithDefaultTake()
+    {
+        var repository = new StubRepository();
+        var controller = CreateController(repository);
+
+        var result = controller.GetTimeline(Guid.NewGuid(), null);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var payload = Assert.IsAssignableFrom<IReadOnlyList<JobTimelineItemResponse>>(ok.Value);
+        var entry = Assert.Single(payload);
+        Assert.Equal(new DateTime(2026, 4, 2, 9, 30, 15), entry.DeliveredOn);
+        Assert.Equal("170446-1: Acme", entry.MessageBody);
+        Assert.Equal(new JobListOptions().TimelineTake, repository.TimelineTake);
+    }
+
+    [Fact]
+    public void GetTimeline_RequestedTake_ClampedToConfiguredMax()
+    {
+        var repository = new StubRepository();
+        var controller = CreateController(repository);
+
+        controller.GetTimeline(Guid.NewGuid(), 999_999);
+
+        Assert.Equal(new JobListOptions().MaxTimelineTake, repository.TimelineTake);
+    }
+
+    [Fact]
+    public void GetTimeline_UnknownOrder_ReturnsNotFound()
+    {
+        var repository = new StubRepository { TimelineExists = false };
+        var controller = CreateController(repository);
+
+        var result = controller.GetTimeline(Guid.NewGuid(), null);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status404NotFound, notFound.StatusCode);
+    }
+
     private static JobOrdersController CreateController(IJobManagementRepository repository)
     {
         var controller = new JobOrdersController(
@@ -123,6 +162,10 @@ public sealed class JobOrdersControllerTests
         public bool JobOrdersCalled { get; private set; }
 
         public bool JobStatsCalled { get; private set; }
+
+        public bool TimelineExists { get; init; } = true;
+
+        public int? TimelineTake { get; private set; }
 
         public IReadOnlyList<JobListItemResponse> GetRange(DateOnly startOn, int days) => [];
 
@@ -172,6 +215,24 @@ public sealed class JobOrdersControllerTests
         }
 
         public JobOrderResponse? GetJobOrder(Guid orderId) => null;
+
+        public IReadOnlyList<JobTimelineItemResponse>? GetJobTimeline(Guid orderId, int take)
+        {
+            TimelineTake = take;
+            return TimelineExists
+                ?
+                [
+                    new JobTimelineItemResponse
+                    {
+                        FCMHistoryId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                        DeliveredOn = new DateTime(2026, 4, 2, 9, 30, 15),
+                        MessageTitle = "JB5 有紙",
+                        MessageBody = "170446-1: Acme",
+                        Topic = "Device",
+                    }
+                ]
+                : null;
+        }
 
         public Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
             => Task.FromResult(CreateResponse(request.OrderNumber));

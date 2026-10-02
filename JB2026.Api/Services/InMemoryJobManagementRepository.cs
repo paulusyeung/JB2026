@@ -225,6 +225,52 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         return _jobs.TryGetValue(orderId, out var job) ? MapOrder(job) : null;
     }
 
+    public IReadOnlyList<JobTimelineItemResponse>? GetJobTimeline(Guid orderId, int take)
+    {
+        if (!_jobs.TryGetValue(orderId, out var job))
+        {
+            return null;
+        }
+
+        // No FCMHistory table exists in this fallback mode, so the timeline is rebuilt from the
+        // job's own lifecycle stamps using the legacy row shape ("{OrderNumber}-{JobNumber}: {CustomerName}").
+        var body = $"{job.CompositeOrderNumber}: {job.CustomerName}";
+        var milestones = new List<(DateTime DeliveredOn, string MessageTitle)>
+        {
+            (job.CreatedOn, "JB5 新增訂單"),
+            (job.OrderedOn, "JB5 新增訂單"),
+        };
+
+        if (job.ScheduledOn.HasValue)
+        {
+            milestones.Add((job.ScheduledOn.Value, "JB5 已排單"));
+        }
+
+        if (job.ModifiedOn.HasValue)
+        {
+            milestones.Add((job.ModifiedOn.Value, "JB5 已填成本"));
+        }
+
+        if (job.CompletedOn.HasValue)
+        {
+            milestones.Add((job.CompletedOn.Value, "JB5 全單完成"));
+        }
+
+        return milestones
+            .OrderBy(milestone => milestone.DeliveredOn)
+            .ThenBy(milestone => milestone.MessageTitle, StringComparer.Ordinal)
+            .Take(Math.Max(take, 1))
+            .Select(milestone => new JobTimelineItemResponse
+            {
+                FCMHistoryId = Guid.NewGuid(),
+                DeliveredOn = milestone.DeliveredOn,
+                MessageTitle = milestone.MessageTitle,
+                MessageBody = body,
+                Topic = "Device",
+            })
+            .ToList();
+    }
+
     public async Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
     {
         // A blank order number means "new order": the server allocates it here rather than
@@ -557,7 +603,7 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
         public Dictionary<string, string>? WorkflowAttributes { get; init; }
         public required string[] StyleTitles { get; init; }
         public required IReadOnlyList<JobAttachmentRecord> Attachments { get; init; }
-        public string CompositeOrderNumber => $"{OrderNumber}-{JobNumber}";
+        public string CompositeOrderNumber => string.IsNullOrWhiteSpace(JobNumber) ? OrderNumber : $"{OrderNumber}-{JobNumber}";
     }
 
     private sealed record JobAttachmentRecord(string FileName, string ContentType, long Length);

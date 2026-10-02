@@ -20,6 +20,8 @@ public interface IJobManagementRepository
 
     JobOrderResponse? GetJobOrder(Guid orderId);
 
+    IReadOnlyList<JobTimelineItemResponse>? GetJobTimeline(Guid orderId, int take);
+
     Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor);
 
     Task<JobOrderResponse?> UpdateJobOrder(Guid orderId, UpdateJobOrderRequest request, string actor);

@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import type { JobOrderRecord, JobStatsRecord, OrderTypeWorkflowAttribute } from '@/types/api'
+import type { JobOrderRecord, JobStatsRecord, JobTimelineItem, OrderTypeWorkflowAttribute } from '@/types/api'
 
 interface CreateJobOrderRequest {
   /** Omit for a brand new order; the server allocates the number atomically. */
@@ -122,6 +122,16 @@ export async function getOrderTypeWorkflowAttributes(orderType: number): Promise
 
 export async function getJobOrder(id: string): Promise<JobOrderRecord> {
   const response = await apiClient.get<JobOrderRecord>(`/api/v2/job-orders/${id}`)
+  return response.data
+}
+
+/**
+ * Push-notification delivery history for the order behind `id`, newest first.
+ * Rows come from the legacy FCMHistory table and match the "{OrderNumber}-" message prefix,
+ * so the result covers every job number under the order.
+ */
+export async function getJobTimeline(id: string): Promise<JobTimelineItem[]> {
+  const response = await apiClient.get<JobTimelineItem[]>(`/api/v2/job-orders/${id}/timeline`)
   return response.data
 }
 

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useDateFormatStore } from '@/stores/dateFormat'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
-import { DATE_FORMATS, type DateFormatType, formatDate as baseFormatDate } from '@/utils/dateFormatter'
+import { DATE_FORMATS, type DateFormatType, formatDate as baseFormatDate, formatDateWithSeconds as baseFormatDateWithSeconds } from '@/utils/dateFormatter'
 
 export function useGlobalDateFormatter() {
   const dateFormatStore = useDateFormatStore()
@@ -29,6 +29,18 @@ export function useGlobalDateFormatter() {
     }
   }
   
+  // Follows the global date format but always adds hours, minutes and seconds.
+  const formatWithSeconds = (
+    value: string | Date | null | undefined,
+    formatType?: DateFormatType,
+    locale?: string
+  ) => {
+    const targetFormat = formatType || dateFormatStore.currentFormat
+    const targetLocale = locale || activeLocale.value
+
+    return baseFormatDateWithSeconds(value, targetFormat, targetLocale)
+  }
+
   const setFormat = (format: DateFormatType) => {
     dateFormatStore.setCurrentFormat(format)
   }
@@ -36,6 +48,7 @@ export function useGlobalDateFormatter() {
   return {
     currentFormat,
     format,
+    formatWithSeconds,
     setFormat,
     DATE_FORMATS // Re-export for convenience in templates
   }

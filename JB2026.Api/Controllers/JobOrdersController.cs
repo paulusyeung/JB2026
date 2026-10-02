@@ -200,6 +200,32 @@ public sealed class JobOrdersController : ControllerBase
         return Ok(order);
     }
 
+    [HttpGet("{id:guid}/timeline")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobTimelineItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public ActionResult<IReadOnlyList<JobTimelineItemResponse>> GetTimeline(
+        Guid id,
+        [FromQuery] int? take)
+    {
+        var requestedTake = Math.Clamp(
+            take.GetValueOrDefault(_jobListOptions.TimelineTake),
+            1,
+            Math.Max(1, _jobListOptions.MaxTimelineTake));
+
+        var timeline = _repository.GetJobTimeline(id, requestedTake);
+        if (timeline is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Job order not found",
+                Detail = $"No job order exists for order id '{id}'.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+
+        return Ok(timeline);
+    }
+
     [HttpGet("~/api/v2/order-types/{orderType}/workflow-attributes")]
     [ProducesResponseType(typeof(OrderTypeWorkflowAttributeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]

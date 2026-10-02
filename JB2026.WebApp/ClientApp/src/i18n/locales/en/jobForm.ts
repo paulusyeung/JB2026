@@ -41,6 +41,7 @@ export const jobFormMessages = {
         attachment: 'Attachment',
         printOrder: 'Print Order',
         workflow: 'Workflow',
+        timeline: 'Timeline',
         edit: 'Edit',
         editProductDetails: 'Edit Product Details',
         editRemarks: 'Edit Ｃost',

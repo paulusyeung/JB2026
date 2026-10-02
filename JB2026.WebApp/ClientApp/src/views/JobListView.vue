@@ -165,6 +165,10 @@
               {{ t('jobOrder.jobList.actions.print') }}
             </v-btn>
 
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-timeline-clock-outline" :disabled="attachmentAndPrintDisabled" @click="openTimeline()">
+              {{ t('jobOrder.jobList.actions.timeline') }}
+            </v-btn>
+
             <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
               {{ t('jobOrder.jobList.actions.export') }}
             </v-btn>
@@ -227,6 +231,9 @@
               </v-list-item>
               <v-list-item prepend-icon="mdi-printer" :disabled="attachmentAndPrintDisabled" @click="printList">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-timeline-clock-outline" :disabled="attachmentAndPrintDisabled" @click="openTimeline()">
+                <v-list-item-title>{{ t('jobOrder.jobList.actions.timeline') }}</v-list-item-title>
               </v-list-item>
               <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
                 <v-list-item-title>{{ t('jobOrder.jobList.actions.export') }}</v-list-item-title>
@@ -332,6 +339,9 @@
                   </v-list-item>
                   <v-list-item prepend-icon="mdi-printer" :disabled="attachmentAndPrintDisabled" @click.stop="printList">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.print') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-timeline-clock-outline" :disabled="attachmentAndPrintDisabled" @click.stop="openTimeline(row)">
+                    <v-list-item-title>{{ t('jobOrder.jobList.actions.timeline') }}</v-list-item-title>
                   </v-list-item>
                   <v-list-item prepend-icon="mdi-file-delimited-outline" :disabled="displayedRows.length === 0" @click.stop="exportToCsv">
                     <v-list-item-title>{{ t('jobOrder.jobList.actions.export') }}</v-list-item-title>
@@ -527,6 +537,12 @@
       :product-details="printManagerJob?.productDetails"
     />
 
+    <JobTimelineDialog
+      v-model="timelineOpen"
+      :order-id="timelineOrder?.orderId ?? null"
+      :order-number="timelineOrder ? compositeOrderNumber(timelineOrder) : ''"
+    />
+
     <v-snackbar v-model="saveSuccess" color="success" timeout="3000">
       {{ t('jobOrder.saved') }}
       <template #actions>
@@ -548,6 +564,7 @@ import { useDisplay } from 'vuetify'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
+import JobTimelineDialog from '@/components/forms/JobTimelineDialog.vue'
 import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
 import { useColumnOrder } from '@/composables/useColumnOrder'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
@@ -631,6 +648,8 @@ const productDetailsDialogOpen = ref(false)
 const remarksDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
+const timelineOpen = ref(false)
+const timelineOrder = ref<JobOrderRecord | null>(null)
 const invoicePreviewOpen = ref(false)
 const invoicePreviewLoading = ref(false)
 const invoiceGenerateLoading = ref(false)
@@ -936,6 +955,30 @@ async function printList() {
   } catch {
     showActionNotice(t('jobOrder.openEditFailed'))
   }
+}
+
+// The toolbar entry follows the selection like Print does; the card view menu passes its own row.
+function openTimeline(row?: JobOrderRecord) {
+  if (row) {
+    timelineOrder.value = row
+    timelineOpen.value = true
+    return
+  }
+
+  if (selectedOrderIds.value.length !== 1) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
+  }
+
+  const targetOrderId = selectedOrderIds.value[0] ?? null
+  const targetRow = rows.value.find((item) => item.orderId === targetOrderId) ?? null
+  if (!targetRow) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
+  }
+
+  timelineOrder.value = targetRow
+  timelineOpen.value = true
 }
 
 function exportToCsv() {

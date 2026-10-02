@@ -347,6 +347,89 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
         return job is null ? null : MapOrder(job, userDisplayNameLookup);
     }
 
+    public IReadOnlyList<JobTimelineItemResponse>? GetJobTimeline(Guid orderId, int take)
+    {
+        var job = _readContext.JobOrders
+            .AsNoTracking()
+            .Where(order => order.OrderId == orderId)
+            .Select(order => new { order.OrderNumber, order.JobNumber })
+            .FirstOrDefault();
+
+        if (job == null || string.IsNullOrWhiteSpace(job.OrderNumber))
+        {
+            return null;
+        }
+
+        // Legacy lifecycle push rows are written as "{OrderNumber}-{JobNumber}: {CustomerName}".
+        // One push is recorded per (stage, job) pair, so a job's timeline is that job's own rows
+        // plus the job 0 rows:
+        //
+        //  - Job 0 was migrated into job 1 and has no JobOrder row of its own, so it can never be
+        //    opened by itself. Its push is the earliest record of the order, so it is folded into
+        //    every job's timeline (order 170479: JobOrder jobs 1 and 2, pushes for jobs 0, 1 and 2).
+        //  - Other jobs contribute only their own rows. A single stage fans out across jobs at one
+        //    instant (order 170195 "JB5 已排單" wrote 14 rows, one per job), so including a
+        //    neighbour's rows would mix in stages that belong to a different job.
+        //
+        // The trailing colon keeps the job number unambiguous: a bare "170479-1" prefix would also
+        // swallow "170479-10" .. "170479-14".
+        var orderNumber = job.OrderNumber.Trim();
+        var selectedJobNumber = job.JobNumber.GetValueOrDefault();
+        var orderPrefix = $"{orderNumber}-";
+
+        var entries = _readContext.FCMHistories
+            .AsNoTracking()
+            .Where(entry => entry.MessageBody != null && entry.MessageBody.StartsWith(orderPrefix))
+            .OrderBy(entry => entry.DeliveredOn)
+            .ThenBy(entry => entry.MessageBody)
+            .ToList()
+            .Where(entry => TryGetJobNumber(entry.MessageBody!, orderNumber, out var entryJobNumber)
+                && (entryJobNumber == 0 || entryJobNumber == selectedJobNumber))
+            .Take(Math.Max(take, 1))
+            .ToList();
+
+        return entries
+            .Select(entry => new JobTimelineItemResponse
+            {
+                FCMHistoryId = entry.FCMHistoryId,
+                DeliveredOn = entry.DeliveredOn,
+                MessageTitle = entry.MessageTitle,
+                MessageBody = entry.MessageBody,
+                Topic = entry.Topic,
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Extracts the job number from a legacy push body shaped
+    /// "{OrderNumber}-{JobNumber}: {CustomerName}". Requires digits followed immediately by the
+    /// colon, so "170479-1:" yields 1 while "170479-14:" yields 14 and a body with no colon fails.
+    /// </summary>
+    private static bool TryGetJobNumber(string messageBody, string orderNumber, out int jobNumber)
+    {
+        jobNumber = -1;
+
+        var prefix = $"{orderNumber}-";
+        if (!messageBody.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var start = prefix.Length;
+        var cursor = start;
+        while (cursor < messageBody.Length && char.IsAsciiDigit(messageBody[cursor]))
+        {
+            cursor++;
+        }
+
+        if (cursor == start || cursor >= messageBody.Length || messageBody[cursor] != ':')
+        {
+            return false;
+        }
+
+        return int.TryParse(messageBody.AsSpan(start, cursor - start), out jobNumber);
+    }
+
     public async Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor)
     {
         var actorId = await ResolveUserGuidAsync(actor) ?? Guid.NewGuid();

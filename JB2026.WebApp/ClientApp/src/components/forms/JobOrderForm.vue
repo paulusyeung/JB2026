@@ -29,6 +29,15 @@
           <v-btn variant="tonal" color="primary" :disabled="isNew" @click="handleWorkflowClick">
             {{ t('jobForm.actions.workflow') }}
           </v-btn>
+          <v-btn
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-timeline-clock-outline"
+            :disabled="isNew"
+            @click="handleTimelineClick"
+          >
+            {{ t('jobForm.actions.timeline') }}
+          </v-btn>
         </div>
       </v-card-title>
 
@@ -367,6 +376,12 @@
         </v-btn>
       </v-card-actions>
     </v-card>
+
+    <JobTimelineDialog
+      v-model="timelineOpen"
+      :order-id="props.job?.orderId ?? null"
+      :order-number="timelineOrderLabel"
+    />
   </v-form>
 </template>
 
@@ -374,6 +389,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { VForm } from 'vuetify/components'
+import JobTimelineDialog from '@/components/forms/JobTimelineDialog.vue'
 import { useOrderTypeOptions } from '@/composables/useOrderTypeOptions'
 import { saveJob } from '@/services/jobs'
 import { getJobOrder, getJobPreviewBlob, getOrderTypeWorkflowAttributes } from '@/services/jobOrders'
@@ -413,6 +429,16 @@ const workflowAttributeDefs = ref<OrderTypeWorkflowAttribute[]>([])
 const workflowAttributeValues = ref<Record<string, string>>({})
 const workflowStatuses = ref<{ step1: number | null; step2: number | null; step3: number | null }>({ step1: null, step2: null, step3: null })
 const previewImageUrl = ref<string | null>(null)
+const timelineOpen = ref(false)
+// JobDetail carries the order number but not the job number, so prefer the legacy
+// record's composite number for the dialog subtitle and fall back to the order number.
+const timelineOrderLabel = computed(() => {
+  const record = legacyRecord.value
+  if (record) {
+    return record.jobNumber ? `${record.orderNumber}-${record.jobNumber}` : record.orderNumber
+  }
+  return props.job?.orderNumber ?? ''
+})
 const dragOffset = ref({ x: 0, y: 0 })
 const dragPointer = ref<{ id: number; startX: number; startY: number; originX: number; originY: number } | null>(null)
 
@@ -431,6 +457,7 @@ watch(
     syncLegacyFields(null)
     errorMessage.value = ''
     clearPreviewImage()
+    timelineOpen.value = false
     workflowStatuses.value = {
       step1: job?.step1Status ?? (job?.orderId ? null : 0),
       step2: job?.step2Status ?? (job?.orderId ? null : 0),
@@ -779,6 +806,13 @@ function handlePrintClick() {
 function handleWorkflowClick() {
   if (!props.job) return
   emit('workflow', props.job)
+}
+
+// The timeline is queried by order id, so this dialog is self-contained instead of
+// being emitted to the parent (JobOrderForm is rendered by a dozen views).
+function handleTimelineClick() {
+  if (isNew.value || !props.job?.orderId) return
+  timelineOpen.value = true
 }
 
 function handleProductDetailsEdit() {

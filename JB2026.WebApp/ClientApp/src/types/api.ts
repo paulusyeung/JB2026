@@ -555,6 +555,14 @@ export interface JobOrderPrintRequest {
   selectedProductDetailSections?: string[]
 }
 
+export interface JobTimelineItem {
+  fcmHistoryId: string
+  deliveredOn: string
+  messageTitle?: string | null
+  messageBody?: string | null
+  topic?: string | null
+}
+
 export interface QuotationListItem {
   headerId: string
   machineType: string

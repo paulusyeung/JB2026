@@ -376,6 +376,8 @@ public sealed class JobOrderPrintControllerTests
         public IReadOnlyList<JobOrderResponse> GetOrderList(string? lookup, int commonQuery, string? startsWith, int take, DateOnly? startOn = null, DateOnly? endOn = null, string? lookupField = null) => [];
         public IReadOnlyList<JobStatsResponse> GetJobStats(DateOnly? startOn, DateOnly? endOn) => [];
         public JobOrderResponse? GetJobOrder(Guid orderId) => null;
+
+        public IReadOnlyList<JobTimelineItemResponse>? GetJobTimeline(Guid orderId, int take) => [];
         public Task<JobOrderResponse> CreateJobOrder(CreateJobOrderRequest request, string actor) => throw new NotImplementedException();
         public Task<JobOrderResponse?> UpdateJobOrder(Guid orderId, UpdateJobOrderRequest request, string actor) => throw new NotImplementedException();
         public Task<JobOrderResponse?> DeleteJobOrder(Guid orderId) => Task.FromResult<JobOrderResponse?>(null);
