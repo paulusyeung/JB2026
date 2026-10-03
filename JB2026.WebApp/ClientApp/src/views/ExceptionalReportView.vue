@@ -54,7 +54,7 @@
           </v-list>
           </v-menu>
 
-          <v-menu location="bottom">
+          <v-menu v-model="sortingMenuOpen" location="bottom" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                 {{ t('jobOrder.orderList.actions.sorting') }}
@@ -72,8 +72,8 @@
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('jobOrder.orderList.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('jobOrder.orderList.actions.desc') }}</v-btn>
+                <v-btn value="asc" @click="sortingMenuOpen = false">{{ t('jobOrder.orderList.actions.asc') }}</v-btn>
+                <v-btn value="desc" @click="sortingMenuOpen = false">{{ t('jobOrder.orderList.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
@@ -415,6 +415,7 @@ const {
   itemsPerPage: 10,
   criteria: defaultCriteriaState(),
 })
+const sortingMenuOpen = ref(false)
 const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const { format } = useGlobalDateFormatter()

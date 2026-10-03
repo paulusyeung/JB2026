@@ -64,7 +64,7 @@
           </v-list>
           </v-menu>
 
-          <v-menu location="bottom">
+          <v-menu v-model="sortingMenuOpen" location="bottom" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                 {{ t('billing.invoices.actions.sorting') }}
@@ -82,8 +82,8 @@
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('billing.invoices.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('billing.invoices.actions.desc') }}</v-btn>
+                <v-btn value="asc" @click="sortingMenuOpen = false">{{ t('billing.invoices.actions.asc') }}</v-btn>
+                <v-btn value="desc" @click="sortingMenuOpen = false">{{ t('billing.invoices.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
@@ -329,6 +329,7 @@ const visibleColumnKeys = viewSettings.visibleColumns
 const columnOrder = viewSettings.columnOrder
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
+const sortingMenuOpen = ref(false)
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
 const itemsPerPage = viewSettings.itemsPerPage

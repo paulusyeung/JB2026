@@ -46,7 +46,7 @@
             </v-list>
           </v-menu>
 
-          <v-menu location="bottom">
+          <v-menu v-model="sortingMenuOpen" location="bottom" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                 {{ t('quotations.actions.sorting') }}
@@ -64,8 +64,8 @@
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('quotations.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('quotations.actions.desc') }}</v-btn>
+                <v-btn value="asc" @click="sortingMenuOpen = false">{{ t('quotations.actions.asc') }}</v-btn>
+                <v-btn value="desc" @click="sortingMenuOpen = false">{{ t('quotations.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
@@ -292,6 +292,7 @@ const viewSettings = useViewSettings('quotations', {
 const visibleColumnKeys = viewSettings.visibleColumns
 const sortKey = viewSettings.sortKey
 const sortDirection = viewSettings.sortDirection
+const sortingMenuOpen = ref(false)
 const checkboxMode = viewSettings.checkboxMode
 const viewMode = viewSettings.viewMode
 const { isPhoneLayout } = useResponsiveList()

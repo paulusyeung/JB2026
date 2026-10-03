@@ -110,7 +110,7 @@
             </v-list>
           </v-menu>
 
-          <v-menu location="bottom">
+          <v-menu v-model="sortingMenuOpen" location="bottom" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                 {{ t('jobOrder.jobList.actions.sorting') }}
@@ -128,8 +128,12 @@
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('jobOrder.jobList.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('jobOrder.jobList.actions.desc') }}</v-btn>
+                <v-btn value="asc" @click="sortingMenuOpen = false">
+                  {{ t('jobOrder.jobList.actions.asc') }}
+                </v-btn>
+                <v-btn value="desc" @click="sortingMenuOpen = false">
+                  {{ t('jobOrder.jobList.actions.desc') }}
+                </v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
@@ -599,6 +603,7 @@ const endDate = ref('')
 const statusFilter = ref(-1)
 const startDatePickerOpen = ref(false)
 const endDatePickerOpen = ref(false)
+const sortingMenuOpen = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const activeOrderId = ref<string | null>(null)
 const defaultColumnKeys = [

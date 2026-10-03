@@ -194,7 +194,7 @@
                   </v-list>
                 </v-menu>
 
-                <v-menu location="bottom">
+                <v-menu v-model="joSortingMenuOpen" location="bottom" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                       {{ t('jobOrder.jobList.actions.sorting') }}
@@ -212,8 +212,8 @@
                       hide-details
                     />
                     <v-btn-toggle v-model="joSortDirection" mandatory divided class="mt-3" density="compact">
-                      <v-btn value="asc">{{ t('jobOrder.jobList.actions.asc') }}</v-btn>
-                      <v-btn value="desc">{{ t('jobOrder.jobList.actions.desc') }}</v-btn>
+                      <v-btn value="asc" @click="joSortingMenuOpen = false">{{ t('jobOrder.jobList.actions.asc') }}</v-btn>
+                      <v-btn value="desc" @click="joSortingMenuOpen = false">{{ t('jobOrder.jobList.actions.desc') }}</v-btn>
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
@@ -505,7 +505,7 @@
                   </v-list>
                 </v-menu>
 
-                <v-menu location="bottom">
+                <v-menu v-model="invSortingMenuOpen" location="bottom" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                       {{ t('billing.invoices.actions.sorting') }}
@@ -523,8 +523,8 @@
                       hide-details
                     />
                     <v-btn-toggle v-model="invSortDirection" mandatory divided class="mt-3" density="compact">
-                      <v-btn value="asc">{{ t('billing.invoices.actions.asc') }}</v-btn>
-                      <v-btn value="desc">{{ t('billing.invoices.actions.desc') }}</v-btn>
+                      <v-btn value="asc" @click="invSortingMenuOpen = false">{{ t('billing.invoices.actions.asc') }}</v-btn>
+                      <v-btn value="desc" @click="invSortingMenuOpen = false">{{ t('billing.invoices.actions.desc') }}</v-btn>
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
@@ -770,7 +770,7 @@
                   </v-list>
                 </v-menu>
 
-                <v-menu location="bottom">
+                <v-menu v-model="oppSortingMenuOpen" location="bottom" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                       {{ t('crm.opportunities.actions.sorting') }}
@@ -788,8 +788,8 @@
                       hide-details
                     />
                     <v-btn-toggle v-model="oppSortDirection" mandatory divided class="mt-3" density="compact">
-                      <v-btn value="asc">{{ t('crm.opportunities.actions.asc') }}</v-btn>
-                      <v-btn value="desc">{{ t('crm.opportunities.actions.desc') }}</v-btn>
+                      <v-btn value="asc" @click="oppSortingMenuOpen = false">{{ t('crm.opportunities.actions.asc') }}</v-btn>
+                      <v-btn value="desc" @click="oppSortingMenuOpen = false">{{ t('crm.opportunities.actions.desc') }}</v-btn>
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
@@ -1017,7 +1017,7 @@
                   </v-list>
                 </v-menu>
 
-                <v-menu location="bottom">
+                <v-menu v-model="taskSortingMenuOpen" location="bottom" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                       {{ t('crm.tasks.actions.sorting') }}
@@ -1035,8 +1035,8 @@
                       hide-details
                     />
                     <v-btn-toggle v-model="taskSortDirection" mandatory divided class="mt-3" density="compact">
-                      <v-btn value="asc">{{ t('crm.tasks.actions.asc') }}</v-btn>
-                      <v-btn value="desc">{{ t('crm.tasks.actions.desc') }}</v-btn>
+                      <v-btn value="asc" @click="taskSortingMenuOpen = false">{{ t('crm.tasks.actions.asc') }}</v-btn>
+                      <v-btn value="desc" @click="taskSortingMenuOpen = false">{{ t('crm.tasks.actions.desc') }}</v-btn>
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
@@ -1291,7 +1291,7 @@
                   </v-list>
                 </v-menu>
 
-                <v-menu location="bottom">
+                <v-menu v-model="filesSortingMenuOpen" location="bottom" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                       {{ t('customer360.files.actions.sortBy') }}
@@ -1309,8 +1309,8 @@
                       hide-details
                     />
                     <v-btn-toggle v-model="filesSortDirection" mandatory divided class="mt-3" density="compact">
-                      <v-btn value="asc">{{ t('customer360.files.actions.asc') }}</v-btn>
-                      <v-btn value="desc">{{ t('customer360.files.actions.desc') }}</v-btn>
+                      <v-btn value="asc" @click="filesSortingMenuOpen = false">{{ t('customer360.files.actions.asc') }}</v-btn>
+                      <v-btn value="desc" @click="filesSortingMenuOpen = false">{{ t('customer360.files.actions.desc') }}</v-btn>
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
@@ -1562,7 +1562,7 @@
                   </v-list>
                 </v-menu>
 
-                <v-menu location="bottom">
+                <v-menu v-model="emailSortingMenuOpen" location="bottom" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                       {{ t('customer360.emails.actions.sorting') }}
@@ -1580,8 +1580,8 @@
                       hide-details
                     />
                     <v-btn-toggle v-model="emailSortDirection" mandatory divided class="mt-3" density="compact">
-                      <v-btn value="asc">{{ t('customer360.emails.actions.asc') }}</v-btn>
-                      <v-btn value="desc">{{ t('customer360.emails.actions.desc') }}</v-btn>
+                      <v-btn value="asc" @click="emailSortingMenuOpen = false">{{ t('customer360.emails.actions.asc') }}</v-btn>
+                      <v-btn value="desc" @click="emailSortingMenuOpen = false">{{ t('customer360.emails.actions.desc') }}</v-btn>
                     </v-btn-toggle>
                   </v-card>
                 </v-menu>
@@ -2186,6 +2186,7 @@ const oppVisibleColumnKeys = oppViewSettings.visibleColumns
 const oppColumnOrder = oppViewSettings.columnOrder
 const oppSortKey = oppViewSettings.sortKey
 const oppSortDirection = oppViewSettings.sortDirection
+const oppSortingMenuOpen = ref(false)
 const oppCheckboxMode = oppViewSettings.checkboxMode
 const oppViewMode = oppViewSettings.viewMode
 const oppItemsPerPage = oppViewSettings.itemsPerPage
@@ -2397,6 +2398,7 @@ const taskVisibleColumnKeys = taskViewSettings.visibleColumns
 const taskColumnOrder = taskViewSettings.columnOrder
 const taskSortKey = taskViewSettings.sortKey
 const taskSortDirection = taskViewSettings.sortDirection
+const taskSortingMenuOpen = ref(false)
 const taskCheckboxMode = taskViewSettings.checkboxMode
 const taskViewMode = taskViewSettings.viewMode
 const taskItemsPerPage = taskViewSettings.itemsPerPage
@@ -2632,6 +2634,7 @@ const joVisibleColumnKeys = joViewSettings.visibleColumns
 const joColumnOrder = joViewSettings.columnOrder
 const joSortKey = joViewSettings.sortKey
 const joSortDirection = joViewSettings.sortDirection
+const joSortingMenuOpen = ref(false)
 const joCheckboxMode = joViewSettings.checkboxMode
 const joViewMode = joViewSettings.viewMode
 const joItemsPerPage = joViewSettings.itemsPerPage
@@ -3040,6 +3043,7 @@ const invVisibleColumnKeys = invViewSettings.visibleColumns
 const invColumnOrder = invViewSettings.columnOrder
 const invSortKey = invViewSettings.sortKey
 const invSortDirection = invViewSettings.sortDirection
+const invSortingMenuOpen = ref(false)
 const invCheckboxMode = invViewSettings.checkboxMode
 const invViewMode = invViewSettings.viewMode
 const invItemsPerPage = invViewSettings.itemsPerPage
@@ -3376,6 +3380,7 @@ const {
 } = useColumnOrder(filesColumnOrder, allFilesHeaders, filesDefaultColumnKeys)
 
 const filesSortDirection = filesViewSettings.sortDirection
+const filesSortingMenuOpen = ref(false)
 const filesCheckboxMode = filesViewSettings.checkboxMode
 const filesViewMode = filesViewSettings.viewMode
 const filesItemsPerPage = filesViewSettings.itemsPerPage
@@ -3509,6 +3514,7 @@ const emailVisibleColumnKeys = emailViewSettings.visibleColumns
 const emailColumnOrder = emailViewSettings.columnOrder
 const emailSortKey = emailViewSettings.sortKey
 const emailSortDirection = emailViewSettings.sortDirection
+const emailSortingMenuOpen = ref(false)
 const emailCheckboxMode = emailViewSettings.checkboxMode
 const emailViewMode = emailViewSettings.viewMode
 const emailItemsPerPage = emailViewSettings.itemsPerPage

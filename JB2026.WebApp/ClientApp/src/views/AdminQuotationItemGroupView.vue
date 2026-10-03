@@ -44,7 +44,7 @@
             </v-list>
           </v-menu>
 
-          <v-menu location="bottom">
+          <v-menu v-model="sortingMenuOpen" location="bottom" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                 {{ t('admin.quotationItemGroup.actions.sorting') }}
@@ -62,8 +62,8 @@
                 hide-details
               />
               <v-btn-toggle v-model="sortDirection" mandatory divided class="mt-3" density="compact">
-                <v-btn value="asc">{{ t('admin.quotationItemGroup.actions.asc') }}</v-btn>
-                <v-btn value="desc">{{ t('admin.quotationItemGroup.actions.desc') }}</v-btn>
+                <v-btn value="asc" @click="sortingMenuOpen = false">{{ t('admin.quotationItemGroup.actions.asc') }}</v-btn>
+                <v-btn value="desc" @click="sortingMenuOpen = false">{{ t('admin.quotationItemGroup.actions.desc') }}</v-btn>
               </v-btn-toggle>
             </v-card>
           </v-menu>
@@ -217,6 +217,7 @@ const editingItemGroup = ref<AdminQuotationItemGroupListItem | null>(null)
 const saveSuccess = ref(false)
 const successMessage = ref('')
 const sortDirection = ref<SortDirection>('asc')
+const sortingMenuOpen = ref(false)
 const sortKey = ref('originalOrder')
 const visibleColumnKeys = ref<string[]>([
   'icon',

@@ -53,7 +53,7 @@
             </v-list>
           </v-menu>
 
-          <v-menu location="bottom">
+          <v-menu v-model="sortingMenuOpen" location="bottom" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" variant="outlined" size="small" prepend-icon="mdi-sort">
                 {{ t('sml.invoiceList.actions.sorting') }}
@@ -75,7 +75,7 @@
                   size="small"
                   variant="outlined"
                   :color="sortDirection === 'asc' ? 'primary' : undefined"
-                  @click="sortDirection = 'asc'"
+                  @click="sortDirection = 'asc'; sortingMenuOpen = false"
                 >
                   {{ t('sml.invoiceList.actions.asc') }}
                 </v-btn>
@@ -83,7 +83,7 @@
                   size="small"
                   variant="outlined"
                   :color="sortDirection === 'desc' ? 'primary' : undefined"
-                  @click="sortDirection = 'desc'"
+                  @click="sortDirection = 'desc'; sortingMenuOpen = false"
                 >
                   {{ t('sml.invoiceList.actions.desc') }}
                 </v-btn>
@@ -239,6 +239,7 @@ const {
   viewMode: 'detail',
   itemsPerPage: 10,
 })
+const sortingMenuOpen = ref(false)
 
 const commonQueryItems = computed(() => [
   { value: 1, label: t('sml.invoiceList.commonQueryItems.thirty') },
