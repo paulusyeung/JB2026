@@ -120,11 +120,9 @@ async function load() {
 watch(
   () => [props.modelValue, props.orderId] as const,
   ([open, orderId]) => {
-    if (!open) {
-      entries.value = []
-      errorMessage.value = ''
-      return
-    }
+    // Keep entries while closing: the dialog stays mounted during the leave
+    // transition, so clearing here would flash the empty-state alert.
+    if (!open) return
 
     if (orderId) {
       void load()
