@@ -22,10 +22,10 @@ export const crmMessages = {
       address: '地址',
       people: '聯絡人',
       opportunities: '商機',
-      createdOn: '建立時間',
+      createdOn: '建立日期',
       createdBy: '建立人',
-      updatedOn: '更新時間',
-      updatedBy: '更新人',
+      updatedOn: '修改日期',
+      updatedBy: '修改者',
     },
     form: {
       editTitle: '編輯公司',
