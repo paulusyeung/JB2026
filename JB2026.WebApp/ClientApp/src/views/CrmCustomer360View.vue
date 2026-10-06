@@ -371,7 +371,6 @@
                   :show-select="joCheckboxMode"
                   density="compact"
                   fixed-header
-                  height="45vh"
                   v-model:items-per-page="joItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="job-orders-table"
@@ -680,7 +679,6 @@
                   :show-select="invCheckboxMode"
                   density="compact"
                   fixed-header
-                  height="45vh"
                   v-model:items-per-page="invItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="invoices-table"
@@ -921,7 +919,6 @@
                   :show-select="oppCheckboxMode"
                   density="compact"
                   fixed-header
-                  height="45vh"
                   v-model:items-per-page="oppItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="opportunities-table"
@@ -1182,7 +1179,6 @@
                   :show-select="taskCheckboxMode"
                   density="compact"
                   fixed-header
-                  height="45vh"
                   v-model:items-per-page="taskItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="tasks-table"
@@ -1444,7 +1440,6 @@
                   :show-select="filesCheckboxMode"
                   density="compact"
                   fixed-header
-                  height="45vh"
                   v-model:items-per-page="filesItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="files-table"
@@ -1695,7 +1690,6 @@
                   :show-select="emailCheckboxMode"
                   density="compact"
                   fixed-header
-                  height="45vh"
                   v-model:items-per-page="emailItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="emails-table"
@@ -3781,7 +3775,22 @@ watch(emailDetailDialogOpen, (open) => {
 
 .detail-tabs-card :deep(.v-tabs-window) {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-tabs-card :deep(.v-window__container) {
+  flex: 1;
+  min-height: 0;
+}
+
+.detail-tabs-card :deep(.v-window-item--active) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .company-info {
@@ -3857,7 +3866,31 @@ watch(emailDetailDialogOpen, (open) => {
 }
 
 .tab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 1.5rem;
+}
+
+.tab-content .v-data-table {
+  flex: 1;
+  min-height: 0;
+}
+
+.tab-content .jo-card-list,
+.tab-content .invoice-card-list,
+.tab-content .opportunity-card-list,
+.tab-content .task-card-list,
+.tab-content .file-card-list,
+.tab-content .email-card-list,
+.tab-content .list-mobile-card-stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Chromium sizes grid rows without the aspect-ratio thumbnail's height when
+     the grid container has a bounded height, making rows overlap */
+  grid-auto-rows: max-content;
 }
 
 .opportunities-tab-content {
@@ -4597,7 +4630,6 @@ watch(emailDetailDialogOpen, (open) => {
 }
 
 .timeline-tab-content {
-  max-height: calc(100vh - 14rem);
   overflow-y: auto;
 }
 
