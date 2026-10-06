@@ -161,6 +161,7 @@ export const jobOrderMessages = {
           attachProduct: 'Attachment',
           customerRef: 'Customer Ref',
           attachCustomer: 'Attachment',
+          createdOn: 'Created On',
           orderedBy: 'Ordered By',
           quotation: 'Quotation#',
           cogs: 'COGS',

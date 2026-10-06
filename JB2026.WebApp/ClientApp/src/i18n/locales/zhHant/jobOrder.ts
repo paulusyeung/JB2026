@@ -161,6 +161,7 @@ export const jobOrderMessages = {
           attachProduct: '附',
           customerRef: '客戶參考',
           attachCustomer: '附',
+          createdOn: '建立日期',
           orderedBy: '下單者',
           quotation: '報價號',
           cogs: '生產成本',

@@ -30,7 +30,7 @@ public sealed class CrmController : ControllerBase
     {
         var currentUserEmail = await ResolveCurrentUserEmailAsync(readContext, cancellationToken);
 
-        var companies = await twentyCrmService.GetCompaniesAsync(currentUserEmail, lookup, readContext, cancellationToken);
+        var companies = await twentyCrmService.GetCompaniesAsync(currentUserEmail, lookup, cancellationToken);
 
         return Ok(companies);
     }
@@ -41,10 +41,9 @@ public sealed class CrmController : ControllerBase
     public async Task<ActionResult<CrmCompanyResponse>> GetCompany(
         string id,
         [FromServices] ITwentyCrmService twentyCrmService,
-        [FromServices] JB5LegacyReadContext readContext,
         CancellationToken cancellationToken = default)
     {
-        var company = await twentyCrmService.GetCompanyByIdAsync(id, readContext, cancellationToken);
+        var company = await twentyCrmService.GetCompanyByIdAsync(id, cancellationToken);
 
         if (company is null)
             return NotFound();
@@ -79,7 +78,7 @@ public sealed class CrmController : ControllerBase
             }));
         }
 
-        var existingCompanyNames = await twentyCrmService.GetAllCompanyNamesAsync(cancellationToken);
+        var existingCompanyLinks = await twentyCrmService.GetAllCompanyLinksAsync(cancellationToken);
 
         var rawQuery = readContext.vwCustomerList_Actives
             .AsNoTracking()
@@ -103,7 +102,8 @@ public sealed class CrmController : ControllerBase
 
         var result = rows
             .Where(row => !string.IsNullOrWhiteSpace(row.CustomerName))
-            .Where(row => existingCompanyNames.Count == 0 || !existingCompanyNames.Contains(row.CustomerName!))
+            .Where(row => !existingCompanyLinks.CompanyNames.Contains(row.CustomerName!)
+                && !existingCompanyLinks.LinkedCustomerIds.Contains(row.CustomerId.ToString()))
             .Take(take ?? int.MaxValue)
             .Select(row => new CrmMigratableCustomerResponse
             {
@@ -164,7 +164,7 @@ public sealed class CrmController : ControllerBase
 
             if (request.CustomerId is { } customerId)
             {
-                await FlagCustomerSyncedToCrmAsync(customerId, customerGateway, cancellationToken);
+                await FlagCustomerSyncedToCrmAsync(customerId, created.Id, customerGateway, cancellationToken);
             }
 
             return Ok(created);
@@ -177,14 +177,19 @@ public sealed class CrmController : ControllerBase
 
     private async Task FlagCustomerSyncedToCrmAsync(
         Guid customerId,
+        string twentyCompanyId,
         ICustomerStoredProcedureGateway customerGateway,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(twentyCompanyId))
+            return;
+
         var current = await customerGateway.SelectAsync(customerId, cancellationToken);
         if (current is null)
             return;
 
         var metadata = MergeMetadataCode(current.MetadataXml, "SyncedToCRM", "1");
+        metadata = MergeMetadataCode(metadata, "twentyCompanyId", twentyCompanyId);
 
         var actorId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : Guid.Empty;
 

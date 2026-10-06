@@ -1,15 +1,27 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using JB2026.Api.Models;
 using JB2026.Api.Options;
-using JB2026.EfCore.Data;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace JB2026.Api.Services.TwentyCrm;
 
 public class TwentyCrmService : ITwentyCrmService
 {
+    private const string JbCustomerIdFieldName = "jbCustomerId";
+    private const string JbCustomerIdFieldLabel = "JB Customer ID";
+
+    /// <summary>
+    /// Cached result of the jbCustomerId field check, keyed by Twenty base URL.
+    /// true when the custom field exists (or was created), false when JB2026
+    /// should degrade gracefully (e.g. create the field manually via the
+    /// Twenty Data Model settings).
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, Lazy<Task<bool>>> JbFieldEnsuredCache = new();
+
+    private sealed record TwentyFieldMutation(string MutationName, string ArgumentName, string InputTypeName, bool WrapInField);
+
     private readonly IOptions<TwentyCrmOptions> _options;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TwentyCrmService> _logger;
@@ -71,7 +83,6 @@ public class TwentyCrmService : ITwentyCrmService
     public async Task<IReadOnlyList<CrmCompanyResponse>> GetCompaniesAsync(
         string? currentUserEmail = null,
         string? lookup = null,
-        JB5LegacyReadContext? readContext = null,
         CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
@@ -86,6 +97,12 @@ public class TwentyCrmService : ITwentyCrmService
         {
             var hasLookup = !string.IsNullOrWhiteSpace(lookup);
             var hasEmail = !string.IsNullOrWhiteSpace(currentUserEmail);
+
+            // Only query/return the linked customer id when the jbCustomerId
+            // custom field exists (or was just created) — otherwise the query
+            // would fail with "Cannot query field".
+            var hasLinkedCustomerField = await EnsureJbCustomerIdFieldAsync(cancellationToken);
+            var linkedCustomerField = hasLinkedCustomerField ? "jbCustomerId" : string.Empty;
 
             var filterClauses = new List<string>();
             filterClauses.Add(
@@ -107,6 +124,7 @@ public class TwentyCrmService : ITwentyCrmService
                       node {
                         id
                         name
+                        {{linkedCustomerField}}
                         accountOwnerId
                         domainName {
                           primaryLinkUrl
@@ -187,10 +205,6 @@ public class TwentyCrmService : ITwentyCrmService
 
             var result = new List<CrmCompanyResponse>();
 
-            var syncedNames = readContext is not null
-                ? await GetSyncedToCrmCompanyNamesAsync(readContext, cancellationToken)
-                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var edge in edges.EnumerateArray())
             {
                 if (!edge.TryGetProperty("node", out var node) || node.ValueKind != JsonValueKind.Object)
@@ -199,7 +213,6 @@ public class TwentyCrmService : ITwentyCrmService
                 var parsed = ParseCompany(node);
                 if (parsed is not null)
                 {
-                    parsed.SyncedToCrm = syncedNames.Contains(parsed.Name);
                     result.Add(parsed);
                 }
             }
@@ -213,89 +226,30 @@ public class TwentyCrmService : ITwentyCrmService
         }
     }
 
-    private async Task<HashSet<string>> GetSyncedToCrmCompanyNamesAsync(
-        JB5LegacyReadContext readContext,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var customers = await readContext.vwCustomerList_Actives
-                .AsNoTracking()
-                .GroupJoin(
-                    readContext.Customers.AsNoTracking(),
-                    view => view.CustomerId,
-                    customer => customer.CustomerId,
-                    (view, customerGroup) => new { view, customerGroup })
-                .SelectMany(
-                    x => x.customerGroup.DefaultIfEmpty(),
-                    (x, customer) => new
-                    {
-                        x.view.CustomerName,
-                        MetadataXml = customer != null ? customer.MetadataXml : null,
-                    })
-                .Where(row => !string.IsNullOrWhiteSpace(row.CustomerName))
-                .ToListAsync(cancellationToken);
-
-            var syncedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var customer in customers)
-            {
-                if (TryGetMetadataCode(customer.MetadataXml, "SyncedToCRM") == "1"
-                    && !string.IsNullOrWhiteSpace(customer.CustomerName))
-                {
-                    syncedNames.Add(customer.CustomerName!);
-                }
-            }
-
-            return syncedNames;
-        }
-        catch
-        {
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        }
-    }
-
-    private static string TryGetMetadataCode(string? metadataXml, string key)
-    {
-        if (string.IsNullOrWhiteSpace(metadataXml))
-            return string.Empty;
-
-        try
-        {
-            using var document = JsonDocument.Parse(metadataXml.Trim());
-            if (document.RootElement.ValueKind == JsonValueKind.Object
-                && document.RootElement.TryGetProperty(key, out var value)
-                && value.ValueKind == JsonValueKind.String)
-            {
-                return value.GetString() ?? string.Empty;
-            }
-        }
-        catch
-        {
-            // Fall back to empty when metadata is not valid JSON.
-        }
-
-        return string.Empty;
-    }
-
-    public async Task<HashSet<string>> GetAllCompanyNamesAsync(CancellationToken cancellationToken = default)
+    public async Task<CrmCompanyLinksInfo> GetAllCompanyLinksAsync(CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
 
+        var links = new CrmCompanyLinksInfo();
+
         if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
         {
-            _logger.LogWarning("Twenty CRM not configured — returning empty company name set");
-            return [];
+            _logger.LogWarning("Twenty CRM not configured — returning empty company links");
+            return links;
         }
 
         try
         {
-            const string query = """
-                query AllCompanyNames($first: Int) {
+            var hasLinkedCustomerField = await EnsureJbCustomerIdFieldAsync(cancellationToken);
+            var linkedCustomerField = hasLinkedCustomerField ? "jbCustomerId" : string.Empty;
+
+            var query = $$"""
+                query AllCompanyLinks($first: Int) {
                   companies {
                     edges {
                       node {
                         name
+                        {{linkedCustomerField}}
                       }
                     }
                   }
@@ -310,10 +264,8 @@ public class TwentyCrmService : ITwentyCrmService
                 || !companiesEl.TryGetProperty("edges", out var edges)
                 || edges.ValueKind != JsonValueKind.Array)
             {
-                return [];
+                return links;
             }
-
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var edge in edges.EnumerateArray())
             {
@@ -322,21 +274,23 @@ public class TwentyCrmService : ITwentyCrmService
 
                 var name = GetStringProp(node, "name");
                 if (!string.IsNullOrWhiteSpace(name))
-                    names.Add(name);
+                    links.CompanyNames.Add(name);
+
+                if (TryGetLinkedCustomerId(node) is { } customerId)
+                    links.LinkedCustomerIds.Add(customerId.ToString());
             }
 
-            return names;
+            return links;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch company names from Twenty CRM");
-            return [];
+            _logger.LogError(ex, "Failed to fetch company links from Twenty CRM");
+            return links;
         }
     }
 
     public async Task<CrmCompanyResponse?> GetCompanyByIdAsync(
         string id,
-        JB5LegacyReadContext? readContext = null,
         CancellationToken cancellationToken = default)
     {
         var options = _options.Value;
@@ -349,13 +303,17 @@ public class TwentyCrmService : ITwentyCrmService
 
         try
         {
-            const string query = """
+            var hasLinkedCustomerField = await EnsureJbCustomerIdFieldAsync(cancellationToken);
+            var linkedCustomerField = hasLinkedCustomerField ? "jbCustomerId" : string.Empty;
+
+            var query = $$"""
                 query GetCompany($id: ID!) {
                   companies(filter: { id: { eq: $id } }) {
                     edges {
                       node {
                         id
                         name
+                        {{linkedCustomerField}}
                         accountOwnerId
                         domainName {
                           primaryLinkUrl
@@ -433,11 +391,6 @@ public class TwentyCrmService : ITwentyCrmService
                 return null;
 
             var company = ParseCompany(companyEl);
-            if (company is not null && readContext is not null)
-            {
-                var syncedNames = await GetSyncedToCrmCompanyNamesAsync(readContext, cancellationToken);
-                company.SyncedToCrm = syncedNames.Contains(company.Name);
-            }
 
             return company;
         }
@@ -638,6 +591,16 @@ public class TwentyCrmService : ITwentyCrmService
             if (!string.IsNullOrWhiteSpace(request.AccountOwnerId))
                 createData["accountOwnerId"] = request.AccountOwnerId;
 
+            if (request.CustomerId is { } linkedCustomerId)
+            {
+                if (await EnsureJbCustomerIdFieldAsync(cancellationToken))
+                    createData["jbCustomerId"] = linkedCustomerId.ToString();
+                else
+                    _logger.LogWarning(
+                        "Creating company '{Name}' without jbCustomerId — custom field unavailable, link will be metadata-only",
+                        request.Name);
+            }
+
             const string query = """
                 mutation CreateCompany($data: CompanyCreateInput!) {
                   createCompany(data: $data) {
@@ -672,6 +635,622 @@ public class TwentyCrmService : ITwentyCrmService
             _logger.LogError(ex, "Failed to create company in Twenty CRM");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Ensures the jbCustomerId custom field exists on the Twenty Company
+    /// object, creating it through the metadata API when necessary. The
+    /// result is cached for the lifetime of the process. Never throws.
+    /// </summary>
+    private async Task<bool> EnsureJbCustomerIdFieldAsync(CancellationToken cancellationToken)
+    {
+        var options = _options.Value;
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey) || string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await JbFieldEnsuredCache
+                .GetOrAdd(options.BaseUrl.TrimEnd('/'), _ => new Lazy<Task<bool>>(() => EnsureJbCustomerIdFieldCoreAsync(CancellationToken.None)))
+                .Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected failure while ensuring jbCustomerId field in Twenty CRM");
+            return false;
+        }
+    }
+
+    private async Task<bool> EnsureJbCustomerIdFieldCoreAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Some Twenty builds silently return null for unknown GraphQL
+            // selection fields instead of failing — field existence must be
+            // checked through schema introspection, not data queries.
+            if (await HasJbCustomerIdFieldInSchemaAsync(cancellationToken))
+            {
+                return true;
+            }
+
+            // Preferred path: GraphQL metadata API.
+            var mutation = await DiscoverFieldMutationAsync(cancellationToken);
+
+            if (mutation is not null)
+            {
+                var companyObjectMetadataId = await FindCompanyObjectMetadataIdAsync(cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(companyObjectMetadataId))
+                {
+                    try
+                    {
+                        await CreateJbCustomerIdFieldAsync(mutation, companyObjectMetadataId, cancellationToken);
+
+                        _logger.LogInformation(
+                            "Created custom field '{Name}' ({Label}) on the Twenty Company object via the GraphQL metadata API",
+                            JbCustomerIdFieldName,
+                            JbCustomerIdFieldLabel);
+                    }
+                    catch (InvalidOperationException ex) when (IsFieldAlreadyExistsError(ex.Message))
+                    {
+                        _logger.LogInformation(
+                            "Custom field '{Name}' already exists on the Twenty Company object",
+                            JbCustomerIdFieldName);
+                    }
+                }
+            }
+            else
+            {
+                // Fallback path: some Twenty builds expose the metadata API
+                // only through the REST endpoints.
+                _logger.LogInformation(
+                    "Twenty CRM GraphQL metadata API unavailable — falling back to the REST metadata API for the '{Name}' field",
+                    JbCustomerIdFieldName);
+
+                try
+                {
+                    await CreateJbCustomerIdFieldViaRestAsync(cancellationToken);
+
+                    _logger.LogInformation(
+                        "Created custom field '{Name}' ({Label}) on the Twenty Company object via the REST metadata API",
+                        JbCustomerIdFieldName,
+                        JbCustomerIdFieldLabel);
+                }
+                catch (InvalidOperationException ex) when (IsFieldAlreadyExistsError(ex.Message))
+                {
+                    _logger.LogInformation(
+                        "Custom field '{Name}' already exists on the Twenty Company object",
+                        JbCustomerIdFieldName);
+                }
+            }
+
+            // Metadata activation can lag slightly — retry the schema check.
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                if (await HasJbCustomerIdFieldInSchemaAsync(cancellationToken))
+                    return true;
+
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
+
+            _logger.LogWarning(
+                "The '{Name}' field could not be verified in the Twenty schema after creation — create it manually via the Twenty Data Model settings",
+                JbCustomerIdFieldName);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Could not ensure the '{Name}' custom field in Twenty CRM — create it manually via the Twenty Data Model settings",
+                JbCustomerIdFieldName);
+            return false;
+        }
+    }
+
+    private async Task<bool> HasJbCustomerIdFieldInSchemaAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            const string query = """
+                query CompanyFieldCheck {
+                  __type(name: "Company") {
+                    fields {
+                      name
+                    }
+                  }
+                }
+                """;
+
+            var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+            if (!data.TryGetProperty("__type", out var typeEl) || typeEl.ValueKind != JsonValueKind.Object)
+                return false;
+
+            if (!typeEl.TryGetProperty("fields", out var fieldsEl) || fieldsEl.ValueKind != JsonValueKind.Array)
+                return false;
+
+            foreach (var field in fieldsEl.EnumerateArray())
+            {
+                if (string.Equals(GetStringProp(field, "name"), JbCustomerIdFieldName, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check the Twenty schema for the '{Name}' field", JbCustomerIdFieldName);
+            return false;
+        }
+    }
+
+    private async Task<TwentyFieldMutation?> DiscoverFieldMutationAsync(CancellationToken cancellationToken)
+    {
+        const string query = """
+            query FieldMutationDiscovery {
+              __schema {
+                mutationType {
+                  fields {
+                    name
+                    args {
+                      name
+                      type {
+                        kind
+                        ofType { kind name }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+        JsonElement? mutationTypeEl = null;
+
+        if (data.TryGetProperty("__schema", out var schemaEl)
+            && schemaEl.ValueKind == JsonValueKind.Object
+            && schemaEl.TryGetProperty("mutationType", out var mt)
+            && mt.ValueKind == JsonValueKind.Object
+            && mt.TryGetProperty("fields", out var fieldsEl)
+            && fieldsEl.ValueKind == JsonValueKind.Array)
+        {
+            mutationTypeEl = fieldsEl;
+        }
+
+        if (mutationTypeEl is null)
+            return null;
+
+        // Preferred mutation names in order; fall back to any "*Field*"
+        // mutation that takes a single non-null input object argument.
+        string[] mutationCandidates = ["createOneField", "createOneFieldMetadataItem"];
+
+        string? mutationName = null;
+        string? argName = null;
+        string? inputTypeName = null;
+
+        foreach (var mutationCandidate in mutationCandidates)
+        {
+            foreach (var field in mutationTypeEl.Value.EnumerateArray())
+            {
+                if (!string.Equals(GetStringProp(field, "name"), mutationCandidate, StringComparison.Ordinal))
+                    continue;
+
+                foreach (var arg in field.TryGetProperty("args", out var argsEl) && argsEl.ValueKind == JsonValueKind.Array
+                    ? argsEl.EnumerateArray()
+                    : Enumerable.Empty<JsonElement>())
+                {
+                    var argInputType = ExtractInputTypeName(arg);
+                    if (argInputType is null)
+                        continue;
+
+                    if (GetStringProp(arg, "name") is "input" or "field" or "data")
+                    {
+                        mutationName = mutationCandidate;
+                        argName = GetStringProp(arg, "name");
+                        inputTypeName = argInputType;
+                        break;
+                    }
+                }
+
+                if (mutationName is not null)
+                    break;
+            }
+
+            if (mutationName is not null)
+                break;
+        }
+
+        if (mutationName is null || inputTypeName is null)
+            return null;
+
+        // Decide how to build the payload: some schemas accept the create
+        // payload directly (FieldCreateInput), others nest it under a "field"
+        // key (CreateOneFieldInput). Inspect the input type's own fields.
+        var wrapsInField = await InputTypeHasFieldEntryAsync(inputTypeName, cancellationToken);
+
+        return new TwentyFieldMutation(mutationName, argName ?? "input", inputTypeName, wrapsInField);
+    }
+
+    private async Task<bool> InputTypeHasFieldEntryAsync(string inputTypeName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var query = $$"""
+                query InputTypeShape {
+                  __type(name: "{{inputTypeName}}") {
+                    inputFields {
+                      name
+                    }
+                  }
+                }
+                """;
+
+            var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+            if (!data.TryGetProperty("__type", out var typeEl) || typeEl.ValueKind != JsonValueKind.Object)
+                return false;
+
+            if (!typeEl.TryGetProperty("inputFields", out var inputFieldsEl) || inputFieldsEl.ValueKind != JsonValueKind.Array)
+                return false;
+
+            foreach (var inputField in inputFieldsEl.EnumerateArray())
+            {
+                if (string.Equals(GetStringProp(inputField, "name"), "field", StringComparison.Ordinal))
+                    return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static string? ExtractInputTypeName(JsonElement arg)
+    {
+        if (arg.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var typeEl = arg.TryGetProperty("type", out var t) && t.ValueKind == JsonValueKind.Object
+            ? t
+            : default;
+
+        // Unwrap NON_NULL / LIST wrappers to find the named input object type.
+        for (var depth = 0; depth < 4 && typeEl.ValueKind == JsonValueKind.Object; depth++)
+        {
+            var kind = GetStringProp(typeEl, "kind");
+
+            if (kind is "NON_NULL" or "LIST")
+            {
+                typeEl = typeEl.TryGetProperty("ofType", out var ofType) && ofType.ValueKind == JsonValueKind.Object
+                    ? ofType
+                    : default;
+                continue;
+            }
+
+            if (kind == "INPUT_OBJECT")
+                return GetStringProp(typeEl, "name");
+
+            break;
+        }
+
+        return null;
+    }
+
+    private async Task<string?> FindCompanyObjectMetadataIdAsync(CancellationToken cancellationToken)
+    {
+        string[] queryCandidates =
+        [
+            """
+            query CompanyObjectMetadata {
+              objectMetadataItems {
+                edges {
+                  node {
+                    id
+                    nameSingular
+                  }
+                }
+              }
+            }
+            """,
+            """
+            query CompanyObjectMetadata {
+              findManyObjectMetadataItems {
+                edges {
+                  node {
+                    id
+                    nameSingular
+                  }
+                }
+              }
+            }
+            """,
+        ];
+
+        foreach (var query in queryCandidates)
+        {
+            try
+            {
+                var data = await PostGraphQLAsync(query, new Dictionary<string, object?>(), cancellationToken);
+
+                foreach (var node in ExtractObjectMetadataNodes(data))
+                {
+                    var nameSingular = GetStringProp(node, "nameSingular");
+                    if (string.Equals(nameSingular, "company", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var objectMetadataId = GetStringProp(node, "id");
+                        if (!string.IsNullOrWhiteSpace(objectMetadataId))
+                            return objectMetadataId;
+                    }
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Try the next metadata query shape.
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Object metadata payloads differ between Twenty versions — some return
+    /// a connection ({ target: { edges: [{ node }] } }), some a plain array.
+    /// </summary>
+    private static IEnumerable<JsonElement> ExtractObjectMetadataNodes(JsonElement data)
+    {
+        foreach (var child in data.EnumerateObject())
+        {
+            if (child.Value.ValueKind != JsonValueKind.Object && child.Value.ValueKind != JsonValueKind.Array)
+                continue;
+
+            IEnumerable<JsonElement> containers;
+
+            if (child.Value.ValueKind == JsonValueKind.Array)
+                containers = child.Value.EnumerateArray();
+            else
+                containers = [child.Value];
+
+            foreach (var container in containers)
+            {
+                if (container.TryGetProperty("edges", out var edges) && edges.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var edge in edges.EnumerateArray())
+                    {
+                        if (edge.TryGetProperty("node", out var node) && node.ValueKind == JsonValueKind.Object)
+                            yield return node;
+                    }
+                }
+                else
+                {
+                    yield return container;
+                }
+            }
+        }
+    }
+
+    private async Task CreateJbCustomerIdFieldAsync(
+        TwentyFieldMutation mutation,
+        string objectMetadataId,
+        CancellationToken cancellationToken)
+    {
+        var payload = new JsonObject
+        {
+            ["objectMetadataId"] = objectMetadataId,
+            ["name"] = JbCustomerIdFieldName,
+            ["label"] = JbCustomerIdFieldLabel,
+            ["type"] = "TEXT",
+        };
+
+        var input = mutation.WrapInField ? new JsonObject { ["field"] = payload } : payload;
+
+        var query = $$"""
+            mutation CreateJbCustomerIdField($input: {{mutation.InputTypeName}}!) {
+              {{mutation.MutationName}}({{mutation.ArgumentName}}: $input) {
+                id
+                name
+              }
+            }
+            """;
+
+        var variables = new Dictionary<string, object?>
+        {
+            ["input"] = input,
+        };
+
+        await PostGraphQLAsync(query, variables, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates the jbCustomerId field through the REST metadata API
+    /// (POST /rest/metadata/fields), used by Twenty builds that hide the
+    /// metadata operations from the GraphQL schema.
+    /// </summary>
+    private async Task CreateJbCustomerIdFieldViaRestAsync(CancellationToken cancellationToken)
+    {
+        var companyObjectMetadataId = await FindCompanyObjectMetadataIdViaRestAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(companyObjectMetadataId))
+        {
+            throw new InvalidOperationException("Company object metadata unavailable in the Twenty REST metadata API.");
+        }
+
+        var payload = new JsonObject
+        {
+            ["objectMetadataId"] = companyObjectMetadataId,
+            ["name"] = JbCustomerIdFieldName,
+            ["label"] = JbCustomerIdFieldLabel,
+            ["type"] = "TEXT",
+        };
+
+        var (statusCode, body) = await SendRestRequestAsync(
+            HttpMethod.Post,
+            "/rest/metadata/fields",
+            payload,
+            cancellationToken);
+
+        if (statusCode >= 200 && statusCode < 300 && body.HasValue
+            && BodyContainsText(body.Value, JbCustomerIdFieldName))
+        {
+            return;
+        }
+
+        var message = ExtractRestErrorMessage(body)
+            ?? $"HTTP {statusCode}: {Truncate(body?.GetRawText())}";
+        throw new InvalidOperationException(IsFieldAlreadyExistsError(message)
+            ? $"Field {JbCustomerIdFieldName} already exists."
+            : $"Failed to create the {JbCustomerIdFieldName} field via the REST metadata API: {message}");
+    }
+
+    private async Task<string?> FindCompanyObjectMetadataIdViaRestAsync(CancellationToken cancellationToken)
+    {
+        var (statusCode, body) = await SendRestRequestAsync(
+            HttpMethod.Get,
+            "/rest/metadata/objects",
+            null,
+            cancellationToken);
+
+        if (statusCode < 200 || statusCode >= 300 || body is null)
+        {
+            _logger.LogWarning(
+                "Twenty REST metadata API returned {StatusCode} for /rest/metadata/objects",
+                statusCode);
+            return null;
+        }
+
+        // Accepted shapes { objects: [...] } or a plain array.
+        JsonElement objectsEl = default;
+        var foundObjects = false;
+
+        if (body.Value.ValueKind == JsonValueKind.Object)
+        {
+            if (body.Value.TryGetProperty("objects", out var objects) && objects.ValueKind == JsonValueKind.Array)
+            {
+                objectsEl = objects.Clone();
+                foundObjects = true;
+            }
+        }
+        else if (body.Value.ValueKind == JsonValueKind.Array)
+        {
+            objectsEl = body.Value.Clone();
+            foundObjects = true;
+        }
+
+        if (!foundObjects)
+        {
+            _logger.LogWarning("Unexpected shape of the Twenty REST metadata objects response");
+            return null;
+        }
+
+        IList<JsonElement> nodes = objectsEl.EnumerateArray().ToList();
+
+        foreach (var node in nodes)
+        {
+            if (node.ValueKind == JsonValueKind.Object
+                && string.Equals(GetStringProp(node, "nameSingular"), "company", StringComparison.OrdinalIgnoreCase))
+            {
+                var objectMetadataId = GetStringProp(node, "id");
+                if (!string.IsNullOrWhiteSpace(objectMetadataId))
+                    return objectMetadataId;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<(int StatusCode, JsonElement? Body)> SendRestRequestAsync(
+        HttpMethod method,
+        string path,
+        JsonObject? body,
+        CancellationToken cancellationToken)
+    {
+        using var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_options.Value.ApiKey}");
+        client.Timeout = TimeSpan.FromSeconds(_options.Value.HttpClientTimeoutSeconds);
+
+        var baseUrl = _options.Value.BaseUrl.TrimEnd('/');
+        var url = $"{baseUrl}{path}";
+
+        using var request = new HttpRequestMessage(method, url);
+
+        if (body is not null)
+        {
+            request.Content = new StringContent(
+                body.ToJsonString(),
+                System.Text.Encoding.UTF8,
+                "application/json");
+        }
+
+        using var response = await client.SendAsync(request, cancellationToken);
+        var bodyText = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        JsonElement? parsed = null;
+
+        try
+        {
+            var doc = JsonDocument.Parse(bodyText);
+
+            if (doc.RootElement.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Object)
+                parsed = dataEl.Clone();
+            else
+                parsed = doc.RootElement.Clone();
+        }
+        catch (JsonException)
+        {
+            // Body is not JSON — error message extraction will use the raw text.
+        }
+
+        return ((int)response.StatusCode, parsed);
+    }
+
+    private static bool BodyContainsText(JsonElement element, string text)
+    {
+        var raw = element.GetRawText();
+        return raw.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ExtractRestErrorMessage(JsonElement? body)
+    {
+        if (body is null)
+            return null;
+
+        var raw = body.Value.GetRawText();
+
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("messages", out var messagesEl)
+                && messagesEl.ValueKind == JsonValueKind.Array
+                && messagesEl.GetArrayLength() > 0)
+            {
+                var first = messagesEl.EnumerateArray().First();
+                return first.ValueKind == JsonValueKind.String ? first.GetString() : null;
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall back to the raw body as message.
+        }
+
+        return raw;
+    }
+
+    private static bool IsFieldAlreadyExistsError(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        var lowered = message.ToLowerInvariant();
+        return lowered.Contains("already exist") || lowered.Contains("unique") || lowered.Contains("duplicate");
     }
 
     public async Task<IReadOnlyList<CrmMemberResponse>> GetWorkspaceMembersAsync(CancellationToken cancellationToken = default)
@@ -3027,6 +3606,8 @@ public class TwentyCrmService : ITwentyCrmService
         if (string.IsNullOrWhiteSpace(companyId))
             return null;
 
+        var linkedCustomerId = TryGetLinkedCustomerId(node);
+
         return new CrmCompanyResponse
         {
             Id = companyId,
@@ -3042,7 +3623,15 @@ public class TwentyCrmService : ITwentyCrmService
             UpdatedBy = ResolveActorName(node, "updatedBy"),
             People = ResolveRelationItems(node, "people"),
             Opportunities = ResolveRelationItems(node, "opportunities"),
+            SyncedToCrm = linkedCustomerId.HasValue,
+            CustomerId = linkedCustomerId,
         };
+    }
+
+    private static Guid? TryGetLinkedCustomerId(JsonElement node)
+    {
+        var raw = GetStringProp(node, "jbCustomerId");
+        return Guid.TryParse(raw, out var customerId) ? customerId : null;
     }
 
     private async Task<JsonElement> PostGraphQLAsync(

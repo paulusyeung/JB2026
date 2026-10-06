@@ -45,6 +45,8 @@ public sealed class CrmCompanyResponse
     public List<CrmRelationItem> Opportunities { get; set; } = new();
 
     public bool SyncedToCrm { get; set; }
+
+    public Guid? CustomerId { get; set; }
 }
 
 public sealed class CrmMemberResponse

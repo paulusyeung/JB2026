@@ -1961,6 +1961,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { getCrmCompanies, getCrmCompany, getCrmPeople, getCrmOpportunities, getCrmOpportunityStageOptions, getCrmTasks, getCrmTaskStatusOptions, getCrmCompanyTimeline } from '@/services/crm'
+import { getAdminCustomer } from '@/services/admin'
 import { apiClient } from '@/services/api'
 import { getCompanyPaperlessFiles } from '@/services/files'
 import { getJobList, deleteJobOrder } from '@/services/jobOrders'
@@ -2885,7 +2886,21 @@ async function loadJobOrders() {
   joErrorMessage.value = ''
   joCardLimit.value = 50
   try {
-    joRows.value = await getJobList({ lookup: company.value!.name.trim() || undefined })
+    // Prefer the linked JB2026 customer name over the Twenty company name —
+    // legacy job rows carry the customer name, which may differ from the
+    // Twenty company name.
+    let lookup = company.value.name.trim()
+    if (company.value.customerId) {
+      try {
+        const customer = await getAdminCustomer(company.value.customerId)
+        if (customer.customerName) {
+          lookup = customer.customerName.trim()
+        }
+      } catch {
+        // Fall back to company name if customer lookup fails.
+      }
+    }
+    joRows.value = await getJobList({ lookup: lookup || undefined })
     await hydrateJoInvoiceSummaries(joRows.value)
   } catch {
     joErrorMessage.value = t('jobOrder.jobList.loadFailed')

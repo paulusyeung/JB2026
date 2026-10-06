@@ -160,6 +160,7 @@ export const jobOrderMessages = {
           attachProduct: '附',
           customerRef: '客户参考',
           attachCustomer: '附',
+          createdOn: '创建日期',
           orderedBy: '下单者',
           quotation: '报价号',
           cogs: '生产成本',
