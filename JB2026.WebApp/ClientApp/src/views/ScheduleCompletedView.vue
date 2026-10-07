@@ -128,6 +128,10 @@
             {{ t('jobOrder.completed.actions.reschedule') }}
           </v-btn>
 
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-timeline-clock-outline" :disabled="selectedOrderIds.length !== 1" @click="openTimeline()">
+            {{ t('jobOrder.jobList.actions.timeline') }}
+          </v-btn>
+
           <v-btn variant="outlined" size="small" prepend-icon="mdi-file-delimited-outline" :disabled="rows.length === 0" @click="exportToCsv">
             {{ t('jobOrder.completed.actions.export') }}
           </v-btn>
@@ -295,6 +299,12 @@
       :product-details="printManagerJob?.productDetails"
     />
 
+    <JobTimelineDialog
+      v-model="timelineOpen"
+      :order-id="timelineOrder?.orderId ?? null"
+      :order-number="timelineOrder ? timelineOrder.orderNumber : ''"
+    />
+
     <v-snackbar v-model="actionNoticeOpen" color="info" timeout="3200">
       {{ actionNoticeMessage }}
     </v-snackbar>
@@ -312,6 +322,7 @@ import { useColumnOrder } from '@/composables/useColumnOrder'
 import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderForm from '@/components/forms/JobOrderForm.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
+import JobTimelineDialog from '@/components/forms/JobTimelineDialog.vue'
 import { getJobDetail } from '@/services/jobs'
 import { getCompletedSchedule, rescheduleCompletedOrders } from '@/services/scheduler'
 import type { JobDetail, JobScheduleCompletedItem } from '@/types/api'
@@ -336,6 +347,8 @@ const productDetailsDialogOpen = ref(false)
 const remarksDialogOpen = ref(false)
 const printManagerOpen = ref(false)
 const printManagerJob = ref<JobDetail | null>(null)
+const timelineOpen = ref(false)
+const timelineOrder = ref<JobScheduleCompletedItem | null>(null)
 
 const defaultColumnKeys = [
   'orderNumber',
@@ -492,10 +505,14 @@ function toggleColumn(columnKey: string) {
 }
 
 function onRowClick(_event: Event, payload: { item: JobScheduleCompletedItem }) {
-  activeOrderId.value = payload.item.orderId
-  if (checkboxMode.value) {
-    toggleSelectedOrder(payload.item.orderId)
-  } else {
+  const orderId = payload.item.orderId
+  activeOrderId.value = orderId
+  if (selectedOrderIds.value.includes(orderId)) {
+    selectedOrderIds.value = []
+    return
+  }
+  selectedOrderIds.value = [orderId]
+  if (!checkboxMode.value) {
     openEditor(payload.item)
   }
 }
@@ -596,6 +613,29 @@ function handleRemarksEdit(job: JobDetail) {
 function handlePrintOrder(job: JobDetail) {
   printManagerJob.value = job
   printManagerOpen.value = true
+}
+
+function openTimeline(row?: JobScheduleCompletedItem) {
+  if (row) {
+    timelineOrder.value = row
+    timelineOpen.value = true
+    return
+  }
+
+  if (selectedOrderIds.value.length !== 1) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
+  }
+
+  const targetOrderId = selectedOrderIds.value[0] ?? null
+  const targetRow = rows.value.find((item) => item.orderId === targetOrderId) ?? null
+  if (!targetRow) {
+    showActionNotice(t('jobOrder.jobList.noSelection'))
+    return
+  }
+
+  timelineOrder.value = targetRow
+  timelineOpen.value = true
 }
 
 function handleWorkflow(job: JobDetail) {
