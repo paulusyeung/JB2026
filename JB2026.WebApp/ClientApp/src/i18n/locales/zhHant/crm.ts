@@ -81,8 +81,8 @@ export const crmMessages = {
       company: '公司',
       createdOn: '建立時間',
       createdBy: '建立人',
-      updatedOn: '更新時間',
-      updatedBy: '更新人',
+      updatedOn: '修改日期',
+      updatedBy: '修改者',
     },
     actions: {
       resetColumns: '重設欄位順序',
@@ -133,8 +133,8 @@ export const crmMessages = {
       relations: '關聯對象',
       createdOn: '建立時間',
       createdBy: '建立人',
-      updatedOn: '更新時間',
-      updatedBy: '更新人',
+      updatedOn: '修改日期',
+      updatedBy: '修改人',
     },
     actions: {
       resetColumns: '重設欄位順序',
@@ -188,8 +188,8 @@ export const crmMessages = {
       owner: '負責人',
       createdOn: '建立時間',
       createdBy: '建立人',
-      updatedOn: '更新時間',
-      updatedBy: '更新人',
+      updatedOn: '修改日期',
+      updatedBy: '修改人',
     },
     actions: {
       resetColumns: '重設欄位順序',
