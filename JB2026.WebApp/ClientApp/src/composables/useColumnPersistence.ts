@@ -18,6 +18,8 @@ interface ViewSettings {
   itemsPerPage?: number
   ignoreGuest?: boolean
   criteria?: CriteriaSettings
+  startOn?: string
+  endOn?: string
 }
 
 const SAVE_DEBOUNCE_MS = 500
@@ -44,6 +46,8 @@ export function useViewSettings(viewId: string, defaults: {
   itemsPerPage?: number
   ignoreGuest?: boolean
   criteria?: CriteriaSettings
+  startOn?: string
+  endOn?: string
 }) {
   const storageKey = `${STORAGE_PREFIX}${viewId}`
   const objectId = getViewObjectId(viewId)
@@ -58,6 +62,8 @@ export function useViewSettings(viewId: string, defaults: {
   const itemsPerPage = ref<number | undefined>(defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE)
   const ignoreGuest = ref<boolean | undefined>(defaults.ignoreGuest)
   const criteria = ref<CriteriaSettings | undefined>(defaults.criteria)
+  const startOn = ref<string | undefined>(defaults.startOn)
+  const endOn = ref<string | undefined>(defaults.endOn)
 
   function parseSettings(raw: string | null): ViewSettings | null {
     if (!raw) {
@@ -80,6 +86,8 @@ export function useViewSettings(viewId: string, defaults: {
         itemsPerPage: parsed.itemsPerPage ?? defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
         ignoreGuest: parsed.ignoreGuest ?? defaults.ignoreGuest,
         criteria: parsed.criteria ?? defaults.criteria,
+        startOn: parsed.startOn ?? defaults.startOn,
+        endOn: parsed.endOn ?? defaults.endOn,
       }
     } catch {
       return null
@@ -103,6 +111,8 @@ export function useViewSettings(viewId: string, defaults: {
       itemsPerPage: defaults.itemsPerPage ?? DEFAULT_ITEMS_PER_PAGE,
       ignoreGuest: defaults.ignoreGuest,
       criteria: defaults.criteria,
+      startOn: defaults.startOn,
+      endOn: defaults.endOn,
     }
   }
 
@@ -120,6 +130,8 @@ export function useViewSettings(viewId: string, defaults: {
     itemsPerPage.value = settings.itemsPerPage
     ignoreGuest.value = settings.ignoreGuest
     criteria.value = settings.criteria
+    startOn.value = settings.startOn
+    endOn.value = settings.endOn
   }
 
   async function loadFromServerAndOverlay() {
@@ -161,16 +173,22 @@ export function useViewSettings(viewId: string, defaults: {
     }, SAVE_DEBOUNCE_MS)
   }
 
-  // Initialize immediately
+  let resolveReady: () => void = () => {}
+  const ready = new Promise<void>((resolve) => {
+    resolveReady = resolve
+  })
+
+  // Initialize immediately from localStorage for a responsive startup.
   applySettings(loadFromLocalStorage())
 
-  onMounted(() => {
-    void loadFromServerAndOverlay()
+  onMounted(async () => {
+    await loadFromServerAndOverlay()
+    resolveReady()
   })
 
   // Watch for changes and save
   watch(
-    [visibleColumns, columnOrder, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria],
+    [visibleColumns, columnOrder, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria, startOn, endOn],
     () => {
       const settings: ViewSettings = {
         visibleColumns: visibleColumns.value,
@@ -182,6 +200,8 @@ export function useViewSettings(viewId: string, defaults: {
         itemsPerPage: itemsPerPage.value,
         ignoreGuest: ignoreGuest.value,
         criteria: criteria.value,
+        startOn: startOn.value,
+        endOn: endOn.value,
       }
 
       saveToLocalStorage(settings)
@@ -190,5 +210,5 @@ export function useViewSettings(viewId: string, defaults: {
     { deep: true }
   )
 
-  return { visibleColumns, columnOrder, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria }
+  return { visibleColumns, columnOrder, sortKey, sortDirection, checkboxMode, viewMode, itemsPerPage, ignoreGuest, criteria, startOn, endOn, ready }
 }

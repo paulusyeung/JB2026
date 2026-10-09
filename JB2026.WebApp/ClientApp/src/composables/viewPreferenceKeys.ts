@@ -21,6 +21,7 @@ const VIEW_OBJECT_IDS: Record<string, string> = {
   'completed-schedule': '3262c4ba-da7f-4442-aa70-461a6d0401df',
   'packing-schedule': '21523084-0ae5-478f-8e55-2adb5323e9d5',
   'exceptional-report': '2aa58ae4-0605-4c7b-896e-a17924e2b0a7',
+  jobstats: '7c1f9d2a-3b64-4e58-9a12-6d0f4b8c2e91',
   'crm-customer360-job-orders': 'a9cf4fde-1153-460e-bdff-c579216d8c42',
   'crm-customer360-invoices': '20e25c59-fd5c-4561-845b-ff420aab9b10',
   'crm-customer360-opportunities': '1609fa4f-f55b-4a4e-858a-517672bfcd3b',

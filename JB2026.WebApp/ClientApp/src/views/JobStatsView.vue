@@ -209,6 +209,7 @@ import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
+import { useViewSettings } from '@/composables/useColumnPersistence'
 import { getJobStats } from '@/services/jobOrders'
 import { useThemeStore } from '@/stores/theme'
 import type { JobStatsRecord } from '@/types/api'
@@ -241,8 +242,11 @@ const pivotRef = ref<WptElement | null>(null)
 const pivotMounted = ref(false)
 const pivotAvailable = ref(false)
 
-const startOn = ref('')
-const endOn = ref('')
+const { startOn, endOn, ready: viewSettingsReady } = useViewSettings('jobstats', {
+  visibleColumns: [],
+  startOn: '',
+  endOn: '',
+})
 const startDatePickerOpen = ref(false)
 const endDatePickerOpen = ref(false)
 let hydrateRetryTimer: number | null = null
@@ -455,6 +459,7 @@ onMounted(async () => {
   }
 
   await customElements.whenDefined('web-pivot-table')
+  await viewSettingsReady
   await load()
 
   if (!pivotMounted.value) {
