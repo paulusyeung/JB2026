@@ -418,14 +418,6 @@ public class TwentyCrmService : ITwentyCrmService
                 ["name"] = string.IsNullOrWhiteSpace(request.Name) ? null : request.Name.Trim(),
             };
 
-            if (!string.IsNullOrWhiteSpace(request.DomainName))
-            {
-                updateData["domainName"] = new Dictionary<string, object?>
-                {
-                    ["primaryLinkUrl"] = NormalizeDomainUrl(request.DomainName.Trim()),
-                };
-            }
-
             updateData["address"] = new Dictionary<string, object?>
             {
                 ["addressStreet1"] = string.IsNullOrWhiteSpace(request.Address.Street1) ? null : request.Address.Street1.Trim(),
@@ -444,6 +436,9 @@ public class TwentyCrmService : ITwentyCrmService
                     edges {
                       node {
                         id
+                        domainName {
+                          primaryLinkUrl
+                        }
                         people {
                           edges { node { id } }
                         }
@@ -461,6 +456,8 @@ public class TwentyCrmService : ITwentyCrmService
 
             var currentPeopleIds = new List<string>();
             var currentOpportunityIds = new List<string>();
+            var foundCurrentCompany = false;
+            var currentDomainName = string.Empty;
 
             if (currentData.TryGetProperty("companies", out var companiesEl)
                 && companiesEl.TryGetProperty("edges", out var curEdges)
@@ -468,8 +465,32 @@ public class TwentyCrmService : ITwentyCrmService
                 && curEdges.GetArrayLength() > 0
                 && curEdges[0].TryGetProperty("node", out var curNode))
             {
+                foundCurrentCompany = true;
+                currentDomainName = ResolveDomainName(curNode);
                 currentPeopleIds = ExtractRelationIds(curNode, "people");
                 currentOpportunityIds = ExtractRelationIds(curNode, "opportunities");
+            }
+
+            // Only send the domain when it changed. Twenty stores link values
+            // verbatim (often without a scheme), so re-submitting an unchanged
+            // domain would rewrite it and could collide with the unique index
+            // on company."domainNamePrimaryLinkUrl" (including soft-deleted rows).
+            if (!string.IsNullOrWhiteSpace(request.DomainName))
+            {
+                var requestedDomain = request.DomainName.Trim();
+                var domainChanged = !foundCurrentCompany
+                    || !string.Equals(
+                        NormalizeDomainUrl(currentDomainName),
+                        NormalizeDomainUrl(requestedDomain),
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (domainChanged)
+                {
+                    updateData["domainName"] = new Dictionary<string, object?>
+                    {
+                        ["primaryLinkUrl"] = NormalizeDomainUrl(requestedDomain),
+                    };
+                }
             }
 
             if (request.PeopleIds is not null)
