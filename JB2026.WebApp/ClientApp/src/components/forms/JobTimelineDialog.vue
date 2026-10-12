@@ -204,7 +204,7 @@ watch(
 
 .job-timeline__title {
   margin-block-start: 2px;
-  color: rgba(var(--v-theme-on-surface), 0.6);
+  color: rgba(var(--v-theme-success), 1.0);
 }
 
 @media (max-width: 600px) {
