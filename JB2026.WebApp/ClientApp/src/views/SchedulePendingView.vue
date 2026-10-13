@@ -448,7 +448,7 @@ const allHeaders = computed(() => [
 const { orderedHeaders, moveColumn, resetColumnOrder } = useColumnOrder(columnOrder, allHeaders, defaultColumnKeys)
 
 const headerExtras = {
-  urgencyLevel: { icon: 'mdi-bell', size: 16, color: 'grey-darken-2', align: 'center' as const },
+  urgencyLevel: { icon: 'mdi-bell', size: 16, align: 'center' as const },
 }
 
 const headers = computed(() => orderedHeaders.value.filter((header) => visibleColumnKeys.value.includes(String(header.key))))
