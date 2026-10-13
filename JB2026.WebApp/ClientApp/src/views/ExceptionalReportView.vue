@@ -746,8 +746,6 @@ function invoiceNumberForRow(row: JobOrderRecord) {
 
 .reports-toolbar__date {
   min-width: 200px;
-  max-width: 200px;
-  flex: 0 0 auto;
 }
 
 .toolbar-bar {
