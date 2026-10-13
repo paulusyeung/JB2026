@@ -2,24 +2,51 @@
   <section class="page-section exceptional-list-page">
     <v-card rounded="xl" elevation="0" class="panel-card exceptional-list-card">
       <v-card-title class="reports-toolbar d-flex flex-wrap align-center ga-3">
-        <v-text-field
-          v-model="startOn"
-          class="reports-toolbar__date"
-          :label="t('reports.exceptional.startDate')"
-          type="date"
-          density="comfortable"
-          variant="solo-filled"
-          hide-details
-        />
-        <v-text-field
-          v-model="endOn"
-          class="reports-toolbar__date"
-          :label="t('reports.exceptional.endDate')"
-          type="date"
-          density="comfortable"
-          variant="solo-filled"
-          hide-details
-        />
+        <v-menu v-model="startDatePickerOpen" :close-on-content-click="false">
+          <template #activator="{ props: menuProps }">
+            <v-text-field
+              :model-value="startOn ? format(startOn) : ''"
+              class="reports-toolbar__date"
+              :label="t('reports.exceptional.startDate')"
+              variant="solo-filled"
+              density="comfortable"
+              readonly
+              append-inner-icon="mdi-calendar"
+              v-bind="menuProps"
+              hide-details
+              clearable
+              @click:clear="startOn = ''"
+            />
+          </template>
+          <v-date-picker
+            :model-value="startOn ? new Date(startOn + 'T12:00:00') : undefined"
+            hide-header
+            @update:model-value="onStartDatePicked"
+          />
+        </v-menu>
+
+        <v-menu v-model="endDatePickerOpen" :close-on-content-click="false">
+          <template #activator="{ props: menuProps }">
+            <v-text-field
+              :model-value="endOn ? format(endOn) : ''"
+              class="reports-toolbar__date"
+              :label="t('reports.exceptional.endDate')"
+              variant="solo-filled"
+              density="comfortable"
+              readonly
+              append-inner-icon="mdi-calendar"
+              v-bind="menuProps"
+              hide-details
+              clearable
+              @click:clear="endOn = ''"
+            />
+          </template>
+          <v-date-picker
+            :model-value="endOn ? new Date(endOn + 'T12:00:00') : undefined"
+            hide-header
+            @update:model-value="onEndDatePicked"
+          />
+        </v-menu>
         <v-btn color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="refreshList">
           {{ t('common.refresh') }}
         </v-btn>
@@ -311,6 +338,8 @@ const printManagerJob = ref<JobDetail | null>(null)
 const now = new Date()
 const startOn = ref(toDateOnly(new Date(now.getFullYear(), now.getMonth(), 1)))
 const endOn = ref(toDateOnly(new Date(now.getFullYear(), now.getMonth() + 1, 0)))
+const startDatePickerOpen = ref(false)
+const endDatePickerOpen = ref(false)
 const selectedOrderIds = ref<string[]>([])
 const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 
@@ -678,6 +707,20 @@ function toDateOnly(value: Date) {
   return `${y}-${m}-${d}`
 }
 
+function onStartDatePicked(date: Date | null) {
+  if (date) {
+    startOn.value = toDateOnly(date)
+  }
+  startDatePickerOpen.value = false
+}
+
+function onEndDatePicked(date: Date | null) {
+  if (date) {
+    endOn.value = toDateOnly(date)
+  }
+  endDatePickerOpen.value = false
+}
+
 function invoiceAmountForRow(row: JobOrderRecord) {
   const summary = invoiceSummaryByOrderId.value[row.orderId]
   return summary?.amount ?? row.invoiceAmount
@@ -703,6 +746,8 @@ function invoiceNumberForRow(row: JobOrderRecord) {
 
 .reports-toolbar__date {
   min-width: 200px;
+  max-width: 200px;
+  flex: 0 0 auto;
 }
 
 .toolbar-bar {
@@ -805,6 +850,7 @@ function invoiceNumberForRow(row: JobOrderRecord) {
 @media (max-width: 960px) {
   .reports-toolbar__date {
     width: 100%;
+    max-width: none;
   }
 }
 </style>
