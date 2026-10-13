@@ -365,7 +365,7 @@ import { getPendingSchedule, updatePendingUrgency, updatePendingWorkflow } from 
 import type { JobDetail, JobSchedulePendingItem } from '@/types/api'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { getOrderTypeMeta } from '@/utils/orderType'
-import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
+import { useJobStatus } from '@/composables/useJobStatus'
 
 const rows = ref<JobSchedulePendingItem[]>([])
 const loading = ref(false)
@@ -419,6 +419,7 @@ const viewMode = viewSettings.viewMode
 const itemsPerPage = viewSettings.itemsPerPage
 
 const { t } = useI18n({ useScope: 'global' })
+const { statusIcon, statusColor, statusLabel } = useJobStatus()
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const router = useRouter()
 const display = useDisplay()

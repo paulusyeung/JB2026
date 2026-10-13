@@ -588,7 +588,7 @@ import {
   type PreviewInvoiceResponse,
 } from '@/services/billing'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
-import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
+import { useJobStatus } from '@/composables/useJobStatus'
 
 type JobListViewMode = 'detail' | 'card'
 
@@ -670,6 +670,7 @@ const invoiceSummaryByOrderId = ref<Record<string, InvoiceBillingSummary>>({})
 const jobListDaysBack = ref(90)
 
 const { t } = useI18n({ useScope: 'global' })
+const { statusIcon, statusColor, statusLabel } = useJobStatus()
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const { formatCurrency: formatCurrencyByLocale } = useLocaleFormatters()
 

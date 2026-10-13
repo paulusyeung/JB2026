@@ -262,7 +262,7 @@ import { getAdminCustomers, getAdminUsers } from '@/services/admin'
 import { createJobOrder, deleteJobOrder, updateJobOrder } from '@/services/jobOrders'
 import { deleteJobAttachments, getJobDetail } from '@/services/jobs'
 import type { JobOrderFormData, JobOrderRecord } from '@/types/api'
-import { statusIcon, statusColor } from '@/composables/useJobStatus'
+import { useJobStatus } from '@/composables/useJobStatus'
 import { useGlobalDateFormatter } from '@/composables/useGlobalDateFormatter'
 import { DATE_FORMATS } from '@/utils/dateFormatter'
 
@@ -281,6 +281,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { statusIcon, statusColor } = useJobStatus()
 const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')

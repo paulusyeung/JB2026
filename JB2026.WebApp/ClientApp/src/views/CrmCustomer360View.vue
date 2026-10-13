@@ -1960,7 +1960,7 @@ import { apiClient } from '@/services/api'
 import { getCompanyPaperlessFiles } from '@/services/files'
 import { getJobList, deleteJobOrder } from '@/services/jobOrders'
 import { getJobDetail } from '@/services/jobs'
-import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
+import { useJobStatus } from '@/composables/useJobStatus'
 import { getOrderTypeMeta } from '@/utils/orderType'
 import { useLocaleFormatters } from '@/composables/useLocaleFormatters'
 import { listInvoices, getInvoiceSummary, sendInvoice, downloadInvoicePdf, downloadDeliveryNote, type InvoiceBillingSummary } from '@/services/billing'
@@ -2041,6 +2041,7 @@ function handlePersonSaved(saved: CrmPerson) {
 }
 
 const { t } = useI18n({ useScope: 'global' })
+const { statusIcon, statusColor, statusLabel } = useJobStatus()
 
 const companies = ref<CrmCompany[]>([])
 const company = ref<CrmCompany | null>(null)

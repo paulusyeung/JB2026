@@ -546,7 +546,7 @@ import JobOrderActionDialogs from '@/components/forms/JobOrderActionDialogs.vue'
 import JobOrderPrintManagerDialog from '@/components/forms/JobOrderPrintManagerDialog.vue'
 import ReorderableTableHeaders from '@/components/grids/ReorderableTableHeaders.vue'
 import type { JobDetail, JobOrderRecord } from '@/types/api'
-import { statusIcon, statusColor, statusLabel } from '@/composables/useJobStatus'
+import { useJobStatus } from '@/composables/useJobStatus'
 
 type OrderListViewMode = 'detail' | 'card'
 
@@ -624,6 +624,7 @@ const {
 const sortingMenuOpen = ref(false)
 
 const { t } = useI18n({ useScope: 'global' })
+const { statusIcon, statusColor, statusLabel } = useJobStatus()
 const { format, DATE_FORMATS } = useGlobalDateFormatter()
 const router = useRouter()
 const display = useDisplay()
