@@ -1226,7 +1226,7 @@ function startResize(event: MouseEvent, table: ResizeTable, column: ResizableCol
 .transfer-col,
 .action-col {
   flex: 0 0 36px;
-  padding-top: 46px;
+  padding-top: 32px;
 }
 
 .transfer-col :deep(.machine-btn),
