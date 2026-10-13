@@ -415,13 +415,13 @@
                 >
                   <template #[`header.status`]>
                     <div class="d-flex justify-center">
-                      <v-icon size="14" color="primary">mdi-flag</v-icon>
+                      <v-icon size="14">mdi-flag</v-icon>
                     </div>
                   </template>
 
                   <template #[`header.attachProduct`]>
                     <div class="d-flex justify-center">
-                      <v-icon size="14" color="grey darken-3">mdi-paperclip</v-icon>
+                      <v-icon size="14">mdi-paperclip</v-icon>
                     </div>
                   </template>
 <!-- 
