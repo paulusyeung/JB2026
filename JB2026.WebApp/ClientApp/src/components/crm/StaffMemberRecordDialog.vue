@@ -264,6 +264,7 @@ import { setupTwoFactor, confirmTwoFactor, disableTwoFactor, getTwoFactorStatus 
 import SyncCrmDialog from '@/components/crm/SyncCrmDialog.vue'
 import QrcodeVue from 'qrcode.vue'
 import type { AdminUserRecord, TwoFactorSetupResponse } from '@/types/api'
+import { buildUserRoleOptions } from '@/utils/userRole'
 
 const props = defineProps<{
   userId: string | null
@@ -310,13 +311,7 @@ function syncToCrm() {
 }
 
 const userRoleOptions = computed(() =>
-  [
-    { value: 0, title: t('admin.user.form.roles.guest') },
-    { value: 1, title: t('admin.user.form.roles.operator') },
-    { value: 2, title: t('admin.user.form.roles.supervisor') },
-    { value: 3, title: t('admin.user.form.roles.manager') },
-    { value: 4, title: t('admin.user.form.roles.admin') },
-  ].sort((a, b) => a.title.localeCompare(b.title)),
+  buildUserRoleOptions(t).sort((a, b) => a.title.localeCompare(b.title)),
 )
 
 const requiredUsername = (value: string) => value.trim().length > 0 || t('admin.user.form.requiredUsername')

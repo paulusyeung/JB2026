@@ -180,7 +180,7 @@
               </div>
             </div>
             <div class="user-card__body">
-              <span class="text-caption">{{ t('admin.user.headers.userRole') }}: {{ row.role || '-' }}</span>
+              <span class="text-caption">{{ t('admin.user.headers.userRole') }}: {{ formatUserRole(t, row.role) }}</span>
             </div>
             <div class="user-card__footer text-caption text-medium-emphasis">
               <span>{{ t('admin.user.headers.modifiedBy') }}: {{ row.modifiedBy || '-' }}</span>
@@ -220,6 +220,7 @@
             </v-btn>
           </template>
 
+          <template #[`item.role`]='{ item }'>{{ formatUserRole(t, item.role) }}</template>
           <template #[`item.createdOn`]='{ item }'>{{ formatDateCell(item.createdOn) }}</template>
           <template #[`item.modifiedOn`]='{ item }'>{{ formatDateCell(item.modifiedOn) }}</template>
         </v-data-table>
@@ -257,6 +258,7 @@ import { useResponsiveList } from '@/composables/useResponsiveList'
 import AdminUserRecordDialog from '@/components/forms/AdminUserRecordDialog.vue'
 import { getAdminUsers } from '@/services/admin'
 import type { AdminUser, AdminUserRecord } from '@/types/api'
+import { formatUserRole } from '@/utils/userRole'
 
 type AdminUserViewMode = 'detail' | 'card'
 
@@ -339,7 +341,7 @@ const headers = computed(() =>
 const mobileColumns = computed<ListMobileCardColumn<AdminUserDisplayItem>[]>(() => [
   { key: 'userAlias', label: t('admin.user.headers.userAlias'), section: 'header', emphasis: true },
   { key: 'username', label: t('admin.user.headers.username'), section: 'header' },
-  { key: 'role', label: t('admin.user.headers.userRole'), section: 'body' },
+  { key: 'role', label: t('admin.user.headers.userRole'), section: 'body', formatter: (item) => formatUserRole(t, item.role) },
   { key: 'createdBy', label: t('admin.user.headers.createdBy'), section: 'footer' },
   {
     key: 'modifiedOn',

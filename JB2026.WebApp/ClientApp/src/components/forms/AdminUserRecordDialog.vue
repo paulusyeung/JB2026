@@ -102,6 +102,7 @@ import {
   updateAdminUser,
 } from '@/services/admin'
 import type { AdminUserRecord } from '@/types/api'
+import { buildUserRoleOptions } from '@/utils/userRole'
 
 const props = defineProps<{
   userId: string | null
@@ -128,13 +129,7 @@ const draft = reactive({
 
 const isNew = computed(() => !props.userId)
 
-const userRoleOptions = computed(() => [
-  { value: 0, title: t('admin.user.form.roles.guest') },
-  { value: 1, title: t('admin.user.form.roles.operator') },
-  { value: 2, title: t('admin.user.form.roles.supervisor') },
-  { value: 3, title: t('admin.user.form.roles.manager') },
-  { value: 4, title: t('admin.user.form.roles.admin') },
-])
+const userRoleOptions = computed(() => buildUserRoleOptions(t))
 
 const requiredUsername = (value: string) => value.trim().length > 0 || t('admin.user.form.requiredUsername')
 

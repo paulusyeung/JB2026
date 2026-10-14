@@ -71,7 +71,7 @@ export const adminMessages = {
           roles: {
             guest: '訪客',
             operator: '操作員',
-            supervisor: '督導',
+            supervisor: '主管',
             manager: '經理',
             admin: '管理員',
           },

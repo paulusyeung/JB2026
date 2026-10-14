@@ -51,7 +51,7 @@
         />
         <div class="text-left topbar-identity" v-if="session.profile" @click="openProfileEditor">
           <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
-          <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
+          <div class="text-caption text-medium-emphasis">{{ formatUserRole(t, session.profile.role) }}</div>
         </div>
         <v-btn
           v-if="session.isAuthenticated"
@@ -94,7 +94,7 @@
 
           <div class="topbar-identity mb-3" v-if="session.profile" @click="openProfileEditor">
             <div class="text-subtitle-2">{{ session.profile.displayName }}</div>
-            <div class="text-caption text-medium-emphasis">{{ session.profile.role }}</div>
+            <div class="text-caption text-medium-emphasis">{{ formatUserRole(t, session.profile.role) }}</div>
           </div>
 
           <v-btn
@@ -132,6 +132,7 @@ import { setLocale } from '@/i18n'
 import { useThemeStore } from '@/stores/theme'
 import ThemeSettings from '@/components/settings/ThemeSettings.vue'
 import StaffMemberRecordDialog from '@/components/crm/StaffMemberRecordDialog.vue'
+import { formatUserRole } from '@/utils/userRole'
 
 const props = defineProps<{
   isMobile: boolean
