@@ -431,7 +431,7 @@
                   <template #[`item.completedOn`]="{ item }">{{ item.completedOn ? joFormat(item.completedOn) : '-' }}</template>
                   <template #[`item.modifiedOn`]="{ item }">{{ item.modifiedOn ? joFormat(item.modifiedOn) : '-' }}</template>
                   <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
-                  <template #[`item.invoiceAmount`]="{ item }">{{ joFormatCurrency(item.invoiceAmount) }}</template>
+                  <template #[`item.invoiceAmount`]="{ item }">{{ item.invoiceAmount ? joFormatCurrency(item.invoiceAmount) : '' }}</template>
                   <template #[`item.invoiceRef`]="{ item }">
                     <div class="d-flex align-center ga-1">
                       <v-btn
@@ -2835,10 +2835,10 @@ const joColumnOptions = computed(() =>
 const joReorderableKeys = joDefaultColumnKeys.filter((key) => key !== 'ln')
 
 const joHeaderExtras = {
-  orderType: { icon: 'mdi-tag-outline', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.orderType') },
-  status: { icon: 'mdi-flag', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.status') },
-  attachProduct: { icon: 'mdi-paperclip', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.attachProduct') },
-  attachCustomer: { icon: 'mdi-paperclip', size: 14, color: 'primary', align: 'center' as const, title: t('jobOrder.jobList.headers.attachCustomer') },
+  orderType: { icon: 'mdi-tag-outline', size: 14, align: 'center' as const, title: t('jobOrder.jobList.headers.orderType') },
+  status: { icon: 'mdi-flag', size: 14, align: 'center' as const, title: t('jobOrder.jobList.headers.status') },
+  attachProduct: { icon: 'mdi-paperclip', size: 14, align: 'center' as const, title: t('jobOrder.jobList.headers.attachProduct') },
+  attachCustomer: { icon: 'mdi-paperclip', size: 14, align: 'center' as const, title: t('jobOrder.jobList.headers.attachCustomer') },
 }
 
 const {
