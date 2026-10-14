@@ -117,7 +117,6 @@
           <v-divider vertical class="mx-1" />
 
           <v-btn
-            color="primary"
             variant="outlined"
             size="small"
             prepend-icon="mdi-calendar-refresh"
@@ -128,7 +127,7 @@
             {{ t('jobOrder.completed.actions.reschedule') }}
           </v-btn>
 
-          <v-btn color="primary" variant="outlined" size="small" prepend-icon="mdi-timeline-clock-outline" :disabled="selectedOrderIds.length !== 1" @click="openTimeline()">
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-timeline-clock-outline" :disabled="selectedOrderIds.length !== 1" @click="openTimeline()">
             {{ t('jobOrder.jobList.actions.timeline') }}
           </v-btn>
 
