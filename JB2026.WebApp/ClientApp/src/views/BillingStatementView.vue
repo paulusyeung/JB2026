@@ -196,6 +196,7 @@
           class="billing-statement-table"
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+          hover
         >
           <template #headers="table">
             <ReorderableTableHeaders :table="table" @move="moveColumn" />

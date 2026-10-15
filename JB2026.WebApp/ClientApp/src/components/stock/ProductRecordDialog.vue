@@ -196,6 +196,7 @@
                 fixed-header
                 height="360"
                 class="movement-table"
+                hover
               >
                 <template #[`item.inOutDate`]="{ item }">{{ format(item.inOutDate) }}</template>
                 <template #[`item.qty`]="{ item }">{{ formatNumber(item.qty) }}</template>

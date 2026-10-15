@@ -153,6 +153,7 @@
           fixed-header
           height="100%"
           class="quotation-item-table"
+          hover
           @click:row="onRowClick"
           @dblclick="openPopup"
         >

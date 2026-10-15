@@ -230,6 +230,7 @@
           class="completed-list-table"
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+          hover
           @click:row="onRowClick"
         >
           <template #headers="table">

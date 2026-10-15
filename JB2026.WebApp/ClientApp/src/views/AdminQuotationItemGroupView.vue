@@ -153,6 +153,7 @@
           fixed-header
           height="100%"
           class="quotation-item-group-table"
+          hover
           @click:row="onRowClick"
         >
           <template #[`item.icon`]>

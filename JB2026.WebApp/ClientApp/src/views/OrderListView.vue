@@ -334,6 +334,7 @@
           class="order-list-table"
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+          hover
           @click:row="onRowClick"
         >
           <template #headers="table">
@@ -411,6 +412,7 @@
                   density="compact"
                   hide-default-footer
                   class="detail-grid"
+                  hover
                   @click:row="onDetailRowClick"
                 >
                   <template #[`header.status`]>

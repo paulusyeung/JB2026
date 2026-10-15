@@ -15,7 +15,7 @@
           :on-card-click="() => undefined"
         />
 
-        <v-data-table v-else :headers="headers" :items="rows" :loading="loading" item-value="slug" />
+        <v-data-table v-else :headers="headers" :items="rows" :loading="loading" item-value="slug" hover />
       </v-card-text>
     </v-card>
   </section>

@@ -216,6 +216,7 @@
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           :no-data-text="t('reports.exceptional.empty')"
+          hover
         >
           <template #headers="table">
             <ReorderableTableHeaders :table="table" @move="moveColumn" />

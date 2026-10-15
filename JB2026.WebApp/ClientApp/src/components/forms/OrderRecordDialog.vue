@@ -181,6 +181,7 @@
           density="compact"
           :items-per-page="10"
           class="order-record-grid text-no-wrap"
+          hover
           @click:row="onRelatedRowClick"
         >
           <template #[`header.select`]>

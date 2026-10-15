@@ -139,6 +139,7 @@
           fixed-header
           height="100%"
           class="workflow-table"
+          hover
           @click:row="onRowClick"
           @dblclick="openEdit"
         >

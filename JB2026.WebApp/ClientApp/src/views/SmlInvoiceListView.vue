@@ -176,6 +176,7 @@
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
           class="invoice-list-table sml-invoice-list-table"
+          hover
         >
           <template #item.rowNumber="{ item }">{{ item.rowNumber ?? '-' }}</template>
           <template #item.invoiceNumber="{ item }">

@@ -29,6 +29,7 @@
         item-value="orderId"
         :loading-text="t('jobs.table.loading')"
         class="jobs-table"
+        hover
         @click:row="handleSelect"
       >
         <template #[`item.requiredOn`]="{ item }">

@@ -23,14 +23,14 @@
         </div>
 
         <h4 class="text-subtitle-1 mb-2">{{ t('sml.monthlyTotals') }}</h4>
-        <v-data-table :headers="monthlyHeaders" :items="stats?.monthly ?? []" :loading="loading">
+        <v-data-table :headers="monthlyHeaders" :items="stats?.monthly ?? []" :loading="loading" hover>
           <template #[`item.amount`]="{ item }">
             {{ formatMoney(item.amount) }}
           </template>
         </v-data-table>
 
         <h4 class="text-subtitle-1 mt-6 mb-2">{{ t('sml.topCustomers') }}</h4>
-        <v-data-table :headers="customerHeaders" :items="stats?.topCustomers ?? []" :loading="loading">
+        <v-data-table :headers="customerHeaders" :items="stats?.topCustomers ?? []" :loading="loading" hover>
           <template #[`item.amount`]="{ item }">
             {{ formatMoney(item.amount) }}
           </template>

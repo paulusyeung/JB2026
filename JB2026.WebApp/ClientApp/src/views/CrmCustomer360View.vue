@@ -374,6 +374,7 @@
                   v-model:items-per-page="joItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="job-orders-table"
+                  hover
                   @click:row="onJoRowClick"
                 >
                   <template #headers="table">
@@ -682,6 +683,7 @@
                   v-model:items-per-page="invItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="invoices-table"
+                  hover
                   @click:row="onInvRowClick"
                 >
                   <template #headers="table">
@@ -922,6 +924,7 @@
                   v-model:items-per-page="oppItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="opportunities-table"
+                  hover
                 >
                   <template #headers="table">
                     <ReorderableTableHeaders
@@ -1182,6 +1185,7 @@
                   v-model:items-per-page="taskItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="tasks-table"
+                  hover
                 >
                   <template #headers="table">
                     <ReorderableTableHeaders
@@ -1443,6 +1447,7 @@
                   v-model:items-per-page="filesItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="files-table"
+                  hover
                 >
                   <template #headers="table">
                     <ReorderableTableHeaders
@@ -1693,6 +1698,7 @@
                   v-model:items-per-page="emailItemsPerPage"
                   :items-per-page-options="[10, 15, 20, 25, 50, -1]"
                   class="emails-table"
+                  hover
                   @click:row="onEmailRowClick"
                 >
                   <template #headers="table">

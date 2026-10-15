@@ -22,6 +22,7 @@
           :items="filteredRows"
           :loading="loading"
           item-value="orderId"
+          hover
           @click:row="onRowClick"
         >
           <template #[`item.orderNumber`]="{ item }">

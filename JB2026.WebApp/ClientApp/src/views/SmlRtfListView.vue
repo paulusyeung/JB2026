@@ -151,6 +151,7 @@
                     density="compact"
                     hide-default-footer
                     class="rtf-detail-table"
+                    hover
                   >
                     <template #item.lineNumber="{ item: lineItem }">{{ formatNumber(lineItem.lineNumber) }}</template>
                     <template #item.productCode="{ item: lineItem }">{{ lineItem.productCode || '-' }}</template>
@@ -181,6 +182,7 @@
           class="invoice-list-table sml-rtf-list-table"
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+          hover
           @update:expanded="onExpandedChange"
         >
           <template #item.expander="{ item }">
@@ -220,6 +222,7 @@
                     density="compact"
                     hide-default-footer
                     class="rtf-detail-table"
+                    hover
                   >
                     <template #item.lineNumber="{ item: lineItem }">{{ formatNumber(lineItem.lineNumber) }}</template>
                     <template #item.productCode="{ item: lineItem }">{{ lineItem.productCode || '-' }}</template>

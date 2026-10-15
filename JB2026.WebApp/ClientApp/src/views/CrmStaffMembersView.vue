@@ -192,6 +192,7 @@
           class="staff-members-table"
           v-model:items-per-page="itemsPerPage"
           :items-per-page-options="[10, 15, 20, 25, 50, -1]"
+          hover
           @click:row="onDataRowClick"
         >
           <template #headers="table">

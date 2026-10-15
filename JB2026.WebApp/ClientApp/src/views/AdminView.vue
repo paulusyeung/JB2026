@@ -16,7 +16,7 @@
           {{ t('admin.signedInAs', { name: currentUser.displayName, role: currentUser.role }) }}
         </v-chip>
 
-        <v-data-table :headers="headers" :items="users" :loading="loading" item-value="userId" />
+        <v-data-table :headers="headers" :items="users" :loading="loading" item-value="userId" hover />
       </v-card-text>
     </v-card>
   </section>

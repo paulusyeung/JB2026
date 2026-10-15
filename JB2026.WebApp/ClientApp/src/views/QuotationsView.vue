@@ -213,6 +213,7 @@
           :show-select="checkboxMode"
           item-value="headerId"
           class="quotations-table"
+          hover
           @click:row="onRowClick"
         >
           <template #[`item.rowNumber`]="{ index }">
