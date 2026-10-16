@@ -747,7 +747,7 @@ function stepStatusColor(workIndex: number): string {
 
   if (status == null) return '#bdbdbd'
   if (status === 0) return '#e76464'
-  if (status === 1) return '#f4a261'
+  if (status === 1) return '#ffb300'
   if (status === 2) return '#61c06a'
   if (status === 3) return '#56a8e3'
   return '#9e9e9e'
