@@ -423,7 +423,7 @@
 
             <template #[`item.orderedOn`]="{ item }">{{ format(item.orderedOn) }}</template>
             <template #[`item.requiredOn`]="{ item }">{{ format(item.requiredOn) }}</template>
-            <template #[`item.completedOn`]="{ item }">{{ format(item.completedOn) }}</template>
+            <template #[`item.completedOn`]="{ item }">{{ item.completedOn ? format(item.completedOn) : '' }}</template>
             <template #[`item.modifiedOn`]="{ item }">{{ format(item.modifiedOn) }}</template>
             <template #[`item.modifiedBy`]="{ item }">{{ item.modifiedBy || '-' }}</template>
             <template #[`item.invoiceStatus`]="{ item }">
@@ -445,7 +445,7 @@
 
             <template #[`item.invoiceAmount`]="{ item }">{{ formatCurrency(invoiceAmountForRow(item)) }}</template>
             <template #[`item.invoiceRef`]="{ item }">{{ invoiceNumberForRow(item) }}</template>
-            <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '-' }}</template>
+            <template #[`item.productStyle`]="{ item }">{{ item.productStyle || '' }}</template>
             <template #[`item.cogs`]="{ item }">{{ formatCurrency(Number(item.originalSONumber) || 0) }}</template>
           </v-data-table>
         </div>
