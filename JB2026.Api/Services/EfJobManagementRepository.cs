@@ -239,6 +239,7 @@ public sealed class EfJobManagementRepository : IJobManagementRepository
             ["customerref"] = o => (EF.Property<string>(o, "CustomerRef") != null && EF.Property<string>(o, "CustomerRef")!.Contains(token)),
             ["ordertitle"] = o => (EF.Property<string>(o, "OrderTitle") != null && EF.Property<string>(o, "OrderTitle")!.Contains(token)),
             ["orderedby"] = o => (EF.Property<string>(o, "OrderedBy") != null && EF.Property<string>(o, "OrderedBy")!.Contains(token)),
+            ["invoiceref"] = o => (EF.Property<string>(o, "InvoiceRef") != null && EF.Property<string>(o, "InvoiceRef")!.Contains(token)),
         };
 
         if (!string.IsNullOrWhiteSpace(lookupField) && predicates.TryGetValue(lookupField.Trim().ToLowerInvariant(), out var single))

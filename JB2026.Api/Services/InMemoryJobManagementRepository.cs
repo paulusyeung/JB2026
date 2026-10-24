@@ -168,12 +168,14 @@ public sealed class InMemoryJobManagementRepository : IJobManagementRepository
             "customerref" => query.Where(j => j.CustomerRef.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
             "ordertitle" => query.Where(j => j.OrderTitle.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
             "orderedby" => query.Where(j => j.OrderedBy.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+            "invoiceref" => query.Where(j => (j.InvoiceRef ?? string.Empty).Contains(lookup, StringComparison.OrdinalIgnoreCase)),
             _ => query.Where(j =>
                 j.OrderNumber.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
                 j.CustomerName.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
                 j.CustomerRef.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
                 j.OrderTitle.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
-                j.OrderedBy.Contains(lookup, StringComparison.OrdinalIgnoreCase)),
+                j.OrderedBy.Contains(lookup, StringComparison.OrdinalIgnoreCase) ||
+                (j.InvoiceRef ?? string.Empty).Contains(lookup, StringComparison.OrdinalIgnoreCase)),
         };
     }
 
