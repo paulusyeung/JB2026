@@ -68,7 +68,7 @@
           <!-- Available panel -->
           <div v-if="!isPhoneLayout" class="schedule-panel">
             <div class="panel-header text-caption font-weight-bold text-medium-emphasis mb-1">
-              {{ t('scheduler.schedule.available.title') }} ({{ availableDisplay.length }})
+              {{ t('scheduler.schedule.available.title') }} ({{ t('scheduler.schedule.available.daysRange', { count: availableDisplay.length, days: scheduleAvailableDaysBack }) }})
             </div>
             <div class="list-container">
               <template v-if="!isPhoneLayout">
@@ -435,7 +435,7 @@
         <v-card-text>
           <div class="d-flex align-center justify-space-between mb-4">
             <span class="text-subtitle-1 font-weight-bold">
-              {{ t('scheduler.schedule.available.title') }} ({{ availableDisplay.length }})
+              {{ t('scheduler.schedule.available.title') }} ({{ t('scheduler.schedule.available.daysRange', { count: availableDisplay.length, days: scheduleAvailableDaysBack }) }})
             </span>
             <v-btn icon="mdi-close" variant="text" @click="availableSheet = false" />
           </div>

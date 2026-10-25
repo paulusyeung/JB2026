@@ -17,6 +17,7 @@ export const schedulerMessages = {
         },
         available: {
           title: '可用工单',
+          daysRange: '{count}/{days} 天内',
         },
         scheduled: {
           title: '已选工单',

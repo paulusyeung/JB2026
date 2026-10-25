@@ -17,6 +17,7 @@ export const schedulerMessages = {
         },
         available: {
           title: 'Available Job Orders',
+          daysRange: '{count}/{days}-days',
         },
         scheduled: {
           title: 'Selected Job Orders',
