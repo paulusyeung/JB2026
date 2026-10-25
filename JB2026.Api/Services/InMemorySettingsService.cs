@@ -34,6 +34,7 @@ public sealed class InMemorySettingsService : ISettingsService
         GmailPassword = "24110810",
         DateFormatPreference = SettingsResponse.DefaultDateFormatPreference,
         JobListDaysBack = 90,
+        ScheduleAvailableDaysBack = 91,
     };
 
     public SettingsResponse Get()
@@ -65,6 +66,7 @@ public sealed class InMemorySettingsService : ISettingsService
                 GmailPassword = request.GmailPassword.Trim(),
                 DateFormatPreference = NormalizeDateFormatPreference(request.DateFormatPreference),
                 JobListDaysBack = request.JobListDaysBack,
+                ScheduleAvailableDaysBack = request.ScheduleAvailableDaysBack,
             };
 
             return _settings;
@@ -112,6 +114,7 @@ public sealed class InMemorySettingsService : ISettingsService
             GmailPassword = source.GmailPassword,
             DateFormatPreference = source.DateFormatPreference,
             JobListDaysBack = source.JobListDaysBack,
+            ScheduleAvailableDaysBack = source.ScheduleAvailableDaysBack,
         };
     }
 

@@ -98,6 +98,21 @@
               <span class="text-body-2">{{ t('settings.fields.daysUnit') }}</span>
             </div>
 
+            <label class="field-label" for="schedule-available-days-back">{{ t('settings.fields.scheduleAvailableDaysBack') }}</label>
+            <div class="d-flex align-center ga-2">
+              <v-text-field
+                id="schedule-available-days-back"
+                v-model.number="model.scheduleAvailableDaysBack"
+                type="number"
+                min="1"
+                variant="outlined"
+                density="compact"
+                hide-details
+                class="range-input"
+              />
+              <span class="text-body-2">{{ t('settings.fields.daysUnit') }}</span>
+            </div>
+
             <label class="field-label" for="gmail-account">{{ t('settings.fields.gmailAccount') }}</label>
             <v-text-field
               id="gmail-account"
@@ -169,6 +184,7 @@ const model = ref<AppSettings>({
   gmailPassword: '',
   dateFormatPreference: DATE_FORMATS.SHORT_DATE,
   jobListDaysBack: 90,
+  scheduleAvailableDaysBack: 91,
 })
 
 const dateFormatOptions = computed(() => [
@@ -223,6 +239,12 @@ async function save() {
 
   if (!Number.isFinite(model.value.jobListDaysBack) || model.value.jobListDaysBack <= 0) {
     errorMessage.value = t('settings.messages.jobListDaysBackInvalid')
+    savedMessage.value = ''
+    return
+  }
+
+  if (!Number.isFinite(model.value.scheduleAvailableDaysBack) || model.value.scheduleAvailableDaysBack <= 0) {
+    errorMessage.value = t('settings.messages.scheduleAvailableDaysBackInvalid')
     savedMessage.value = ''
     return
   }

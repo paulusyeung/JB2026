@@ -73,6 +73,7 @@ async function mockApiRoutes(page: Page) {
         gmailPassword: '',
         dateFormatPreference: 'dd/MM/yyyy',
         jobListDaysBack: 30,
+        scheduleAvailableDaysBack: 91,
       },
     }),
   )

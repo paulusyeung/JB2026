@@ -54,4 +54,7 @@ public sealed class UpdateSettingsRequest
 
     [Range(1, 3650)]
     public int JobListDaysBack { get; init; } = 90;
+
+    [Range(1, 3650)]
+    public int ScheduleAvailableDaysBack { get; init; } = 91;
 }

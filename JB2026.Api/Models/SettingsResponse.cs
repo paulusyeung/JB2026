@@ -33,4 +33,6 @@ public sealed class SettingsResponse
     public string DateFormatPreference { get; init; } = DefaultDateFormatPreference;
 
     public int JobListDaysBack { get; init; } = 90;
+
+    public int ScheduleAvailableDaysBack { get; init; } = 91;
 }

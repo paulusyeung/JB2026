@@ -583,6 +583,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { getAvailableSchedule, getOnAirSchedule, saveScheduleBatch } from '@/services/scheduler'
+import { getSettings } from '@/services/settings'
 import { getJobDetail } from '@/services/jobs'
 import type { JobDetail, JobScheduleAvailableItem, JobScheduleOnAirItem } from '@/types/api'
 import AdaptiveRow from '@/components/ui/AdaptiveRow.vue'
@@ -635,6 +636,9 @@ const scheduledColumnWidths = ref({
 const checkedAvailable = ref<string[]>([])
 const checkedScheduled = ref<string[]>([])
 
+// User-editable lookback window for the Available Job Orders list (SettingsView > Show available jobs from)
+const scheduleAvailableDaysBack = ref(91)
+
 // ─── interfaces ───────────────────────────────────────────────────────────────
 interface ScheduledItemState extends JobScheduleOnAirItem {
   // Overrides from the original on-air response so we can mutate them locally
@@ -684,6 +688,13 @@ function formatPrintTime(value: string | undefined | null): string {
   return num.toFixed(1)
 }
 
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function dDay(requiredOn: string | null | undefined): number | null {
   if (!requiredOn) return null
   const today = new Date()
@@ -719,7 +730,15 @@ function getScheduledFields(item: ScheduledItemState) {
 }
 
 // ─── lifecycle ────────────────────────────────────────────────────────────────
-onMounted(() => load())
+onMounted(async () => {
+  try {
+    const settings = await getSettings()
+    scheduleAvailableDaysBack.value = settings.scheduleAvailableDaysBack || 91
+  } catch {
+    // Use default 91 days if settings load fails
+  }
+  await load()
+})
 
 // Reload on-air list when machine filter changes (available stays the same)
 watch(machineFilter, () => {
@@ -735,8 +754,9 @@ async function load() {
   cancelledOrderIds.value = new Set()
 
   try {
+    const startOn = toIsoDate(new Date(Date.now() - (scheduleAvailableDaysBack.value - 1) * 24 * 60 * 60 * 1000))
     const [available, onAir] = await Promise.all([
-      getAvailableSchedule(0),
+      getAvailableSchedule(0, startOn),
       getOnAirSchedule(0),
     ])
 

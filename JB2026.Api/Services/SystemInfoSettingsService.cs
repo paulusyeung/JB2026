@@ -48,6 +48,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
             GmailPassword = baseSettings.GmailPassword,
             DateFormatPreference = persisted.DateFormatPreference ?? baseSettings.DateFormatPreference,
             JobListDaysBack = int.TryParse(persisted.JobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack,
+            ScheduleAvailableDaysBack = int.TryParse(persisted.ScheduleAvailableDaysBack, out var scheduleDaysBack) ? scheduleDaysBack : baseSettings.ScheduleAvailableDaysBack,
         };
     }
 
@@ -55,7 +56,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
     {
         if (string.IsNullOrWhiteSpace(metadataXml))
         {
-            return new PersistedSettings(null, null, null, null, null);
+            return new PersistedSettings(null, null, null, null, null, null);
         }
 
         try
@@ -72,7 +73,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
                     settingsElement.Attribute(NextProductNumberAttr)?.Value,
                     settingsElement.Attribute(NextQuotationNumberAttr)?.Value,
                     settingsElement.Attribute("DateFormatPreference")?.Value,
-                    settingsElement.Attribute("JobListDaysBack")?.Value);
+                    settingsElement.Attribute("JobListDaysBack")?.Value,
+                    settingsElement.Attribute("ScheduleAvailableDaysBack")?.Value);
             }
 
             // Fall back to old format: <record id="data" .../>
@@ -86,7 +88,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
                     dataRecord.Attribute(NextProductNumberAttr)?.Value,
                     dataRecord.Attribute(NextQuotationNumberAttr)?.Value,
                     dataRecord.Attribute("dateFormatPreference")?.Value,
-                    dataRecord.Attribute("JobListDaysBack")?.Value);
+                    dataRecord.Attribute("JobListDaysBack")?.Value,
+                    dataRecord.Attribute("ScheduleAvailableDaysBack")?.Value);
             }
         }
         catch
@@ -94,7 +97,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
             // If XML is malformed, fall back to in-memory defaults
         }
 
-        return new PersistedSettings(null, null, null, null, null);
+        return new PersistedSettings(null, null, null, null, null, null);
     }
 
     private sealed record PersistedSettings(
@@ -102,7 +105,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
         string? NextProductNumber,
         string? NextQuotationNumber,
         string? DateFormatPreference,
-        string? JobListDaysBack);
+        string? JobListDaysBack,
+        string? ScheduleAvailableDaysBack);
 
     public SettingsResponse Update(UpdateSettingsRequest request)
     {
@@ -116,7 +120,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
                 updated.NextProductNumber,
                 updated.NextQuotationNumber,
                 updated.DateFormatPreference,
-                updated.JobListDaysBack),
+                updated.JobListDaysBack,
+                updated.ScheduleAvailableDaysBack),
             CancellationToken.None).GetAwaiter().GetResult();
 
         return updated;
@@ -139,7 +144,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
                     persisted.NextProductNumber ?? baseSettings.NextProductNumber,
                     persisted.NextQuotationNumber ?? baseSettings.NextQuotationNumber,
                     persisted.DateFormatPreference ?? baseSettings.DateFormatPreference,
-                    int.TryParse(persisted.JobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack);
+                    int.TryParse(persisted.JobListDaysBack, out var daysBack) ? daysBack : baseSettings.JobListDaysBack,
+                    int.TryParse(persisted.ScheduleAvailableDaysBack, out var scheduleDaysBack) ? scheduleDaysBack : baseSettings.ScheduleAvailableDaysBack);
             },
             cancellationToken);
 
@@ -157,7 +163,8 @@ public sealed class SystemInfoSettingsService : ISettingsService
         string nextProductNumber,
         string nextQuotationNumber,
         string dateFormatPreference,
-        int jobListDaysBack)
+        int jobListDaysBack,
+        int scheduleAvailableDaysBack)
     {
         XDocument doc;
 
@@ -201,6 +208,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
                 dataRecord.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
                 dataRecord.SetAttributeValue("DateFormatPreference", dateFormatPreference);
                 dataRecord.SetAttributeValue("JobListDaysBack", jobListDaysBack);
+                dataRecord.SetAttributeValue("ScheduleAvailableDaysBack", scheduleAvailableDaysBack);
             }
             else
             {
@@ -213,6 +221,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
                 settingsElement.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
                 settingsElement.SetAttributeValue("DateFormatPreference", dateFormatPreference);
                 settingsElement.SetAttributeValue("JobListDaysBack", jobListDaysBack);
+                settingsElement.SetAttributeValue("ScheduleAvailableDaysBack", scheduleAvailableDaysBack);
             }
         }
         else
@@ -223,6 +232,7 @@ public sealed class SystemInfoSettingsService : ISettingsService
             settingsElement.SetAttributeValue(NextQuotationNumberAttr, nextQuotationNumber);
             settingsElement.SetAttributeValue("DateFormatPreference", dateFormatPreference);
             settingsElement.SetAttributeValue("JobListDaysBack", jobListDaysBack);
+            settingsElement.SetAttributeValue("ScheduleAvailableDaysBack", scheduleAvailableDaysBack);
         }
 
         return doc.ToString(SaveOptions.DisableFormatting);

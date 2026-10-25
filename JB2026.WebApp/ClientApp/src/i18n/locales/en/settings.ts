@@ -11,6 +11,7 @@ export const settingsMessages = {
         scheduleQueryRange: 'Show completed jobs in',
         daysUnit: 'day(s)',
         jobListDaysBack: 'Show job list from',
+        scheduleAvailableDaysBack: 'Show available jobs from',
         gmailAccount: 'Gmail Account',
         gmailPassword: 'Gmail Password',
         dateFormat: 'Date Format Preference',
@@ -44,5 +45,6 @@ export const settingsMessages = {
         saveFailed: 'Unable to save settings. Please verify API availability.',
         scheduleRangeInvalid: 'Range must be at least 1 day.',
         jobListDaysBackInvalid: 'Job list days must be at least 1 day.',
+        scheduleAvailableDaysBackInvalid: 'Available job days must be at least 1 day.',
       },
     } as const

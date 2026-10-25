@@ -840,6 +840,7 @@ export interface AppSettings {
   gmailPassword: string
   dateFormatPreference: string
   jobListDaysBack: number
+  scheduleAvailableDaysBack: number
 }
 
 export interface RbacValues {

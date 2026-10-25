@@ -787,15 +787,19 @@ public sealed class JobSchedulesController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<JobScheduleAvailableItemResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<JobScheduleAvailableItemResponse>>> GetAvailable(
         [FromQuery] int orderType = 0,
+        [FromQuery] DateOnly? startOn = null,
         CancellationToken cancellationToken = default)
     {
         var today = DateTime.Today;
+        // Honour the client-supplied lookback window (driven by the editable JobListDaysBack
+        // setting); fall back to the legacy 91-day window when no start date is provided.
+        var lowerBound = startOn.HasValue ? startOn.Value.ToDateTime(TimeOnly.MinValue) : today.AddDays(-91);
         var rows = await _readContext.JobOrders
             .AsNoTracking()
             .Where(item => item.OrderType == orderType)
             .Where(item => item.Status == 1)
             .Where(item => item.JobNumber != 0)
-            .Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= today.AddDays(-91))
+            .Where(item => item.OrderedOn.HasValue && item.OrderedOn.Value >= lowerBound)
             .Where(item => item.CompletedOn == null || item.CompletedOn.Value.Year == 1900)
             .Where(item => !_readContext.JobSchedules.Any(s => s.OrderId == item.OrderId && s.Cancelled != true))
             .OrderByDescending(item => item.OrderNumber)

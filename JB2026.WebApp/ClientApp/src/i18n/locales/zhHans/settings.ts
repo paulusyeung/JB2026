@@ -11,6 +11,7 @@ export const settingsMessages = {
         scheduleQueryRange: '显示已完成作业于',
         daysUnit: '天',
         jobListDaysBack: '显示作业清单回溯',
+        scheduleAvailableDaysBack: '显示可排程作业回溯',
         gmailAccount: 'Gmail 账号',
         gmailPassword: 'Gmail 密码',
       },
@@ -35,5 +36,6 @@ export const settingsMessages = {
         saveFailed: '无法保存设置，请检查 API 可用性。',
         scheduleRangeInvalid: '范围至少需要 1 天。',
         jobListDaysBackInvalid: '作业清单天数至少需要 1 天。',
+        scheduleAvailableDaysBackInvalid: '可排程作业天数至少需要 1 天。',
       },
     } as const

@@ -109,9 +109,9 @@ export async function updateScheduleTime(
   await apiClient.patch(`/api/v2/job-schedules/${scheduleId}/time`, request)
 }
 
-export async function getAvailableSchedule(orderType = 0): Promise<JobScheduleAvailableItem[]> {
+export async function getAvailableSchedule(orderType = 0, startOn?: string): Promise<JobScheduleAvailableItem[]> {
   const response = await apiClient.get<JobScheduleAvailableItem[]>('/api/v2/job-schedules/available', {
-    params: { orderType },
+    params: { orderType, startOn },
   })
   return response.data
 }
